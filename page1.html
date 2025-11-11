@@ -6,7 +6,7 @@
     <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* alapvető reszet és sötét háttér */
+        /* Alapvető reszet és sötét háttér */
         body {
             margin: 0;
             padding: 0;
@@ -20,7 +20,7 @@
             text-align: center;
         }
 
-        /* teljes szélességű kép (felső rész) */
+        /* Teljes szélességű kép (felső rész) */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -36,7 +36,7 @@
             filter: brightness(70%);
         }
 
-        /* tartalom doboz a kép alatt */
+        /* Tartalom doboz a KÉP ALATT */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
@@ -52,52 +52,49 @@
             text-align: left;
         }
 
-        /* történet szövege */
+        /* Történet szövege */
         #story-text-display {
-            font-size: 1.3em; 
+            font-size: 1.3em;
             font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
             margin-bottom: 20px;
-            
-            /* Kurzor szimuláció CSS-ben */
-            border-right: 2px solid #00FFFF;
-            white-space: pre-wrap;
+            transition: opacity 0.5s ease-in-out;
+            /* Kikapcsolt gépelő effektushoz a sima szöveg stílus */
+            white-space: pre-wrap; 
             overflow: hidden; 
-            animation: blink-caret .75s step-end infinite;
         }
 
-        @keyframes blink-caret {
-            from, to { border-color: transparent }
-            50% { border-color: #00FFFF; }
+        /* Audio gomb konténer */
+        #audio-button-container {
+            text-align: center;
+            margin-bottom: 15px;
+            display: none; /* Alapértelmezetten rejtett */
         }
-
+        
         /* audio gomb stílusa */
         .audio-button {
-            padding: 8px 15px;
-            margin-right: 15px;
+            padding: 10px 20px;
             text-decoration: none;
             color: #1a1a1a;
             background-color: #00FFFF; /* Cián szín */
             border: none;
             border-radius: 5px;
-            font-size: 1em;
+            font-size: 1.1em;
             font-weight: 700;
             cursor: pointer;
             transition: background-color 0.3s;
             box-shadow: 0 2px 10px rgba(0, 255, 255, 0.4);
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            vertical-align: top;
-            white-space: nowrap; /* Fontos, hogy a gomb egyben maradjon */
+            gap: 8px;
         }
 
         .audio-button:hover {
             background-color: #00DDEE;
         }
-        
-        /* interakciós terület (lapozó gombok vagy jelszó input) */
+
+        /* Interakciós terület (Lapozó gombok vagy Jelszó input) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -107,7 +104,7 @@
             min-height: 48px;
         }
 
-        /* lapozó gombok stílusa */
+        /* Lapozó gombok stílusa */
         .page-button {
             padding: 12px 20px;
             text-decoration: none;
@@ -135,7 +132,7 @@
             opacity: 0.6;
         }
 
-        /* jelszó beviteli konténer */
+        /* Jelszó beviteli konténer */
         #password-container {
             display: none;
             flex-direction: column;
@@ -149,7 +146,7 @@
             display: flex;
         }
 
-        /* input mező stílusa */
+        /* Input mező stílusa */
         #password-input {
             padding: 12px;
             border: 2px solid #8a2be2;
@@ -162,7 +159,7 @@
             margin-bottom: 10px;
         }
 
-        /* ellenőrző gomb stílusa */
+        /* Ellenőrző gomb stílusa */
         #check-password-button {
             padding: 15px 25px;
             color: #ffffff;
@@ -192,12 +189,17 @@
 <body>
 
     <div class="full-width-image-container">
-        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="titokzatos erdő bejárata">
+        <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos erdő bejárata">
     </div>
 
     <div class="content-box">
         
         <p id="story-text-display"></p>
+        
+        <div id="audio-button-container">
+             <button id="play-audio-button" class="audio-button">▶️ Lejátszás</button>
+        </div>
+
 
         <div class="interaction-container">
             <button id="prev-page-button" class="page-button" disabled>
@@ -212,7 +214,7 @@
                 <p>Add meg a kódot:</p>
                 <input type="password" id="password-input" maxlength="4">
                 <button id="check-password-button">
-                    Kód ellenőrzése
+                    Kód Ellenőrzése
                 </button>
                 <p id="message"></p>
             </div>
@@ -222,29 +224,25 @@
     <audio id="story-audio" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
 
     <script>
+        // Történet: minden oldalhoz tartozik szöveg és kép
         const storyPages = [
-            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg", typing: true },
-            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: "https://i.ibb.co/L5tC46G/page-2.jpg", typing: true },
-            { text: `"Már húsz perce itt állunk, és semmi."`, image: "https://i.ibb.co/1n5b00v/page-3.jpg", typing: true }, 
-            { text: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: "https://i.ibb.co/v4t5z44/page-4.jpg", typing: true }, 
-            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: "https://i.ibb.co/4Tz2X5Y/page-5.jpg", typing: true }, 
-            // Az 5. indexű oldalon kikapcsoljuk a gépelést és beillesztjük a gombot
-            { 
-                text: `<button class="audio-button" onclick="playAudio(this)">▶️ Lejátszás</button> "Ügynökök, az idő szorít." "A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, 
-                image: "https://i.ibb.co/Xz9F31h/page-6.jpg",
-                typing: false // Kikapcsolt gépelés
-            }, 
-            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: "https://i.ibb.co/Tq552k9/page-7.jpg", typing: true }, 
-            { text: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: "https://i.ibb.co/Wf0V9Xk/page-8.jpg", typing: true }, 
-            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg", typing: true }, 
-            { text: `"Ezaz! De mihez vezet?"`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg", typing: true } 
+            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" },
+            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: "https://i.ibb.co/L5tC46G/page-2.jpg" },
+            { text: `"Már húsz perce itt állunk, és semmi."`, image: "https://i.ibb.co/1n5b00v/page-3.jpg" }, 
+            { text: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: "https://i.ibb.co/v4t5z44/page-4.jpg" }, 
+            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: "https://i.ibb.co/4Tz2X5Y/page-5.jpg" }, 
+            // A 6. oldal (index 5) szövegét szétválasztjuk a gomb megjelenítése miatt
+            { text: `"Ügynökök, az idő szorít." "A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, image: "https://i.ibb.co/Xz9F31h/page-6.jpg" }, 
+            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: "https://i.ibb.co/Tq552k9/page-7.jpg" }, 
+            { text: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: "https://i.ibb.co/Wf0V9Xk/page-8.jpg" }, 
+            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" }, 
+            { text: `"Ezaz! De mihez vezet?"`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" } 
         ];
 
         let currentPartIndex = 0;
         const CORRECT_PASSWORD = "5571";
         const SUCCESS_LINK = "minta_oldal_3.html"; 
-        const TYPING_SPEED = 40; // karakter/másodperc
-
+        
         const storyDisplay = document.getElementById('story-text-display');
         const nextButton = document.getElementById('next-page-button');
         const prevButton = document.getElementById('prev-page-button');
@@ -252,25 +250,13 @@
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
-        const storyImage = document.querySelector('.full-width-image-container img');
+        const storyImage = document.getElementById('story-image'); // ID hozzáadva a HTML-ben
         const storyAudio = document.getElementById('story-audio');
+        const audioButtonContainer = document.getElementById('audio-button-container');
+        const playAudioButton = document.getElementById('play-audio-button');
+
 
         // --- Segéd FÜGGVÉNYEK ---
-
-        // Audio lejátszása és a gomb szövegének frissítése
-        function playAudio(buttonElement) {
-            if (storyAudio.paused) {
-                storyAudio.play().catch(error => {
-                    console.log('Autoplay failed, user interaction needed.', error);
-                    // Opcionálisan ide kerülhet egy hibaüzenet
-                });
-                buttonElement.innerHTML = "⏸️ Szünet";
-            } else {
-                storyAudio.pause();
-                buttonElement.innerHTML = "▶️ Lejátszás";
-            }
-        }
-        window.playAudio = playAudio; // Globálisan elérhetővé tesszük
 
         function saveProgress() {
             localStorage.setItem('gameProgress', currentPartIndex);
@@ -298,58 +284,54 @@
                 prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
             }
+            
+            // Audio gomb megjelenítése/elrejtése
+            if (currentPartIndex === 5) { // Index 5 a 6. oldal (ott van a hangüzenet)
+                audioButtonContainer.style.display = 'block';
+            } else {
+                audioButtonContainer.style.display = 'none';
+            }
         }
 
-        // Gépelő effektus (csak sima szövegre)
-        function typeWriterEffect(text, element, speed) {
-            let i = 0;
-            element.innerHTML = '';
-            
-            element.style.animation = 'none'; 
-            
-            function type() {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i); 
-                    i++;
-                    setTimeout(type, speed);
-                } else {
-                    element.style.animation = 'blink-caret .75s step-end infinite';
-                    updateButtons();
-                }
-            }
-            type();
-        }
-                
+        // Szöveg megjelenítése áttűnéssel (visszaállítva az egyszerűbb, stabil verzió)
         function showStoryPart() {
             messageDisplay.textContent = ''; 
-
-            // Állítsuk le a hangot, ha lapozunk, és frissítsük a gombot
+            
+            // Állítsuk le a hangot lapozáskor
             storyAudio.pause();
-            const currentButton = document.querySelector('.audio-button');
-            if (currentButton) {
-                 currentButton.innerHTML = "▶️ Lejátszás";
-            }
+            playAudioButton.innerHTML = "▶️ Lejátszás";
 
-            if (currentPartIndex < storyPages.length) {
-                const currentPage = storyPages[currentPartIndex];
-                storyImage.src = currentPage.image; 
-
-                if (currentPage.typing) {
-                    // Ha a flag true (alapértelmezett)
-                    typeWriterEffect(currentPage.text, storyDisplay, TYPING_SPEED);
-                } else {
-                    // Ha a flag false (a gombos oldal)
+            storyDisplay.style.opacity = 0;
+            setTimeout(() => {
+                if (currentPartIndex < storyPages.length) {
+                    const currentPage = storyPages[currentPartIndex];
                     storyDisplay.innerHTML = currentPage.text;
-                    storyDisplay.style.animation = 'blink-caret .75s step-end infinite';
-                    updateButtons();
+                    storyImage.src = currentPage.image; // Kép URL frissítése
                 }
-
-            } else {
+                storyDisplay.style.opacity = 1;
                 updateButtons();
+            }, 500);
+        }
+        
+        // Audio lejátszása és a gomb szövegének frissítése
+        function toggleAudio() {
+            if (storyAudio.paused) {
+                // Előtte visszaállítjuk a kezdetre, hogy újra játszható legyen
+                storyAudio.currentTime = 0; 
+                storyAudio.play().catch(error => {
+                    console.log('Autoplay failed, user interaction needed.', error);
+                });
+                playAudioButton.innerHTML = "⏸️ Szünet";
+            } else {
+                storyAudio.pause();
+                playAudioButton.innerHTML = "▶️ Lejátszás";
             }
         }
 
         // --- ESEMÉNYKEZELŐK ---
+        
+        // Audio gomb eseménykezelője
+        playAudioButton.addEventListener('click', toggleAudio);
 
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
