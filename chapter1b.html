@@ -54,7 +54,7 @@
 
         /* Történet szövege */
         #story-text-display {
-            font-size: 1.3em; /* Nagyobb betűméret a mondatonkénti megjelenéshez */
+            font-size: 1.3em; /* Nagyobb betűméret a mondatonkénti megjelenés miatt */
             font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
@@ -174,8 +174,8 @@
             </button>
 
             <div id="password-container">
-                <p>Add meg a Kódot:</p>
-                <input type="password" id="password-input" placeholder="5571" maxlength="4">
+                <p>Add meg a kódot:</p>
+                <input type="password" id="password-input" maxlength="4">
                 <button id="check-password-button">
                     Kód Ellenőrzése
                 </button>
@@ -201,7 +201,7 @@
             `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
             `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
             `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
-            `"Ezaz! De mihez vezet?"` // Ez az UTOLSÓ lapozható mondat
+            `"Ezaz! De mihez vezet?"` // Utolsó mondat a kérés szerint
         ];
 
         let currentPartIndex = 0;
@@ -224,7 +224,8 @@
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
-                nextButton.textContent = 'Folytatás';
+                // Az utolsó lapozás után lép át a kódra
+                nextButton.textContent = currentPartIndex === storyParts.length - 1 ? 'Tovább a Kódra' : 'Folytatás';
             } else {
                 // Jelszó fázis: lapozó gombok eltűnnek, jelszó doboz megjelenik
                 nextButton.style.display = 'none';
@@ -237,6 +238,7 @@
         function showStoryPart() {
             storyDisplay.style.opacity = 0;
             setTimeout(() => {
+                // Csak akkor próbáljuk megjeleníteni a szöveget, ha van még rész
                 if (currentPartIndex < storyParts.length) {
                     storyDisplay.innerHTML = storyParts[currentPartIndex];
                 }
@@ -247,11 +249,9 @@
 
         // Lapozás (Előre) kezelése
         nextButton.addEventListener('click', () => {
-            if (currentPartIndex < storyParts.length) {
-                currentPartIndex++;
-                messageDisplay.textContent = '';
-                showStoryPart();
-            }
+            currentPartIndex++;
+            messageDisplay.textContent = ''; // Törli az esetleges hibaüzenetet
+            showStoryPart();
         });
 
         // Lapozás (Vissza) kezelése
