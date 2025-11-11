@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lapozgatós Történet – CYOA</title>
+    <title>Lapozgatós Történet – CYOA VégDöntés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Alapvető reszet és sötét háttér */
@@ -36,11 +36,11 @@
             filter: brightness(70%); /* Enyhe sötétítés */
         }
 
-        /* Tartalom doboz a kép alatt */
+        /* Tartalom doboz a KÉP ALATT */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
-            margin: -40px 10px 10px 10px; 
+            margin: 20px 10px 20px 10px; /* Megfelelő margó, nem takarja a képet */
             border-radius: 10px;
             max-width: 800px;
             width: calc(100% - 20px);
@@ -68,6 +68,7 @@
             align-items: center;
             padding-top: 10px;
             border-top: 1px dashed #8A2BE2;
+            min-height: 48px; /* Stabilitás a lapozó gomb helyén */
         }
 
         /* Lapozó gombok (Folytatás és Vissza) */
@@ -84,8 +85,6 @@
             transition: background-color 0.3s, transform 0.1s;
             text-transform: uppercase;
             box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
-            /* Kikapcsolt állapot stílusa */
-            opacity: 1; 
         }
         
         .page-button:hover:not(:disabled) {
@@ -100,9 +99,9 @@
             opacity: 0.6;
         }
 
-        /* A Lapozás után megjelenő döntési gombok konténere */
+        /* Döntési gombok konténere (a lapozó gomb helyén jelenik meg) */
         .final-decision-buttons {
-            display: none;
+            display: none; /* Alapból rejtve */
             flex-direction: column;
             gap: 15px;
             width: 100%;
@@ -111,10 +110,14 @@
         }
 
         .final-decision-buttons.visible {
-            display: flex;
+            display: flex; /* Megjelenik, ha elértük a történet végét */
+            /* A lapozó gombok helyett jelenik meg. */
+            flex-direction: column; 
+            margin-top: 0;
+            padding-top: 10px;
         }
-
-        /* Döntési gombok stílusa */
+        
+        /* A fő döntési gombok stílusa */
         .cyoa-button {
             padding: 15px 25px;
             text-decoration: none;
@@ -132,7 +135,7 @@
 
         /* Reszponzivitás a döntési gombokhoz */
         @media (min-width: 600px) {
-            .final-decision-buttons {
+            .final-decision-buttons.visible {
                 flex-direction: row;
                 justify-content: space-around;
             }
@@ -160,16 +163,15 @@
             <button id="next-page-button" class="page-button">
                 Folytatás
             </button>
-        </div>
 
-        <div class="final-decision-buttons" id="decision-buttons">
-            <a href="minta_oldal_1.html" class="cyoa-button">
-                Megpróbálod megfejteni a rúnákat
-            </a>
-
-            <a href="minta_oldal_2.html" class="cyoa-button">
-                Megkeresed a kapu kinyitásához szükséges kart
-            </a>
+            <div class="final-decision-buttons" id="decision-buttons">
+                <a href="minta_oldal_1.html" class="cyoa-button">
+                    Megfejted a rúnákat
+                </a>
+                <a href="minta_oldal_2.html" class="cyoa-button">
+                    Megkeresed a kart
+                </a>
+            </div>
         </div>
     </div>
 
@@ -190,24 +192,30 @@
         let currentPartIndex = 0;
         const storyDisplay = document.getElementById('story-text-display');
         const nextButton = document.getElementById('next-page-button');
-        const prevButton = document.getElementById('prev-page-button'); // Új elem
+        const prevButton = document.getElementById('prev-page-button');
         const decisionButtons = document.getElementById('decision-buttons');
+        const interactionContainer = document.getElementById('interaction-container');
 
         function updateButtons() {
-            // Vissza gomb állapotának frissítése
+            // Vissza gomb: csak akkor engedélyezett, ha nem az első lapon vagyunk
             prevButton.disabled = currentPartIndex === 0;
 
-            // Folytatás gomb feliratának és láthatóságának frissítése
             if (currentPartIndex < storyParts.length - 1) {
+                // Még van lapozható szöveg: mutassuk a lapozó gombokat, rejtsük a döntési gombokat
+                nextButton.style.display = 'block';
+                prevButton.style.display = 'block';
+                decisionButtons.classList.remove('visible');
                 nextButton.textContent = 'Folytatás';
-                nextButton.style.display = 'block';
-                decisionButtons.classList.remove('visible');
             } else if (currentPartIndex === storyParts.length - 1) {
-                nextButton.textContent = 'Döntés!';
+                // Utolsó szöveglap: mutassuk a lapozó gombokat, hogy a felhasználó döntéshez jusson
                 nextButton.style.display = 'block';
+                prevButton.style.display = 'block';
                 decisionButtons.classList.remove('visible');
+                nextButton.textContent = 'Döntés!';
             } else {
-                nextButton.style.display = 'none'; // Rejtett, ha a történet vége
+                // A történet vége (currentPartIndex === storyParts.length): rejtsük a lapozó gombokat, mutassuk a döntési gombokat
+                nextButton.style.display = 'none';
+                prevButton.style.display = 'none';
                 decisionButtons.classList.add('visible');
             }
         }
@@ -225,14 +233,8 @@
 
         // Folytatás (Előre) Lapozás kezelése
         nextButton.addEventListener('click', () => {
-            if (currentPartIndex < storyParts.length) {
-                currentPartIndex++;
-                if (currentPartIndex < storyParts.length) {
-                    showStoryPart();
-                } else {
-                    updateButtons(); // Átállás a döntési fázisra
-                }
-            }
+            currentPartIndex++;
+            showStoryPart();
         });
 
         // Vissza Lapozás kezelése
@@ -245,6 +247,8 @@
 
         // Az első szövegrész betöltése az oldal indulásakor
         window.onload = () => {
+            // Ha a böngésző visszagombjával érkezik a felhasználó
+            currentPartIndex = 0; 
             showStoryPart();
         };
     </script>
