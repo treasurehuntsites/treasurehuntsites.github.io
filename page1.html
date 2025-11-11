@@ -187,11 +187,14 @@
         /* Módosított stílus az avatar képhez */
         .avatar-image {
             position: absolute;
-            top: -50px; /* Feljebb toljuk */
-            left: -30px; /* Beljebb toljuk, de még a bal oldalon */
-            width: 100px; /* Kisebb méret */
-            height: auto; /* A magasság arányosan igazodik */
-            object-fit: contain; /* A kép befér a megadott méretbe, arányosan */
+            top: -30px; /* Feljebb toljuk, hogy kilógjon a dobozból */
+            left: -30px; /* Balra toljuk, hogy kilógjon a dobozból */
+            width: 80px; /* Kisebb méret */
+            height: 80px; /* Kisebb méret */
+            border-radius: 50%; /* Kör alakú kivágás */
+            object-fit: cover; /* A kép kitölti a kört */
+            border: 3px solid #00FFFF; /* Keret */
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7); /* Neon árnyék */
             z-index: 20; /* Biztosítja, hogy a legfelül legyen */
             display: block; /* Mindig látható lesz */
         }
@@ -324,4 +327,73 @@
                 if (currentPartIndex < storyPages.length) {
                     const currentPage = storyPages[currentPartIndex];
                     storyDisplay.innerHTML = currentPage.text;
-                    storyImage
+                    storyImage.src = currentPage.image; 
+                }
+                storyDisplay.style.opacity = 1;
+                updateButtons();
+            }, 500);
+        }
+        
+        // Audio lejátszása és a gomb szövegének frissítése
+        function toggleAudio() {
+            if (storyAudio.paused) {
+                storyAudio.currentTime = 0; 
+                storyAudio.play().catch(error => {
+                    console.log('Autoplay failed, user interaction needed.', error);
+                });
+                playAudioButton.innerHTML = "⏸️ Szünet";
+            } else {
+                storyAudio.pause();
+                playAudioButton.innerHTML = "▶️ Lejátszás";
+            }
+        }
+
+        // --- ESEMÉNYKEZELŐK ---
+        
+        playAudioButton.addEventListener('click', toggleAudio);
+
+        nextButton.addEventListener('click', () => {
+            currentPartIndex++;
+            saveProgress();
+            showStoryPart();
+        });
+
+        prevButton.addEventListener('click', () => {
+            if (currentPartIndex > 0) {
+                currentPartIndex--;
+                saveProgress();
+                showStoryPart();
+            }
+        });
+
+        checkButton.addEventListener('click', () => {
+            const enteredPassword = passwordInput.value.trim();
+
+            if (enteredPassword === CORRECT_PASSWORD) {
+                messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
+                messageDisplay.style.color = '#00FF00';
+                localStorage.removeItem('gameProgress'); 
+                storyAudio.pause();
+                setTimeout(() => {
+                    window.location.href = SUCCESS_LINK;
+                }, 1000);
+            } else {
+                messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
+                messageDisplay.style.color = '#FF4500';
+                passwordInput.value = '';
+            }
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkButton.click(); 
+            }
+        });
+
+        window.onload = () => {
+            loadProgress(); 
+            showStoryPart();
+        };
+    </script>
+</body>
+</html>
