@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titkos Üzenet – Kódfejtés</title>
+    <title>Titkos Üzenet – Kódfejtés (Alsó)</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Alapvető reszet és sötét háttér */
@@ -13,50 +13,76 @@
             font-family: 'Play', sans-serif;
             color: #E0E0E0;
             background-color: #1a1a1a;
-            /* A fő háttérkép most fix, a body NEM flex konténer */
             min-height: 100vh;
             text-align: center;
         }
 
-        /* 1. Teljes oldalt kitöltő fő háttérkép */
+        /* 1. Teljes oldalt kitöltő fő háttérkép (Fix, nem görgethető) */
         .main-background-image {
-            position: fixed; /* Rögzített háttér */
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -10; /* Legmélyebben */
+            z-index: -10;
             overflow: hidden;
         }
 
         .main-background-image img {
             width: 100%;
             height: 100%;
+            /* ÚJ HÁTTÉRKÉP LINK */
+            content: url("https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg"); 
             object-fit: cover;
             object-position: center top;
-            filter: brightness(50%); /* Kicsit sötétebb, hogy kiemelje a fix tartalmat */
+            filter: brightness(50%);
         }
-
-        /* 2. Párbeszédes kép konténere (FIX pozíció) */
-        .chat-image-container {
-            /* Fix pozíció, hogy rögzítve legyen a képernyőhöz */
-            position: fixed; 
-            top: 5vh; /* Kis margó felül, hogy ne érje a széleket */
+        
+        /* 3. Tartalom doboz (FIX pozíció - ALUL) */
+        .content-box {
+            position: fixed;
+            bottom: 5vh; /* Alulról 5vh távolság */
             left: 50%;
-            transform: translateX(-50%); /* Középre igazítás */
-
+            transform: translateX(-50%);
+            
             width: 90%;
             max-width: 800px;
-            height: 225px; /* 150% méret (eredeti 150px * 1.5) */
             
-            /* Eltávolítjuk a negatív margót, és a top/transform kezeli a pozíciót */
+            /* Max magasság, hogy maradjon hely a karakterképnek és a felső margónak */
+            max-height: 45vh; 
+            overflow-y: auto; /* Görgetés a szöveghez, ha nem fér el */
+
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            margin: 0;
+            border-radius: 10px;
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+            border: 3px solid #8A2BE2;
+            box-sizing: border-box;
+            z-index: 20;
+            text-align: left;
+        }
+
+        /* 2. Párbeszédes kép konténere (FIX pozíció - ALUL) */
+        .chat-image-container {
+            position: fixed; 
+            left: 50%;
+            transform: translateX(-50%);
+            
+            /* Bottom pozíció beállítása, hogy közvetlenül a content-box fölé kerüljön */
+            bottom: calc(5vh + 3px + 45vh); /* 5vh (content-box margó) + 3px (content-box border) + content-box max-height */
+            
+            width: 90%;
+            max-width: 800px;
+            height: 225px; 
+            
             margin: 0; 
             
             display: none; 
             justify-content: center;
             align-items: flex-end; 
             overflow: visible; 
-            z-index: 30; /* Minden felett */
+            z-index: 30;
             transition: opacity 0.5s;
         }
 
@@ -65,37 +91,13 @@
         }
 
         .chat-image-container img {
+            /* ÚJ KARAKTERKÉP LINK */
+            content: url("https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740218605.png"); 
             height: 100%; 
             width: auto;
             object-fit: contain; 
             border: none;
             box-shadow: none;
-        }
-
-        /* 3. Tartalom doboz (FIX pozíció) */
-        .content-box {
-            /* Fix pozíció, rögzítve a képernyőhöz */
-            position: fixed;
-            top: calc(5vh + 225px); /* chat-image-container aljához illesztés (top + magasság) */
-            left: 50%;
-            transform: translateX(-50%); /* Középre igazítás */
-            
-            width: 90%;
-            max-width: 800px;
-            
-            /* Max magasság beállítása, hogy elférjen a képernyőn (bottom: 5vh helyett) */
-            max-height: calc(90vh - 225px); 
-            overflow-y: auto; /* Görgetés a szöveghez, ha nem fér el */
-
-            background-color: rgba(0, 0, 0, 0.9);
-            padding: 20px;
-            margin: 0; /* A pozíciót a top/left/transform kezeli */
-            border-radius: 10px;
-            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
-            border: 3px solid #8A2BE2;
-            box-sizing: border-box;
-            z-index: 20;
-            text-align: left;
         }
 
         /* Történet szövege */
@@ -188,11 +190,11 @@
 <body>
 
     <div class="main-background-image">
-        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1760193452.jpg" alt="Titokzatos erdő bejárata">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos városi háttér">
     </div>
 
     <div id="chat-image-container" class="chat-image-container">
-        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740218605.png" alt="Márk, az ügynök">
     </div>
 
     <div class="content-box">
@@ -224,23 +226,24 @@
         const storyParts = [
             `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, // 0
             `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, // 1
-            `"Biztos, hogy ez az a fülke?"`, // 2 <<< Kép megjelenik
-            `"Már húsz perce itt állunk, és semmi."`, // 3 <<< Kép megjelenik
-            `"Türelem, Anna."`, // 4
-            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, // 5
-            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, // 6 <<< Kép megjelenik
+            `"Biztos, hogy ez az a fülke?"`, // 2
+            `"Már húsz perce itt állunk, és semmi."`, // 3
+            `"Türelem, Anna."`, // 4 <<< Kép megjelenik
+            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, // 5 <<< Kép megjelenik
+            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, // 6
             `"Ügynökök, az idő szorít."`, // 7
             `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, // 8
             `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, // 9
-            `"Egy üvegkapszulát? Ez valami rejtvény!"`, // 10 <<< Kép megjelenik
-            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, // 11
+            `"Egy üvegkapszulát? Ez valami rejtvény!"`, // 10
+            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, // 11 <<< Kép megjelenik
             `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, // 12
             `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, // 13
-            `"Ezaz! De mihez vezet?"` // 14 (Utolsó mondat)
+            `"Ezaz! De mihez vezet?"` // 14 <<< Kép megjelenik (Utolsó mondat)
         ];
 
-        // Azok az indexek, ahol a képnek látszódnia kell.
-        const imageIndexes = [2, 3, 6, 10]; 
+        // Azok az indexek, ahol az ÚJ karakterképnek (Márk) látszódnia kell.
+        // A szövegek kezdete: "Türelem...", "Ha a kontaktunk...", "Már meg is van!", "Ezaz!..."
+        const imageIndexes = [4, 5, 11, 14]; 
 
         let currentPartIndex = 0;
         const CORRECT_PASSWORD = "5571";
@@ -258,7 +261,7 @@
         function updateButtons() {
             prevButton.disabled = currentPartIndex === 0;
 
-            // Kép láthatóságának frissítése
+            // Kép láthatóságának frissítése (ÚJ indexek alapján)
             if (imageIndexes.includes(currentPartIndex)) {
                 chatImageContainer.classList.add('visible');
             } else {
