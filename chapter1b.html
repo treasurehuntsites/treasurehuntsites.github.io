@@ -1,17 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="hu">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* Alapvető reszet és sötét háttér */
+        /* alapvető reszet és sötét háttér */
         body {
             margin: 0;
             padding: 0;
             font-family: 'Play', sans-serif;
-            color: #E0E0E0;
+            color: #e0e0e0;
             background-color: #1a1a1a;
             display: flex;
             flex-direction: column;
@@ -20,7 +20,7 @@
             text-align: center;
         }
 
-        /* Teljes szélességű kép (felső rész) */
+        /* teljes szélességű kép (felső rész) */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -36,7 +36,7 @@
             filter: brightness(70%);
         }
 
-        /* Tartalom doboz a KÉP ALATT */
+        /* tartalom doboz a kép alatt */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
@@ -45,39 +45,76 @@
             max-width: 800px;
             width: calc(100% - 20px);
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
-            border: 3px solid #8A2BE2;
+            border: 3px solid #8a2be2;
             box-sizing: border-box;
             position: relative;
             z-index: 10;
             text-align: left;
         }
 
+        /* Lejátszás gomb stílusa */
+        #play-audio-button {
+            display: none; /* Alapértelmezetten rejtett */
+            width: 100%;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+            background-color: #00FFFF;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #play-audio-button:hover {
+            background-color: #00DDEE;
+        }
+
         /* Történet szövege */
         #story-text-display {
-            font-size: 1.3em; /* Nagyobb betűméret a mondatonkénti megjelenés miatt */
+            font-size: 1.3em;
             font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
             margin-bottom: 20px;
             transition: opacity 0.5s ease-in-out; 
+            
+            /* Kurzor szimuláció CSS-ben */
+            border-right: 2px solid #00FFFF;
+            white-space: pre-wrap;
+            overflow: hidden; 
+            animation: blink-caret .75s step-end infinite;
         }
 
-        /* Interakciós terület (Lapozó gombok vagy Jelszó input) */
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #00FFFF; }
+        }
+
+        /* interakciós terület (lapozó gombok vagy jelszó input) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding-top: 10px;
-            border-top: 1px dashed #8A2BE2;
+            border-top: 1px dashed #8a2be2;
             min-height: 48px;
         }
 
-        /* Lapozó gombok stílusa */
+        /* lapozó gombok stílusa */
         .page-button {
             padding: 12px 20px;
             text-decoration: none;
-            color: #FFFFFF;
-            background-color: #8A2BE2;
+            color: #ffffff;
+            background-color: #8a2be2;
             border: none;
             border-radius: 5px;
             font-size: 1.1em;
@@ -89,7 +126,7 @@
         }
         
         .page-button:hover:not(:disabled) {
-            background-color: #7B1CD1;
+            background-color: #7b1cd1;
             transform: translateY(-1px);
         }
 
@@ -100,7 +137,7 @@
             opacity: 0.6;
         }
 
-        /* Jelszó beviteli konténer */
+        /* jelszó beviteli konténer */
         #password-container {
             display: none;
             flex-direction: column;
@@ -114,24 +151,24 @@
             display: flex;
         }
 
-        /* Input mező stílusa */
+        /* input mező stílusa */
         #password-input {
             padding: 12px;
-            border: 2px solid #8A2BE2;
+            border: 2px solid #8a2be2;
             border-radius: 5px;
             background-color: #2c2c2c;
-            color: #00FFFF;
+            color: #00ffff;
             font-size: 1.2em;
             text-align: center;
             font-family: 'Play', sans-serif;
             margin-bottom: 10px;
         }
 
-        /* Ellenőrző gomb stílusa */
+        /* ellenőrző gomb stílusa */
         #check-password-button {
             padding: 15px 25px;
-            color: #FFFFFF;
-            background-color: #00FFFF;
+            color: #ffffff;
+            background-color: #00ffff;
             border: none;
             border-radius: 5px;
             font-size: 1.2em;
@@ -143,24 +180,27 @@
         }
 
         #check-password-button:hover {
-            background-color: #00DDEE;
+            background-color: #00ddee;
         }
 
         /* Üzenet stílusa */
         #message {
             margin-top: 10px;
             font-weight: 700;
-            color: #FF4500;
+            color: #ff4500;
         }
     </style>
 </head>
 <body>
 
     <div class="full-width-image-container">
-        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos erdő bejárata">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="titokzatos erdő bejárata">
     </div>
 
     <div class="content-box">
+        <button id="play-audio-button">
+            <span style="font-size: 1.5em; line-height: 1;">▶️</span> Üzenet Lejátszása
+        </button>
         
         <p id="story-text-display"></p>
 
@@ -177,37 +217,36 @@
                 <p>Add meg a kódot:</p>
                 <input type="password" id="password-input" maxlength="4">
                 <button id="check-password-button">
-                    Kód Ellenőrzése
+                    Kód ellenőrzése
                 </button>
                 <p id="message"></p>
             </div>
         </div>
     </div>
+    
+    <audio id="story-audio" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3"></audio>
 
     <script>
-        // Történet: minden mondat külön elemként
-        const storyParts = [
-            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`,
-            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`,
-            `"Biztos, hogy ez az a fülke?"`,
-            `"Már húsz perce itt állunk, és semmi."`,
-            `"Türelem, Anna."`,
-            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`,
-            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`,
-            `"Ügynökök, az idő szorít."`,
-            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`,
-            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`,
-            `"Egy üvegkapszulát? Ez valami rejtvény!"`,
-            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
-            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
-            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
-            `"Ezaz! De mihez vezet?"` // Utolsó mondat a kérés szerint
+        const storyPages = [
+            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" }, 
+            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: "https://i.ibb.co/L5tC46G/page-2.jpg" }, 
+            { text: `"Már húsz perce itt állunk, és semmi."`, image: "https://i.ibb.co/1n5b00v/page-3.jpg" }, 
+            { text: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: "https://i.ibb.co/v4t5z44/page-4.jpg" }, 
+            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: "https://i.ibb.co/4Tz2X5Y/page-5.jpg" }, 
+            // EZ AZ AZ OLDAL (index 5), AHOL MEGJELENIK AZ AUDIO GOMB!
+            { text: `"Ügynökök, az idő szorít." "A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, image: "https://i.ibb.co/Xz9F31h/page-6.jpg" }, 
+            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: "https://i.ibb.co/Tq552k9/page-7.jpg" }, 
+            { text: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: "https://i.ibb.co/Wf0V9Xk/page-8.jpg" }, 
+            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" }, 
+            { text: `"Ezaz! De mihez vezet?"`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" } 
         ];
 
         let currentPartIndex = 0;
         const CORRECT_PASSWORD = "5571";
         const SUCCESS_LINK = "minta_oldal_3.html"; 
-        
+        const TYPING_SPEED = 40; 
+        const AUDIO_TRIGGER_INDEX = 5; // Az index, ahol a hang gomb megjelenik
+
         const storyDisplay = document.getElementById('story-text-display');
         const nextButton = document.getElementById('next-page-button');
         const prevButton = document.getElementById('prev-page-button');
@@ -215,61 +254,124 @@
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
+        const storyImage = document.querySelector('.full-width-image-container img');
+        
+        // ÚJ ELEMEK
+        const audioButton = document.getElementById('play-audio-button');
+        const storyAudio = document.getElementById('story-audio');
+
+        // --- Segéd FÜGGVÉNYEK ---
+
+        function saveProgress() {
+            localStorage.setItem('gameProgress', currentPartIndex);
+        }
+
+        function loadProgress() {
+            const savedIndex = localStorage.getItem('gameProgress');
+            if (savedIndex !== null) {
+                currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length); 
+            } else {
+                currentPartIndex = 0;
+            }
+        }
 
         function updateButtons() {
             prevButton.disabled = currentPartIndex === 0;
+            
+            // Audio gomb megjelenítése/elrejtése
+            if (currentPartIndex === AUDIO_TRIGGER_INDEX) {
+                audioButton.style.display = 'flex'; // Megjelenítjük a gombot
+            } else {
+                audioButton.style.display = 'none'; // Elrejtjük a gombot
+                storyAudio.pause(); // Ha lapozunk, állítsuk le a hangot
+                storyAudio.currentTime = 0;
+            }
 
-            if (currentPartIndex < storyParts.length) {
-                // Lapozó fázis
+            if (currentPartIndex < storyPages.length) {
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
-                // Az utolsó lapozás után lép át a kódra
-                nextButton.textContent = currentPartIndex === storyParts.length - 1 ? 'Tovább a Kódra' : 'Folytatás';
+                nextButton.textContent = currentPartIndex === storyPages.length - 1 ? 'Kód Megadása' : 'Folytatás';
             } else {
-                // Jelszó fázis: lapozó gombok eltűnnek, jelszó doboz megjelenik
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
             }
         }
-        
-        // Szöveg megjelenítése áttűnéssel
-        function showStoryPart() {
-            storyDisplay.style.opacity = 0;
-            setTimeout(() => {
-                // Csak akkor próbáljuk megjeleníteni a szöveget, ha van még rész
-                if (currentPartIndex < storyParts.length) {
-                    storyDisplay.innerHTML = storyParts[currentPartIndex];
+
+        function typeWriterEffect(text, element, speed) {
+            let i = 0;
+            element.innerHTML = '';
+            
+            element.style.animation = 'none'; 
+            
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i); 
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    element.style.animation = 'blink-caret .75s step-end infinite';
+                    updateButtons();
                 }
-                storyDisplay.style.opacity = 1;
+            }
+            type();
+        }
+                
+        function showStoryPart() {
+            messageDisplay.textContent = ''; 
+
+            if (currentPartIndex < storyPages.length) {
+                const currentPage = storyPages[currentPartIndex];
+                storyImage.src = currentPage.image; 
+                typeWriterEffect(currentPage.text, storyDisplay, TYPING_SPEED);
+            } else {
                 updateButtons();
-            }, 500);
+            }
         }
 
-        // Lapozás (Előre) kezelése
+        // --- ESEMÉNYKEZELŐK ---
+        
+        // AUDIO gomb kattintása
+        audioButton.addEventListener('click', () => {
+            storyAudio.play().catch(error => {
+                console.error("Hiba a hang lejátszásakor:", error);
+                messageDisplay.textContent = 'Hiba: Nem sikerült lejátszani a hangot.';
+                messageDisplay.style.color = '#FF4500';
+            });
+            audioButton.textContent = '🎶 Üzenet Lejátszása (Folyamatban)';
+            audioButton.disabled = true;
+
+            // Visszaállítás a lejátszás végén
+            storyAudio.onended = () => {
+                audioButton.textContent = '▶️ Üzenet Lejátszása';
+                audioButton.disabled = false;
+            };
+        });
+
+
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
-            messageDisplay.textContent = ''; // Törli az esetleges hibaüzenetet
+            saveProgress();
             showStoryPart();
         });
 
-        // Lapozás (Vissza) kezelése
         prevButton.addEventListener('click', () => {
             if (currentPartIndex > 0) {
                 currentPartIndex--;
-                messageDisplay.textContent = '';
+                saveProgress();
                 showStoryPart();
             }
         });
 
-        // Jelszó ellenőrzése
         checkButton.addEventListener('click', () => {
             const enteredPassword = passwordInput.value.trim();
 
             if (enteredPassword === CORRECT_PASSWORD) {
                 messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
                 messageDisplay.style.color = '#00FF00';
+                localStorage.removeItem('gameProgress'); 
+                storyAudio.pause(); // Kód elfogadása esetén is leállítjuk a hangot
                 setTimeout(() => {
                     window.location.href = SUCCESS_LINK;
                 }, 1000);
@@ -280,9 +382,14 @@
             }
         });
 
-        // Az első szövegrész betöltése az oldal indulásakor
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkButton.click(); 
+            }
+        });
+
         window.onload = () => {
-            currentPartIndex = 0; 
+            loadProgress(); 
             showStoryPart();
         };
     </script>
