@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lapozgatós Történet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Alapvető reszet és sötét háttér */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Play', sans-serif;
+            color: #E0E0E0;
+            background-color: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        /* Teljes szélességű kép (felső rész) */
+        .full-width-image-container {
+            width: 100%;
+            /* Mobilra optimalizálva kisebb magasság */
+            height: 300px; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        .full-width-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            filter: brightness(70%);
+        }
+
+        /* Tartalom doboz a kép alatt */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            margin: -40px 10px 10px 10px; /* Negatív margó rálóg a képre, összekötve a kettőt */
+            border-radius: 10px;
+            max-width: 800px;
+            width: calc(100% - 20px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); /* Erős lila fény */
+            border: 3px solid #8A2BE2;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+            text-align: left; /* Szöveg balra igazítása */
+        }
+
+        /* Történet szövege */
+        #story-text-display {
+            font-size: 1.1em;
+            line-height: 1.6;
+            min-height: 100px; /* Megakadályozza az ugrálást lapozáskor */
+            margin-bottom: 20px;
+            transition: opacity 0.5s ease-in-out; /* Áttűnési effektus lapozáshoz */
+        }
+
+        /* Gombok konténere (lapozó gomb és döntés gombok) */
+        .interaction-container {
+            display: flex;
+            justify-content: flex-end; /* Lapozó gomb jobbra */
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px dashed #8A2BE2;
+        }
+
+        /* Lapozó gomb stílusa */
+        #next-page-button {
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #FFFFFF;
+            background-color: #8A2BE2; /* Lila gomb */
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+        }
+
+        #next-page-button:hover {
+            background-color: #7B1CD1;
+            transform: translateY(-1px);
+        }
+        
+        /* A Lapozás után megjelenő döntési gombok konténere */
+        .final-decision-buttons {
+            display: none; /* Alapból rejtve */
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .final-decision-buttons.visible {
+            display: flex; /* Megjelenik, ha elértük a történet végét */
+        }
+
+        /* Döntési gombok stílusa (ugyanaz, mint a lapozó gomb, de szélesebb) */
+        .cyoa-button {
+            padding: 15px 25px;
+            text-decoration: none;
+            color: #FFFFFF;
+            background-color: #8A2BE2;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4);
+        }
+
+        /* Reszponzivitás a döntési gombokhoz */
+        @media (min-width: 600px) {
+            .final-decision-buttons {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            .cyoa-button {
+                width: 45%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="full-width-image-container">
+        <img src="" alt="Kapucnis főszereplő figura">
+    </div>
+
+    <div class="content-box">
+        
+        <p id="story-text-display"></p>
+
+        <div class="interaction-container">
+            <button id="next-page-button">
+                Folytatás
+            </button>
+        </div>
+
+        <div class="final-decision-buttons" id="decision-buttons">
+            <a href="minta_oldal_1.html" class="cyoa-button">
+                Megpróbálod megfejteni a rúnákat
+            </a>
+
+            <a href="minta_oldal_2.html" class="cyoa-button">
+                Megkeresed a kapu kinyitásához szükséges kart
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Történet a 3 részre tördelve
+        const storyParts = [
+            `
+                Mélyen a hegy gyomrában, a mohás kövek és az évezredes csend ölelésében álltál. Előtted egy hatalmas, rézveretes kapu emelkedett. A fém hideg volt, felülete rejtélyes rúnákkal volt teleírva, melyek halvány, zöld fénnyel pislákoltak. A levegő nehéz volt, ózon szagú, mintha egy rég elfeledett energia szivárogna a hasadékból.
+            `,
+            `
+                A kapucnid mélyére húzódva lassan a kapuhoz léptél. A rúnák alatt vékony, alig látható bevéséseket találtál, mintha valaki egy elfeledett írásjelet próbált volna elrejteni a fő üzenet mögött. Megérintetted a hideg rezet, és érezted, hogy a titkos mechanizmus még működhet.
+            `,
+            `
+                Tudtad, hogy amit keresel, a kapun túl van. Ez a pont a küldetésed sorsdöntő pillanata. Az üzenetet érted, de a kapu zárva van. Két lehetséges út áll előtted, két lehetőség, melyek örökre megváltoztatják a történet menetét. El kell döntened, hogyan tovább.
+            `
+        ];
+
+        let currentPartIndex = 0;
+        const storyDisplay = document.getElementById('story-text-display');
+        const nextButton = document.getElementById('next-page-button');
+        const decisionButtons = document.getElementById('decision-buttons');
+
+        // Függvény a szöveg megjelenítésére
+        function showStoryPart(index) {
+            // Áttűnési effektus: elhalványul, változik, majd megjelenik
+            storyDisplay.style.opacity = 0;
+            setTimeout(() => {
+                storyDisplay.innerHTML = storyParts[index];
+                storyDisplay.style.opacity = 1;
+            }, 500); // Fél másodperc várakozás
+        }
+
+        // Lapozás kezelése
+        nextButton.addEventListener('click', () => {
+            currentPartIndex++;
+
+            if (currentPartIndex < storyParts.length) {
+                // Még van lapozható szöveg
+                showStoryPart(currentPartIndex);
+                if (currentPartIndex === storyParts.length - 1) {
+                    nextButton.textContent = 'Induljon a Kaland!'; // Utolsó lapozás előtt a gomb felirata megváltozik
+                }
+            } else {
+                // Utolsó lapozás megtörtént, megjelenítjük a döntési gombokat
+                nextButton.style.display = 'none';
+                decisionButtons.classList.add('visible');
+                // Hozzáadjuk a döntő szövegrészt is a lapozás helyére, ha szükséges
+            }
+        });
+
+        // Az első szövegrész betöltése az oldal indulásakor
+        window.onload = () => {
+            showStoryPart(currentPartIndex);
+        };
+    </script>
+</body>
+</html>
