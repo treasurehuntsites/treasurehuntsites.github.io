@@ -13,58 +13,50 @@
             font-family: 'Play', sans-serif;
             color: #E0E0E0;
             background-color: #1a1a1a;
-            /* A görgetést a body elem kezeli, de a tartalom középre kerül */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            /* A fő háttérkép most fix, a body NEM flex konténer */
             min-height: 100vh;
             text-align: center;
         }
 
-        /* 1. Teljes szélességű fő kép (felső rész) */
-        .full-width-image-container {
+        /* 1. Teljes oldalt kitöltő fő háttérkép */
+        .main-background-image {
+            position: fixed; /* Rögzített háttér */
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 300px; 
+            height: 100%;
+            z-index: -10; /* Legmélyebben */
             overflow: hidden;
-            position: relative;
         }
 
-        .full-width-image-container img {
+        .main-background-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             object-position: center top;
-            filter: brightness(70%);
+            filter: brightness(50%); /* Kicsit sötétebb, hogy kiemelje a fix tartalmat */
         }
 
-        /* Fő konténer az oldal tartalmához, ami középen van és nem görgethető */
-        /* Ehhez a wrap-container-hez igazítjuk a karakterképet és a szövegdobozt */
-        .page-content-wrapper {
-            max-width: 800px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            /* FONTOS: Mivel a fő kép nincs ebben a wrap-ben, a felső margót be kell állítani */
-            margin: 0 10px 20px 10px;
-            position: relative;
-        }
-
-        /* 2. Párbeszédes kép konténere (Szövegdoboz felett) */
+        /* 2. Párbeszédes kép konténere (FIX pozíció) */
         .chat-image-container {
-            width: 100%;
-            /* Nincs max-width, mert a wrapper már beállította */
-            height: 225px; 
+            /* Fix pozíció, hogy rögzítve legyen a képernyőhöz */
+            position: fixed; 
+            top: 5vh; /* Kis margó felül, hogy ne érje a széleket */
+            left: 50%;
+            transform: translateX(-50%); /* Középre igazítás */
+
+            width: 90%;
+            max-width: 800px;
+            height: 225px; /* 150% méret (eredeti 150px * 1.5) */
             
-            /* FONTOS: Negatív margó beállítása, hogy rálógjon a felső képre */
-            margin-top: -75px; /* -75px az 225px magasság kb. harmada */
+            /* Eltávolítjuk a negatív margót, és a top/transform kezeli a pozíciót */
+            margin: 0; 
             
             display: none; 
             justify-content: center;
             align-items: flex-end; 
             overflow: visible; 
-            position: relative;
-            z-index: 20; 
+            z-index: 30; /* Minden felett */
             transition: opacity 0.5s;
         }
 
@@ -80,23 +72,33 @@
             box-shadow: none;
         }
 
-        /* Tartalom doboz (Szöveg és gombok) */
+        /* 3. Tartalom doboz (FIX pozíció) */
         .content-box {
+            /* Fix pozíció, rögzítve a képernyőhöz */
+            position: fixed;
+            top: calc(5vh + 225px); /* chat-image-container aljához illesztés (top + magasság) */
+            left: 50%;
+            transform: translateX(-50%); /* Középre igazítás */
+            
+            width: 90%;
+            max-width: 800px;
+            
+            /* Max magasság beállítása, hogy elférjen a képernyőn (bottom: 5vh helyett) */
+            max-height: calc(90vh - 225px); 
+            overflow-y: auto; /* Görgetés a szöveghez, ha nem fér el */
+
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
-            /* Margó felül nulla, így érintkezik a karakterkép konténerrel */
-            margin: 0; 
+            margin: 0; /* A pozíciót a top/left/transform kezeli */
             border-radius: 10px;
-            width: 100%; 
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8A2BE2;
             box-sizing: border-box;
-            position: relative;
-            z-index: 10;
+            z-index: 20;
             text-align: left;
         }
-        
-        /* A korábbi stílusok (szöveg, gombok, jelszómező) változatlanok maradtak */
+
+        /* Történet szövege */
         #story-text-display {
             font-size: 1.3em;
             font-weight: 700;
@@ -106,6 +108,7 @@
             transition: opacity 0.5s ease-in-out; 
         }
 
+        /* Lapozó és jelszó stílusok (megtartva) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -114,10 +117,9 @@
             border-top: 1px dashed #8A2BE2;
             min-height: 48px;
         }
-        
+
         .page-button {
             padding: 12px 20px;
-            text-decoration: none;
             color: #FFFFFF;
             background-color: #8A2BE2;
             border: none;
@@ -185,37 +187,34 @@
 </head>
 <body>
 
-    <div class="full-width-image-container">
+    <div class="main-background-image">
         <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1760193452.jpg" alt="Titokzatos erdő bejárata">
     </div>
 
-    <div class="page-content-wrapper">
+    <div id="chat-image-container" class="chat-image-container">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
+    </div>
+
+    <div class="content-box">
         
-        <div id="chat-image-container" class="chat-image-container">
-            <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
-        </div>
+        <p id="story-text-display"></p>
 
-        <div class="content-box">
+        <div class="interaction-container">
+            <button id="prev-page-button" class="page-button" disabled>
+                Vissza
+            </button>
             
-            <p id="story-text-display"></p>
+            <button id="next-page-button" class="page-button">
+                Folytatás
+            </button>
 
-            <div class="interaction-container">
-                <button id="prev-page-button" class="page-button" disabled>
-                    Vissza
+            <div id="password-container">
+                <p>Add meg a kódot:</p>
+                <input type="password" id="password-input" maxlength="4">
+                <button id="check-password-button">
+                    Kód Ellenőrzése
                 </button>
-                
-                <button id="next-page-button" class="page-button">
-                    Folytatás
-                </button>
-
-                <div id="password-container">
-                    <p>Add meg a kódot:</p>
-                    <input type="password" id="password-input" maxlength="4">
-                    <button id="check-password-button">
-                        Kód Ellenőrzése
-                    </button>
-                    <p id="message"></p>
-                </div>
+                <p id="message"></p>
             </div>
         </div>
     </div>
