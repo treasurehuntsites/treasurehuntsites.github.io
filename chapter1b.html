@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titkos Üzenet – Kódfejtés</title>
+    <title>Titkos Üzenet – Párbeszéd</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Alapvető reszet és sötét háttér */
@@ -20,7 +20,7 @@
             text-align: center;
         }
 
-        /* Teljes szélességű HÁTTÉRKÉP */
+        /* Teljes szélességű HÁTTÉRKÉP (felső rész) */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -35,37 +35,42 @@
             object-position: center top;
             filter: brightness(70%);
         }
-        
-        /* KARAKTERKÉP KONÉNER (a szövegdoboz és a háttér között) */
-        #character-image-container {
-            position: relative;
-            z-index: 15; /* A tartalom és a háttér között, de a tartalom felett */
-            margin-top: -150px; /* Rálóg a háttérképre */
-            margin-bottom: -150px; /* Alá tolja a szövegdobozt */
+
+        /* KARAKTER PORTRAIT KÉP */
+        #character-portrait {
+            position: relative; /* Pozícionáláshoz */
+            width: 120px; /* Méret a mobil optimalizáláshoz */
+            height: 120px;
+            overflow: hidden;
+            border-radius: 50%; /* Kör alakú kép, bár kérés szerint keret nélküli */
+            margin-top: -60px; /* Fél kép belóg a content-box-ba */
+            margin-bottom: -60px;
+            z-index: 15; /* A szövegdoboz fölé helyezi */
             opacity: 0; /* Alapból rejtett */
-            transition: opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
-            pointer-events: none; /* Ne akadályozza az egérkattintásokat */
+            transition: opacity 0.5s ease-in-out, transform 0.5s;
+            background-color: transparent; /* Nincs háttérszín */
         }
         
-        #character-image-container.visible {
-            opacity: 1;
-            margin-top: -140px; /* Enyhe mozgás animációhoz */
-            margin-bottom: -140px;
-        }
-
-        #character-image-container img {
+        #character-portrait img {
             width: 100%;
-            max-width: 250px; /* Kisebb méret mobilon */
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); /* Kék fényhatás a karakter körül */
-            border: 3px solid #00FFFF;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border: none; /* Nincs keret */
+            border-radius: 0; /* Keret eltávolítva */
+        }
+        
+        #character-portrait.visible {
+            opacity: 1;
+            /* Leengedjük a képet pont a szövegdoboz tetejére */
+            transform: translateY(120px); 
         }
 
-        /* Tartalom doboz */
+        /* Tartalom doboz a KÉP ALATT */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
+            /* Levettük a negatív margót, de hagyunk egy kis rést a kép alatt */
             margin: 20px 10px 20px 10px; 
             border-radius: 10px;
             max-width: 800px;
@@ -76,9 +81,12 @@
             position: relative;
             z-index: 10;
             text-align: left;
+            /* Létrehozunk helyet a portré képnek */
+            padding-top: 80px; 
+            margin-top: -60px; /* Rálógatjuk a tartalom dobozt a háttérre, hogy a portré jobban kiemelkedjen */
         }
 
-        /* Történet és interakciós stílusok (többi változatlan) */
+        /* Történet szövege */
         #story-text-display {
             font-size: 1.3em; 
             font-weight: 700;
@@ -88,6 +96,8 @@
             transition: opacity 0.5s ease-in-out; 
         }
 
+        /* Jelszó beviteli konténer stílusai változatlanul */
+        /* ... */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -180,8 +190,8 @@
         <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1760193452.jpg" alt="Titokzatos erdő bejárata">
     </div>
 
-    <div id="character-image-container">
-        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
+    <div id="character-portrait">
+        <img src="" alt="Beszélő karakter">
     </div>
 
     <div class="content-box">
@@ -209,23 +219,26 @@
     </div>
 
     <script>
+        // A karakterkép URL-je
+        const CHARACTER_IMAGE_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
+        
         // Történet: minden mondat külön elemként
         const storyParts = [
-            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, // 0
-            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, // 1
-            `"Biztos, hogy ez az a fülke?"`, // 2 (Karakterkép jelenik meg)
-            `"Már húsz perce itt állunk, és semmi."`, // 3 (Karakterkép jelen van)
-            `"Türelem, Anna."`, // 4 (Karakterkép elvileg eltűnik, de Márk is beszélhetne)
-            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, // 5 (Karakterkép nincs)
-            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, // 6 (Karakterkép jelenik meg)
-            `"Ügynökök, az idő szorít."`, // 7 (Karakterkép jelen van)
-            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, // 8 (Karakterkép jelen van)
-            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, // 9 (Karakterkép jelen van)
-            `"Egy üvegkapszulát? Ez valami rejtvény!"`, // 10 (Karakterkép jelen van)
-            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, // 11 (Karakterkép jelen van)
-            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, // 12
-            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, // 13
-            `"Ezaz! De mihez vezet?"` // 14 (Karakterkép jelen van)
+            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: false },
+            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, image: false },
+            { text: `"Biztos, hogy ez az a fülke?"`, image: true }, // **KÉP MEGJELENIK** (biztos)
+            { text: `"Már húsz perce itt állunk, és semmi."`, image: false },
+            { text: `"Türelem, Anna."`, image: false },
+            { text: `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: false },
+            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: true }, // **KÉP MEGJELENIK** (ahogy)
+            { text: `"Ügynökök, az idő szorít."`, image: false },
+            { text: `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, image: false },
+            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: false },
+            { text: `"Egy üvegkapszulát? Ez valami rejtvény!"`, image: true }, // **KÉP MEGJELENIK** (egy üvegkapszulát)
+            { text: `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: false },
+            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, image: false },
+            { text: `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: false },
+            { text: `"Ezaz! De mihez vezet?"`, image: false } // Utolsó mondat
         ];
 
         let currentPartIndex = 0;
@@ -239,26 +252,10 @@
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
-        const characterImageContainer = document.getElementById('character-image-container'); // Új elem
-
-        // Mely mondatoknál jelenjen meg a karakterkép
-        function shouldShowCharacter(text) {
-            const lowerText = text.toLowerCase();
-            // A kérésben szereplő kezdő szavak: "biztos...", "ahogy...", "egy üvegkapszulát"
-            return lowerText.startsWith('"biztos') || 
-                   lowerText.startsWith('ahogy') || 
-                   lowerText.startsWith('"egy üvegkapszulát');
-        }
-
-        // A kép láthatóságának frissítése (mivel a beszélő változik, itt egyszerűsítettem a kérésre)
-        function updateCharacterImage(text) {
-            if (shouldShowCharacter(text)) {
-                characterImageContainer.classList.add('visible');
-            } else {
-                characterImageContainer.classList.remove('visible');
-            }
-        }
-
+        
+        const characterPortrait = document.getElementById('character-portrait');
+        const characterImage = characterPortrait.querySelector('img');
+        characterImage.src = CHARACTER_IMAGE_URL; // Beállítjuk a kép URL-jét
 
         function updateButtons() {
             prevButton.disabled = currentPartIndex === 0;
@@ -274,19 +271,22 @@
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
-                // Ha átlépünk a kódra, a karakterkép tűnjön el
-                characterImageContainer.classList.remove('visible'); 
             }
         }
         
         // Szöveg megjelenítése áttűnéssel
         function showStoryPart() {
+            // Karakterkép láthatóságának beállítása
+            if (currentPartIndex < storyParts.length && storyParts[currentPartIndex].image) {
+                characterPortrait.classList.add('visible');
+            } else {
+                characterPortrait.classList.remove('visible');
+            }
+
             storyDisplay.style.opacity = 0;
             setTimeout(() => {
                 if (currentPartIndex < storyParts.length) {
-                    const currentText = storyParts[currentPartIndex];
-                    storyDisplay.innerHTML = currentText;
-                    updateCharacterImage(currentText); // Kép frissítése a szöveg alapján
+                    storyDisplay.innerHTML = storyParts[currentPartIndex].text;
                 }
                 storyDisplay.style.opacity = 1;
                 updateButtons();
