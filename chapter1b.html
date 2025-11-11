@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lapozgatós Történet – Kémkód</title>
+    <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* A stílusok megegyeznek az előző kóddal a reszponzivitás és a CYOA hangulat érdekében */
+        /* Alapvető reszet és sötét háttér */
         body {
             margin: 0;
             padding: 0;
@@ -20,6 +20,7 @@
             text-align: center;
         }
 
+        /* Teljes szélességű kép (felső rész) */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -35,6 +36,7 @@
             filter: brightness(70%);
         }
 
+        /* Tartalom doboz a KÉP ALATT */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
@@ -50,14 +52,19 @@
             text-align: left;
         }
 
+        /* Történet szövege */
         #story-text-display {
             font-size: 1.1em;
             line-height: 1.6;
             min-height: 100px;
             margin-bottom: 20px;
             transition: opacity 0.5s ease-in-out; 
+            /* Fontos: A szöveget nagyobb betűtípussal jelenítjük meg a mondatonkénti lapozás miatt */
+            font-size: 1.3em;
+            font-weight: 700;
         }
 
+        /* Interakciós terület (Lapozó gombok vagy Jelszó input) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -67,6 +74,7 @@
             min-height: 48px;
         }
 
+        /* Lapozó gombok stílusa */
         .page-button {
             padding: 12px 20px;
             text-decoration: none;
@@ -94,6 +102,7 @@
             opacity: 0.6;
         }
 
+        /* Jelszó beviteli konténer */
         #password-container {
             display: none;
             flex-direction: column;
@@ -107,6 +116,7 @@
             display: flex;
         }
 
+        /* Input mező stílusa */
         #password-input {
             padding: 12px;
             border: 2px solid #8A2BE2;
@@ -119,6 +129,7 @@
             margin-bottom: 10px;
         }
 
+        /* Ellenőrző gomb stílusa */
         #check-password-button {
             padding: 15px 25px;
             color: #FFFFFF;
@@ -137,6 +148,7 @@
             background-color: #00DDEE;
         }
 
+        /* Üzenet stílusa */
         #message {
             margin-top: 10px;
             font-weight: 700;
@@ -175,24 +187,28 @@
     </div>
 
     <script>
-        // ÚJ Történet a 4 részre tördelve
+        // Történet: minden mondat külön elemként
         const storyParts = [
-            `
-                Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott. Anna türelmetlenül dobolt az ujjaival az üvegfalon. Márk türelemre intette: "Biztos, hogy ez az a fülke? Már húsz perce itt állunk, és semmi."
-            `,
-            `
-                Ahogy Márk befejezte a mondatot, a fülkébe csörgött a telefon. Anna azonnal felkapta a kagylót. Egy rekedt, torzított hang szólt a vonal túlsó végén: "Ügynökök, az idő szorít. A városban rejtett nyomok vezetnek a bűnszervezet terveihez."
-            `,
-            `
-                "Az első kódot a fejetek fölött találjátok. Egy üvegkapszulát keressetek." – folytatta a hang, majd letette. "Egy üvegkapszulát? Ez valami rejtvény!" – mondta Anna. Márk azonnal a fülke tetejéhez nyúlt.
-            `,
-            `
-                "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve." Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle. "Ezaz! De mihez vezet? "
-            `
+            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`,
+            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`,
+            `"Biztos, hogy ez az a fülke?"`,
+            `"Már húsz perce itt állunk, és semmi."`,
+            `"Türelem, Anna."`,
+            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`,
+            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`,
+            `"Ügynökök, az idő szorít."`,
+            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`,
+            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`,
+            `"Egy üvegkapszulát? Ez valami rejtvény!"`,
+            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
+            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
+            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
+            `"Ezaz! De mihez vezet?"`,
+            `A papíron egyetlen szám volt: 5571. A bejárat a kapu nyitásához szükséges. Írd be a kódot alul.`
         ];
 
         let currentPartIndex = 0;
-        const CORRECT_PASSWORD = "5571"; // ÚJ JELSZÓ
+        const CORRECT_PASSWORD = "5571"; // Új jelszó
         const SUCCESS_LINK = "minta_oldal_3.html"; 
         
         const storyDisplay = document.getElementById('story-text-display');
@@ -211,15 +227,17 @@
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
+                // Az utolsó lapozás előtt megváltozik a gomb felirata
                 nextButton.textContent = currentPartIndex === storyParts.length - 1 ? 'Kód beírása' : 'Folytatás';
             } else {
-                // Jelszó fázis: lapozó gombok eltűnnek, jelszó mező megjelenik
+                // Jelszó fázis: lapozó gombok eltűnnek, jelszó doboz megjelenik
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
             }
         }
         
+        // Szöveg megjelenítése áttűnéssel
         function showStoryPart() {
             storyDisplay.style.opacity = 0;
             setTimeout(() => {
@@ -234,7 +252,7 @@
         // Lapozás (Előre) kezelése
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
-            messageDisplay.textContent = ''; 
+            messageDisplay.textContent = '';
             showStoryPart();
         });
 
