@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="hu">
 <head>
@@ -55,15 +54,14 @@
 
         /* történet szövege */
         #story-text-display {
-            font-size: 1.3em; /* nagyobb betűméret a mondatonkénti megjelenés miatt */
+            font-size: 1.3em; 
             font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
             margin-bottom: 20px;
-            transition: opacity 0.5s ease-in-out; 
             
             /* Kurzor szimuláció CSS-ben */
-            border-right: 2px solid #00FFFF; /* Kurzor */
+            border-right: 2px solid #00FFFF;
             white-space: pre-wrap;
             overflow: hidden; 
             animation: blink-caret .75s step-end infinite;
@@ -91,7 +89,8 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            vertical-align: top; /* Eltolja a gombot a sor elejére */
+            vertical-align: top;
+            white-space: nowrap; /* Fontos, hogy a gomb egyben maradjon */
         }
 
         .audio-button:hover {
@@ -224,20 +223,21 @@
 
     <script>
         const storyPages = [
-            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" },
-            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: "https://i.ibb.co/L5tC46G/page-2.jpg" },
-            { text: `"Már húsz perce itt állunk, és semmi."`, image: "https://i.ibb.co/1n5b00v/page-3.jpg" }, 
-            { text: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: "https://i.ibb.co/v4t5z44/page-4.jpg" }, 
-            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: "https://i.ibb.co/4Tz2X5Y/page-5.jpg" }, 
-            // A kért szekció: A gombot beillesztjük a szöveg elé (HTML formátumban)
+            { text: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg", typing: true },
+            { text: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: "https://i.ibb.co/L5tC46G/page-2.jpg", typing: true },
+            { text: `"Már húsz perce itt állunk, és semmi."`, image: "https://i.ibb.co/1n5b00v/page-3.jpg", typing: true }, 
+            { text: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: "https://i.ibb.co/v4t5z44/page-4.jpg", typing: true }, 
+            { text: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: "https://i.ibb.co/4Tz2X5Y/page-5.jpg", typing: true }, 
+            // Az 5. indexű oldalon kikapcsoljuk a gépelést és beillesztjük a gombot
             { 
                 text: `<button class="audio-button" onclick="playAudio(this)">▶️ Lejátszás</button> "Ügynökök, az idő szorít." "A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, 
-                image: "https://i.ibb.co/Xz9F31h/page-6.jpg" 
+                image: "https://i.ibb.co/Xz9F31h/page-6.jpg",
+                typing: false // Kikapcsolt gépelés
             }, 
-            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: "https://i.ibb.co/Tq552k9/page-7.jpg" }, 
-            { text: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: "https://i.ibb.co/Wf0V9Xk/page-8.jpg" }, 
-            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" }, 
-            { text: `"Ezaz! De mihez vezet?"`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg" } 
+            { text: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: "https://i.ibb.co/Tq552k9/page-7.jpg", typing: true }, 
+            { text: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: "https://i.ibb.co/Wf0V9Xk/page-8.jpg", typing: true }, 
+            { text: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg", typing: true }, 
+            { text: `"Ezaz! De mihez vezet?"`, image: "https://i.ibb.co/8Y4L5c7/page-9.jpg", typing: true } 
         ];
 
         let currentPartIndex = 0;
@@ -260,15 +260,17 @@
         // Audio lejátszása és a gomb szövegének frissítése
         function playAudio(buttonElement) {
             if (storyAudio.paused) {
-                storyAudio.play();
+                storyAudio.play().catch(error => {
+                    console.log('Autoplay failed, user interaction needed.', error);
+                    // Opcionálisan ide kerülhet egy hibaüzenet
+                });
                 buttonElement.innerHTML = "⏸️ Szünet";
             } else {
                 storyAudio.pause();
                 buttonElement.innerHTML = "▶️ Lejátszás";
             }
         }
-        // Globális elérhetővé tétel az onclick miatt
-        window.playAudio = playAudio; 
+        window.playAudio = playAudio; // Globálisan elérhetővé tesszük
 
         function saveProgress() {
             localStorage.setItem('gameProgress', currentPartIndex);
@@ -298,30 +300,16 @@
             }
         }
 
-        // Gépelő effektus módosítva, hogy tudjon HTML-t is kezelni
+        // Gépelő effektus (csak sima szövegre)
         function typeWriterEffect(text, element, speed) {
             let i = 0;
             element.innerHTML = '';
             
-            // Kinyerjük a gomb HTML-t, ha létezik (az audio gomb esetében)
-            let remainingText = text;
-            let buttonHtml = '';
-            const buttonMatch = text.match(/<button.*?<\/button>/);
-            if (buttonMatch) {
-                buttonHtml = buttonMatch[0];
-                remainingText = text.replace(buttonHtml, '').trim();
-            }
-
-            // Hozzáadjuk a gombot azonnal, ha van
-            if (buttonHtml) {
-                element.innerHTML = buttonHtml;
-            }
-            
             element.style.animation = 'none'; 
             
             function type() {
-                if (i < remainingText.length) {
-                    element.innerHTML += remainingText.charAt(i); 
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i); 
                     i++;
                     setTimeout(type, speed);
                 } else {
@@ -335,7 +323,7 @@
         function showStoryPart() {
             messageDisplay.textContent = ''; 
 
-            // Állítsuk le a hangot, ha lapozunk
+            // Állítsuk le a hangot, ha lapozunk, és frissítsük a gombot
             storyAudio.pause();
             const currentButton = document.querySelector('.audio-button');
             if (currentButton) {
@@ -345,7 +333,17 @@
             if (currentPartIndex < storyPages.length) {
                 const currentPage = storyPages[currentPartIndex];
                 storyImage.src = currentPage.image; 
-                typeWriterEffect(currentPage.text, storyDisplay, TYPING_SPEED);
+
+                if (currentPage.typing) {
+                    // Ha a flag true (alapértelmezett)
+                    typeWriterEffect(currentPage.text, storyDisplay, TYPING_SPEED);
+                } else {
+                    // Ha a flag false (a gombos oldal)
+                    storyDisplay.innerHTML = currentPage.text;
+                    storyDisplay.style.animation = 'blink-caret .75s step-end infinite';
+                    updateButtons();
+                }
+
             } else {
                 updateButtons();
             }
@@ -374,7 +372,6 @@
                 messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
                 messageDisplay.style.color = '#00FF00';
                 localStorage.removeItem('gameProgress'); 
-                // Állítsuk le a hangot, ha sikerült a kód
                 storyAudio.pause();
                 setTimeout(() => {
                     window.location.href = SUCCESS_LINK;
