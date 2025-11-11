@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titkos Üzenet – Két Karakter Váltása (Érintkező)</title>
+    <title>Titkos Üzenet – Pontos Érintkezés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Alapvető reszet és sötét háttér */
@@ -37,22 +37,19 @@
             filter: brightness(50%);
         }
         
-        /* --- Karakterkép Konténerek --- */
-        
-        /* A content-box magassága: 45vh. Karakterkép magassága: 225px. 
-           A doboz aljától (bottom: 5vh) felfelé pozícionáljuk a karakterképet. */
-
         /* 3. Tartalom doboz (FIX pozíció - ALUL) */
         .content-box {
+            /* Fix pozíció: Rögzítve a képernyő aljához */
             position: fixed;
-            bottom: 5vh;
+            bottom: 5vh; 
             left: 50%;
             transform: translateX(-50%);
             
             width: 90%;
             max-width: 800px;
             
-            /* Max magasság: 45vh (marad a hely a karakterképnek és a felső margónak) */
+            /* Konkrét magasságot adunk a számításhoz: pl. 300px min-height + 20px padding + 48px gomb */
+            /* Max magasság, hogy maradjon hely a karakterképnek és a felső margónak */
             max-height: 45vh; 
             overflow-y: auto; 
 
@@ -73,16 +70,16 @@
             left: 50%;
             transform: translateX(-50%);
             
-            /* PONTOS ILLESZTÉS: 
-               bottom: 5vh (content-box alja) 
-               + max-height (45vh) 
-               + border-width (3px * 2, de csak a felső 3px érdekel, mert bottom van. Viszont a border-box paddingot is tartalmaz. A content-box alja és teteje közötti távolság 45vh. Tehát bottom: 5vh + 45vh). */
-            /* A calc pontosan 50vh (100vh - 5vh alul - 45vh magasság) távolságra van a tetejétől. */
-            bottom: calc(5vh + 45vh); 
-            
+            /* Pozíció: A content-box 'bottom' pozíciójából (5vh) indulunk,
+               majd hozzáadjuk a content-box magasságát (max-height 45vh)
+               és a karakterkép magasságát (225px) kivonjuk ebből.
+               bottom: (5vh + 45vh) - 225px. Ez biztosítja a pontos érintkezést. */
+            bottom: calc(5vh + 45vh - 225px); 
+
+            /* A konténer magassága */
+            height: 225px; 
             width: 90%;
             max-width: 800px;
-            height: 225px; /* 150% méret */
             
             margin: 0; 
             
@@ -93,7 +90,7 @@
             z-index: 30;
             transition: opacity 0.5s;
         }
-        
+
         #anna-container.visible, #mark-container.visible {
             display: flex;
         }
@@ -106,7 +103,7 @@
             box-shadow: none;
         }
 
-        /* A többi stílus változatlan */
+        /* Történet szövege */
         #story-text-display {
             font-size: 1.3em;
             font-weight: 700;
@@ -116,6 +113,7 @@
             transition: opacity 0.5s ease-in-out; 
         }
 
+        /* Lapozó és jelszó stílusok (megtartva) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -123,6 +121,40 @@
             padding-top: 10px;
             border-top: 1px dashed #8A2BE2;
             min-height: 48px;
+        }
+
+        .page-button {
+            padding: 12px 20px;
+            color: #FFFFFF;
+            background-color: #8A2BE2;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+        }
+        
+        .page-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        #password-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            padding-top: 10px;
+            text-align: center;
+        }
+
+        #password-container.visible {
+            display: flex;
         }
     </style>
 </head>
