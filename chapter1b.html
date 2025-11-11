@@ -54,14 +54,12 @@
 
         /* Történet szövege */
         #story-text-display {
-            font-size: 1.1em;
+            font-size: 1.3em; /* Nagyobb betűméret a mondatonkénti megjelenéshez */
+            font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
             margin-bottom: 20px;
             transition: opacity 0.5s ease-in-out; 
-            /* Fontos: A szöveget nagyobb betűtípussal jelenítjük meg a mondatonkénti lapozás miatt */
-            font-size: 1.3em;
-            font-weight: 700;
         }
 
         /* Interakciós terület (Lapozó gombok vagy Jelszó input) */
@@ -176,8 +174,8 @@
             </button>
 
             <div id="password-container">
-                <p>Add meg a Kapu Kódját:</p>
-                <input type="password" id="password-input" placeholder="****" maxlength="4">
+                <p>Add meg a Kódot:</p>
+                <input type="password" id="password-input" placeholder="5571" maxlength="4">
                 <button id="check-password-button">
                     Kód Ellenőrzése
                 </button>
@@ -203,12 +201,11 @@
             `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
             `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
             `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
-            `"Ezaz! De mihez vezet?"`,
-            `A papíron egyetlen szám volt: 5571. A bejárat a kapu nyitásához szükséges. Írd be a kódot alul.`
+            `"Ezaz! De mihez vezet?"` // Ez az UTOLSÓ lapozható mondat
         ];
 
         let currentPartIndex = 0;
-        const CORRECT_PASSWORD = "5571"; // Új jelszó
+        const CORRECT_PASSWORD = "5571";
         const SUCCESS_LINK = "minta_oldal_3.html"; 
         
         const storyDisplay = document.getElementById('story-text-display');
@@ -227,8 +224,7 @@
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
-                // Az utolsó lapozás előtt megváltozik a gomb felirata
-                nextButton.textContent = currentPartIndex === storyParts.length - 1 ? 'Kód beírása' : 'Folytatás';
+                nextButton.textContent = 'Folytatás';
             } else {
                 // Jelszó fázis: lapozó gombok eltűnnek, jelszó doboz megjelenik
                 nextButton.style.display = 'none';
@@ -251,9 +247,11 @@
 
         // Lapozás (Előre) kezelése
         nextButton.addEventListener('click', () => {
-            currentPartIndex++;
-            messageDisplay.textContent = '';
-            showStoryPart();
+            if (currentPartIndex < storyParts.length) {
+                currentPartIndex++;
+                messageDisplay.textContent = '';
+                showStoryPart();
+            }
         });
 
         // Lapozás (Vissza) kezelése
