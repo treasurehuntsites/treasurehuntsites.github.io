@@ -20,7 +20,7 @@
             text-align: center;
         }
 
-        /* Teljes szélességű kép (felső rész) */
+        /* Teljes szélességű HÁTTÉRKÉP */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -35,8 +35,34 @@
             object-position: center top;
             filter: brightness(70%);
         }
+        
+        /* KARAKTERKÉP KONÉNER (a szövegdoboz és a háttér között) */
+        #character-image-container {
+            position: relative;
+            z-index: 15; /* A tartalom és a háttér között, de a tartalom felett */
+            margin-top: -150px; /* Rálóg a háttérképre */
+            margin-bottom: -150px; /* Alá tolja a szövegdobozt */
+            opacity: 0; /* Alapból rejtett */
+            transition: opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
+            pointer-events: none; /* Ne akadályozza az egérkattintásokat */
+        }
+        
+        #character-image-container.visible {
+            opacity: 1;
+            margin-top: -140px; /* Enyhe mozgás animációhoz */
+            margin-bottom: -140px;
+        }
 
-        /* Tartalom doboz a KÉP ALATT */
+        #character-image-container img {
+            width: 100%;
+            max-width: 250px; /* Kisebb méret mobilon */
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8); /* Kék fényhatás a karakter körül */
+            border: 3px solid #00FFFF;
+        }
+
+        /* Tartalom doboz */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
@@ -52,9 +78,9 @@
             text-align: left;
         }
 
-        /* Történet szövege */
+        /* Történet és interakciós stílusok (többi változatlan) */
         #story-text-display {
-            font-size: 1.3em; /* Nagyobb betűméret a mondatonkénti megjelenés miatt */
+            font-size: 1.3em; 
             font-weight: 700;
             line-height: 1.6;
             min-height: 100px;
@@ -62,7 +88,6 @@
             transition: opacity 0.5s ease-in-out; 
         }
 
-        /* Interakciós terület (Lapozó gombok vagy Jelszó input) */
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -72,7 +97,6 @@
             min-height: 48px;
         }
 
-        /* Lapozó gombok stílusa */
         .page-button {
             padding: 12px 20px;
             text-decoration: none;
@@ -100,7 +124,6 @@
             opacity: 0.6;
         }
 
-        /* Jelszó beviteli konténer */
         #password-container {
             display: none;
             flex-direction: column;
@@ -114,7 +137,6 @@
             display: flex;
         }
 
-        /* Input mező stílusa */
         #password-input {
             padding: 12px;
             border: 2px solid #8A2BE2;
@@ -127,7 +149,6 @@
             margin-bottom: 10px;
         }
 
-        /* Ellenőrző gomb stílusa */
         #check-password-button {
             padding: 15px 25px;
             color: #FFFFFF;
@@ -146,7 +167,6 @@
             background-color: #00DDEE;
         }
 
-        /* Üzenet stílusa */
         #message {
             margin-top: 10px;
             font-weight: 700;
@@ -158,6 +178,10 @@
 
     <div class="full-width-image-container">
         <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1760193452.jpg" alt="Titokzatos erdő bejárata">
+    </div>
+
+    <div id="character-image-container">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
     </div>
 
     <div class="content-box">
@@ -187,21 +211,21 @@
     <script>
         // Történet: minden mondat külön elemként
         const storyParts = [
-            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`,
-            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`,
-            `"Biztos, hogy ez az a fülke?"`,
-            `"Már húsz perce itt állunk, és semmi."`,
-            `"Türelem, Anna."`,
-            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`,
-            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`,
-            `"Ügynökök, az idő szorít."`,
-            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`,
-            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`,
-            `"Egy üvegkapszulát? Ez valami rejtvény!"`,
-            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
-            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
-            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
-            `"Ezaz! De mihez vezet?"` // Utolsó mondat a kérés szerint
+            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, // 0
+            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, // 1
+            `"Biztos, hogy ez az a fülke?"`, // 2 (Karakterkép jelenik meg)
+            `"Már húsz perce itt állunk, és semmi."`, // 3 (Karakterkép jelen van)
+            `"Türelem, Anna."`, // 4 (Karakterkép elvileg eltűnik, de Márk is beszélhetne)
+            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, // 5 (Karakterkép nincs)
+            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, // 6 (Karakterkép jelenik meg)
+            `"Ügynökök, az idő szorít."`, // 7 (Karakterkép jelen van)
+            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, // 8 (Karakterkép jelen van)
+            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, // 9 (Karakterkép jelen van)
+            `"Egy üvegkapszulát? Ez valami rejtvény!"`, // 10 (Karakterkép jelen van)
+            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, // 11 (Karakterkép jelen van)
+            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, // 12
+            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, // 13
+            `"Ezaz! De mihez vezet?"` // 14 (Karakterkép jelen van)
         ];
 
         let currentPartIndex = 0;
@@ -215,6 +239,26 @@
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
+        const characterImageContainer = document.getElementById('character-image-container'); // Új elem
+
+        // Mely mondatoknál jelenjen meg a karakterkép
+        function shouldShowCharacter(text) {
+            const lowerText = text.toLowerCase();
+            // A kérésben szereplő kezdő szavak: "biztos...", "ahogy...", "egy üvegkapszulát"
+            return lowerText.startsWith('"biztos') || 
+                   lowerText.startsWith('ahogy') || 
+                   lowerText.startsWith('"egy üvegkapszulát');
+        }
+
+        // A kép láthatóságának frissítése (mivel a beszélő változik, itt egyszerűsítettem a kérésre)
+        function updateCharacterImage(text) {
+            if (shouldShowCharacter(text)) {
+                characterImageContainer.classList.add('visible');
+            } else {
+                characterImageContainer.classList.remove('visible');
+            }
+        }
+
 
         function updateButtons() {
             prevButton.disabled = currentPartIndex === 0;
@@ -224,13 +268,14 @@
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
-                // Az utolsó lapozás után lép át a kódra
                 nextButton.textContent = currentPartIndex === storyParts.length - 1 ? 'Tovább a Kódra' : 'Folytatás';
             } else {
-                // Jelszó fázis: lapozó gombok eltűnnek, jelszó doboz megjelenik
+                // Jelszó fázis
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
+                // Ha átlépünk a kódra, a karakterkép tűnjön el
+                characterImageContainer.classList.remove('visible'); 
             }
         }
         
@@ -238,9 +283,10 @@
         function showStoryPart() {
             storyDisplay.style.opacity = 0;
             setTimeout(() => {
-                // Csak akkor próbáljuk megjeleníteni a szöveget, ha van még rész
                 if (currentPartIndex < storyParts.length) {
-                    storyDisplay.innerHTML = storyParts[currentPartIndex];
+                    const currentText = storyParts[currentPartIndex];
+                    storyDisplay.innerHTML = currentText;
+                    updateCharacterImage(currentText); // Kép frissítése a szöveg alapján
                 }
                 storyDisplay.style.opacity = 1;
                 updateButtons();
@@ -250,7 +296,7 @@
         // Lapozás (Előre) kezelése
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
-            messageDisplay.textContent = ''; // Törli az esetleges hibaüzenetet
+            messageDisplay.textContent = '';
             showStoryPart();
         });
 
