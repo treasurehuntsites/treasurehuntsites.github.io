@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titkos Üzenet – Kódfejtés (Párbeszéd)</title>
+    <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* Alapvető reszet és sötét háttér */
@@ -20,7 +20,7 @@
             text-align: center;
         }
 
-        /* Teljes szélességű kép (felső rész) */
+        /* 1. Teljes szélességű fő kép (felső rész) */
         .full-width-image-container {
             width: 100%;
             height: 300px; 
@@ -36,38 +36,51 @@
             filter: brightness(70%);
         }
 
-        /* Tartalom doboz (a fő tartalom konténer, ehhez viszonyítunk a képpel) */
+        /* 2. Párbeszédes kép konténere (Szövegdoboz felett) */
+        .chat-image-container {
+            width: 100%;
+            max-width: 800px; /* Megfelel a tartalom doboz max szélességének */
+            height: 150px; 
+            margin: 20px 10px 0 10px; /* Távolság a fő képtől */
+            display: none; /* Alapból rejtve */
+            justify-content: center;
+            align-items: flex-end; /* Karakter alulról indul */
+            overflow: hidden;
+            transition: opacity 0.5s;
+        }
+
+        .chat-image-container.visible {
+            display: flex;
+        }
+
+        .chat-image-container img {
+            /* Kérés: ne vágja le a kép egyik szélét sem (arány megtartása mellett) */
+            height: 100%; 
+            width: auto;
+            object-fit: contain; 
+            /* Fontos: Nincs keret és nincs árnyék */
+            border: none;
+            box-shadow: none;
+        }
+
+        /* Tartalom doboz a KÉP(EK) ALATT */
         .content-box {
             background-color: rgba(0, 0, 0, 0.9);
             padding: 20px;
-            margin: 20px 10px 20px 10px; 
+            /* A chat kép miatt kevesebb a felső margó, de lent van */
+            margin: 0 10px 20px 10px; 
             border-radius: 10px;
             max-width: 800px;
             width: calc(100% - 20px);
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8A2BE2;
             box-sizing: border-box;
-            position: relative; /* Fontos! Ehhez viszonyítva lesz a karakterkép pozicionálva */
+            position: relative;
             z-index: 10;
             text-align: left;
         }
-        
-        /* KARAKTERKÉP STÍLUSA */
-        #character-avatar {
-            display: none; /* Alapból rejtett */
-            position: absolute;
-            top: 0;
-            left: 0;
-            /* Negatív margó, hogy a doboz bal felső sarkán túlnyúljon */
-            margin-top: -30px; 
-            margin-left: -30px; 
-            width: 100px; /* Kép mérete */
-            height: auto;
-            border-radius: 5px; /* Enyhe kerekítés, de keret nincs */
-            z-index: 20; /* Magasabb, mint a content-box, hogy fedjen */
-        }
-        
-        /* Történet szövege (beljebb húzzuk, ha a karakter beszél, hogy ne fedje a kép) */
+
+        /* Történet szövege */
         #story-text-display {
             font-size: 1.3em;
             font-weight: 700;
@@ -76,9 +89,6 @@
             margin-bottom: 20px;
             transition: opacity 0.5s ease-in-out; 
         }
-        
-        /* KÉP és GOMBOK stílusai változatlanok, a teljesség igénye nélkül kihagytam,
-           de az előző kódblokkban találhatóak. */
 
         /* Interakciós terület */
         .interaction-container {
@@ -90,6 +100,7 @@
             min-height: 48px;
         }
 
+        /* Lapozó gombok (marad a régi stílus) */
         .page-button {
             padding: 12px 20px;
             text-decoration: none;
@@ -117,7 +128,7 @@
             opacity: 0.6;
         }
 
-        /* Jelszó beviteli konténer */
+        /* Jelszó beviteli konténer (marad a régi stílus) */
         #password-container {
             display: none;
             flex-direction: column;
@@ -174,10 +185,12 @@
         <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1760193452.jpg" alt="Titokzatos erdő bejárata">
     </div>
 
+    <div id="chat-image-container" class="chat-image-container">
+        <img src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna, az ügynök">
+    </div>
+
     <div class="content-box">
         
-        <img id="character-avatar" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png" alt="Anna karakterkép">
-
         <p id="story-text-display"></p>
 
         <div class="interaction-container">
@@ -203,26 +216,26 @@
     <script>
         // Történet: minden mondat külön elemként
         const storyParts = [
-            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`,
-            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`,
-            `"**Biztos**, hogy ez az a fülke?"`,
-            `"**Már húsz** perce itt állunk, és semmi."`,
-            `"Türelem, Anna."`,
-            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`,
-            `**Ahogy** Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`,
-            `"Ügynökök, az idő szorít."`,
-            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`,
-            `"Az első kódot a fejetek fölött találjátok - **Egy üvegkapszulát** keressetek."`,
-            `"Egy üvegkapszulát? Ez valami rejtvény!"`,
-            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`,
-            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`,
-            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`,
-            `"Ezaz! De mihez vezet?"`
+            `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, // 0
+            `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, // 1
+            `"Biztos, hogy ez az a fülke?"`, // 2 <<< Kép megjelenik (Biztos...)
+            `"Már húsz perce itt állunk, és semmi."`, // 3 <<< Kép megjelenik (Már húsz...)
+            `"Türelem, Anna."`, // 4
+            `"Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, // 5
+            `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, // 6 <<< Kép megjelenik (Ahogy...)
+            `"Ügynökök, az idő szorít."`, // 7
+            `"A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."`, // 8
+            `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, // 9
+            `"Egy üvegkapszulát? Ez valami rejtvény!"`, // 10 <<< Kép megjelenik (Egy üvegkapszulát...)
+            `"Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, // 11
+            `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, // 12
+            `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, // 13
+            `"Ezaz! De mihez vezet?"` // 14 (Utolsó mondat)
         ];
-        
-        // A mondatok indexei, ahol a karakterkép megjelenik (0-tól indexelve)
-        // "Biztos..." (2), "Már húsz..." (3), "Ahogy..." (6), "Egy üvegkapszulát..." (9)
-        const AVATAR_INDICES = [2, 3, 6, 9]; 
+
+        // Azok az indexek, ahol a képnek látszódnia kell.
+        // A szövegek kezdete: "Biztos...", "Már húsz...", "Ahogy...", "Egy üvegkapszulát..."
+        const imageIndexes = [2, 3, 6, 10]; 
 
         let currentPartIndex = 0;
         const CORRECT_PASSWORD = "5571";
@@ -235,16 +248,16 @@
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
-        const characterAvatar = document.getElementById('character-avatar');
+        const chatImageContainer = document.getElementById('chat-image-container'); // Új elem
 
         function updateButtons() {
             prevButton.disabled = currentPartIndex === 0;
 
-            // Karakterkép megjelenítése/eltüntetése
-            if (AVATAR_INDICES.includes(currentPartIndex)) {
-                characterAvatar.style.display = 'block';
+            // Kép láthatóságának frissítése
+            if (imageIndexes.includes(currentPartIndex)) {
+                chatImageContainer.classList.add('visible');
             } else {
-                characterAvatar.style.display = 'none';
+                chatImageContainer.classList.remove('visible');
             }
 
             if (currentPartIndex < storyParts.length) {
@@ -257,6 +270,7 @@
                 // Jelszó fázis
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
+                chatImageContainer.classList.remove('visible'); // Kódnál eltűnik a kép
                 passwordContainer.classList.add('visible');
             }
         }
