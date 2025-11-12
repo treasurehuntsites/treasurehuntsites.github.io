@@ -254,20 +254,32 @@
         // STABIL KÉP URL HASZNÁLATA MINDEN OLDALHOZ: 
         const STABLE_IMAGE_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg";
 
-        // VISSZAÁLLÍTOTT EREDETI TÖRTÉNETRÉSZEK
+        // MÓDOSÍTOTT TÖRTÉNETRÉSZEK: Idézőjelek törölve, mondatok különválasztva, hangos oldalakon csak a gomb van
         const storyPages = [
             { type: 'text', content: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, image: STABLE_IMAGE_URL },
-            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon. "Biztos, hogy ez az a fülke?"`, image: STABLE_IMAGE_URL },
-            { type: 'text', content: `"Már húsz perce itt állunk, és semmi."`, image: STABLE_IMAGE_URL }, 
-            { type: 'text', content: `"Türelem, Anna." "Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot."`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Biztos, hogy ez az a fülke?`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Már húsz perce itt állunk, és semmi.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Türelem, Anna.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot.`, image: STABLE_IMAGE_URL }, 
             { type: 'text', content: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, image: STABLE_IMAGE_URL }, 
-            { type: 'audio', audioId: 1, content: `"Ügynökök, az idő szorít." "A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez."` }, // 1. Audio
-            { type: 'text', content: `"Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek."`, image: STABLE_IMAGE_URL }, 
-            { type: 'text', content: `"Egy üvegkapszulát? Ez valami rejtvény!" "Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve."`, image: STABLE_IMAGE_URL }, 
-            { type: 'text', content: `Néhány perc múlva Márk talált egy kis üvegkapszulát. Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: STABLE_IMAGE_URL }, 
-            { type: 'text', content: `"Ezaz! De mihez vezet?"`, image: STABLE_IMAGE_URL },
-            { type: 'text', content: `Anna, nézd meg mi van a papír másik oldalán! Lehet, hogy van még valami nyom.`, image: STABLE_IMAGE_URL },
-            { type: 'audio', audioId: 2, content: `Hoppá, van még egy hangfájl a papírra ragasztva, egy apró USB pendrive-on. Hallgassuk meg!` } // 2. Audio
+            { type: 'audio', audioId: 1, content: `` }, // 1. Audio - Szöveg törölve
+            { type: 'text', content: `Ügynökök, az idő szorít.`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `A városban rejtett nyomok vezetnek a bűnszövetkezet terveihez.`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Egy üvegkapszulát?`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ez valami rejtvény!`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Már meg is van!`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Itt volt pont a fejünk felett mágnessel rögzítve.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ezaz!`, image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `De mihez vezet?`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Anna, nézd meg mi van a papír másik oldalán!`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Lehet, hogy van még valami nyom.`, image: STABLE_IMAGE_URL },
+            { type: 'audio', audioId: 2, content: `` }, // 2. Audio - Szöveg törölve
+            { type: 'text', content: `Hoppá, van még egy hangfájl a papírra ragasztva, egy apró USB pendrive-on.`, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Hallgassuk meg!`, image: STABLE_IMAGE_URL } 
         ];
 
         let currentPartIndex = 0;
@@ -364,15 +376,17 @@
                 if (currentPartIndex < storyPages.length) {
                     const currentPage = storyPages[currentPartIndex];
                     
-                    if (currentPage.type === 'text') {
+                    if (currentPage.type === 'text' || currentPage.type === 'audio') {
+                        // Szöveg megjelenítése (hangos oldalaknál ez most üres string)
                         storyDisplay.innerHTML = currentPage.content;
-                    } else if (currentPage.type === 'audio') {
-                        // Hangüzenet megjelenítése
-                        storyDisplay.innerHTML = currentPage.content;
-                        if (currentPage.audioId === 1) {
-                            audioContainer1.style.display = 'block';
-                        } else if (currentPage.audioId === 2) {
-                            audioContainer2.style.display = 'block';
+                        
+                        // Audio gomb megjelenítése
+                        if (currentPage.type === 'audio') {
+                            if (currentPage.audioId === 1) {
+                                audioContainer1.style.display = 'block';
+                            } else if (currentPage.audioId === 2) {
+                                audioContainer2.style.display = 'block';
+                            }
                         }
                     }
                     
