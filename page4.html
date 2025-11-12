@@ -79,9 +79,9 @@
             margin-bottom: 15px;
         }
         
-        /* audio gomb stílusa - EGYSÉGESÍTVE */
+        /* audio gomb stílusa - EGYSÉGESÍTVE a page-button-höz hasonlóan */
         .audio-button {
-            padding: 12px 20px; /* Megemelve a lapozó gombok méretére */
+            padding: 12px 20px; 
             text-decoration: none;
             color: #1a1a1a;
             background-color: #00FFFF; 
@@ -117,19 +117,6 @@
             width: 100%;
         }
 
-        /* Jelszó beviteli konténer */
-        #password-container {
-            display: none;
-            flex-direction: column;
-            gap: 15px;
-            width: 100%;
-            text-align: center;
-        }
-
-        #password-container.visible {
-            display: flex;
-        }
-
         /* Lapozó gombok stílusa (Alap méret) */
         .page-button {
             padding: 12px 20px; 
@@ -157,6 +144,19 @@
             box-shadow: none;
             opacity: 0.6;
         }
+
+        /* Jelszó beviteli konténer */
+        #password-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        #password-container.visible {
+            display: flex;
+        }
         
         /* Input mező stílusa */
         #password-input {
@@ -180,37 +180,32 @@
             width: 100%;
         }
 
-        /* Ellenőrző gomb stílusa - EGYSÉGESÍTVE (méretben megegyezik a .page-button-nel) */
+        /* Ellenőrző gomb stílusa - **UNIFIKÁLVA:** megkapja a page-button alapjait */
         #check-password-button, #back-button-password {
-            padding: 12px 20px; 
+            /* Megöröklik a page-button stílusát a .page-button classon keresztül */
+            text-decoration: none;
             border: none;
             border-radius: 5px;
-            font-size: 1.1em; 
             font-weight: 700;
             cursor: pointer;
             transition: background-color 0.3s, transform 0.1s;
             text-transform: uppercase;
             white-space: nowrap; 
-            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4); /* Egységes árnyék */
         }
         
+        /* Egyedi színek, de egységes méret */
         #back-button-password {
             color: #ffffff;
-            background-color: #8a2be2; /* Megegyezik a Lapozó Vissza gombbal */
+            background-color: #8a2be2; 
         }
         
-        #back-button-password:hover {
-            background-color: #7b1cd1;
-            transform: translateY(-1px);
-        }
-
         #check-password-button {
             color: #ffffff;
             background-color: #00ffff;
             box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4); 
-            flex-grow: 1; /* Hogy kitöltse a maradék helyet */
+            flex-grow: 1; 
         }
-
+        
         #check-password-button:hover {
             background-color: #00ddee;
             transform: translateY(-1px); 
@@ -240,16 +235,26 @@
         
         /* --- NAGYÍTHATÓ KÉP STÍLUSOK --- */
         
-        /* Kicsi, kattintható kép a doboz fölött */
+        /* Kicsi, kattintható kép a content-box FELETT */
+        #puzzle-image-container {
+            display: none; /* Alapértelmezetten rejtve, a JS jeleníti meg */
+            width: 100%;
+            position: absolute;
+            top: 50%; /* Középre helyezés */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
         #puzzle-image {
             width: 150px; 
             height: auto;
-            margin: 15px auto;
-            display: none; 
+            display: block;
+            margin: 0 auto;
             cursor: pointer;
             border: 3px solid #00ffff;
             border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
         }
 
         /* MODAL KONTÉNER (A kinagyított kép háttere) */
@@ -303,10 +308,11 @@
         <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos jelenet">
     </div>
 
-    <img id="puzzle-image" 
-         src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg" 
-         alt="Titkos kód beolvasása" 
-         style="display: none;">
+    <div id="puzzle-image-container">
+        <img id="puzzle-image" 
+             src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg" 
+             alt="Titkos kód beolvasása">
+    </div>
 
     <div class="content-box" id="content-box">
         <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
@@ -337,10 +343,10 @@
                 <input type="password" id="password-input" maxlength="4">
                 
                 <div class="password-interaction">
-                    <button id="back-button-password">
+                    <button id="back-button-password" class="page-button">
                         Vissza
                     </button>
-                    <button id="check-password-button">
+                    <button id="check-password-button" class="page-button">
                         Kód Ellenőrzése
                     </button>
                 </div>
@@ -401,15 +407,16 @@
         const storyDisplay = document.getElementById('story-text-display');
         const nextButton = document.getElementById('next-page-button');
         const prevButton = document.getElementById('prev-page-button');
-        const interactionContainer = document.getElementById('interaction-container'); // Lapozó konténer
-        const passwordContainer = document.getElementById('password-container'); // Jelszó konténer
-        const backButtonPassword = document.getElementById('back-button-password'); // Vissza gomb a jelszó oldalon
+        const interactionContainer = document.getElementById('interaction-container'); 
+        const passwordContainer = document.getElementById('password-container'); 
+        const backButtonPassword = document.getElementById('back-button-password'); 
 
         const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
         const storyImage = document.getElementById('story-image'); 
-        const puzzleImage = document.getElementById('puzzle-image'); // Kicsi, nagyítható kép
+        const puzzleImageContainer = document.getElementById('puzzle-image-container'); // Kép konténer
+        const puzzleImage = document.getElementById('puzzle-image'); 
 
         const storyAudio1 = document.getElementById('story-audio-1');
         const playAudioButton1 = document.getElementById('play-audio-button-1');
@@ -452,7 +459,7 @@
 
         function toggleAudio(audioElement, buttonElement, buttonText) {
             if (audioElement.paused) {
-                stopAllAudio(); // Állítsuk le a többit
+                stopAllAudio(); 
                 audioElement.play().catch(error => {
                     console.error('Autoplay failed, user interaction needed.', error);
                 });
@@ -489,7 +496,7 @@
                 // Normál lapozó mód (interakciós konténer látható)
                 interactionContainer.style.display = 'flex';
                 passwordContainer.classList.remove('visible');
-                puzzleImage.style.display = 'none'; 
+                puzzleImageContainer.style.display = 'none'; // Kép elrejtése
                 
                 prevButton.disabled = currentPartIndex === 0;
                 nextButton.textContent = (currentPartIndex === storyPages.length - 1) ? 'Kód Megadása' : 'Folytatás';
@@ -497,14 +504,15 @@
                 // Kód kérés mód (jelszó konténer látható)
                 interactionContainer.style.display = 'none';
                 passwordContainer.classList.add('visible');
-                puzzleImage.style.display = 'block'; 
+                puzzleImageContainer.style.display = 'block'; // Kép megjelenítése
             }
         }
 
         function updateAvatar(pageIndex) {
             // AVATAR KÉP CSERÉJE
-            // Anna lépései: 2, 3, 7, 11. 
-            if (pageIndex === 2 || pageIndex === 3 || pageIndex === 7 || pageIndex === 11) {
+            const ANNA_PAGES = [2, 3, 7, 11]; 
+            
+            if (ANNA_PAGES.includes(pageIndex)) {
                 avatarImg.src = ANNA_AVATAR_URL;
                 avatarImg.alt = 'Anna avatar';
             } else {
