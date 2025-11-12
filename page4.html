@@ -226,33 +226,35 @@
             transition: opacity 0.3s ease-in-out; 
         }
         
-        /* --- NAGYÍTHATÓ KÉP STÍLUSOK (FELÜLRE HELYEZVE) --- */
+        /* --- NAGYÍTHATÓ KÉP STÍLUSOK (FELÜLRE HELYEZVE, SZÉLESSÉG BEÁLLÍTVA) --- */
         
         #puzzle-image-container {
             display: none; 
-            width: 100%;
-            max-width: 800px; /* Szélesség korlátozása a tartalomhoz igazítva */
+            /* Ugyanaz a max-width, mint a .content-box */
+            max-width: 800px; 
+            height: 150px; /* Magasság korlátozása, hogy csak egy része látszódjon */
+            overflow: hidden; /* A kép többi része elrejtve */
             position: fixed; 
-            top: 15%; /* FELÜLRE HELYEZÉS */
+            top: 15%; 
             left: 50%;
             transform: translateX(-50%); 
             z-index: 10;
             pointer-events: none; 
+            border: 3px solid #8a2be2; /* Keret hozzáadva, mint a content-boxon */
+            border-radius: 10px;
         }
 
         #puzzle-image {
-            width: 150px; 
+            width: 100%; /* Kitölti a konténert */
             height: auto;
             display: block;
-            margin: 0 auto;
+            margin: 0; /* Nincs külső margó */
             cursor: pointer;
-            border: 3px solid #00ffff;
-            border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
             pointer-events: all; 
         }
 
-        /* MODAL KONTÉNER (A kinagyított kép háttere) */
+        /* MODAL KONTÉNER (A nagyításhoz) */
         .modal {
             display: none; 
             position: fixed;
@@ -494,7 +496,13 @@
                 puzzleImageContainer.style.display = 'none'; // Kép elrejtése
                 
                 prevButton.disabled = currentPartIndex === 0;
-                nextButton.textContent = (currentPartIndex === storyPages.length - 1) ? 'Kód Megadása' : 'Folytatás';
+                // Visszaállítás "Folytatás"-ra
+                nextButton.textContent = 'Folytatás';
+                // Ha az utolsó oldal, akkor mégis kód megadása történik a háttérben
+                if (currentPartIndex === storyPages.length - 1) {
+                    nextButton.textContent = 'Folytatás'; // De a tovább lépés a kód oldalra visz
+                }
+
             } else {
                 // Kód kérés mód (jelszó konténer látható)
                 interactionContainer.style.display = 'none';
