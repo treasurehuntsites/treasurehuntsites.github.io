@@ -111,7 +111,7 @@
             min-height: 48px;
         }
 
-        /* Lapozó gombok stílusa (Alap méret) */
+        /* Lapozó gombok stílusa */
         .page-button {
             padding: 12px 20px; 
             text-decoration: none;
@@ -153,15 +153,6 @@
             display: flex;
         }
         
-        /* Hozzáadott div a kép megjelenítéséhez */
-        #image-hint-container {
-            text-align: center; 
-            margin-bottom: 20px;
-            padding-top: 10px;
-            border-top: 1px dashed #8a2be2; /* Elválasztó vonal */
-        }
-
-
         /* Input mező stílusa */
         #password-input {
             padding: 12px;
@@ -175,18 +166,24 @@
             margin-bottom: 10px;
         }
 
-        /* Ellenőrző gomb stílusa (MEGEGYEZIK a .page-button-nel, de más szín) */
-        /* A .page-button osztály garantálja a méretazonosságot */
-        #check-password-button.page-button {
-            /* Felülírjuk az alapértelmezett háttérszínt és árnyékot */
+        /* Ellenőrző gomb stílusa - MEGEGYEZIK a .page-button-nel */
+        #check-password-button {
+            padding: 12px 20px; 
+            color: #ffffff;
             background-color: #00ffff;
-            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4); 
-            color: #1a1a1a; /* Betűszín feketére váltva a jobb kontrasztért */
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em; 
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-transform: uppercase;
+            /* Eltávolítva az extra árnyék, ami optikailag nagyobbnak láttatta */
         }
-        
-        #check-password-button.page-button:hover {
+
+        #check-password-button:hover {
             background-color: #00ddee;
-            color: #1a1a1a;
+            transform: translateY(-1px); 
         }
 
         /* Üzenet stílusa */
@@ -211,35 +208,47 @@
             transition: opacity 0.3s ease-in-out; 
         }
         
-        /* Modal stílusok (Képgagyításhoz) */
+        /* --- ÚJ CSS: NAGYÍTHATÓ KÉP STÍLUSOK --- */
+        
+        /* Kicsi, kattintható kép a doboz fölött */
+        #puzzle-image {
+            width: 150px; /* Alapértelmezett méret */
+            height: auto;
+            margin: 15px auto;
+            display: none; /* Alapértelmezetten rejtve, amíg a JS meg nem jeleníti */
+            cursor: pointer;
+            border: 3px solid #00ffff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+
+        /* MODAL KONTÉNER (A kinagyított kép háttere) */
         .modal {
             display: none; /* Alapértelmezetten rejtve */
-            position: fixed; 
-            z-index: 50; 
+            position: fixed;
+            z-index: 100; /* Legfelül */
             padding-top: 60px; 
             left: 0;
             top: 0;
-            width: 100%; 
-            height: 100%; 
+            width: 100%;
+            height: 100%;
             overflow: auto; 
-            background-color: rgba(0,0,0,0.9); 
+            background-color: rgba(0, 0, 0, 0.9);
         }
 
+        /* MODAL TARTALOM (A kinagyított kép) */
         .modal-content {
             margin: auto;
             display: block;
             width: 90%;
             max-width: 700px;
-            animation-name: zoom;
-            animation-duration: 0.6s;
+            height: auto;
+            max-height: 90%; 
+            object-fit: contain; 
         }
 
-        @keyframes zoom {
-            from {transform:scale(0)} 
-            to {transform:scale(1)}
-        }
-
-        .close-button {
+        /* Bezáró gomb (X) */
+        .close {
             position: absolute;
             top: 15px;
             right: 35px;
@@ -247,15 +256,15 @@
             font-size: 40px;
             font-weight: bold;
             transition: 0.3s;
-        }
-
-        .close-button:hover,
-        .close-button:focus {
-            color: #bbb;
-            text-decoration: none;
             cursor: pointer;
         }
 
+        .close:hover,
+        .close:focus {
+            color: #00ffff;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -263,6 +272,11 @@
     <div class="full-width-image-container">
         <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos jelenet">
     </div>
+
+    <img id="puzzle-image" 
+         src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg" 
+         alt="Titkos kód beolvasása" 
+         style="display: none;">
 
     <div class="content-box" id="content-box">
         <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
@@ -275,12 +289,6 @@
         
         <div id="audio-container-2" class="audio-container" style="display:none;">
              <button id="play-audio-button-2" class="audio-button">▶️ Lejátszás (2)</button>
-        </div>
-
-        <div id="image-hint-container" style="display: none;">
-             <img id="hint-image-trigger" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg" 
-                  alt="Titkos üzenet a kapszulából" style="width: 100%; max-width: 250px; cursor: pointer; border: 3px solid #00ffff; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);">
-             <p style="font-size: 0.9em; margin-top: 5px; color: #aaa;">Kattints a képre a nagyításhoz</p>
         </div>
 
 
@@ -296,19 +304,20 @@
             <div id="password-container">
                 <p>Add meg a kódot:</p>
                 <input type="password" id="password-input" maxlength="4">
-                <button id="check-password-button" class="page-button"> 
+                <button id="check-password-button">
                     Kód Ellenőrzése
                 </button>
                 <p id="message"></p>
             </div>
         </div>
     </div>
-    
-    <div id="image-modal" class="modal">
-        <span class="close-button">&times;</span>
-        <img class="modal-content" id="img01">
-    </div>
 
+    <div id="myModal" class="modal" onclick="closeModal()">
+      <span class="close">&times;</span>
+      <img class="modal-content" id="img01" 
+           src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg" 
+           alt="Titkos kód beolvasása">
+    </div>
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
@@ -320,21 +329,25 @@
         // AVATAR KÉPEK URL-jei
         const MARK_AVATAR_URL = "https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true";
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
+        
+        // KÓDOLVASÓ KÉP URL-je
+        const PUZZLE_IMAGE_URL = "https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/Img/1757454039.jpg";
 
-        // TÖRTÉNETRÉSZEK
+
+        // MÓDOSÍTOTT TÖRTÉNETRÉSZEK
         const storyPages = [
-            { type: 'text', content: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 0. 
-            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 1. 
-            { type: 'text', content: `Biztos, hogy ez az a fülke?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 2. 
-            { type: 'text', content: `Már húsz perce itt állunk, és semmi.`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 3. 
+            { type: 'text', content: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 0. (Narrátor)
+            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 1. (Narrátor)
+            { type: 'text', content: `Biztos, hogy ez az a fülke?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 2. (Anna: 3. lépés)
+            { type: 'text', content: `Már húsz perce itt állunk, és semmi.`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 3. (Anna: 4. lépés)
             { type: 'text', content: `Türelem, Anna.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 4.
             { type: 'text', content: `Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 5.
-            { type: 'text', content: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 6. 
-            { type: 'text', content: `Nézd Márk, mi lehet ez? Mi van, ha megnyomom?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 7. 
+            { type: 'text', content: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 6. (Narrátor)
+            { type: 'text', content: `Nézd Márk, mi lehet ez? Mi van, ha megnyomom?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 7. (Anna, ÚJ LÉPÉS)
             { type: 'audio', audioId: 1, content: ``, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 8. (1. Audio)
             { type: 'audio', audioId: 2, content: ``, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 9. (2. Audio)
-            { type: 'text', content: `Egy üvegkapszulát?`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 10. <--- Kép itt jelenik meg
-            { type: 'text', content: `Ez valami rejtvény!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 11. 
+            { type: 'text', content: `Egy üvegkapszulát?`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 10.
+            { type: 'text', content: `Ez valami rejtvény!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 11. (Anna: 12. lépés)
             { type: 'text', content: `Már meg is van!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 12.
             { type: 'text', content: `Itt volt pont a fejünk felett mágnessel rögzítve.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 13.
             { type: 'text', content: `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 14.
@@ -346,7 +359,6 @@
         let currentPartIndex = 0;
         const CORRECT_PASSWORD = "5571";
         const SUCCESS_LINK = "minta_oldal_3.html"; 
-        const IMAGE_HINT_INDEX = 17; // A kép a történet VÉGÉN, a kódmegadás előtt jelenjen meg (utolsó oldal indexe + 1)
         
         const contentBox = document.getElementById('content-box');
         const storyDisplay = document.getElementById('story-text-display');
@@ -357,8 +369,8 @@
         const checkButton = document.getElementById('check-password-button');
         const messageDisplay = document.getElementById('message');
         const storyImage = document.getElementById('story-image'); 
-        const imageHintContainer = document.getElementById('image-hint-container');
-        
+        const puzzleImage = document.getElementById('puzzle-image');
+
         const storyAudio1 = document.getElementById('story-audio-1');
         const playAudioButton1 = document.getElementById('play-audio-button-1');
         const audioContainer1 = document.getElementById('audio-container-1');
@@ -369,11 +381,8 @@
         
         const avatarImg = document.getElementById('avatar-img');
         
-        // Modal elemek
-        const modal = document.getElementById("image-modal");
+        const modal = document.getElementById("myModal");
         const modalImg = document.getElementById("img01");
-        const hintImageTrigger = document.getElementById("hint-image-trigger");
-        const span = document.getElementsByClassName("close-button")[0];
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -402,7 +411,7 @@
 
         function toggleAudio(audioElement, buttonElement, buttonText) {
             if (audioElement.paused) {
-                stopAllAudio(); 
+                stopAllAudio(); // Állítsuk le a többit
                 audioElement.play().catch(error => {
                     console.error('Autoplay failed, user interaction needed.', error);
                 });
@@ -413,6 +422,22 @@
             }
         }
         
+        // Modal (Nagyítás) funkciók
+        function openModal(imgSrc) {
+            modal.style.display = "block";
+            modalImg.src = imgSrc;
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+        
+        // Eseménykezelő a kis képre
+        puzzleImage.onclick = function(){
+            openModal(PUZZLE_IMAGE_URL);
+        }
+
+
         playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
         playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
 
@@ -420,37 +445,21 @@
             prevButton.disabled = currentPartIndex === 0;
             stopAllAudio(); 
 
-            // Képi tipp és kód input megjelenítése a történet végén
+            // A kód input mező megjelenítése a történet végén
             if (currentPartIndex < storyPages.length) {
                 nextButton.style.display = 'block';
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
-                imageHintContainer.style.display = 'none'; // Elrejtjük, amíg nincs rá szükség
+                puzzleImage.style.display = 'none'; // Kép elrejtése
                 
-                // Utolsó oldal lapozó gomb felirata
+                // Az utolsó oldal lapozó gomb felirata:
                 nextButton.textContent = (currentPartIndex === storyPages.length - 1) ? 'Kód Megadása' : 'Folytatás';
-                
-            } else if (currentPartIndex === storyPages.length) {
-                // A KÓDMEGADÁS ELŐTTI ÁTMENETI LÉPÉS A KÉPPEL
-                nextButton.style.display = 'none';
-                prevButton.style.display = 'block';
-                passwordContainer.classList.remove('visible');
-                imageHintContainer.style.display = 'block'; // Megjelenítjük a képet
-                storyDisplay.innerHTML = 'Márk kibontotta a papírt. Ez állt rajta:';
-                
-                // Módosítjuk a "Vissza" gombot a kódról a képre váltáshoz
-                prevButton.textContent = 'Vissza a történethez';
-                
             } else {
-                 // Kód input megjelenítése
+                // Kód input megjelenítése
                 nextButton.style.display = 'none';
-                prevButton.style.display = 'block';
+                prevButton.style.display = 'none';
                 passwordContainer.classList.add('visible');
-                imageHintContainer.style.display = 'none';
-                storyDisplay.innerHTML = '';
-                
-                // Vissza gomb felirat a kód inputról
-                prevButton.textContent = 'Vissza a képhez';
+                puzzleImage.style.display = 'block'; // Kép megjelenítése
             }
         }
 
@@ -470,7 +479,7 @@
             // Indexek: 0, 1, 6, 8 (Audio 1), 9 (Audio 2), 14, 15
             const NARRATOR_PAGES = [0, 1, 6, 8, 9, 14, 15];
             
-            if (NARRATOR_PAGES.includes(pageIndex) || pageIndex >= storyPages.length) {
+            if (NARRATOR_PAGES.includes(pageIndex)) {
                 avatarImg.style.opacity = 0; 
             } else {
                 avatarImg.style.opacity = 1;
@@ -482,7 +491,7 @@
             contentBox.style.opacity = 0;
 
             setTimeout(() => {
-                // Elrejtjük az összes audio konténert és a képi tippet
+                // Elrejtjük az összes audio konténert
                 audioContainer1.style.display = 'none';
                 audioContainer2.style.display = 'none';
                 storyDisplay.innerHTML = ''; 
@@ -507,13 +516,9 @@
                     
                     storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
                     
-                } else if (currentPartIndex === storyPages.length) {
-                     // Képi tipp megjelenítésének kezelése
-                     updateAvatar(currentPartIndex);
-                     // A tartalom frissítése a kép megjelenítéséhez szükséges texttel történik az updateButtons-ben
                 } else {
                     // Kód bevitelnél
-                    updateAvatar(currentPartIndex); 
+                    avatarImg.style.opacity = 0; // Elrejtjük az avatart a kód inputnál
                 }
 
                 contentBox.style.opacity = 1;
@@ -531,33 +536,11 @@
 
         prevButton.addEventListener('click', () => {
             if (currentPartIndex > 0) {
-                // Ha a kód input mezőnél vagyunk, és vissza gombot nyomunk, menjünk vissza a képhez
-                if (currentPartIndex > storyPages.length) {
-                     currentPartIndex = storyPages.length;
-                } else {
-                    currentPartIndex--;
-                }
+                currentPartIndex--;
                 saveProgress();
                 showStoryPart();
             }
         });
-
-        // A KÉP MODAL KEZELÉSE
-        hintImageTrigger.onclick = function() {
-            modal.style.display = "block";
-            modalImg.src = this.src;
-        }
-
-        span.onclick = function() { 
-            modal.style.display = "none";
-        }
-        
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-
 
         checkButton.addEventListener('click', () => {
             const enteredPassword = passwordInput.value.trim();
