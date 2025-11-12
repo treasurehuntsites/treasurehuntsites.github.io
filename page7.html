@@ -51,7 +51,7 @@
             border: 3px solid #8a2be2;
             box-sizing: border-box;
             position: fixed; 
-            bottom: 0; 
+            bottom: 60px; /* Ezt módosítottam, hogy legyen helye az új menünek alatta */
             left: 50%;
             transform: translateX(-50%); 
             z-index: 10;
@@ -101,7 +101,7 @@
             background-color: #00DDEE;
         }
 
-        /* --- ALSÓ INTERAKCIÓS SÁV --- */
+        /* --- ALSÓ INTERAKCIÓS SÁV (a történet gombjai) --- */
         .bottom-bar {
             padding-top: 10px;
             border-top: 1px dashed #8a2be2;
@@ -229,24 +229,23 @@
         
         #puzzle-image-container {
             display: none; 
-            /* Ugyanaz a max-width, mint a .content-box */
             max-width: 800px; 
-            width: calc(100% - 20px); /* Megegyezik a content-box szélességével */
+            width: calc(100% - 20px); 
             height: 150px; 
-            overflow: hidden; /* Fölösleges részek vágása */
-            position: fixed; /* BIZTOSÍTJA A FIX POZÍCIÓT */
-            top: 10%; /* Fentebb pozícionálás */
+            overflow: hidden; 
+            position: fixed; 
+            top: 10%; 
             left: 50%;
             transform: translateX(-50%); 
             z-index: 10;
             pointer-events: none; 
             border: 3px solid #8a2be2; 
             border-radius: 10px;
-            box-sizing: border-box; /* Fontos a szélesség pontos számításához */
+            box-sizing: border-box; 
         }
 
         #puzzle-image {
-            width: 100%; /* Kitölti a konténert */
+            width: 100%; 
             height: auto;
             display: block;
             margin: 0; 
@@ -298,7 +297,48 @@
             text-decoration: none;
             cursor: pointer;
         }
+
+        /* --- ÚJ ALSÓ MENÜ SÁV --- */
+        .bottom-menu-bar {
+            position: fixed;
+            bottom: 0; /* Rögzítve az oldal aljára */
+            left: 0;
+            width: 100%;
+            height: 60px; /* Megfelelő magasság */
+            background-color: rgba(0, 0, 0, 0.8);
+            border-top: 1px solid #8a2be2;
+            z-index: 11; /* Magasabb z-index, mint a content-box */
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.4);
+        }
+
+        .menu-icon {
+            color: #e0e0e0;
+            font-size: 1.2em;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .menu-icon i {
+            font-size: 1.8em; /* Ikon mérete */
+            margin-bottom: 5px;
+        }
+
+        .menu-icon:hover {
+            background-color: rgba(138, 43, 226, 0.3);
+            color: #00ffff;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 
@@ -351,6 +391,17 @@
                 <p id="message"></p>
             </div>
         </div>
+    </div>
+
+    <div class="bottom-menu-bar">
+        <a href="#" class="menu-icon" id="gallery-icon">
+            <i class="fas fa-image"></i>
+            <span>KÉP</span>
+        </a>
+        <a href="minta_oldal_4.html" class="menu-icon">
+            <i class="fas fa-map-marked-alt"></i>
+            <span>TÉRKÉP</span>
+        </a>
     </div>
 
     <div id="myModal" class="modal" onclick="closeModal()">
@@ -434,6 +485,8 @@
         const modal = document.getElementById("myModal");
         const modalImg = document.getElementById("img01");
 
+        const galleryIcon = document.getElementById('gallery-icon');
+
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -483,10 +536,16 @@
             modal.style.display = "none";
         }
         
-        // Eseménykezelő a kis képre
+        // Eseménykezelő a kis kódképre
         puzzleImage.onclick = function(){
             openModal(PUZZLE_IMAGE_URL);
         }
+
+        // Eseménykezelő az új "KÉP" ikonra
+        galleryIcon.addEventListener('click', (e) => {
+            e.preventDefault(); // Megakadályozza az alapértelmezett link viselkedést
+            openModal(PUZZLE_IMAGE_URL);
+        });
 
 
         playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
@@ -596,34 +655,4 @@
             showStoryPart();
         });
 
-        checkButton.addEventListener('click', () => {
-            const enteredPassword = passwordInput.value.trim();
-
-            if (enteredPassword === CORRECT_PASSWORD) {
-                messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
-                messageDisplay.style.color = '#00FF00';
-                localStorage.removeItem('gameProgress'); 
-                stopAllAudio();
-                setTimeout(() => {
-                    window.location.href = SUCCESS_LINK;
-                }, 1000);
-            } else {
-                messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
-                messageDisplay.style.color = '#FF4500';
-                passwordInput.value = '';
-            }
-        });
-
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                checkButton.click(); 
-            }
-        });
-
-        window.onload = () => {
-            loadProgress(); 
-            showStoryPart();
-        };
-    </script>
-</body>
-</html>
+        checkButton.addEventListener('
