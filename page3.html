@@ -204,6 +204,7 @@
             z-index: 20; 
             display: block; 
             box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); 
+            transition: opacity 0.3s ease-in-out; /* Hozzáadva az elrejtéshez/megjelenítéshez */
         }
     </style>
 </head>
@@ -258,30 +259,26 @@
         const MARK_AVATAR_URL = "https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true";
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
 
-        // MÓDOSÍTOTT TÖRTÉNETRÉSZEK: A kért két szöveges rész törölve, Audio 2 átrakva a 9. lépésbe.
+        // MÓDOSÍTOTT TÖRTÉNETRÉSZEK
         const storyPages = [
-            { type: 'text', content: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.` }, // 0.
-            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 1.
+            { type: 'text', content: `Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 0. (Nincs avatar)
+            { type: 'text', content: `Anna türelmetlenül dobolt az ujjaival az üvegfalon.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 1. (Nincs avatar)
             { type: 'text', content: `Biztos, hogy ez az a fülke?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 2. (Anna: 3. lépés)
             { type: 'text', content: `Már húsz perce itt állunk, és semmi.`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 3. (Anna: 4. lépés)
             { type: 'text', content: `Türelem, Anna.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 4.
             { type: 'text', content: `Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 5.
-            { type: 'text', content: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 6.
+            { type: 'text', content: `Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 6.
             { type: 'audio', audioId: 1, content: ``, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 7. (1. Audio)
-            
-            // KÉT SZÖVEGES ELEM TÖRÖLVE INNEN
-
-            { type: 'audio', audioId: 2, content: ``, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 8. (2. Audio beillesztve)
-            
+            { type: 'audio', audioId: 2, content: ``, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 8. (2. Audio)
             { type: 'text', content: `Az első kódot a fejetek fölött találjátok - Egy üvegkapszulát keressetek.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 9.
             { type: 'text', content: `Egy üvegkapszulát?`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 10. 
             { type: 'text', content: `Ez valami rejtvény!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 11. (Anna: 12. lépés)
             { type: 'text', content: `Már meg is van!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 12.
             { type: 'text', content: `Itt volt pont a fejünk felett mágnessel rögzítve.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 13.
-            { type: 'text', content: `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 14.
-            { type: 'text', content: `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 15.
+            { type: 'text', content: `Néhány perc múlva Márk talált egy kis üvegkapszulát.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 14.
+            { type: 'text', content: `Mikor kinyitotta a tetejét, egy összetekert papírt húzott ki belőle.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 15.
             { type: 'text', content: `Ezaz!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 16.
-            { type: 'text', content: `De mihez vezet?`, speaker: 'Mark', image: STABLE_IMAGE_URL } // 17. (Történet vége a kód input előtt)
+            { type: 'text', content: `De mihez vezet?`, speaker: 'Mark', image: STABLE_IMAGE_URL } // 17. (Történet vége)
         ];
 
         let currentPartIndex = 0;
@@ -318,8 +315,6 @@
         function loadProgress() {
             const savedIndex = localStorage.getItem('gameProgress');
             if (savedIndex !== null) {
-                // Biztosítjuk, hogy az index ne lépjen túl az utolsó történetoldalon,
-                // de engedélyezzük, hogy betöltse a kód-input állapotát is.
                 currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length); 
             } else {
                 currentPartIndex = 0;
@@ -372,6 +367,7 @@
         }
 
         function updateAvatar(pageIndex) {
+            // AVATAR KÉP CSERÉJE
             // A kért indexek (3., 4., 12. lépés) a tömbben 2, 3 és 11 indexnek felelnek meg (0-tól számozva)
             if (pageIndex === 2 || pageIndex === 3 || pageIndex === 11) {
                 avatarImg.src = ANNA_AVATAR_URL;
@@ -379,6 +375,17 @@
             } else {
                 avatarImg.src = MARK_AVATAR_URL;
                 avatarImg.alt = 'Márk avatar';
+            }
+            
+            // AVATAR LÁTHATÓSÁG
+            // A kért első két lépés (0. és 1. index) esetén az opacity 0, különben 1
+            if (pageIndex === 0 || pageIndex === 1 || pageIndex === 6 || pageIndex === 7 || pageIndex === 8 || pageIndex === 14 || pageIndex === 15) {
+                // 0, 1: Nincs avatar (narrátor)
+                // 6, 7, 8: Narrátor (akció, hang)
+                // 14, 15: Narrátor (akció)
+                avatarImg.style.opacity = 0; 
+            } else {
+                avatarImg.style.opacity = 1;
             }
         }
 
@@ -390,15 +397,14 @@
                 // Elrejtjük az összes audio konténert
                 audioContainer1.style.display = 'none';
                 audioContainer2.style.display = 'none';
-                storyDisplay.innerHTML = ''; // Alaphelyzetbe állítjuk a szöveget
+                storyDisplay.innerHTML = ''; 
 
                 if (currentPartIndex < storyPages.length) {
                     const currentPage = storyPages[currentPartIndex];
                     
-                    updateAvatar(currentPartIndex); // Avatar frissítése
+                    updateAvatar(currentPartIndex); // Avatar frissítése és láthatóság beállítása
                     
                     if (currentPage.type === 'text' || currentPage.type === 'audio') {
-                        // Szöveg megjelenítése (hangos oldalaknál ez most üres string)
                         storyDisplay.innerHTML = currentPage.content;
                         
                         // Audio gomb megjelenítése
@@ -414,8 +420,8 @@
                     storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
                     
                 } else {
-                    // Ha túlléptünk a történeten és a kód bevitelnél vagyunk:
-                    updateAvatar(currentPartIndex); // Marad az utolsó szereplő
+                    // Kód bevitelnél
+                    avatarImg.style.opacity = 0; // Elrejtjük az avatart a kód inputnál
                 }
 
                 contentBox.style.opacity = 1;
