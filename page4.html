@@ -178,7 +178,6 @@
             cursor: pointer;
             transition: background-color 0.3s;
             text-transform: uppercase;
-            /* Eltávolítva az extra árnyék, ami optikailag nagyobbnak láttatta */
         }
 
         #check-password-button:hover {
@@ -208,7 +207,7 @@
             transition: opacity 0.3s ease-in-out; 
         }
         
-        /* --- ÚJ CSS: NAGYÍTHATÓ KÉP STÍLUSOK --- */
+        /* --- NAGYÍTHATÓ KÉP STÍLUSOK --- */
         
         /* Kicsi, kattintható kép a doboz fölött */
         #puzzle-image {
@@ -265,6 +264,11 @@
             text-decoration: none;
             cursor: pointer;
         }
+        
+        /* Kódoldal elrendezése: csak a visszamenő gomb látszik a lapozó konténerben */
+        .interaction-container.password-mode {
+             justify-content: flex-start; /* Gombot balra igazítja */
+        }
     </style>
 </head>
 <body>
@@ -292,7 +296,7 @@
         </div>
 
 
-        <div class="interaction-container">
+        <div class="interaction-container" id="interaction-container">
             <button id="prev-page-button" class="page-button" disabled>
                 Vissza
             </button>
@@ -365,12 +369,15 @@
         const nextButton = document.getElementById('next-page-button');
         const prevButton = document.getElementById('prev-page-button');
         const passwordContainer = document.getElementById('password-container');
-        const passwordInput = document.getElementById('password-input');
         const checkButton = document.getElementById('check-password-button');
+        const puzzleImage = document.getElementById('puzzle-image');
+        const interactionContainer = document.getElementById('interaction-container');
+
+        // ... (további változó definíciók) ...
+        const passwordInput = document.getElementById('password-input');
         const messageDisplay = document.getElementById('message');
         const storyImage = document.getElementById('story-image'); 
-        const puzzleImage = document.getElementById('puzzle-image');
-
+        
         const storyAudio1 = document.getElementById('story-audio-1');
         const playAudioButton1 = document.getElementById('play-audio-button-1');
         const audioContainer1 = document.getElementById('audio-container-1');
@@ -383,6 +390,7 @@
         
         const modal = document.getElementById("myModal");
         const modalImg = document.getElementById("img01");
+
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -437,7 +445,6 @@
             openModal(PUZZLE_IMAGE_URL);
         }
 
-
         playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
         playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
 
@@ -451,15 +458,21 @@
                 prevButton.style.display = 'block';
                 passwordContainer.classList.remove('visible');
                 puzzleImage.style.display = 'none'; // Kép elrejtése
+                interactionContainer.classList.remove('password-mode'); // Stílus eltávolítása
                 
                 // Az utolsó oldal lapozó gomb felirata:
                 nextButton.textContent = (currentPartIndex === storyPages.length - 1) ? 'Kód Megadása' : 'Folytatás';
             } else {
                 // Kód input megjelenítése
                 nextButton.style.display = 'none';
-                prevButton.style.display = 'none';
+                
+                // **MÓDOSÍTVA:** A Vissza gomb megjelenítése a kód beviteli oldalon
+                prevButton.style.display = 'block'; 
+                prevButton.textContent = 'Vissza'; 
+                
                 passwordContainer.classList.add('visible');
                 puzzleImage.style.display = 'block'; // Kép megjelenítése
+                interactionContainer.classList.add('password-mode'); // Stílus hozzáadása az elrendezéshez
             }
         }
 
@@ -495,6 +508,11 @@
                 audioContainer1.style.display = 'none';
                 audioContainer2.style.display = 'none';
                 storyDisplay.innerHTML = ''; 
+                
+                // Módosítjuk a Vissza gomb szövegét a normál lapozáshoz, ha éppen nem a kód oldalon vagyunk
+                if (currentPartIndex < storyPages.length) {
+                    prevButton.textContent = 'Vissza';
+                }
 
                 if (currentPartIndex < storyPages.length) {
                     const currentPage = storyPages[currentPartIndex];
@@ -519,6 +537,7 @@
                 } else {
                     // Kód bevitelnél
                     avatarImg.style.opacity = 0; // Elrejtjük az avatart a kód inputnál
+                    storyDisplay.innerHTML = 'Add meg a kódot, amit a papíron találsz!';
                 }
 
                 contentBox.style.opacity = 1;
