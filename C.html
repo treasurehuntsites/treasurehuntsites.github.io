@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titkos Küldetés: Városi Kaland</title>
+    <style>
+        /* Egyszerű, telefonos alkalmazásra emlékeztető stílus */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .container {
+            background-color: #333;
+            border: 2px solid #5cb85c;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 0 15px rgba(92, 184, 92, 0.5);
+        }
+
+        h1 {
+            color: #5cb85c;
+            text-align: center;
+            border-bottom: 2px solid #5cb85c;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        #story-box {
+            background-color: #222;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 150px;
+            margin-bottom: 20px;
+            white-space: pre-wrap; /* Megőrzi az esetleges sortöréseket a történetben */
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .code-input-container {
+            text-align: center;
+            margin-bottom: 15px;
+            display: none; /* Alapból elrejtve, csak a megfelelő ponton jelenik meg */
+        }
+
+        #code-input {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 150px;
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 5px;
+            background-color: #fff;
+            color: #333;
+        }
+
+        .map-button {
+            display: none; /* Alapból elrejtve, csak a megfelelő ponton jelenik meg */
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+
+        #prev-button {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        #next-button, #submit-code {
+            background-color: #5cb85c;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        #message {
+            color: #f00;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Titkos Küldetés: VÖRÖS FÉNY</h1>
+    <div id="story-box"></div>
+
+    <div class="code-input-container" id="code-entry">
+        <label for="code-input">Írd be a Kódot:</label>
+        <input type="text" id="code-input" maxlength="4" placeholder="____">
+        <button id="submit-code">Kód Ellenőrzése</button>
+        <p id="message"></p>
+    </div>
+
+    <button id="map-button" class="map-button" onclick="showMap()">Térkép a Következő Helyszínhez</button>
+
+    <div class="controls">
+        <button id="prev-button" disabled>« Vissza</button>
+        <button id="next-button">Tovább »</button>
+    </div>
+</div>
+
+<script>
+    // --- JÁTÉK LÉPÉSEK ÉS TÖRTÉNET ---
+    const story = [
+        // 0. Kezdés: Telefonfülke
+        {
+            text: "A városi forgatagban állsz egy elhagyatott **telefonfülke** mellett. A kagyló recseg, majd egy mély, torzított hang szól: 'A küldetés elkezdődött. Az első üzenet a fülke felett rejtőzik, egy üvegcsőben.'",
+            code_required: false,
+            map_available: false
+        },
+        // 1. Rejtvény 1: Telefonfülke kód
+        {
+            text: "Megtaláltad az üvegcsövet a fülke tetején. Benne egy apró, feltekert papír, rajta egy négyjegyű számkód. Ezt a kódot kell megadnod az alkalmazásba a továbblépéshez. Ha megvan, írd be ide.",
+            code_required: true,
+            correct_code: "3741", // Fiktív kód a példához
+            map_available: false
+        },
+        // 2. Tovább: Elhagyatott Ház - Szobrok
+        {
+            text: "A kód helyes. Egy új, titkosított üzenet érkezik: 'A következő pont: a **régi, elhagyatott ház**, ahol a négy szobor őrzi az utat. Keresd meg a szobrokat, és jegyezd fel a számokat, amelyekre néznek. A sorrend a szobrok elhelyezkedése alapján a Ház bejáratától indul.'\n\n[Térkép gomb a házhoz való navigáláshoz]",
+            code_required: false,
+            map_available: true,
+            map_location: "Elhagyatott Ház - Négy Szobor"
+        },
+        // 3. Rejtvény 2: Ház Szobor kód
+        {
+            text: "Megtaláltad a négy szobrot. Mindegyik egy-egy irányba néz, és az adott irányban van egy szám a falon. Keresd meg a négy számot (pl. 1, 8, 0, 5) és add meg a négyjegyű kódot a továbblépéshez.",
+            code_required: true,
+            correct_code: "1805", // Fiktív kód a példához
+            map_available: false
+        },
+        // 4. Tovább: Szabadtéri szobor
+        {
+            text: "Ügyes! A következő üzenet: 'A szabadtéri szobor vár rád. Ez a szobor, 'A Döntő Pillanat', egy elfeledett kém, **Alexander 'Árnyék' Kovács** tiszteletére áll. Árnyék 1997-ben mentette meg a várost egy hatalmas katasztrófától, de árulóként bélyegezték meg, és soha nem ismerték el. Csak az évszám maradt, mint utolsó rejtett jel. Olvasd le az évszámot a talapzatról!'\n\n[Térkép gomb a Szoborhoz]",
+            code_required: false,
+            map_available: true,
+            map_location: "Szabadtéri Szobor - 'A Döntő Pillanat'"
+        },
+        // 5. Rejtvény 3: Évszám kód
+        {
+            text: "Melyik évszámot találtad a szobor talapzatán? Add meg a kódot.",
+            code_required: true,
+            correct_code: "1997", // A történetben kitalált évszám
+            map_available: false
+        },
+        // 6. Tovább: Kilométerkő
+        {
+            text: "Az utolsó előtti állomás: 'Keresd a **011-es kilométerkövet**. Mögötte, elrejtve a földben, találsz egy üvegcsövet. A benne lévő papír adja meg a kulcsot a végső helyszínhez: egy **négyzetmértékű pontot** (pl. 40°30' N, 19°20' E) – ez a GPS koordinátád, amit be kell írnod, de csak a számokat!'\n\n[Térkép gomb a Kilométerkőhöz]",
+            code_required: false,
+            map_available: true,
+            map_location: "011-es Kilométerkő"
+        },
+        // 7. Rejtvény 4: GPS koordináta (csak számok)
+        {
+            text: "Megtaláltad a GPS koordinátákat az üvegcsőben. A kód a koordináták számjegyeiből áll, kihagyva az összes betűt és írásjelet (pl. ha N4030 E1920, akkor a kód 40301920). Add meg a nyolc (8) számjegyű kódot.",
+            code_required: true,
+            correct_code: "40301920", // Fiktív kód a példához
+            map_available: false
+        },
+        // 8. Végállomás: Vízesés
+        {
+            text: "A végső üzenet: 'Az utolsó pont: a városi **vízesés** (csatornakifolyó). Ott, a kőfal mögött, elrejtve találsz egy kincsesdobozt, egy négyszámjegyű záródó kulcsdobozt. A kód, ami kinyitja, a négy rejtvény megoldásának **utolsó számjegyeinek** összevonása: _Szobor kód utolsó számjegye + Évszám utolsó számjegye + GPS kód utolsó számjegye + Telefon kód utolsó számjegye_.' (Pl.: 5+7+0+1 = 5701 - _A példakódok utolsó számjegyei a következők: Telefon 374**1**, Szobor 180**5**, Évszám 199**7**, GPS 4030192**0**_)",
+            code_required: false,
+            map_available: true,
+            map_location: "Végállomás: Vízesés (Csatornakifolyó)"
+        },
+        // 9. Rejtvény 5: Végkód
+        {
+            text: "Megtaláltad a kulcsdobozt. Mi a négyszámjegyű kombináció, amit az utolsó utasítás alapján számoltál ki? (A példakódok utolsó számjegyei: 1, 5, 7, 0. A végső kód: **1570**)",
+            code_required: true,
+            correct_code: "1570", // A példa alapján: 1 (Telefon) + 5 (Szobor) + 7 (Évszám) + 0 (GPS) = 1570
+            map_available: false
+        },
+        // 10. Befejezés
+        {
+            text: "A kulcsdoboz kinyílik. Bent egy üzenet: 'A küldetés sikeres. Az igazság lelepleződött: Alex Kovács ártatlan volt. Az üzenet és a kulcs (egy üveggolyó alakú nyaklánc, egyedi galaxissal) a tied. Képezz új 'galaxisokat' a következő küldetéshez.'\n\n**GRATULÁLUNK! A JÁTÉK VÉGET ÉRT.**",
+            code_required: false,
+            map_available: false
+        }
+    ];
+
+    let currentStep = 0;
+    const storyBox = document.getElementById('story-box');
+    const prevButton = document.getElementById('prev-button');
+    const nextButton = document.getElementById('next-button');
+    const codeEntry = document.getElementById('code-entry');
+    const codeInput = document.getElementById('code-input');
+    const submitCodeButton = document.getElementById('submit-code');
+    const message = document.getElementById('message');
+    const mapButton = document.getElementById('map-button');
+
+    function updateView() {
+        const step = story[currentStep];
+
+        // 1. Történet frissítése
+        storyBox.innerHTML = step.text;
+
+        // 2. Navigációs gombok kezelése
+        prevButton.disabled = currentStep === 0;
+        nextButton.disabled = step.code_required; // 'Tovább' gomb letiltása, ha kód kell
+
+        // 3. Kódbeviteli mező kezelése
+        if (step.code_required) {
+            codeEntry.classList.remove('hidden');
+            codeInput.value = '';
+            message.textContent = '';
+            submitCodeButton.disabled = false;
+        } else {
+            codeEntry.classList.add('hidden');
+        }
+
+        // 4. Térkép gomb kezelése
+        if (step.map_available) {
+            mapButton.textContent = `Térkép: ${step.map_location}`;
+            mapButton.classList.remove('hidden');
+        } else {
+            mapButton.classList.add('hidden');
+        }
+    }
+
+    function goToNext() {
+        if (currentStep < story.length - 1) {
+            currentStep++;
+            updateView();
+        }
+    }
+
+    function goToPrev() {
+        if (currentStep > 0) {
+            currentStep--;
+            updateView();
+        }
+    }
+
+    function checkCode() {
+        const step = story[currentStep];
+        const enteredCode = codeInput.value.trim();
+
+        if (enteredCode === step.correct_code) {
+            message.textContent = "Kód elfogadva! Tovább léphetsz.";
+            message.style.color = '#5cb85c';
+            nextButton.disabled = false; // Engedélyezzük a továbblépést
+            submitCodeButton.disabled = true; // Letiltjuk a kódbevitelt
+        } else {
+            message.textContent = "Helytelen kód. Próbáld újra!";
+            message.style.color = '#ff4d4d';
+        }
+    }
+
+    function showMap() {
+        const step = story[currentStep];
+        if (step.map_available) {
+            alert(`Navigálás a következő helyszínre: ${step.map_location}\n\nA játékos most megnyitja a valós térkép alkalmazást, hogy odanavigáljon.`);
+        }
+    }
+
+    // Eseménykezelők hozzáadása
+    nextButton.addEventListener('click', goToNext);
+    prevButton.addEventListener('click', goToPrev);
+    submitCodeButton.addEventListener('click', checkCode);
+    
+    // Kezdő nézet beállítása
+    updateView();
+</script>
+
+</body>
+</html>
