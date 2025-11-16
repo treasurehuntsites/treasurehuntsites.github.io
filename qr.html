@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZXing QR Kód Olvasó</title>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; }
+        /* Itt jelenik meg a kamera képe */
+        #videoContainer { 
+            width: 100%; 
+            max-width: 500px; 
+            margin: 20px auto; 
+            border: 3px solid #007bff; 
+            border-radius: 8px; 
+            display: none; 
+            background-color: white;
+            overflow: hidden; 
+        }
+        /* A video elem kitölti a containert */
+        #video { width: 100%; height: auto; display: block; }
+
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; padding: 10px; background-color: #ffe0e0; border-radius: 5px; }
+        #startButton {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        p { margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>QR Kód Olvasó</h1>
+    <p>Kérlek, nyomd meg a gombot a kamera elindításához.</p>
+
+    <button id="startButton">📸 QR Kód Beolvasása</button>
+
+    <div id="videoContainer">
+        <video id="video"></video>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const videoElement = document.getElementById('video');
+        const videoContainer = document.getElementById('videoContainer');
+        const resultElement = document.getElementById('result');
+        const startButton = document.getElementById('startButton');
+
+        // ZXing kód olvasó inicializálása
+        const codeReader = new ZXing.BrowserQRCodeReader();
+        let stream = null; // A kamera stream tárolására
+
+        function stopScanning() {
+            codeReader.reset();
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            videoContainer.style.display = 'none';
+            startButton.style.display = 'block';
+            startButton.disabled = false;
+        }
+
+        function onScanSuccess(decodedText) {
+            resultElement.innerHTML = `<p class="success">Sikeres beolvasás! Tartalom: <b>${decodedText}</b></p>`;
+            stopScanning();
+
+            // Ellenőrizzük a feltételt: ABC
+            if (decodedText.trim() === "ABC") {
+                resultElement.innerHTML += '<p>✅ Kód elfogadva! Továbbirányítás a cnn.com oldalra...</p>';
+                setTimeout(() => {
+                    window.location.href = 'https://www.cnn.com';
+                }, 1500); 
+            } else {
+                resultElement.innerHTML += '<p class="error">❌ Érvénytelen kód. (Elvárt: ABC)</p>';
+            }
+        }
+
+        startButton.addEventListener('click', async () => {
+            startButton.disabled = true;
+            resultElement.innerHTML = '<p>📷 Keresem a hátsó kamerát és kérem az engedélyt...</p>';
+
+            try {
+                // A ZXing kéri a hátsó kamerát (facingMode: 'environment')
+                const videoInputDevices = await codeReader.getVideoInputDevices();
+                
+                if (videoInputDevices.length === 0) {
+                    throw new Error("Nincs videó bemeneti eszköz (kamera) az eszközön.");
+                }
+
+                // Megpróbáljuk megtalálni a hátsó kamerát
+                const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment')) || videoInputDevices[0];
+                
+                // Kód olvasás indítása
+                videoContainer.style.display = 'block';
+                startButton.style.display = 'none';
+
+                // A stream indítása és elkapása
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: rearCamera.deviceId,
+                        facingMode: 'environment'
+                    }
+                });
+                videoElement.srcObject = stream;
+                videoElement.play();
+                
+                // Elindítjuk a kód dekódolását a videó streamben
+                codeReader.decodeFromVideoElement(videoElement, (result, error) => {
+                    if (result) {
+                        onScanSuccess(result.text);
+                    }
+                    // A hiba kezelés itt folyamatos, nem írunk ki hibaüzenetet
+                });
+
+                resultElement.innerHTML = '<p>✅ Kamera indítva. Kérlek, tartsd a QR-kódot a kijelző elé!</p>';
+
+            } catch (err) {
+                // Hiba kezelése (ha a felhasználó blokkolja, vagy a böngésző tiltja)
+                resultElement.innerHTML = `<p class="error">❌ Súlyos hiba! Kamera indítás sikertelen. Hibaüzenet: <b>${err.message}</b></p>`;
+                
+                startButton.style.display = 'block';
+                startButton.disabled = false;
+                videoContainer.style.display = 'none';
+            }
+        });
+    </script>
+
+</body>
+</html>
