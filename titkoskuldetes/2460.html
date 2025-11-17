@@ -1,1 +1,938 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, orientation=portrait"> 
+    <title>Titkos Üzenet – Kódfejtés</title>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Alapvető reszet és sötét háttér */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Play', sans-serif;
+            /* FONTOS: Sötét téma beállítása */
+            color: #e0e0e0; 
+            background-color: #1a1a1a; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding-bottom: 60px; 
+        }
+        
+        /* ÚJ: Fekvő tájolás tiltása, csak a portré (álló) mód látható */
+        @media only screen and (orientation: landscape) {
+            body::after {
+                content: "Kérlek, tartsd függőlegesen a telefont!";
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #1a1a1a;
+                color: #ff4500;
+                font-size: 2em;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                text-align: center;
+            }
+            body > *:not(style):not(script):not(.full-width-image-container) {
+                display: none !important;
+            }
+        }
+        
+        /* Teljes szélességű KÉP (Háttér) */
+        .full-width-image-container {
+            width: 100%;
+            height: 100vh; 
+            overflow: hidden;
+            position: fixed; 
+            top: 0;
+            left: 0;
+            z-index: 0; 
+        }
 
+        .full-width-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+            object-position: center top; 
+        }
+
+        /* Tartalom doboz - FIX ALULRA ZÁRVA */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.7); 
+            padding: 40px; 
+            margin: 0; 
+            border-radius: 10px 10px 0 0; 
+            max-width: 800px;
+            width: calc(100% - 20px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+            border: 3px solid #8a2be2;
+            box-sizing: border-box;
+            position: fixed; 
+            bottom: 50px; 
+            left: 50%;
+            transform: translateX(-50%); 
+            z-index: 10;
+            text-align: left;
+            min-height: 250px; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: space-between; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Történet szövege */
+        #story-text-display {
+            font-size: 1.3em;
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap; 
+        }
+        
+        /* Audio gombok... */
+        .audio-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .audio-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #1a1a1a;
+            background-color: #00FFFF; 
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .audio-button:hover {
+            background-color: #00DDEE;
+        }
+
+        /* --- ALSÓ INTERAKCIÓS SÁV (a történet gombjai) --- */
+        .bottom-bar {
+            padding-top: 10px;
+            border-top: 1px dashed #8a2be2;
+            min-height: 48px;
+            width: 100%;
+        }
+
+        .interaction-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .page-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #ffffff;
+            background-color: #8a2be2;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+        }
+        
+        .page-button:hover:not(:disabled) {
+            background-color: #7b1cd1;
+            transform: translateY(-1px);
+        }
+
+        .page-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        /* Jelszó konténer */
+        #password-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        #password-container.visible {
+            display: flex;
+        }
+        
+        #password-input {
+            padding: 12px;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            background-color: #2c2c2c;
+            color: #00ffff;
+            font-size: 1.2em;
+            text-align: center;
+            font-family: 'Play', sans-serif;
+            margin-bottom: 5px; 
+        }
+
+        /* A "Add meg a kódot" sor flexbe igazítva a kérdőjellel */
+        #password-container p {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .password-interaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        #check-password-button, #back-button-password {
+            padding: 12px 20px; 
+            font-size: 1.1em; 
+        }
+        
+        #back-button-password {
+            color: #ffffff;
+            background-color: #8a2be2; 
+        }
+        
+        #check-password-button {
+            color: #ffffff;
+            background-color: #00ffff;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4); 
+            flex-grow: 1; 
+        }
+        
+        #check-password-button:hover {
+            background-color: #00ddee;
+            transform: translateY(-1px); 
+        }
+
+        #message {
+            margin-top: 10px;
+            font-weight: 700;
+            color: #ff4500;
+        }
+
+        /* Avatar kép */
+        .avatar-image {
+            position: absolute;
+            top: -50px; 
+            left: -10px; 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            z-index: 20; 
+            display: block; 
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); 
+            transition: opacity 0.3s ease-in-out; 
+        }
+        
+        /* --- FIX ALSÓ MENÜSOR --- */
+        .fixed-menu-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #1a1a1a;
+            border-top: 2px solid #8a2be2;
+            z-index: 50; 
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.3s;
+        }
+
+        .menu-button:hover {
+            color: #00ffff;
+        }
+
+        /* --- GALÉRIA MODAL STÍLUSOK --- */
+        #galleryModal {
+            display: none; 
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll; 
+            background-color: rgba(0, 0, 0, 0.95);
+        }
+        
+        /* ÚJ: Fő galéria nézet (bélyegképek) */
+        #gallery-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; 
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .gallery-thumbnail:hover {
+            transform: scale(1.03);
+        }
+
+        .gallery-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            display: block;
+        }
+        
+        /* Teljes képernyős modál konténer a zoomolható képnek */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: auto; 
+        }
+        
+        .full-image-content {
+            width: 100vw; 
+            height: 100vh;
+            display: flex;
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        #fullImageDisplay {
+            /* Kép zoomolhatóság beállítása */
+            display: block;
+            width: auto; 
+            height: auto;
+            max-width: 100%; 
+            max-height: 100%;
+            
+            touch-action: pan-x pan-y; 
+            cursor: move;
+            margin: auto;
+        }
+
+
+        .close-gallery {
+            position: absolute;
+            top: 15px;
+            right: 33px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 110;
+        }
+        
+        .close-gallery:hover,
+        .close-gallery:focus {
+            color: #00ffff;
+        }
+        
+        /* A navigációs gombok eltávolítva a modálból */
+        .gallery-nav {
+            display: none; 
+        }
+        
+        /* --- SÚGÓ (HELP) MODAL STÍLUSOK (ÚJ) --- */
+        #help-modal {
+            display: none;
+            position: fixed;
+            z-index: 200; /* Legfelül legyen */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+
+        .help-content {
+            background-color: #1a1a1a;
+            margin: 30% auto; /* Középre igazítás */
+            padding: 30px;
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            text-align: center;
+        }
+
+        #help-text-display {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 25px;
+            min-height: 80px;
+        }
+
+        #help-next-button, #help-close-button {
+            /* Általános stílus a súgó gomboknak */
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #help-next-button {
+            background-color: #00ffff;
+            color: #1a1a1a;
+        }
+
+        #help-next-button:hover {
+            background-color: #00ddee;
+        }
+        
+        #help-close-button:hover {
+            background-color: #777777 !important;
+        }
+
+        /* Súgó ikon a kódbevitelhez */
+        .help-icon {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 0; /* Megakadályozza, hogy megnyomja a környező szöveg sortávolságát */
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;"> 
+    <div class="full-width-image-container">
+        <img id="story-image" src="titkoskuldetes/Img/1757480990.jpg" alt="Titokzatos jelenet">
+    </div>
+
+    <div class="content-box" id="content-box">
+        <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
+        
+        <p id="story-text-display"></p>
+        
+        <div id="audio-container-1" class="audio-container" style="display:none;">
+             <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
+        </div>
+        <div id="audio-container-2" class="audio-container" style="display:none;">
+             <button id="play-audio-button-2" class="audio-button">▶️ Lejátszás (2)</button>
+        </div>
+
+
+        <div class="bottom-bar">
+            <div class="interaction-container" id="interaction-container">
+                <button id="prev-page-button" class="page-button" disabled>
+                    Vissza
+                </button>
+                
+                <button id="next-page-button" class="page-button">
+                    Folytatás
+                </button>
+            </div>
+
+            <div id="password-container">
+                <p>
+                    Add meg a kódot:
+                    <button id="help-button" class="help-icon" title="Segítség">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                </p>
+                <input type="password" id="password-input" maxlength="4">
+                
+                <div class="password-interaction">
+                    <button id="back-button-password" class="page-button">
+                        Vissza
+                    </button>
+                    <button id="check-password-button" class="page-button">
+                        ELLENŐRZÉS
+                    </button>
+                </div>
+                <p id="message"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="fixed-menu-bar">
+        <button id="map-button" class="menu-button" title="Térkép">
+            <i class="fa-solid fa-map-location-dot"></i>
+        </button>
+        
+        <button id="image-button" class="menu-button" title="Képgaléria">
+            <i class="fa-solid fa-image"></i>
+        </button>
+    </div>
+    
+    <div id="galleryModal">
+      <span class="close-gallery" onclick="history.back();">×</span>
+      <div id="gallery-container">
+            </div>
+    </div>
+    
+    <div id="full-image-display">
+        <div class="full-image-content">
+            <img id="fullImageDisplay" src="" alt="Nagyított kép" />
+        </div>
+        <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
+    </div>
+    
+    <div id="help-modal">
+        <div class="help-content">
+            <p id="help-text-display"></p>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <button id="help-close-button" class="page-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Bezárás</button>
+                <button id="help-next-button" class="page-button" style="flex-grow: 1; background-color: #00ffff; color: #1a1a1a;">Tovább</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
+    <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
+
+    <script>
+        // KÉP URL-ek
+        const STABLE_IMAGE_URL = "titkoskuldetes/Img/1757480990.jpg";  // <-- MÓDOSÍTVA
+        const MARK_AVATAR_URL = "https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true";
+        const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
+        const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
+
+        // GALÉRIA KÉPEK LISTÁJA <-- MÓDOSÍTVA
+        const galleryImages = [
+            { url: "titkoskuldetes/Img/1757450864.jpg", title: "Galéria kép 1" },
+            { url: "titkoskuldetes/Img/1757450882.jpg", title: "Galéria kép 2" },
+            { url: "titkoskuldetes/Img/1757450898.jpg", title: "Galéria kép 3" }
+        ];
+        let currentGalleryIndex = 0;
+
+
+        // 🛑 TÖRTÉNETRÉSZEK  <-- MÓDOSÍTVA (Egy mondat/doboz)
+        const storyPages = [
+            // Dialogue
+            { type: 'text', content: `Nézd Márk, milyen papírokat találtam!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Hát ezek meg mit jelenthetnek??`, speaker: 'Mark', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Lehet, hogy egy későbbi feladatnál még hasznát vehetjük!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Márk! Újabb üzenet a Vizualizátortól!`, speaker: 'Anna', image: STABLE_IMAGE_URL }, 
+            
+            // Narration
+            { type: 'text', content: `A Kölcsey utcától nem messze, egy régi kőkereszteződésben állt a Nepomuki Szent János-szobor.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Az emberek többsége csak áhítattal keresztet vetett előtte – hiszen Nepomuki a folyók, hidak, vízen átkelők védőszentje volt.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ám a környék öregjei mindig suttogva tettek hozzá valamit: „Ez a szobor nemcsak a víztől védett.”`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A legenda szerint a 19. században, amikor Budafok még Promontor néven volt ismert, a szobor talapzatába egy titkos rekeszt építettek.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A szőlősgazdák és kereskedők itt hagyták a kódolt üzeneteiket egymásnak, nehogy a vámosok vagy a riválisok lefülelék őket.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Aztán jött a háború.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A második világháború alatt a szobor már nemcsak a helyiek titkos postája volt, hanem kémek találkozópontja is.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A legenda úgy tartja, hogy ha valaki a szobor bronzkeresztjét meghúzta, egy apró vasfülke nyílt a kőalapzat oldalán.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ide rejtettek el filmtekercseket, kódolt üzeneteket, sőt egyszer még egy titkos térképet is, amely a Duna alatti csatornajáratokat mutatta.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A hidegháború idején az ÁVH és a nyugati ügynökök egyaránt figyelték a szobrot.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Egykori besúgók szerint minden hónap 13-án, éjfélkor valaki mindig megjelent a Nepomuki lábánál, és cserélt valamit a rejtekben.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Hogy mi volt az?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Senki sem tudja.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Egyesek szerint csak üres papírlapok – hogy összezavarják az ellenséget.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Mások szerint valódi titkok: atomkísérletek helyszínei, fedőnevek, vagy épp ügynökök valódi személyazonossága.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Ma már sokan azt hiszik, a szobor pusztán vallási emlék.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `De a környékbeli gyerekek még mindig azt mesélik egymásnak, hogy ha a telihold fényében halkan odasúgod a szobornak egy titkodat, a szobor halkan vissza suttogta azt.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `És ki tudja?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Talán egyszer valaki valóban megtalálja a vasajtót a talapzat mélyén, és vele együtt egy egész korszak elfeledett üzeneteit.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Keressétek meg a 4 jegyű számkódot a talpazaton.`, speaker: 'Narrator', image: STABLE_IMAGE_URL } 
+        ];
+
+
+        let currentPartIndex = 0;
+        const CORRECT_PASSWORD = "1935"; 
+        const SUCCESS_LINK = "1935.html"; 
+        
+        // 🛑 MÓDOSÍTOTT: SEGÍTSÉG ADATOK ÉS ÁLLAPOT
+        const HELP_MESSAGES = [
+            "A szobroknak közük lehet a számkódos megoldáshoz.",
+            "Lehet, hogy fontos merre néznek?",
+            "A segítségnek ára van. Vigyázz , mert ha nem érsz el 50 pontot a játék végéig, nem tudod a játékot befejezni. A kód: 2460"
+        ];
+        let currentHelpIndex = 0;
+        
+        // DOM elemek
+        const contentBox = document.getElementById('content-box');
+        const storyDisplay = document.getElementById('story-text-display');
+        const nextButton = document.getElementById('next-page-button');
+        const prevButton = document.getElementById('prev-page-button');
+        const interactionContainer = document.getElementById('interaction-container'); 
+        const passwordContainer = document.getElementById('password-container'); 
+        const backButtonPassword = document.getElementById('back-button-password'); 
+
+        const passwordInput = document.getElementById('password-input');
+        const checkButton = document.getElementById('check-password-button');
+        const messageDisplay = document.getElementById('message');
+        const storyImage = document.getElementById('story-image'); 
+        
+        const storyAudio1 = document.getElementById('story-audio-1');
+        const playAudioButton1 = document.getElementById('play-audio-button-1');
+        const audioContainer1 = document.getElementById('audio-container-1');
+        
+        const storyAudio2 = document.getElementById('story-audio-2');
+        const playAudioButton2 = document.getElementById('play-audio-button-2');
+        
+        const audioContainer2 = document.getElementById('audio-container-2'); 
+        
+        const avatarImg = document.getElementById('avatar-img');
+        
+        const imageButton = document.getElementById('image-button');
+        const mapButton = document.getElementById('map-button'); 
+
+        // GALÉRIA DOM elemek
+        const galleryModal = document.getElementById('galleryModal');
+        const galleryContainer = document.getElementById('gallery-container');
+        
+        // Nagyított képhez tartozó elemek
+        const fullImageDisplayModal = document.getElementById('full-image-display');
+        const fullImageDisplay = document.getElementById('fullImageDisplay');
+        
+        // 🛑 MÓDOSÍTOTT: Súgó DOM elemek
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const helpTextDisplay = document.getElementById('help-text-display');
+        const helpNextButton = document.getElementById('help-next-button');
+        const helpCloseButton = document.getElementById('help-close-button'); // ÚJ
+
+        // --- Segéd FÜGGVÉNYEK ---
+
+        function saveProgress() {
+            localStorage.setItem('gameProgress', currentPartIndex);
+        }
+
+        function loadProgress() {
+            const savedIndex = localStorage.getItem('gameProgress');
+            if (savedIndex !== null) {
+                currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length); 
+            } else {
+                currentPartIndex = 0;
+            }
+        }
+        
+        function stopAllAudio() {
+             storyAudio1.pause();
+             storyAudio1.currentTime = 0;
+             playAudioButton1.innerHTML = "▶️ Lejátszás (1)";
+             
+             storyAudio2.pause();
+             storyAudio2.currentTime = 0;
+             playAudioButton2.innerHTML = "▶️ Lejátszás (2)";
+        }
+
+        function toggleAudio(audioElement, buttonElement, buttonText) {
+            if (audioElement.paused) {
+                stopAllAudio(); 
+                audioElement.play().catch(error => {
+                    console.error('Autoplay failed, user interaction needed.', error);
+                });
+                buttonElement.innerHTML = `⏸️ Szünet (${buttonText})`;
+            } else {
+                audioElement.pause();
+                buttonElement.innerHTML = `▶️ Lejátszás (${buttonText})`;
+            }
+        }
+
+        // GALÉRIA FUNKCIÓK (változatlan)
+        function populateGallery() {
+            galleryContainer.innerHTML = ''; 
+            galleryImages.forEach((image, index) => {
+                const thumbnailDiv = document.createElement('div');
+                thumbnailDiv.className = 'gallery-thumbnail';
+                
+                const img = document.createElement('img');
+                img.src = image.url;
+                img.alt = image.title;
+                img.dataset.index = index;
+                
+                thumbnailDiv.onclick = () => openFullImage(image.url);
+                
+                thumbnailDiv.appendChild(img);
+                galleryContainer.appendChild(thumbnailDiv);
+            });
+        }
+        
+        function openFullImage(imageUrl) {
+            fullImageDisplay.src = imageUrl;
+            fullImageDisplayModal.style.display = 'block';
+            galleryModal.style.display = 'none'; 
+            history.pushState(null, null, '#full-image');
+        }
+        
+        function closeFullImage() {
+            fullImageDisplayModal.style.display = 'none';
+        }
+
+        function openGallery() {
+            populateGallery(); 
+            galleryModal.style.display = "block";
+            history.pushState(null, null, '#gallery');
+        }
+
+        function closeGallery() {
+            galleryModal.style.display = "none";
+            fullImageDisplayModal.style.display = 'none'; 
+        }
+
+        // --- SÚGÓ FUNKCIÓK (MÓDOSÍTVA) ---
+
+        function closeHelpModal() {
+            helpModal.style.display = 'none';
+        }
+
+        function showHelpMessage() {
+            if (currentHelpIndex < HELP_MESSAGES.length) {
+                helpTextDisplay.textContent = HELP_MESSAGES[currentHelpIndex];
+                helpModal.style.display = 'block';
+                
+                // Gombok láthatósága és felirata
+                if (currentHelpIndex === HELP_MESSAGES.length - 1) {
+                    helpNextButton.textContent = 'Értem';
+                } else {
+                    helpNextButton.textContent = 'Tovább';
+                }
+                
+            } else {
+                // Ha elfogyott a segítség, csak zárjuk be a modált
+                closeHelpModal();
+                currentHelpIndex = HELP_MESSAGES.length - 1; // Maradjon az utolsó indexen
+            }
+        }
+
+        function nextHelpStep() {
+            if (currentHelpIndex < HELP_MESSAGES.length - 1) {
+                currentHelpIndex++;
+                showHelpMessage();
+            } else {
+                // Zárás, ha az utolsó segítség is megvolt (az "Értem" gomb funkciója)
+                closeHelpModal();
+            }
+        }
+
+        // MÓDOSÍTVA: Eseménykezelő a böngésző Vissza gombjára (Modálok zárása)
+        window.addEventListener('popstate', function(event) {
+            if (fullImageDisplayModal.style.display === 'block') {
+                closeFullImage();
+                history.pushState(null, null, '#gallery'); 
+            } else if (galleryModal.style.display === 'block') {
+                closeGallery();
+                history.pushState(null, null, window.location.pathname + window.location.search);
+            }
+        });
+        
+        // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK (változatlan) ---
+
+        function updateButtons() {
+            stopAllAudio(); 
+
+            if (currentPartIndex < storyPages.length) {
+                // Normál lapozó mód 
+                interactionContainer.style.display = 'flex';
+                passwordContainer.classList.remove('visible');
+                
+                prevButton.disabled = currentPartIndex === 0;
+                nextButton.textContent = 'Folytatás';
+            } else {
+                // Kód kérés mód 
+                interactionContainer.style.display = 'none';
+                passwordContainer.classList.add('visible');
+            }
+        }
+
+        function updateAvatar(pageIndex) {
+            const speakerType = pageIndex < storyPages.length ? storyPages[pageIndex].speaker : 'Narrator';
+            
+            if (speakerType === 'Anna') {
+                avatarImg.src = ANNA_AVATAR_URL;
+                avatarImg.alt = 'Anna avatar';
+                avatarImg.style.opacity = 1;
+            } else if (speakerType === 'Mark') {
+                avatarImg.src = MARK_AVATAR_URL;
+                avatarImg.alt = 'Márk avatar';
+                avatarImg.style.opacity = 1;
+            } else {
+                // Narrator vagy kódbevitel: láthatatlan avatar
+                avatarImg.src = MARK_AVATAR_URL; 
+                avatarImg.alt = 'Szereplő avatar';
+                avatarImg.style.opacity = 0; 
+            }
+        }
+
+        function showStoryPart() {
+            messageDisplay.textContent = ''; 
+            contentBox.style.opacity = 0;
+
+            setTimeout(() => {
+                audioContainer1.style.display = 'none';
+                audioContainer2.style.display = 'none';
+                storyDisplay.innerHTML = ''; 
+
+                if (currentPartIndex < storyPages.length) {
+                    const currentPage = storyPages[currentPartIndex];
+                    
+                    updateAvatar(currentPartIndex); 
+                    
+                    if (currentPage.type === 'text' || currentPage.type === 'audio') {
+                        storyDisplay.innerHTML = currentPage.content;
+                        
+                        if (currentPage.type === 'audio') {
+                            if (currentPage.audioId === 1) {
+                                audioContainer1.style.display = 'block';
+                            } else if (currentPage.audioId === 2) {
+                                audioContainer2.style.display = 'block';
+                            }
+                        }
+                    }
+                    
+                    storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
+                    
+                } else {
+                    // Kód bevitelnél
+                    updateAvatar(currentPartIndex);
+                    storyDisplay.innerHTML = 'Add meg a kódot!';
+                }
+
+                contentBox.style.opacity = 1;
+                updateButtons();
+            }, 500);
+        }
+        
+        // --- ESEMÉNYKEZELŐK ---
+        
+        document.querySelector('#galleryModal .close-gallery').onclick = () => {
+             history.back(); 
+        };
+        
+        document.querySelector('#full-image-display .close-gallery').onclick = () => {
+             history.back(); 
+        };
+
+        nextButton.addEventListener('click', () => {
+            currentPartIndex++;
+            saveProgress();
+            showStoryPart();
+        });
+
+        prevButton.addEventListener('click', () => {
+            if (currentPartIndex > 0) {
+                currentPartIndex--;
+                saveProgress();
+                showStoryPart();
+            }
+        });
+        
+        backButtonPassword.addEventListener('click', () => {
+            currentPartIndex = storyPages.length - 1; 
+            saveProgress();
+            showStoryPart();
+        });
+
+        checkButton.addEventListener('click', () => {
+            const enteredPassword = passwordInput.value.trim();
+
+            if (enteredPassword === CORRECT_PASSWORD) {
+                messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
+                messageDisplay.style.color = '#00FF00';
+                localStorage.removeItem('gameProgress'); 
+                stopAllAudio();
+                setTimeout(() => {
+                    window.location.href = SUCCESS_LINK;
+                }, 1000);
+            } else {
+                messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
+                messageDisplay.style.color = '#FF4500';
+                passwordInput.value = '';
+            }
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkButton.click(); 
+            }
+        });
+        
+        playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
+        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
+
+        
+        // 1. Képgaléria menü gomb eseménykezelője
+        imageButton.addEventListener('click', openGallery);
+        
+        // 2. Térkép menü gomb eseménykezelője
+        mapButton.addEventListener('click', () => {
+            window.open('https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13', '_blank');
+        });
+
+        // 🛑 MÓDOSÍTOTT: Súgó eseménykezelők
+        if (helpButton) {
+            helpButton.addEventListener('click', showHelpMessage);
+        }
+
+        if (helpNextButton) {
+            helpNextButton.addEventListener('click', nextHelpStep);
+        }
+        
+        // ÚJ: Bezárás eseménykezelő
+        if (helpCloseButton) {
+            helpCloseButton.addEventListener('click', closeHelpModal);
+        }
+
+
+        window.onload = () => {
+            loadProgress(); 
+            showStoryPart();
+        };
+    </script>
+</body>
+</html>
