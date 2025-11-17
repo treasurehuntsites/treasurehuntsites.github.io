@@ -284,56 +284,81 @@
             width: 100%;
             height: 100%;
             /* Engedélyezi a görgetést, ha a tartalom nagyobb */
-            overflow: auto; 
+            overflow-y: scroll; 
             background-color: rgba(0, 0, 0, 0.95);
         }
+        
+        /* ÚJ: Fő galéria nézet (bélyegképek) */
+        #gallery-container {
+            display: grid;
+            /* Két egyforma széles oszlop */
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
 
-        .gallery-content {
-            /* Eltávolítva a fix centerezés és méretezés */
-            position: relative;
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; /* Fix magasság a jó elrendezéshez */
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .gallery-thumbnail:hover {
+            transform: scale(1.03);
+        }
+
+        .gallery-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Kitölti a tárolót, nem feltétlenül a teljes képet mutatja */
+            display: block;
+        }
+        
+        /* Teljes képernyős modál konténer a zoomolható képnek */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: auto; /* Ez a lényeg a zoomolhatósághoz! */
+        }
+        
+        .full-image-content {
+            /* Fix centerezés eltávolítva */
             width: 100%;
             min-height: 100%; 
             display: flex;
-            align-items: flex-start; /* Kép a tetejére igazítva */
-            justify-content: flex-start; /* Kép balra igazítva */
+            align-items: center; /* Centerezés a kezdeti megjelenítéshez */
+            justify-content: center;
         }
 
-        .gallery-image {
-            /* Engedélyezi a natív/zoomolt méretet és a mozgathatóságot */
-            width: 100%;
-            height: auto;
-            max-width: none; 
-            max-height: none; 
-            object-fit: contain;
+        #fullImageDisplay {
+            /* A kép maga: engedélyezi a nagyítást (pinch-to-zoom) */
             display: block;
-            cursor: grab;
-            touch-action: pan-x pan-y;
+            width: auto;
+            height: auto;
+            max-width: none;
+            max-height: none;
+            /* Touch-action: Pan engedélyezése zoom után */
+            touch-action: pan-x pan-y; 
+            /* A nagyított kép görgethető legyen */
+            margin: auto; 
+            cursor: move;
         }
 
-        .gallery-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            padding: 16px;
-            font-size: 2em;
-            color: white;
-            cursor: pointer;
-            user-select: none;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-
-        .gallery-nav:hover {
-            opacity: 1;
-        }
-
-        .prev-gallery {
-            left: 0;
-        }
-
-        .next-gallery {
-            right: 0;
-        }
 
         .close-gallery {
             position: absolute;
@@ -351,6 +376,12 @@
         .close-gallery:focus {
             color: #00ffff;
         }
+        
+        /* A navigációs gombok eltávolítva a modálból, mivel az egyképes nézet */
+        .gallery-nav {
+            display: none; 
+        }
+
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -411,12 +442,17 @@
     
     <div id="galleryModal">
       <span class="close-gallery" onclick="closeGallery()">×</span>
-      <div class="gallery-content">
-          <a class="gallery-nav prev-gallery" onclick="prevGalleryImage()">❮</a>
-          <img class="gallery-image" id="galleryImageDisplay" src="">
-          <a class="gallery-nav next-gallery" onclick="nextGalleryImage()">❯</a>
-      </div>
+      <div id="gallery-container">
+          </div>
     </div>
+    
+    <div id="full-image-display" onclick="closeFullImage()">
+        <div class="full-image-content">
+            <img id="fullImageDisplay" src="" alt="Nagyított kép" />
+        </div>
+    </div>
+
+
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
@@ -428,9 +464,10 @@
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
         const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
 
-        // GALÉRIA KÉPEK LISTÁJA
+        // 🛑 GALÉRIA KÉPEK LISTÁJA (Visszaállítva kettőre a két oszlopos elrendezés miatt)
         const galleryImages = [
-            { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" }
+            { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" },
+            { url: PUZZLE_IMAGE_URL, title: "Kódolvasó rejtvény" }
         ];
         let currentGalleryIndex = 0;
 
@@ -489,19 +526,21 @@
         const storyAudio2 = document.getElementById('story-audio-2');
         const playAudioButton2 = document.getElementById('play-audio-button-2');
         
-        // 🛑 JAVÍTVA: document.getElementById hívásra javítva
+        // Javított változó
         const audioContainer2 = document.getElementById('audio-container-2'); 
         
         const avatarImg = document.getElementById('avatar-img');
         
         const imageButton = document.getElementById('image-button');
-        const mapButton = document.getElementById('map-button'); // Térkép gomb
-
+        const mapButton = document.getElementById('map-button'); 
 
         // GALÉRIA DOM elemek
         const galleryModal = document.getElementById('galleryModal');
-        const galleryImageDisplay = document.getElementById('galleryImageDisplay');
-
+        const galleryContainer = document.getElementById('gallery-container');
+        
+        // 🛑 ÚJ: Nagyított képhez tartozó elemek
+        const fullImageDisplayModal = document.getElementById('full-image-display');
+        const fullImageDisplay = document.getElementById('fullImageDisplay');
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -540,48 +579,48 @@
                 buttonElement.innerHTML = `▶️ Lejátszás (${buttonText})`;
             }
         }
+
+        // 🛑 MÓDOSÍTOTT GALÉRIA FUNKCIÓK
         
-        // --- GALÉRIA FUNKCIÓK ---
+        function populateGallery() {
+            galleryContainer.innerHTML = ''; // Tartalom törlése
+            galleryImages.forEach((image, index) => {
+                const thumbnailDiv = document.createElement('div');
+                thumbnailDiv.className = 'gallery-thumbnail';
+                
+                const img = document.createElement('img');
+                img.src = image.url;
+                img.alt = image.title;
+                img.dataset.index = index;
+                
+                // Kattintás a nagykép megnyitásához
+                thumbnailDiv.onclick = () => openFullImage(image.url);
+                
+                thumbnailDiv.appendChild(img);
+                galleryContainer.appendChild(thumbnailDiv);
+            });
+        }
         
-        function showGalleryImage(index) {
-            // Mivel most már csak egy kép van, mindig a 0-ás indexet kell mutassuk.
-            currentGalleryIndex = 0; 
-            galleryImageDisplay.src = galleryImages[currentGalleryIndex].url;
-            galleryImageDisplay.alt = galleryImages[currentGalleryIndex].title;
-
-            // A navigációs gombokat elrejtjük, ha csak 1 kép van.
-            const prevNav = document.querySelector('.prev-gallery');
-            const nextNav = document.querySelector('.next-gallery');
-            if (galleryImages.length <= 1) {
-                if (prevNav) prevNav.style.display = 'none';
-                if (nextNav) nextNav.style.display = 'none';
-            } else {
-                if (prevNav) prevNav.style.display = 'block';
-                if (nextNav) nextNav.style.display = 'block';
-            }
+        function openFullImage(imageUrl) {
+            fullImageDisplay.src = imageUrl;
+            fullImageDisplayModal.style.display = 'block';
+            galleryModal.style.display = 'none'; // Eltüntetjük a bélyegkép modált
         }
-
-        function nextGalleryImage() {
-            // Nem szükséges léptetés, ha csak 1 kép van.
-            if (galleryImages.length > 1) {
-                showGalleryImage(currentGalleryIndex + 1);
-            }
-        }
-
-        function prevGalleryImage() {
-            // Nem szükséges léptetés, ha csak 1 kép van.
-            if (galleryImages.length > 1) {
-                showGalleryImage(currentGalleryIndex - 1);
-            }
+        
+        function closeFullImage() {
+            // Bezárja a nagykép modált, de csak ha a háttérre kattintanak
+            // (a "close-gallery" gomb a HTML-ben van definiálva a "x" jellel)
+            fullImageDisplayModal.style.display = 'none';
         }
 
         function openGallery() {
-            showGalleryImage(0); 
+            populateGallery(); // Galéria tartalom feltöltése
             galleryModal.style.display = "block";
         }
 
         function closeGallery() {
             galleryModal.style.display = "none";
+            fullImageDisplayModal.style.display = 'none'; // Biztos ami biztos
         }
 
         // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
@@ -663,6 +702,17 @@
         
         // --- ESEMÉNYKEZELŐK ---
         
+        // A "close-gallery" span click eseménye most bezárja mindkét modált (ha a nagykép modálban vagyunk)
+        document.querySelector('.close-gallery').onclick = closeGallery;
+        
+        // A nagykép modál bezárása (csak a modál háttérre kattintva)
+        fullImageDisplayModal.addEventListener('click', (e) => {
+            if (e.target === fullImageDisplayModal) {
+                closeFullImage();
+            }
+        });
+
+
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
             saveProgress();
