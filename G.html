@@ -2,28 +2,24 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=portrait">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, orientation=portrait"> 
     <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* ... (A CSS stílusok változatlanok) ... */
-        
         /* Alapvető reszet és sötét háttér */
         body {
             margin: 0;
             padding: 0;
             font-family: 'Play', sans-serif;
-            /* Visszaállítva: Eredeti világos betűszín */
+            /* FONTOS: Sötét téma beállítása */
             color: #e0e0e0; 
-            /* Visszaállítva: Eredeti sötét háttérszín */
             background-color: #1a1a1a; 
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             text-align: center;
-            /* Extra hely az alulra fixált menü miatt! */
             padding-bottom: 60px; 
         }
         
@@ -45,7 +41,6 @@
                 z-index: 9999;
                 text-align: center;
             }
-            /* Elrejti az összes többi tartalmat fekvő módban */
             body > *:not(style):not(script):not(.full-width-image-container) {
                 display: none !important;
             }
@@ -66,14 +61,11 @@
             width: 100%;
             height: 100%;
             object-fit: contain; 
-            /* Kép a tetejéhez igazítva */
             object-position: center top; 
-            /* Filter (sötétítő réteg) eltávolítva */
         }
 
         /* Tartalom doboz - FIX ALULRA ZÁRVA */
         .content-box {
-            /* Visszaállítva: Eredeti félig átlátszó sötét háttér */
             background-color: rgba(0, 0, 0, 0.7); 
             padding: 40px; 
             margin: 0; 
@@ -84,7 +76,7 @@
             border: 3px solid #8a2be2;
             box-sizing: border-box;
             position: fixed; 
-            bottom: 50px; /* Alul fix menüsor (50px) fölött legyen */
+            bottom: 50px; 
             left: 50%;
             transform: translateX(-50%); 
             z-index: 10;
@@ -95,7 +87,6 @@
             justify-content: space-between; 
             opacity: 0; 
             transition: opacity 0.5s ease-in-out;
-            /* Betűszín már a body-ból öröklődik: #e0e0e0 */
         }
 
         /* Történet szövege */
@@ -107,7 +98,7 @@
             white-space: pre-wrap; 
         }
         
-        /* Audio gombok... (a többi CSS változatlan a görgethető résznél) */
+        /* Audio gombok... */
         .audio-container {
             text-align: center;
             margin-bottom: 15px;
@@ -291,54 +282,78 @@
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; 
+            overflow-y: scroll; 
             background-color: rgba(0, 0, 0, 0.95);
         }
-
-        .gallery-content {
-            position: relative;
-            margin: auto;
-            width: 90%;
-            max-width: 900px;
-            height: 90%;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        
+        /* ÚJ: Fő galéria nézet (bélyegképek) */
+        #gallery-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
-        .gallery-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; 
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .gallery-thumbnail:hover {
+            transform: scale(1.03);
+        }
+
+        .gallery-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
             display: block;
         }
-
-        .gallery-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            padding: 16px;
-            font-size: 2em;
-            color: white;
-            cursor: pointer;
-            user-select: none;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-
-        .gallery-nav:hover {
-            opacity: 1;
-        }
-
-        .prev-gallery {
+        
+        /* Teljes képernyős modál konténer a zoomolható képnek */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: auto; 
+        }
+        
+        .full-image-content {
+            width: 100vw; 
+            height: 100vh;
+            display: flex;
+            align-items: center; 
+            justify-content: center; 
         }
 
-        .next-gallery {
-            right: 0;
+        #fullImageDisplay {
+            /* Kép zoomolhatóság beállítása */
+            display: block;
+            width: auto; 
+            height: auto;
+            max-width: 100%; 
+            max-height: 100%;
+            
+            touch-action: pan-x pan-y; 
+            cursor: move;
+            margin: auto;
         }
+
 
         .close-gallery {
             position: absolute;
@@ -356,6 +371,12 @@
         .close-gallery:focus {
             color: #00ffff;
         }
+        
+        /* A navigációs gombok eltávolítva a modálból */
+        .gallery-nav {
+            display: none; 
+        }
+
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -415,13 +436,19 @@
     </div>
     
     <div id="galleryModal">
-      <span class="close-gallery" onclick="closeGallery()">×</span>
-      <div class="gallery-content">
-          <a class="gallery-nav prev-gallery" onclick="prevGalleryImage()">❮</a>
-          <img class="gallery-image" id="galleryImageDisplay" src="">
-          <a class="gallery-nav next-gallery" onclick="nextGalleryImage()">❯</a>
-      </div>
+      <span class="close-gallery" onclick="history.back();">×</span>
+      <div id="gallery-container">
+          </div>
     </div>
+    
+    <div id="full-image-display">
+        <div class="full-image-content">
+            <img id="fullImageDisplay" src="" alt="Nagyított kép" />
+        </div>
+        <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
+    </div>
+
+
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
@@ -434,45 +461,43 @@
         const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
 
         // GALÉRIA KÉPEK LISTÁJA
-        // FRISSÍTVE: Már csak egy kép van a listában
         const galleryImages = [
-            { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" }
+            { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" },
+            { url: PUZZLE_IMAGE_URL, title: "Kódolvasó rejtvény" }
         ];
         let currentGalleryIndex = 0;
 
 
-        // 🛑 TÖRTÉNETRÉSZEK (FRISSÍTVE AZ UTOLSÓ MONDATBAN)
+        // 🛑 TÖRTÉNETRÉSZEK 
         const storyPages = [
             // Dialogue
-            { type: 'text', content: `És most hogyan tovább?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 0. §A
-            { type: 'text', content: `Nézd, mit ír a Vizualizátor..`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 1. §M
+            { type: 'text', content: `És most hogyan tovább?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Nézd, mit ír a Vizualizátor..`, speaker: 'Mark', image: STABLE_IMAGE_URL }, 
             
             // Narration (A speciális AR készülék leírása)
-            { type: 'text', content: `Anna felolvasta mit ír speciális AR készüléke a szemben lévő furcsa házról.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 2.
-            { type: 'text', content: `A XXII. kerület mélyén, Budafok régi házai alatt húzódik a híres pincerendszer, amelyet a 18. századi német szőlősgazdák vájtak a mészkőbe.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 3.
-            { type: 'text', content: `A legtöbben úgy tartják, hogy ezek a járatok csak a borkereskedőknek és a kőfejtőknek szolgáltak menedékül.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 4.
-            { type: 'text', content: `De van, aki mást mesél.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 5.
-            { type: 'text', content: `A helybéliek között fennmaradt egy történet a Kölcsey utca 3. szám alatti házról.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 6.
-            { type: 'text', content: `A ház külsőre semmiben sem különbözött a szomszédos épületektől, kivéve a négy szobor fejét a homlokzatán, de állítólag volt egy titkos lejárata a pince mélyére.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 7.
-            { type: 'text', content: `A legenda szerint a II. világháború alatt a németek itt alakítottak ki egy rejtett rádióállomást, ahonnan üzeneteket továbbítottak a frontvonal mögé.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 8.
-            { type: 'text', content: `A rádiószobát állítólag csak úgy lehetett megközelíteni, ha egy bizonyos szobor fejét jó irányba forgattak a fal homlokzatán – ekkor nyílt egy keskeny kőajtó a mélybe.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 9.
-            { type: 'text', content: `A háború után a szovjetek is felfedezték a rejtekhelyet, de nem számolták fel.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 10.
-            { type: 'text', content: `A hidegháború idején a titkos járatokat a magyar állambiztonság használta: azt beszélték, hogy a Kölcsey utcából közvetlen alagút vezetett a Duna-part alá, ahol egy konspirációs találkozóhely volt berendezve.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 11.
-            { type: 'text', content: `Az idősebb helyiek úgy tartják, hogy az 1956-os forradalom idején ismeretlen emberek hordták le a pincébe a rádióalkatrészeket és röplapokat.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 12.
-            { type: 'text', content: `Senki sem tudja, kik voltak – szovjet ügynökök, ellenállók, vagy egyszerű kémek?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 13.
-            { type: 'text', content: `A mai napig akadnak, akik azt állítják, ha éjszaka csendben állsz a Kölcsey utca 3. előtt, halk zúgást hallasz a mélyből – mintha egy régi adó-vevő még mindig próbálna kapcsolatba lépni valakivel.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 14.
-            { type: 'text', content: `Mások szerint a pincék egy része máig feltáratlan, és valahol ott rejtőzik egy vasládikó, tele rejtjelekkel, mikrofilmekkel és egy soha el nem küldött üzenettel, ami talán örökre megváltoztatta volna Budapest történelmét.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 15.
+            { type: 'text', content: `Anna felolvasta mit ír speciális AR készüléke a szemben lévő furcsa házról.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A XXII. kerület mélyén, Budafok régi házai alatt húzódik a híres pincerendszer, amelyet a 18. századi német szőlősgazdák vájtak a mészkőbe.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A legtöbben úgy tartják, hogy ezek a járatok csak a borkereskedőknek és a kőfejtőknek szolgáltak menedékül.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `De van, aki mást mesél.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A helybéliek között fennmaradt egy történet a Kölcsey utca 3. szám alatti házról.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A ház külsőre semmiben sem különbözött a szomszédos épületektől, kivéve a négy szobor fejét a homlokzatán, de állítólag volt egy titkos lejárata a pince mélyére.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A legenda szerint a II. világháború alatt a németek itt alakítottak ki egy rejtett rádióállomást, ahonnan üzeneteket továbbítottak a frontvonal mögé.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A rádiószobát állítólag csak úgy lehetett megközelíteni, ha egy bizonyos szobor fejét jó irányba forgattak a fal homlokzatán – ekkor nyílt egy keskeny kőajtó a mélybe.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A háború után a szovjetek is felfedezték a rejtekhelyet, de nem számolták fel.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A hidegháború idején a titkos járatokat a magyar állambiztonság használta: azt beszélték, hogy a Kölcsey utcából közvetlen alagút vezetett a Duna-part alá, ahol egy konspirációs találkozóhely volt berendezve.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Az idősebb helyiek úgy tartják, hogy az 1956-os forradalom idején ismeretlen emberek hordták le a pincébe a rádióalkatrészeket és röplapokat.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Senki sem tudja, kik voltak – szovjet ügynökök, ellenállók, vagy egyszerű kémek?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `A mai napig akadnak, akik azt állítják, ha éjszaka csendben állsz a Kölcsey utca 3. előtt, halk zúgást hallasz a mélyből – mintha egy régi adó-vevő még mindig próbálna kapcsolatba lépni valakivel.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Mások szerint a pincék egy része máig feltáratlan, és valahol ott rejtőzik egy vasládikó, tele rejtjelekkel, mikrofilmekkel és egy soha el nem küldött üzenettel, ami talán örökre megváltoztatta volna Budapest történelmét.`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
             
             // Dialogue (Márk) és lezárás
-            { type: 'text', content: `Fú, ez izgalmasan hangzik!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 16. §M
-            { type: 'text', content: `De vajon mik azok a fura szobrok meg számok a homlokzaton?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 17. 
-            // FRISSÍTVE: Utolsó szövegdoboz
-            { type: 'text', content: `Mi lehet a kód?`, speaker: 'Narrator', image: STABLE_IMAGE_URL } // 18. (Történet vége a kód bevitele előtt)
+            { type: 'text', content: `Fú, ez izgalmasan hangzik!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `De vajon mik azok a fura szobrok meg számok a homlokzaton?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, 
+            { type: 'text', content: `Mi lehet a kód?`, speaker: 'Narrator', image: STABLE_IMAGE_URL } 
         ];
 
 
         let currentPartIndex = 0;
-        // FRISSÍTVE: A helyes jelszó 5571 helyett 2460
         const CORRECT_PASSWORD = "2460"; 
         const SUCCESS_LINK = "minta_oldal_3.html"; 
         
@@ -496,18 +521,21 @@
         
         const storyAudio2 = document.getElementById('story-audio-2');
         const playAudioButton2 = document.getElementById('play-audio-button-2');
-        const audioContainer2 = document.getElementById('audio-container-2');
+        
+        const audioContainer2 = document.getElementById('audio-container-2'); 
         
         const avatarImg = document.getElementById('avatar-img');
         
         const imageButton = document.getElementById('image-button');
-        const mapButton = document.getElementById('map-button'); // Térkép gomb
-
+        const mapButton = document.getElementById('map-button'); 
 
         // GALÉRIA DOM elemek
         const galleryModal = document.getElementById('galleryModal');
-        const galleryImageDisplay = document.getElementById('galleryImageDisplay');
-
+        const galleryContainer = document.getElementById('gallery-container');
+        
+        // 🛑 ÚJ: Nagyított képhez tartozó elemek
+        const fullImageDisplayModal = document.getElementById('full-image-display');
+        const fullImageDisplay = document.getElementById('fullImageDisplay');
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -546,50 +574,67 @@
                 buttonElement.innerHTML = `▶️ Lejátszás (${buttonText})`;
             }
         }
+
+        // 🛑 GALÉRIA FUNKCIÓK
         
-        // --- GALÉRIA FUNKCIÓK ---
+        function populateGallery() {
+            galleryContainer.innerHTML = ''; 
+            galleryImages.forEach((image, index) => {
+                const thumbnailDiv = document.createElement('div');
+                thumbnailDiv.className = 'gallery-thumbnail';
+                
+                const img = document.createElement('img');
+                img.src = image.url;
+                img.alt = image.title;
+                img.dataset.index = index;
+                
+                // Kattintás a nagykép megnyitásához
+                thumbnailDiv.onclick = () => openFullImage(image.url);
+                
+                thumbnailDiv.appendChild(img);
+                galleryContainer.appendChild(thumbnailDiv);
+            });
+        }
         
-        function showGalleryImage(index) {
-            // Mivel most már csak egy kép van, mindig a 0-ás indexet kell mutassuk.
-            currentGalleryIndex = 0; 
-            galleryImageDisplay.src = galleryImages[currentGalleryIndex].url;
-            galleryImageDisplay.alt = galleryImages[currentGalleryIndex].title;
-
-            // A navigációs gombokat elrejtjük, ha csak 1 kép van.
-            const prevNav = document.querySelector('.prev-gallery');
-            const nextNav = document.querySelector('.next-gallery');
-            if (galleryImages.length <= 1) {
-                if (prevNav) prevNav.style.display = 'none';
-                if (nextNav) nextNav.style.display = 'none';
-            } else {
-                if (prevNav) prevNav.style.display = 'block';
-                if (nextNav) nextNav.style.display = 'block';
-            }
+        function openFullImage(imageUrl) {
+            fullImageDisplay.src = imageUrl;
+            fullImageDisplayModal.style.display = 'block';
+            galleryModal.style.display = 'none'; // Eltüntetjük a bélyegkép modált
+            
+            // Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a nagykép modált.
+            history.pushState(null, null, '#full-image');
         }
-
-        function nextGalleryImage() {
-            // Nem szükséges léptetés, ha csak 1 kép van, de a funkciót megtartjuk a jövőre nézve.
-            if (galleryImages.length > 1) {
-                showGalleryImage(currentGalleryIndex + 1);
-            }
-        }
-
-        function prevGalleryImage() {
-            // Nem szükséges léptetés, ha csak 1 kép van, de a funkciót megtartjuk a jövőre nézve.
-            if (galleryImages.length > 1) {
-                showGalleryImage(currentGalleryIndex - 1);
-            }
+        
+        function closeFullImage() {
+            fullImageDisplayModal.style.display = 'none';
         }
 
         function openGallery() {
-            showGalleryImage(0); 
+            populateGallery(); 
             galleryModal.style.display = "block";
+            
+            // Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a modált.
+            history.pushState(null, null, '#gallery');
         }
 
         function closeGallery() {
             galleryModal.style.display = "none";
+            fullImageDisplayModal.style.display = 'none'; 
         }
 
+        // 🛑 MÓDOSÍTVA: Eseménykezelő a böngésző Vissza gombjára (Modálok zárása)
+        window.addEventListener('popstate', function(event) {
+            if (fullImageDisplayModal.style.display === 'block') {
+                // Ha a nagykép modál látható, csak azt zárjuk be, visszalépve a galériára
+                closeFullImage();
+                history.pushState(null, null, '#gallery'); 
+            } else if (galleryModal.style.display === 'block') {
+                // Ha a galéria modál látható, zárjuk be, és távolítsuk el a hash-t.
+                closeGallery();
+                history.pushState(null, null, window.location.pathname + window.location.search);
+            }
+        });
+        
         // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
 
         function updateButtons() {
@@ -609,9 +654,7 @@
             }
         }
 
-        // 🛑 VÁLTOZATLAN: Az updateAvatar a speaker property alapján dönt.
         function updateAvatar(pageIndex) {
-            // Ha túlléptünk a történet végén (kód bevitele), az oldal objektum helyett a length-et használjuk
             const speakerType = pageIndex < storyPages.length ? storyPages[pageIndex].speaker : 'Narrator';
             
             if (speakerType === 'Anna') {
@@ -624,7 +667,7 @@
                 avatarImg.style.opacity = 1;
             } else {
                 // Narrator vagy kódbevitel: láthatatlan avatar
-                avatarImg.src = MARK_AVATAR_URL; // Alapértelmezett URL, ha eltűnik
+                avatarImg.src = MARK_AVATAR_URL; 
                 avatarImg.alt = 'Szereplő avatar';
                 avatarImg.style.opacity = 0; 
             }
@@ -671,6 +714,16 @@
         
         // --- ESEMÉNYKEZELŐK ---
         
+        // MÓDOSÍTVA: A galéria 'X' gombja most a hash-t kezeli
+        document.querySelector('#galleryModal .close-gallery').onclick = () => {
+             history.back(); // Töröljük a #gallery hash-t
+        };
+        
+        // MÓDOSÍTVA: A nagykép 'X' gombja most a hash-t kezeli
+        document.querySelector('#full-image-display .close-gallery').onclick = () => {
+             history.back(); // Vissza a #gallery hash-re
+        };
+
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
             saveProgress();
@@ -722,7 +775,7 @@
         // 1. Képgaléria menü gomb eseménykezelője
         imageButton.addEventListener('click', openGallery);
         
-        // 2. Térkép menü gomb eseménykezelője (VÁLTOZATLAN)
+        // 2. Térkép menü gomb eseménykezelője
         mapButton.addEventListener('click', () => {
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13', '_blank');
         });
