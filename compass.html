@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Navigáció</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        /* --- Távolság megjelenítése --- */
+        #distance-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        /* --- Nyíl stílusa --- */
+        #arrow-container {
+            width: 150px;
+            height: 150px;
+            margin: 20px;
+        }
+
+        #arrow {
+            width: 100%;
+            height: 100%;
+            /* A nyíl kép (pl. egy háromszög) */
+            background-color: transparent;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 150px solid #d9534f; /* Piros nyílhegy */
+            transform-origin: 50% 75%; /* A forgatás középpontja a nyíl aljánál legyen */
+            transition: transform 0.5s ease-out; /* Simább forgatás */
+        }
+
+        #statusz {
+            margin-top: 20px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cél távolsága</h1>
+    
+    <div id="distance-display">
+        -- M
+    </div>
+
+    <div id="arrow-container">
+        <div id="arrow"></div>
+    </div>
+    
+    <p id="statusz">Kérjük, engedélyezze a helymeghatározást és várjon a GPS jelre...</p>
+
+    <script>
+        // --- Beállított Értékek ---
+        const CEL_LAT = 47.428073;    // Célpont szélességi foka
+        const CEL_LON = 19.036570;    // Célpont hosszúsági foka
+        const ATIRANYITAS_LINK = "https://www.valamelyik-link.hu/celoldal"; // A cél URL (előző feladatból)
+        const SUGAR_METER = 25;       // Engedélyezett távolság (előző feladatból)
+
+        const arrowElem = document.getElementById('arrow');
+        const distanceDisplay = document.getElementById('distance-display');
+        const statuszElem = document.getElementById('statusz');
+
+        // --- Segédfüggvény a Távolság Kiszámításához (Haversine-formula, méterben) ---
+        function tavolsagotKiszamol(lat1, lon1, lat2, lon2) {
+            // ... (ugyanaz a függvény, mint korábban)
+            const R = 6371e3; // Föld sugara méterben
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            
+            return R * c;
+        }
+        
+        // --- Segédfüggvény az Irány (Bearing) Kiszámításához ---
+        // Visszaadja az irányt fokokban (0 = Észak)
+        function iranytKiszamol(lat1, lon1, lat2, lon2) {
+            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) -
+                      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+            
+            const bearingRad = Math.atan2(y, x);
+            // Konvertálás fokra, majd normalizálás (0-360)
+            const bearingDeg = (bearingRad * 180 / Math.PI + 360) % 360;
+            return bearingDeg;
+        }
+        
+        // --- Helyzet Figyelése és Frissítése ---
+        function helyzetetFigyel() {
+            if (!("geolocation" in navigator)) {
+                statuszElem.textContent = "Sajnálom, a böngészője nem támogatja a helymeghatározást.";
+                return;
+            }
+
+            // watchPosition: Folyamatosan figyeli a változásokat
+            navigator.geolocation.watchPosition(
+                // Siker esetén
+                (position) => {
+                    const felhasznaloLat = position.coords.latitude * Math.PI / 180; // Radianban
+                    const felhasznaloLon = position.coords.longitude * Math.PI / 180; // Radianban
+                    const celLatRad = CEL_LAT * Math.PI / 180;
+                    const celLonRad = CEL_LON * Math.PI / 180;
+
+                    // 1. Távolság számítása
+                    const tavolsag = tavolsagotKiszamol(position.coords.latitude, position.coords.longitude, CEL_LAT, CEL_LON);
+                    distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; // Egész méterre kerekítés
+
+                    // 2. Irány számítása
+                    const iranyFokban = iranytKiszamol(felhasznaloLat, felhasznaloLon, celLatRad, celLonRad);
+
+                    // 3. Nyíl forgatása
+                    arrowElem.style.transform = `rotate(${iranyFokban}deg)`;
+                    
+                    statuszElem.textContent = `Pontosság: ±${position.coords.accuracy.toFixed(0)} m. (${position.coords.heading ? position.coords.heading.toFixed(0) + ' fok' : 'Nincs iránytű adat'})`;
+
+                    // 4. Átirányítás ellenőrzése (az eredeti feladatból)
+                    if (tavolsag <= SUGAR_METER) {
+                        statuszElem.textContent = "Közelben! Átirányítás 5 másodperc múlva...";
+                        // Ezt érdemes egy kis késleltetéssel csinálni, hogy a felhasználó lássa
+                        setTimeout(() => {
+                            window.location.href = ATIRANYITAS_LINK;
+                        }, 5000);
+                    }
+                },
+                
+                // Hiba esetén
+                (error) => {
+                    let hibaUzenet = "Helymeghatározási hiba: ";
+                    if (error.code === error.PERMISSION_DENIED) {
+                        hibaUzenet = "Kérjük, engedélyezze a helymeghatározást.";
+                    }
+                    statuszElem.textContent = hibaUzenet;
+                },
+                
+                // Opcionális beállítások
+                {
+                    enableHighAccuracy: true, // Kérjük a legjobb pontosságot
+                    timeout: 5000,
+                    maximumAge: 0 // Ne használjon gyorsítótárazott adatot
+                }
+            );
+        }
+
+        // Futtatás az oldal betöltésekor
+        helyzetetFigyel();
+    </script>
+</body>
+</html>
