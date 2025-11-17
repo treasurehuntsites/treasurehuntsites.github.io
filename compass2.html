@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Titkos Küldetés - Irányjelző Műszer</title>
+    <title>Keresd Meg a Helyet</title>
     <style>
         /* --- Zoomolás és Görgetés Letiltása --- */
         html, body {
-            overflow: hidden; /* Tiltja a görgetést */
+            overflow: hidden;
             height: 100%;
-            touch-action: none; /* Megakadályozza a görgetést és nagyítást érintőképernyőn */
+            touch-action: none;
         }
         
-        /* --- Alapvető Stílus a Játékos Hangulathoz (HÁTTÉRKÉPPEL) --- */
+        /* --- Alapvető Stílus a Játékos Hangulathoz (Sötét TÉRKÉP HÁTTÉR) --- */
         body {
             font-family: 'Arial', sans-serif;
-            color: #ffffff; /* Fehér szöveg a kontraszt miatt */
+            color: #ffffff;
             
-            /* --- HÁTTÉRKÉP BEÁLLÍTÁSA --- */
-            background-color: #333333; /* Tartalék szín, ha a kép nem tölt be */
-            background-image: url('titkoskuldetes/Img/Screenshot_20251117_095747.jpg');
-            background-size: cover; /* Kitölti az egész hátteret */
-            background-repeat: no-repeat; /* Nem ismétlődik */
-            background-position: center center; /* Középre igazítás */
-            /* --------------------------- */
+            /* --- HÁTTÉRKÉP SZIMULÁLÁSA (Sötét textúra) --- */
+            background-color: #1a1a1a;
+            background-image: linear-gradient(0deg, rgba(0,0,0,0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 20px 20px; /* Apró rács, mint egy térképen */
+            /* ----------------------------------------------- */
 
             display: flex;
             flex-direction: column;
@@ -38,24 +37,35 @@
         h1 {
             color: #ffcc00;
             margin-bottom: 10px;
-            font-size: 1.5em;
-            /* Text shadow a jobb olvashatóságért, ha világos a kép */
+            font-size: 1.8em; /* Kicsit nagyobb cím */
             text-shadow: 0 0 5px #000000;
         }
 
+        /* --- Térkép Ikon Stílus --- */
+        #map-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #ffcc00;
+            text-decoration: none;
+            font-size: 2.5em;
+            text-shadow: 0 0 5px #000;
+            z-index: 20;
+        }
+        
         #distance-display {
             font-size: 4em;
             font-weight: bold;
             color: #ffcc00;
             margin: 20px 0;
             padding: 10px;
-            background-color: rgba(42, 42, 42, 0.7); /* Áttetsző háttér a jobb olvashatóságért */
+            background-color: rgba(42, 42, 42, 0.7);
             border-radius: 8px;
             min-width: 150px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
 
-        /* --- Műszerfal Stílusa (Directional Indicator) --- */
+        /* --- Műszerfal Stílusa --- */
         #compass-container {
             width: 250px;
             height: 250px;
@@ -63,7 +73,7 @@
             border: 15px solid #000000;
             border-radius: 50%;
             overflow: hidden;
-            background-color: rgba(42, 42, 42, 0.9); /* Majdnem átlátszatlan műszer háttér */
+            background-color: rgba(42, 42, 42, 0.9);
             position: relative;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
         }
@@ -115,7 +125,11 @@
     </style>
 </head>
 <body>
-    <h1>Cél Távolság</h1>
+    <a id="map-link" href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" title="Megnyitás térképen">
+        🗺️
+    </a>
+    
+    <h1>KERESD MEG A HELYET!</h1>
     
     <div id="distance-display">
         -- M
@@ -203,13 +217,10 @@
                 statuszElem.textContent = statuszElem.textContent.split('|')[0].trim() + " | Nincs iránytű adat. A mutató Északhoz képest mutatja a célt.";
             }
             
-            // Simítás
             smoothedRotation = lerp(smoothedRotation, desiredRotation, SMOOTHING_FACTOR);
             
-            // Mutató forgatása
             targetIndicatorElem.style.transform = `rotate(${smoothedRotation}deg)`;
             
-            // Folytatjuk a smooth animációt
             if (Math.abs(angleDiff(smoothedRotation, desiredRotation)) > 0.1) {
                 animationFrameId = requestAnimationFrame(() => updateIndicator(currentBearing, kompasszFok));
             } else {
