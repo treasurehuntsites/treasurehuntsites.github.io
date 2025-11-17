@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Keresd Meg a Helyet</title>
+    <title>Titkos Küldetés - Keresd Meg!</title>
     <style>
         /* --- Zoomolás és Görgetés Letiltása --- */
         html, body {
@@ -12,17 +12,26 @@
             touch-action: none;
         }
         
-        /* --- Alapvető Stílus a Játékos Hangulathoz (Sötét TÉRKÉP HÁTTÉR) --- */
+        /* --- Alapvető Stílus a Titkosügynök Hangulathoz (GENERÁLT HÁTTÉRKÉP) --- */
         body {
             font-family: 'Arial', sans-serif;
             color: #ffffff;
             
-            /* --- HÁTTÉRKÉP SZIMULÁLÁSA (Sötét textúra) --- */
-            background-color: #1a1a1a;
-            background-image: linear-gradient(0deg, rgba(0,0,0,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
-            background-size: 20px 20px; /* Apró rács, mint egy térképen */
-            /* ----------------------------------------------- */
+            /* --- GENERÁLT HÁTTÉRKÉP: Titkosügynök Térkép Stílus --- */
+            background-color: #0d0d0d; /* Nagyon sötét alap */
+            background-image: 
+                /* Rács vonalak */
+                linear-gradient(0deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px), /* Aqua rács */
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                /* Nagyobb, halványabb rács */
+                linear-gradient(0deg, rgba(0, 255, 255, 0.05) 5px, transparent 5px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 5px, transparent 5px);
+            background-size: 50px 50px, 50px 50px, 200px 200px, 200px 200px;
+            background-position: 0 0;
+            background-repeat: repeat;
+            /* Extra textúra a mélységért */
+            background-blend-mode: overlay; /* Hogy a rácsok is látszódjanak */
+            /* --------------------------------------------------- */
 
             display: flex;
             flex-direction: column;
@@ -30,39 +39,29 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding-bottom: 80px; /* Hely az alsó menünek */
             text-align: center;
+            position: relative; /* Az alsó menühöz kell */
         }
 
         h1 {
-            color: #ffcc00;
+            color: #00ffff; /* Neon kék/aqua szín */
             margin-bottom: 10px;
-            font-size: 1.8em; /* Kicsit nagyobb cím */
-            text-shadow: 0 0 5px #000000;
+            font-size: 1.8em;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7); /* Neon fényhatás */
+            letter-spacing: 2px;
         }
 
-        /* --- Térkép Ikon Stílus --- */
-        #map-link {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #ffcc00;
-            text-decoration: none;
-            font-size: 2.5em;
-            text-shadow: 0 0 5px #000;
-            z-index: 20;
-        }
-        
         #distance-display {
             font-size: 4em;
             font-weight: bold;
-            color: #ffcc00;
+            color: #00ff00; /* Neon zöld a távolságra */
             margin: 20px 0;
             padding: 10px;
-            background-color: rgba(42, 42, 42, 0.7);
+            background-color: rgba(0, 0, 0, 0.8); /* Sötétebb, átlátszó háttér */
             border-radius: 8px;
             min-width: 150px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); /* Neon keret árnyék */
         }
 
         /* --- Műszerfal Stílusa --- */
@@ -70,12 +69,12 @@
             width: 250px;
             height: 250px;
             margin: 40px;
-            border: 15px solid #000000;
+            border: 5px solid #00ffff; /* Neon kék keret */
             border-radius: 50%;
             overflow: hidden;
-            background-color: rgba(42, 42, 42, 0.9);
+            background-color: rgba(0, 0, 0, 0.9);
             position: relative;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.7); /* Neon árnyék */
         }
         
         #compass-face {
@@ -85,8 +84,8 @@
             top: 0;
             left: 0;
             background-image: 
-                radial-gradient(circle, transparent 90%, #666 90%, #666 91%, transparent 91%),
-                radial-gradient(circle, transparent 95%, #999 95%, #999 96%, transparent 96%);
+                radial-gradient(circle, transparent 90%, rgba(0, 255, 255, 0.3) 90%, rgba(0, 255, 255, 0.3) 91%, transparent 91%),
+                radial-gradient(circle, transparent 95%, rgba(0, 255, 255, 0.5) 95%, rgba(0, 255, 255, 0.5) 96%, transparent 96%);
             background-size: 100% 100%;
             background-repeat: no-repeat;
         }
@@ -111,9 +110,9 @@
             transform: translateX(-50%);
             width: 30px;
             height: 50%;
-            background-color: #ffffff; 
+            background-color: #00ff00; /* Neon zöld mutató */
             clip-path: polygon(35% 100%, 50% 15%, 65% 100%); 
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.8); /* Neon zöld árnyék */
         }
         
         #statusz {
@@ -122,13 +121,44 @@
             font-size: 0.9em;
             text-shadow: 0 0 3px #000000;
         }
+
+        /* --- ALSÓ MENÜSOR STÍLUSA --- */
+        #bottom-menu {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px; /* Magasság */
+            background-color: rgba(0, 0, 0, 0.9); /* Sötét, áttetsző háttér */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 -5px 15px rgba(0, 255, 255, 0.3); /* Neon fény a tetején */
+            z-index: 100; /* Legfelül legyen */
+        }
+
+        .menu-button {
+            background-color: transparent;
+            border: 2px solid #00ffff; /* Neon kék keret */
+            color: #00ffff; /* Neon kék szöveg */
+            padding: 10px 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .menu-button:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
-    <a id="map-link" href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" title="Megnyitás térképen">
-        🗺️
-    </a>
-    
     <h1>KERESD MEG A HELYET!</h1>
     
     <div id="distance-display">
@@ -141,6 +171,12 @@
     </div>
     
     <p id="statusz">Kérjük, engedélyezze a helymeghatározást és az iránytűt!</p>
+
+    <div id="bottom-menu">
+        <a href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" class="menu-button">
+            🗺️ Térkép
+        </a>
+    </div>
 
     <script>
         // --- Stabilizáló Beállítások ---
