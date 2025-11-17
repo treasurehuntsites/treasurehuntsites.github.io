@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, orientation=portrait"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, orientation=portrait"> 
     <title>Titkos Üzenet – Kódfejtés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -274,7 +274,7 @@
             color: #00ffff;
         }
 
-        /* --- GALÉRIA MODAL STÍLUSOK (MÓDOSÍTVA a zoomoláshoz) --- */
+        /* --- GALÉRIA MODAL STÍLUSOK --- */
         #galleryModal {
             display: none; 
             position: fixed;
@@ -283,7 +283,6 @@
             top: 0;
             width: 100%;
             height: 100%;
-            /* Engedélyezi a görgetést, ha a tartalom nagyobb */
             overflow-y: scroll; 
             background-color: rgba(0, 0, 0, 0.95);
         }
@@ -291,7 +290,6 @@
         /* ÚJ: Fő galéria nézet (bélyegképek) */
         #gallery-container {
             display: grid;
-            /* Két egyforma széles oszlop */
             grid-template-columns: 1fr 1fr; 
             gap: 10px;
             padding: 15px;
@@ -303,7 +301,7 @@
 
         .gallery-thumbnail {
             width: 100%;
-            height: 150px; /* Fix magasság a jó elrendezéshez */
+            height: 150px; 
             overflow: hidden;
             border: 2px solid #8a2be2;
             border-radius: 5px;
@@ -319,7 +317,7 @@
         .gallery-thumbnail img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Kitölti a tárolót, nem feltétlenül a teljes képet mutatja */
+            object-fit: cover; 
             display: block;
         }
         
@@ -333,30 +331,32 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.98);
-            overflow: auto; /* Ez a lényeg a zoomolhatósághoz! */
+            /* Engedélyezi a görgetést, ami elengedhetetlen a zoomolt kép mozgatásához */
+            overflow: auto; 
         }
         
         .full-image-content {
-            /* Fix centerezés eltávolítva */
-            width: 100%;
-            min-height: 100%; 
+            /* Kényszerítjük, hogy legalább viewport méretű legyen, hogy a kép beférjen */
+            width: 100vw; 
+            height: 100vh;
             display: flex;
-            align-items: center; /* Centerezés a kezdeti megjelenítéshez */
-            justify-content: center;
+            align-items: center; /* Centerezés */
+            justify-content: center; /* Centerezés */
         }
 
         #fullImageDisplay {
-            /* A kép maga: engedélyezi a nagyítást (pinch-to-zoom) */
+            /* 🛑 JAVÍTVA: Kép alapértelmezett méret beállítása: Befér a képernyőre! */
             display: block;
-            width: auto;
+            width: auto; 
             height: auto;
-            max-width: none;
-            max-height: none;
-            /* Touch-action: Pan engedélyezése zoom után */
+            /* Kezdeti méret: befér a full-image-content 100vw/100vh méretébe */
+            max-width: 100%; 
+            max-height: 100%;
+            
+            /* Ezeknek az értékeknek a natív zoom nem áll ellent */
             touch-action: pan-x pan-y; 
-            /* A nagyított kép görgethető legyen */
-            margin: auto; 
             cursor: move;
+            margin: auto;
         }
 
 
@@ -377,7 +377,7 @@
             color: #00ffff;
         }
         
-        /* A navigációs gombok eltávolítva a modálból, mivel az egyképes nézet */
+        /* A navigációs gombok eltávolítva a modálból */
         .gallery-nav {
             display: none; 
         }
@@ -464,7 +464,7 @@
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
         const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
 
-        // 🛑 GALÉRIA KÉPEK LISTÁJA (Visszaállítva kettőre a két oszlopos elrendezés miatt)
+        // GALÉRIA KÉPEK LISTÁJA
         const galleryImages = [
             { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" },
             { url: PUZZLE_IMAGE_URL, title: "Kódolvasó rejtvény" }
@@ -526,7 +526,6 @@
         const storyAudio2 = document.getElementById('story-audio-2');
         const playAudioButton2 = document.getElementById('play-audio-button-2');
         
-        // Javított változó
         const audioContainer2 = document.getElementById('audio-container-2'); 
         
         const avatarImg = document.getElementById('avatar-img');
@@ -580,10 +579,10 @@
             }
         }
 
-        // 🛑 MÓDOSÍTOTT GALÉRIA FUNKCIÓK
+        // 🛑 GALÉRIA FUNKCIÓK
         
         function populateGallery() {
-            galleryContainer.innerHTML = ''; // Tartalom törlése
+            galleryContainer.innerHTML = ''; 
             galleryImages.forEach((image, index) => {
                 const thumbnailDiv = document.createElement('div');
                 thumbnailDiv.className = 'gallery-thumbnail';
@@ -608,19 +607,18 @@
         }
         
         function closeFullImage() {
-            // Bezárja a nagykép modált, de csak ha a háttérre kattintanak
-            // (a "close-gallery" gomb a HTML-ben van definiálva a "x" jellel)
+            // Bezárja a nagykép modált, ha a háttérre kattintanak
             fullImageDisplayModal.style.display = 'none';
         }
 
         function openGallery() {
-            populateGallery(); // Galéria tartalom feltöltése
+            populateGallery(); 
             galleryModal.style.display = "block";
         }
 
         function closeGallery() {
             galleryModal.style.display = "none";
-            fullImageDisplayModal.style.display = 'none'; // Biztos ami biztos
+            fullImageDisplayModal.style.display = 'none'; // Biztos, ami biztos
         }
 
         // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
@@ -702,7 +700,7 @@
         
         // --- ESEMÉNYKEZELŐK ---
         
-        // A "close-gallery" span click eseménye most bezárja mindkét modált (ha a nagykép modálban vagyunk)
+        // A "close-gallery" span click eseménye most bezárja mindkét modált
         document.querySelector('.close-gallery').onclick = closeGallery;
         
         // A nagykép modál bezárása (csak a modál háttérre kattintva)
