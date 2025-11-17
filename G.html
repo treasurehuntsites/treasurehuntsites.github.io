@@ -14,13 +14,16 @@
             margin: 0;
             padding: 0;
             font-family: 'Play', sans-serif;
+            /* Visszaállítva: Eredeti világos betűszín */
             color: #e0e0e0; 
+            /* Visszaállítva: Eredeti sötét háttérszín */
             background-color: #1a1a1a; 
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             text-align: center;
+            /* Extra hely az alulra fixált menü miatt! */
             padding-bottom: 60px; 
         }
         
@@ -42,6 +45,7 @@
                 z-index: 9999;
                 text-align: center;
             }
+            /* Elrejti az összes többi tartalmat fekvő módban */
             body > *:not(style):not(script):not(.full-width-image-container) {
                 display: none !important;
             }
@@ -62,11 +66,14 @@
             width: 100%;
             height: 100%;
             object-fit: contain; 
+            /* Kép a tetejéhez igazítva */
             object-position: center top; 
+            /* Filter (sötétítő réteg) eltávolítva */
         }
 
         /* Tartalom doboz - FIX ALULRA ZÁRVA */
         .content-box {
+            /* Visszaállítva: Eredeti félig átlátszó sötét háttér */
             background-color: rgba(0, 0, 0, 0.7); 
             padding: 40px; 
             margin: 0; 
@@ -77,7 +84,7 @@
             border: 3px solid #8a2be2;
             box-sizing: border-box;
             position: fixed; 
-            bottom: 50px; 
+            bottom: 50px; /* Alul fix menüsor (50px) fölött legyen */
             left: 50%;
             transform: translateX(-50%); 
             z-index: 10;
@@ -88,6 +95,7 @@
             justify-content: space-between; 
             opacity: 0; 
             transition: opacity 0.5s ease-in-out;
+            /* Betűszín már a body-ból öröklődik: #e0e0e0 */
         }
 
         /* Történet szövege */
@@ -99,7 +107,7 @@
             white-space: pre-wrap; 
         }
         
-        /* Audio gombok... */
+        /* Audio gombok... (a többi CSS változatlan a görgethető résznél) */
         .audio-container {
             text-align: center;
             margin-bottom: 15px;
@@ -274,7 +282,7 @@
             color: #00ffff;
         }
 
-        /* --- GALÉRIA MODAL STÍLUSOK (Nagyíthatóvá téve) --- */
+        /* --- GALÉRIA MODAL STÍLUSOK --- */
         #galleryModal {
             display: none; 
             position: fixed;
@@ -283,19 +291,16 @@
             top: 0;
             width: 100%;
             height: 100%;
-            /* MÓDOSÍTVA: Görgetést engedélyez a nagy képhez */
-            overflow: auto; 
+            overflow: hidden; 
             background-color: rgba(0, 0, 0, 0.95);
         }
 
         .gallery-content {
             position: relative;
             margin: auto;
-            /* MÓDOSÍTVA: Képméretet korlátozó kód eltávolítva a flexibilis zoomért */
-            width: 90%; 
-            max-width: 90%;
-            height: auto; 
-            min-height: 90%;
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
             top: 50%;
             transform: translateY(-50%);
             display: flex;
@@ -304,14 +309,10 @@
         }
 
         .gallery-image {
-            /* MÓDOSÍTVA: Képméret beállítások a zoomolhatóságért */
-            max-width: unset; 
-            max-height: unset;
-            width: auto;
-            height: auto;
-            object-fit: scale-down; /* Hogy a kicsi képek ne legyenek hatalmasak */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             display: block;
-            cursor: grab; /* Segíti a felhasználót, hogy megfogja/húzhatja */
         }
 
         .gallery-nav {
@@ -342,7 +343,7 @@
         .close-gallery {
             position: absolute;
             top: 15px;
-            right: 35px;
+            right: 33px;
             color: #f1f1f1;
             font-size: 40px;
             font-weight: bold;
@@ -433,14 +434,14 @@
         const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
 
         // GALÉRIA KÉPEK LISTÁJA
-        // MÓDOSÍTVA: A második kép (PUZZLE_IMAGE_URL) eltávolítva.
+        // FRISSÍTVE: Már csak egy kép van a listában
         const galleryImages = [
             { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" }
         ];
         let currentGalleryIndex = 0;
 
 
-        // 🛑 TÖRTÉNETRÉSZEK (Az utolsó bejegyzés módosítva)
+        // 🛑 TÖRTÉNETRÉSZEK (FRISSÍTVE AZ UTOLSÓ MONDATBAN)
         const storyPages = [
             // Dialogue
             { type: 'text', content: `És most hogyan tovább?`, speaker: 'Anna', image: STABLE_IMAGE_URL }, // 0. §A
@@ -465,13 +466,13 @@
             // Dialogue (Márk) és lezárás
             { type: 'text', content: `Fú, ez izgalmasan hangzik!`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // 16. §M
             { type: 'text', content: `De vajon mik azok a fura szobrok meg számok a homlokzaton?`, speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 17. 
-            // MÓDOSÍTVA: Utolsó szövegdoboz a kód kéréséhez.
+            // FRISSÍTVE: Utolsó szövegdoboz
             { type: 'text', content: `Mi lehet a kód?`, speaker: 'Narrator', image: STABLE_IMAGE_URL } // 18. (Történet vége a kód bevitele előtt)
         ];
 
 
         let currentPartIndex = 0;
-        // MÓDOSÍTVA: Helyes jelszó 2460-ra cserélve
+        // FRISSÍTVE: A helyes jelszó 5571 helyett 2460
         const CORRECT_PASSWORD = "2460"; 
         const SUCCESS_LINK = "minta_oldal_3.html"; 
         
@@ -549,21 +550,39 @@
         // --- GALÉRIA FUNKCIÓK ---
         
         function showGalleryImage(index) {
-            currentGalleryIndex = (index + galleryImages.length) % galleryImages.length;
+            // Mivel most már csak egy kép van, mindig a 0-ás indexet kell mutassuk.
+            currentGalleryIndex = 0; 
             galleryImageDisplay.src = galleryImages[currentGalleryIndex].url;
             galleryImageDisplay.alt = galleryImages[currentGalleryIndex].title;
+
+            // A navigációs gombokat elrejtjük, ha csak 1 kép van.
+            const prevNav = document.querySelector('.prev-gallery');
+            const nextNav = document.querySelector('.next-gallery');
+            if (galleryImages.length <= 1) {
+                if (prevNav) prevNav.style.display = 'none';
+                if (nextNav) nextNav.style.display = 'none';
+            } else {
+                if (prevNav) prevNav.style.display = 'block';
+                if (nextNav) nextNav.style.display = 'block';
+            }
         }
 
         function nextGalleryImage() {
-            showGalleryImage(currentGalleryIndex + 1);
+            // Nem szükséges léptetés, ha csak 1 kép van, de a funkciót megtartjuk a jövőre nézve.
+            if (galleryImages.length > 1) {
+                showGalleryImage(currentGalleryIndex + 1);
+            }
         }
 
         function prevGalleryImage() {
-            showGalleryImage(currentGalleryIndex - 1);
+            // Nem szükséges léptetés, ha csak 1 kép van, de a funkciót megtartjuk a jövőre nézve.
+            if (galleryImages.length > 1) {
+                showGalleryImage(currentGalleryIndex - 1);
+            }
         }
 
         function openGallery() {
-            showGalleryImage(0); // Mindig az első képpel kezdünk
+            showGalleryImage(0); 
             galleryModal.style.display = "block";
         }
 
@@ -590,6 +609,7 @@
             }
         }
 
+        // 🛑 VÁLTOZATLAN: Az updateAvatar a speaker property alapján dönt.
         function updateAvatar(pageIndex) {
             // Ha túlléptünk a történet végén (kód bevitele), az oldal objektum helyett a length-et használjuk
             const speakerType = pageIndex < storyPages.length ? storyPages[pageIndex].speaker : 'Narrator';
@@ -702,7 +722,7 @@
         // 1. Képgaléria menü gomb eseménykezelője
         imageButton.addEventListener('click', openGallery);
         
-        // 2. Térkép menü gomb eseménykezelője
+        // 2. Térkép menü gomb eseménykezelője (VÁLTOZATLAN)
         mapButton.addEventListener('click', () => {
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13', '_blank');
         });
