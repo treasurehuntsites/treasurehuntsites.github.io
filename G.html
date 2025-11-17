@@ -331,29 +331,26 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.98);
-            /* Engedélyezi a görgetést, ami elengedhetetlen a zoomolt kép mozgatásához */
             overflow: auto; 
         }
         
         .full-image-content {
-            /* Kényszerítjük, hogy legalább viewport méretű legyen, hogy a kép beférjen */
+            /* Kényszerítjük, hogy legalább viewport méretű legyen a megfelelő centerezéshez */
             width: 100vw; 
             height: 100vh;
             display: flex;
-            align-items: center; /* Centerezés */
-            justify-content: center; /* Centerezés */
+            align-items: center; 
+            justify-content: center; 
         }
 
         #fullImageDisplay {
-            /* 🛑 JAVÍTVA: Kép alapértelmezett méret beállítása: Befér a képernyőre! */
+            /* JAVÍTVA: Kezdetben befér a képernyőre, de a natív zoom engedélyezett */
             display: block;
             width: auto; 
             height: auto;
-            /* Kezdeti méret: befér a full-image-content 100vw/100vh méretébe */
             max-width: 100%; 
             max-height: 100%;
             
-            /* Ezeknek az értékeknek a natív zoom nem áll ellent */
             touch-action: pan-x pan-y; 
             cursor: move;
             margin: auto;
@@ -441,15 +438,16 @@
     </div>
     
     <div id="galleryModal">
-      <span class="close-gallery" onclick="closeGallery()">×</span>
+      <span class="close-gallery" onclick="history.back(); closeGallery();">×</span>
       <div id="gallery-container">
           </div>
     </div>
     
-    <div id="full-image-display" onclick="closeFullImage()">
+    <div id="full-image-display">
         <div class="full-image-content">
             <img id="fullImageDisplay" src="" alt="Nagyított kép" />
         </div>
+        <span class="close-gallery" style="z-index: 120;" onclick="closeFullImage();">×</span>
     </div>
 
 
@@ -604,23 +602,46 @@
             fullImageDisplay.src = imageUrl;
             fullImageDisplayModal.style.display = 'block';
             galleryModal.style.display = 'none'; // Eltüntetjük a bélyegkép modált
+            
+            // 🛑 MÓDOSÍTVA: Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a nagykép modált.
+            history.pushState(null, null, '#full-image');
         }
         
         function closeFullImage() {
-            // Bezárja a nagykép modált, ha a háttérre kattintanak
             fullImageDisplayModal.style.display = 'none';
         }
 
         function openGallery() {
             populateGallery(); 
             galleryModal.style.display = "block";
+            
+            // 🛑 MÓDOSÍTVA: Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a modált.
+            history.pushState(null, null, '#gallery');
         }
 
         function closeGallery() {
             galleryModal.style.display = "none";
             fullImageDisplayModal.style.display = 'none'; // Biztos, ami biztos
+            
+            // 🛑 MÓDOSÍTVA: URL Hash törlése
+            if (window.location.hash) {
+                // A böngésző history.back() hívása valósul meg a hash-re reagáló eseménykezelővel.
+            }
         }
 
+        // 🛑 ÚJ: Eseménykezelő a böngésző Vissza gombjára
+        window.addEventListener('popstate', function(event) {
+            if (fullImageDisplayModal.style.display === 'block') {
+                closeFullImage();
+                // Megállítjuk a további visszalépést, visszatérünk a galéria nézetre
+                history.pushState(null, null, '#gallery'); 
+            } else if (galleryModal.style.display === 'block') {
+                closeGallery();
+                // Visszaállítjuk az eredeti URL-t (eltávolítjuk a hash-t)
+                history.pushState(null, null, window.location.pathname + window.location.search);
+            }
+        });
+        
         // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
 
         function updateButtons() {
@@ -700,16 +721,17 @@
         
         // --- ESEMÉNYKEZELŐK ---
         
-        // A "close-gallery" span click eseménye most bezárja mindkét modált
-        document.querySelector('.close-gallery').onclick = closeGallery;
+        // MÓDOSÍTVA: A galéria 'X' gombja most a hash-t kezeli, és bezárja a modálokat.
+        document.querySelector('#galleryModal .close-gallery').onclick = () => {
+             closeGallery(); 
+             history.back(); // Töröljük a #gallery hash-t
+        };
         
-        // A nagykép modál bezárása (csak a modál háttérre kattintva)
-        fullImageDisplayModal.addEventListener('click', (e) => {
-            if (e.target === fullImageDisplayModal) {
-                closeFullImage();
-            }
-        });
-
+        // MÓDOSÍTVA: A nagykép 'X' gombja most a hash-t kezeli, és bezárja a nagykép modált.
+        document.querySelector('#full-image-display .close-gallery').onclick = () => {
+             closeFullImage();
+             history.back(); // Vissza a #gallery hash-re
+        };
 
         nextButton.addEventListener('click', () => {
             currentPartIndex++;
