@@ -1,3 +1,26 @@
+<div id="help-modal">
+        <div class="help-content">
+            <p id="help-text-display"></p>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <button id="help-close-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Bezárás</button>
+                <button id="help-next-button" style="flex-grow: 1;">Tovább</button>
+            </div>
+        </div>
+    </div>
+    ```
+
+### 2. CSS Módosítás: A "Bezárás" Gomb Stílusa (Inline)
+
+Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az oldal többi gombjához.
+
+### 3. JavaScript Módosítás: Logika Frissítése
+
+1.  Hozzáadtam a `helpCloseButton` DOM elemét.
+2.  Módosítottam a `showHelpMessage` funkciót, hogy a gombok feliratát és láthatóságát (ha az utolsó lépésnél vagyunk) pontosan kezelje.
+
+**A frissített, teljes kód:**
+
+```html
 <!doctype html>
 <html lang="hu">
 <head>
@@ -191,6 +214,14 @@
             font-family: 'Play', sans-serif;
             margin-bottom: 5px; 
         }
+
+        /* A "Add meg a kódot" sor flexbe igazítva a kérdőjellel */
+        #password-container p {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
         
         .password-interaction {
             display: flex;
@@ -376,7 +407,75 @@
         .gallery-nav {
             display: none; 
         }
+        
+        /* --- SÚGÓ (HELP) MODAL STÍLUSOK (ÚJ) --- */
+        #help-modal {
+            display: none;
+            position: fixed;
+            z-index: 200; /* Legfelül legyen */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
 
+        .help-content {
+            background-color: #1a1a1a;
+            margin: 30% auto; /* Középre igazítás */
+            padding: 30px;
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            text-align: center;
+        }
+
+        #help-text-display {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 25px;
+            min-height: 80px;
+        }
+
+        #help-next-button, #help-close-button {
+            /* Általános stílus a súgó gomboknak */
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #help-next-button {
+            background-color: #00ffff;
+            color: #1a1a1a;
+        }
+
+        #help-next-button:hover {
+            background-color: #00ddee;
+        }
+        
+        #help-close-button:hover {
+            background-color: #777777 !important;
+        }
+
+        /* Súgó ikon a kódbevitelhez */
+        .help-icon {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 0; /* Megakadályozza, hogy megnyomja a környező szöveg sortávolságát */
+        }
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -409,7 +508,12 @@
             </div>
 
             <div id="password-container">
-                <p>Add meg a kódot:</p>
+                <p>
+                    Add meg a kódot:
+                    <button id="help-button" class="help-icon" title="Segítség">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                </p>
                 <input type="password" id="password-input" maxlength="4">
                 
                 <div class="password-interaction">
@@ -438,7 +542,7 @@
     <div id="galleryModal">
       <span class="close-gallery" onclick="history.back();">×</span>
       <div id="gallery-container">
-          </div>
+            </div>
     </div>
     
     <div id="full-image-display">
@@ -447,7 +551,16 @@
         </div>
         <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
     </div>
-
+    
+    <div id="help-modal">
+        <div class="help-content">
+            <p id="help-text-display"></p>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <button id="help-close-button" class="page-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Bezárás</button>
+                <button id="help-next-button" class="page-button" style="flex-grow: 1; background-color: #00ffff; color: #1a1a1a;">Tovább</button>
+            </div>
+        </div>
+    </div>
 
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
@@ -501,6 +614,14 @@
         const CORRECT_PASSWORD = "2460"; 
         const SUCCESS_LINK = "minta_oldal_3.html"; 
         
+        // 🛑 MÓDOSÍTOTT: SEGÍTSÉG ADATOK ÉS ÁLLAPOT
+        const HELP_MESSAGES = [
+            "A szobroknak közük lehet a számkódos megoldáshoz.",
+            "Lehet, hogy fontos merre néznek?",
+            "A segítségnek ára van. Vigyázz , mert ha nem érsz el 50 pontot a játék végéig, nem tudod a játékot befejezni. A kód: 2460"
+        ];
+        let currentHelpIndex = 0;
+        
         // DOM elemek
         const contentBox = document.getElementById('content-box');
         const storyDisplay = document.getElementById('story-text-display');
@@ -533,9 +654,16 @@
         const galleryModal = document.getElementById('galleryModal');
         const galleryContainer = document.getElementById('gallery-container');
         
-        // 🛑 ÚJ: Nagyított képhez tartozó elemek
+        // Nagyított képhez tartozó elemek
         const fullImageDisplayModal = document.getElementById('full-image-display');
         const fullImageDisplay = document.getElementById('fullImageDisplay');
+        
+        // 🛑 MÓDOSÍTOTT: Súgó DOM elemek
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const helpTextDisplay = document.getElementById('help-text-display');
+        const helpNextButton = document.getElementById('help-next-button');
+        const helpCloseButton = document.getElementById('help-close-button'); // ÚJ
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -575,8 +703,7 @@
             }
         }
 
-        // 🛑 GALÉRIA FUNKCIÓK
-        
+        // GALÉRIA FUNKCIÓK (változatlan)
         function populateGallery() {
             galleryContainer.innerHTML = ''; 
             galleryImages.forEach((image, index) => {
@@ -588,7 +715,6 @@
                 img.alt = image.title;
                 img.dataset.index = index;
                 
-                // Kattintás a nagykép megnyitásához
                 thumbnailDiv.onclick = () => openFullImage(image.url);
                 
                 thumbnailDiv.appendChild(img);
@@ -599,9 +725,7 @@
         function openFullImage(imageUrl) {
             fullImageDisplay.src = imageUrl;
             fullImageDisplayModal.style.display = 'block';
-            galleryModal.style.display = 'none'; // Eltüntetjük a bélyegkép modált
-            
-            // Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a nagykép modált.
+            galleryModal.style.display = 'none'; 
             history.pushState(null, null, '#full-image');
         }
         
@@ -612,8 +736,6 @@
         function openGallery() {
             populateGallery(); 
             galleryModal.style.display = "block";
-            
-            // Hash-t adunk hozzá az URL-hez, hogy a böngésző "Vissza" gombja bezárja a modált.
             history.pushState(null, null, '#gallery');
         }
 
@@ -622,20 +744,53 @@
             fullImageDisplayModal.style.display = 'none'; 
         }
 
-        // 🛑 MÓDOSÍTVA: Eseménykezelő a böngésző Vissza gombjára (Modálok zárása)
+        // --- SÚGÓ FUNKCIÓK (MÓDOSÍTVA) ---
+
+        function closeHelpModal() {
+            helpModal.style.display = 'none';
+        }
+
+        function showHelpMessage() {
+            if (currentHelpIndex < HELP_MESSAGES.length) {
+                helpTextDisplay.textContent = HELP_MESSAGES[currentHelpIndex];
+                helpModal.style.display = 'block';
+                
+                // Gombok láthatósága és felirata
+                if (currentHelpIndex === HELP_MESSAGES.length - 1) {
+                    helpNextButton.textContent = 'Értem';
+                } else {
+                    helpNextButton.textContent = 'Tovább';
+                }
+                
+            } else {
+                // Ha elfogyott a segítség, csak zárjuk be a modált
+                closeHelpModal();
+                currentHelpIndex = HELP_MESSAGES.length - 1; // Maradjon az utolsó indexen
+            }
+        }
+
+        function nextHelpStep() {
+            if (currentHelpIndex < HELP_MESSAGES.length - 1) {
+                currentHelpIndex++;
+                showHelpMessage();
+            } else {
+                // Zárás, ha az utolsó segítség is megvolt (az "Értem" gomb funkciója)
+                closeHelpModal();
+            }
+        }
+
+        // MÓDOSÍTVA: Eseménykezelő a böngésző Vissza gombjára (Modálok zárása)
         window.addEventListener('popstate', function(event) {
             if (fullImageDisplayModal.style.display === 'block') {
-                // Ha a nagykép modál látható, csak azt zárjuk be, visszalépve a galériára
                 closeFullImage();
                 history.pushState(null, null, '#gallery'); 
             } else if (galleryModal.style.display === 'block') {
-                // Ha a galéria modál látható, zárjuk be, és távolítsuk el a hash-t.
                 closeGallery();
                 history.pushState(null, null, window.location.pathname + window.location.search);
             }
         });
         
-        // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
+        // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK (változatlan) ---
 
         function updateButtons() {
             stopAllAudio(); 
@@ -714,14 +869,12 @@
         
         // --- ESEMÉNYKEZELŐK ---
         
-        // MÓDOSÍTVA: A galéria 'X' gombja most a hash-t kezeli
         document.querySelector('#galleryModal .close-gallery').onclick = () => {
-             history.back(); // Töröljük a #gallery hash-t
+             history.back(); 
         };
         
-        // MÓDOSÍTVA: A nagykép 'X' gombja most a hash-t kezeli
         document.querySelector('#full-image-display .close-gallery').onclick = () => {
-             history.back(); // Vissza a #gallery hash-re
+             history.back(); 
         };
 
         nextButton.addEventListener('click', () => {
@@ -779,6 +932,20 @@
         mapButton.addEventListener('click', () => {
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13', '_blank');
         });
+
+        // 🛑 MÓDOSÍTOTT: Súgó eseménykezelők
+        if (helpButton) {
+            helpButton.addEventListener('click', showHelpMessage);
+        }
+
+        if (helpNextButton) {
+            helpNextButton.addEventListener('click', nextHelpStep);
+        }
+        
+        // ÚJ: Bezárás eseménykezelő
+        if (helpCloseButton) {
+            helpCloseButton.addEventListener('click', closeHelpModal);
+        }
 
 
         window.onload = () => {
