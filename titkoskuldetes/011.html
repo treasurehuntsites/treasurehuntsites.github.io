@@ -540,6 +540,20 @@
         </div>
     </div>
 
+    <!-- ÚJ: Sikeres befejezés felugró ablak 3 másodperces átirányítással -->
+    <div id="success-modal" style="display: none; position: fixed; z-index: 300; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.95); backdrop-filter: blur(5px);">
+        <div style="background-color: #1a1a1a; margin: 30% auto; padding: 30px; border: 3px solid #00FF00; border-radius: 10px; width: 80%; max-width: 400px; box-shadow: 0 0 25px rgba(0, 255, 0, 0.7); text-align: center;">
+            <!-- Kép a talizmánról (placeholder) -->
+            <img src="https://placehold.co/150x150/00ffff/1a1a1a?text=Talizmán" alt="Talizmán kép" style="width: 150px; height: 150px; border-radius: 5px; margin-bottom: 20px; border: 2px solid #00FFFF;">
+            
+            <p style="font-size: 1.4em; font-weight: 700; color: #00FF00; margin-bottom: 10px;">Megtaláltad az egyik talizmánt a 7 közül!</p>
+            <p style="font-size: 1.1em; color: #e0e0e0;">Keressd a fő térképen a folytatást!</p>
+            
+            <!-- Visszaszámláló kijelző -->
+            <p id="redirect-timer" style="margin-top: 20px; color: #8a2be2;">Átirányítás 3 másodperc múlva...</p>
+        </div>
+    </div>
+
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
@@ -643,14 +657,16 @@
 
 
         let currentPartIndex = 0;
-        const CORRECT_PASSWORD = "2460"; 
-        const SUCCESS_LINK = "compass2.html"; 
+        // HELYES JELSZÓ
+        const CORRECT_PASSWORD = "2295"; 
+        // ÚJ CÉL LINK
+        const SUCCESS_LINK = "https://www.google.com/maps/d/u/0/viewer?mid=1RPu5lG2mAeR_TLl_D6Ya4ajbleLgikI&ll=47.453898687406785%2C19.01940665000001&z=13"; 
         
         // 🛑 MÓDOSÍTOTT: SEGÍTSÉG ADATOK ÉS ÁLLAPOT
         const HELP_MESSAGES = [
             "A szobroknak közük lehet a számkódos megoldáshoz.",
             "Lehet, hogy fontos merre néznek?",
-            "A segítségnek ára van. Vigyázz , mert ha nem érsz el 50 pontot a játék végéig, nem tudod a játékot befejezni. A kód: 2460"
+            "A segítségnek ára van. Vigyázz , mert ha nem érsz el 50 pontot a játék végéig, nem tudod a játékot befejezni. A kód: 2295" // FRISSÍTVE A SÚGÓ IS
         ];
         let currentHelpIndex = 0;
         
@@ -690,12 +706,16 @@
         const fullImageDisplayModal = document.getElementById('full-image-display');
         const fullImageDisplay = document.getElementById('fullImageDisplay');
         
-        // 🛑 MÓDOSÍTOTT: Súgó DOM elemek
+        // Súgó DOM elemek
         const helpButton = document.getElementById('help-button');
         const helpModal = document.getElementById('help-modal');
         const helpTextDisplay = document.getElementById('help-text-display');
         const helpNextButton = document.getElementById('help-next-button');
-        const helpCloseButton = document.getElementById('help-close-button'); // ÚJ
+        const helpCloseButton = document.getElementById('help-close-button');
+
+        // ÚJ: Sikeres modal elemek
+        const successModal = document.getElementById('success-modal');
+        const redirectTimer = document.getElementById('redirect-timer');
 
         // --- Segéd FÜGGVÉNYEK ---
 
@@ -934,13 +954,29 @@
             const enteredPassword = passwordInput.value.trim();
 
             if (enteredPassword === CORRECT_PASSWORD) {
-                messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
+                messageDisplay.textContent = 'Kód elfogadva!';
                 messageDisplay.style.color = '#00FF00';
                 localStorage.removeItem('gameProgress'); 
                 stopAllAudio();
-                setTimeout(() => {
-                    window.location.href = SUCCESS_LINK;
+                
+                // 1. Megjeleníti a sikeres modalt
+                successModal.style.display = 'block';
+
+                // 2. Kezeli a visszaszámlálót és az átirányítást
+                let countdown = 3;
+                redirectTimer.textContent = `Átirányítás ${countdown} másodperc múlva...`;
+                
+                const timerInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        redirectTimer.textContent = `Átirányítás ${countdown} másodperc múlva...`;
+                    } else {
+                        clearInterval(timerInterval);
+                        // 3. Átirányítás az új térkép linkre
+                        window.location.href = SUCCESS_LINK;
+                    }
                 }, 1000);
+
             } else {
                 messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
                 messageDisplay.style.color = '#FF4500';
@@ -963,7 +999,7 @@
         
         // 2. Térkép menü gomb eseménykezelője
         mapButton.addEventListener('click', () => {
-            // FRISSÍTVE: Az új Google Maps link
+            // A korábbi térkép link
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1Dv2M055EwshVChr9LgLf5rDIe1kbVZY&ll=47.42414180000005%2C19.0390987&z=17', '_blank');
         });
 
