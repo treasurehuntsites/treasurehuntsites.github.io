@@ -457,7 +457,7 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <img id="story-image" src="Img/Screenshot_20251117_095747.jpg" alt="Titokzatos jelenet">
+        <img id="story-image" src="Img/pokokkove.jpg" alt="Titokzatos jelenet">
     </div>
 
     <div class="content-box" id="content-box">
@@ -545,15 +545,17 @@
 
     <script>
         // KÉP URL-ek
-        const STABLE_IMAGE_URL = "Img/Screenshot_20251117_095747.jpg"; 
+        const STABLE_IMAGE_URL = "Img/pokokkove.jpg"; 
         const MARK_AVATAR_URL = "https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true";
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
-        const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
+        // FRISSÍTVE: PUZZLE_IMAGE_URL a papirfecni.png-re
+        const PUZZLE_IMAGE_URL = "Img/papirfecni.png"; 
 
         // GALÉRIA KÉPEK LISTÁJA
+        // FRISSÍTVE: Galéria képek cseréje
         const galleryImages = [
-            { url: STABLE_IMAGE_URL, title: "Titokzatos jelenet" },
-            { url: PUZZLE_IMAGE_URL, title: "Kódolvasó rejtvény" }
+            { url: STABLE_IMAGE_URL, title: "A pókok köve" }, // A háttérkép
+            { url: PUZZLE_IMAGE_URL, title: "Papírfecni" }      // A papírfecni kép
         ];
         let currentGalleryIndex = 0;
 
@@ -890,24 +892,42 @@
 
             if (enteredPassword === CORRECT_PASSWORD) {
                 // Kód elfogadva!
-                messageDisplay.textContent = 'Kód elfogadva! Nézd meg a következő feladatot a kő mögött.';
+                messageDisplay.textContent = 'Kód elfogadva! Olvasd el a feladatot.';
                 messageDisplay.style.color = '#00FF00';
                 
                 // Elrejti a kód beviteli részt
                 passwordContainer.classList.remove('visible');
+                storyDisplay.innerHTML = ''; // Törli a "Add meg a kódot!" szöveget
 
                 // EXTRA szövegdoboz létrehozása és megjelenítése
                 const successMessageContainer = document.createElement('div');
                 successMessageContainer.id = 'success-message-step';
                 successMessageContainer.style.cssText = 'padding-top: 20px; text-align: center;';
                 successMessageContainer.innerHTML = `
-                    <p id="success-text" style="font-size: 1.3em; color: #00ffff; font-weight: 700;">Nézz be a kő hátulja mögé és keress egy kis üvegcsét. Jegyezd fel az ott talált számkódot!</p>
-                    <button id="final-next-button" class="page-button" style="margin-top: 20px; background-color: #00ffff; color: #1a1a1a; width: 100%;">Tovább</button>
+                    <p id="success-text" style="font-size: 1.3em; color: #00ffff; font-weight: 700; margin-bottom: 20px;">Nézz be a kő hátulja mögé és keress egy kis üvegcsét. Jegyezd fel az ott talált számkódot!</p>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;">
+                        <button id="final-back-button" class="page-button" style="flex-grow: 1;">VISSZA</button>
+                        <button id="final-next-button" class="page-button" style="flex-grow: 1; background-color: #00ffff; color: #1a1a1a;">Tovább</button>
+                    </div>
                 `;
 
                 // A `content-box` aljához adja hozzá az új tartalmat
                 document.getElementById('content-box').appendChild(successMessageContainer);
                 
+                // Vissza gomb eseménykezelője (visszatérés a kódbeviteli állapothoz)
+                document.getElementById('final-back-button').addEventListener('click', () => {
+                    const successMsg = document.getElementById('success-message-step');
+                    if (successMsg) {
+                        successMsg.remove();
+                    }
+                    // Vissza a kódbeviteli állapotba
+                    passwordContainer.classList.add('visible');
+                    messageDisplay.textContent = '';
+                    passwordInput.value = CORRECT_PASSWORD; // Maradjon bent a kód
+                    storyDisplay.innerHTML = 'Add meg a kódot!';
+                    updateButtons();
+                });
+
                 // Az átirányító gomb eseménykezelője
                 document.getElementById('final-next-button').addEventListener('click', () => {
                     localStorage.removeItem('gameProgress');
