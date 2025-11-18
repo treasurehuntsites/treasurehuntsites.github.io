@@ -550,11 +550,17 @@
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
         const PUZZLE_IMAGE_URL = "Img/papirfecni.png"; 
 
-        // GALÉRIA KÉPEK LISTÁJA
-        const galleryImages = [
-            { url: STABLE_IMAGE_URL, title: "A pókok köve" }, // A háttérkép
-            { url: PUZZLE_IMAGE_URL, title: "Papírfecni" }      // A papírfecni kép
+        // GALÉRIA KÉPEK ADATAI
+        // CSAK a háttérképet tartalmazza alapból
+        const BASE_GALLERY_IMAGES = [
+            { url: STABLE_IMAGE_URL, title: "A pókok köve" }
         ];
+        // A titkos kép, amit a Galériához adunk hozzá
+        const SECRET_GALLERY_IMAGE = { url: PUZZLE_IMAGE_URL, title: "Papírfecni" };
+        
+        // ÚJ: Állapotkövetés a titkos képhez
+        let isPapirfecniUnlocked = localStorage.getItem('papirfecni_unlocked') === 'true';
+
         let currentGalleryIndex = 0;
 
 
@@ -674,10 +680,17 @@
             }
         }
 
-        // GALÉRIA FUNKCIÓK
+        // GALÉRIA FUNKCIÓK (MÓDOSÍTVA)
         function populateGallery() {
             galleryContainer.innerHTML = ''; 
-            galleryImages.forEach((image, index) => {
+            
+            // Dinamikusan összeállítja a képlistát
+            let currentImages = [...BASE_GALLERY_IMAGES];
+            if (isPapirfecniUnlocked) {
+                currentImages.push(SECRET_GALLERY_IMAGE);
+            }
+
+            currentImages.forEach((image, index) => {
                 const thumbnailDiv = document.createElement('div');
                 thumbnailDiv.className = 'gallery-thumbnail';
                 
@@ -893,6 +906,10 @@
                 messageDisplay.textContent = 'Kód elfogadva! Olvasd el a feladatot.';
                 messageDisplay.style.color = '#00FF00';
                 
+                // ÚJ: Titkos kép feloldása
+                isPapirfecniUnlocked = true;
+                localStorage.setItem('papirfecni_unlocked', 'true');
+
                 // Elrejti a kód beviteli részt
                 passwordContainer.classList.remove('visible');
                 storyDisplay.innerHTML = ''; // Törli a "Add meg a kódot!" szöveget
