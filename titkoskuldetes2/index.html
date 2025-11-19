@@ -54,7 +54,7 @@
             margin: 0; 
             border-radius: 10px 10px 0 0; 
             max-width: 800px;
-            width: calc(100% - 20px); /* Reszponzív szélesség, mobilra optimalizálva */
+            width: calc(100% - 20px);
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8a2be2;
             box-sizing: border-box;
@@ -267,14 +267,13 @@
         #gpsModal {
             display: none;
             position: fixed;
-            z-index: 200; 
+            z-index: 200; /* Magasan legyen, felülírva a többit */
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            /* 5. A háttér látszódjon, áttetsző fekete overlay */
-            background-color: rgba(0, 0, 0, 0.7); 
-            backdrop-filter: blur(2px);
+            background-color: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(5px);
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -309,7 +308,7 @@
         #distance-display {
             font-size: 4em;
             font-weight: bold;
-            color: #00ff00; 
+            color: #00ff00; /* Neon zöld a távolságra */
             margin: 20px 0 30px 0;
             padding: 10px 20px;
             background-color: rgba(0, 0, 0, 0.8);
@@ -320,8 +319,10 @@
         }
 
         #statusz {
-            /* 2. Pontosság kijelzés elrejtése a felugró ablakban */
-            display: none; 
+            color: #aaaaaa;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+            text-align: center;
         }
 
         .gps-map-button {
@@ -339,6 +340,8 @@
             margin-top: 20px;
         }
         
+        /* A COMPASS.HTML háttere már nem kell, mert az egészet a MODAL fogja fedni */
+
     </style>
 </head>
 <body>
@@ -412,7 +415,7 @@
     
     <div id="gpsModal">
         <div class="gps-content">
-            <h1 id="distance-title">Menj a következő ponthoz</h1> 
+            <h1 id="distance-title">CÉL ÉSZLELÉSE</h1>
             
             <div id="distance-display">
                 -- M
@@ -424,7 +427,10 @@
                 🗺️ Térkép
             </a>
             
-            </div>
+            <button id="close-gps-modal" class="gps-map-button" style="margin-top: 15px; background-color: #8a2be2; border-color: #8a2be2;">
+                Vissza a történethez
+            </button>
+        </div>
     </div>
     
     <script>
@@ -505,7 +511,7 @@
         const gpsModal = document.getElementById('gpsModal');
         const distanceDisplay = document.getElementById('distance-display');
         const statuszElem = document.getElementById('statusz');
-        // const closeGpsModalButton = document.getElementById('close-gps-modal'); // Eltávolítva
+        const closeGpsModalButton = document.getElementById('close-gps-modal');
         
         let watchId = null; // A GPS figyelés ID-ja
         
@@ -671,16 +677,12 @@
         }
 
         function startGpsTracking() {
-            // Elem beállítása hiba esetére
-            statuszElem.style.display = 'none'; 
-            statuszElem.textContent = "Kérjük, engedélyezze a helymeghatározást!";
-
             if (!("geolocation" in navigator)) {
                 statuszElem.textContent = "Hiba: A böngészője nem támogatja a helymeghatározást.";
-                statuszElem.style.display = 'block'; 
                 return;
             }
             
+            // Ha már fut, leállítjuk az előzőt
             if (watchId !== null) {
                 navigator.geolocation.clearWatch(watchId);
             }
@@ -694,9 +696,8 @@
                     distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
 
                     if (tavolsag <= SUGAR_METER) {
-                        statuszElem.textContent = "Cél elérve! Átirányítás 5 másodperc múlva..."; 
-                        statuszElem.style.display = 'block'; // Átirányítás üzenetét mutatjuk
-                        
+                        statuszElem.textContent = "Cél elérve! Átirányítás 5 másodperc múlva...";
+                        // Előtte leállítjuk a GPS figyelést
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                         setTimeout(() => {
@@ -709,8 +710,7 @@
                         return;
                     }
                     
-                    // 2. Pontossági adat kiírásának eltávolítása/elrejtése
-                    statuszElem.style.display = 'none';
+                    statuszElem.textContent = `Pontosság: ±${position.coords.accuracy.toFixed(0)} m.`;
                 },
                 
                 (error) => {
@@ -719,7 +719,6 @@
                     } else {
                         statuszElem.textContent = "Hiba a helymeghatározásban. Kérjük, próbálja újra.";
                     }
-                    statuszElem.style.display = 'block'; // Ha hiba van, írja ki
                     distanceDisplay.textContent = "-- M";
                 },
                 
@@ -731,7 +730,14 @@
             );
         }
         
-        // stopGpsTracking eltávolítva, mivel a modal csak az átirányításkor tűnik el.
+        function stopGpsTracking() {
+             if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            document.body.classList.remove('gps-active');
+            gpsModal.classList.remove('active');
+        }
 
         // ---------------------------------------------------
         // --- ESEMÉNYKEZELŐK ---
@@ -790,16 +796,19 @@
         });
         
         playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
-        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudio2, '2'));
+        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
         
         imageButton.addEventListener('click', openGallery);
         
+        // A térkép gomb most már az interakciós gomb mellett is megjelenik
         mapButton.addEventListener('click', () => {
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1qTBS42KcRDJRlwSLY1FUDSbAwHxP3wo&ll=47.426209499999985%2C19.038944499999992&z=17');
         });
         
-        // --- GPS MODAL Események (Vissza gomb eltávolítva) ---
-        // Nincs eseménykezelő a GPS modal bezárására, mert a cél a folyamatos nyomkövetés.
+        // --- GPS MODAL Események ---
+        closeGpsModalButton.addEventListener('click', () => {
+            stopGpsTracking();
+        });
 
         window.onload = () => {
             loadProgress(); 
