@@ -474,7 +474,7 @@
         #distanceModal {
             display: none; 
             position: fixed;
-            z-index: 200; 
+            z-index: 200; /* Legfelül legyen, nehogy a body takarja */
             left: 0;
             top: 0;
             width: 100%;
@@ -551,8 +551,8 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <!-- VISSZAÁLLÍTVA: Az eredeti, külső URL a megbízható megjelenítés érdekében -->
-        <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos jelenet">
+        <!-- VISSZAÁLLÍTVA AZ EREDETI 5571.HTML-BŐL SZÁRMAZÓ KÉPRE -->
+        <img id="story-image" src="Img/Screenshot_20251117_095747.jpg" alt="Titokzatos jelenet">
     </div>
 
     <div class="content-box" id="content-box">
@@ -667,9 +667,8 @@
         const MAP_URL_FOR_MENU = 'https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13';
         // ------------------------------------------------
 
-        // KÉP URL-ek (az 5571.html-ből)
-        // JAVÍTVA: Visszaállítva a megbízható külső URL-re
-        const STABLE_IMAGE_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg"; 
+        // KÉP URL-ek (az 5571.html-ből származó relatív elérési utak használata)
+        const STABLE_IMAGE_URL = "Img/Screenshot_20251117_095747.jpg"; 
         const MARK_AVATAR_URL = "https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true";
         const ANNA_AVATAR_URL = "https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1740219075.png";
         const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
@@ -890,7 +889,7 @@
         window.addEventListener('popstate', function(event) {
             if (fullImageDisplayModal.style.display === 'block') {
                 closeFullImage();
-                history.pushState(null, null, '#gallery'); 
+                history.pushState(null, null, '#full-image'); 
             } else if (galleryModal.style.display === 'block') {
                 closeGallery();
                 history.pushState(null, null, window.location.pathname + window.location.search);
@@ -1184,27 +1183,50 @@
         }
 
         
-        // EZ A FUNKCIÓ INDÍTJA EL A TARTALOM MEGJELENÍTÉSÉT
+        // 🚀 JAVÍTÁS: EZ A FUNKCIÓ INDÍTJA EL A TARTALOM MEGJELENÍTÉSÉT
         function initializeApp() {
+            // FONTOS: Ez a funkció teszi láthatóvá a body-t
+            
+            // Ellenőrizzük, hogy elindult-e már, hogy ne fusson le többször (pl. képbetöltés error és load eseményre is)
+            if (document.body.style.visibility === 'visible') return; 
+
             loadProgress(); 
             showStoryPart();
             
-            // 1. A body láthatóvá tétele (a CSS átmenettel)
+            // A body láthatóvá tétele (a CSS átmenettel)
             document.body.style.visibility = 'visible';
             document.body.style.opacity = 1;
         }
 
-        // FIGYELJÜK A HÁTTÉRKÉP (story-image) BETÖLTÉSÉT
-        if (storyImage.complete && storyImage.naturalWidth !== 0) {
-            // Ha a kép már a kód futása előtt betöltődött (cache-ből)
-            initializeApp();
-        } else {
-            // Megvárjuk, amíg a kép betöltődik
-            storyImage.addEventListener('load', initializeApp);
+        // FONTOS JAVÍTÁS: A window.onload esemény elindítja a játékot,
+        // így garantáltan lefut, még akkor is, ha a képbetöltés problémás.
+        window.onload = () => {
+             // Google Forms küldése a betöltéskor
+            const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMxfTwsgk0nyIiuJ1o9mWHbRkyPA9hBI792mABbOzJOVlONA/formResponse";
+            fetch(FORM_URL, {
+                method: 'POST',
+                mode: 'no-cors'
+            }).then(() => {
+                console.log("Látogatási adat sikeresen elküldve a Google Sheets felé.");
+            }).catch(error => {
+                console.error("Hiba történt a látogatási kérés küldésekor:", error);
+            });
             
-            // Ha a kép valamiért nem tölt be (broken link), akkor is induljon el a játék
-            storyImage.addEventListener('error', initializeApp);
-        }
+            // FOUC megelőzése: Megvárjuk a képbetöltést, de ha már kész van, azonnal indul.
+            const storyImage = document.getElementById('story-image');
+            
+            storyImage.addEventListener('load', initializeApp, { once: true });
+            storyImage.addEventListener('error', initializeApp, { once: true });
+            
+            // Ha a kép már cache-ből be van töltve vagy valamiért a listener nem fut, 
+            // futtassuk le a játékot egy rövid idő után, hogy a felhasználó lássa a tartalmat.
+            if (storyImage.complete || storyImage.naturalWidth !== 0) {
+                 initializeApp();
+            } else {
+                 // Fallback arra az esetre, ha a kép betöltési eseménye nem fut
+                 setTimeout(initializeApp, 1500); 
+            }
+        };
     </script>
 </body>
 </html>
