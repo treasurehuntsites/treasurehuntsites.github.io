@@ -2,8 +2,8 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <!-- TÁJOLÁS ZÁR FELOLDVA: Eltávolítva a portrait kényszerítés és a landscape tiltás -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0"> 
+    <!-- TÁJOLÁS ZÁR VISSZAHELYEZVE: Kényszerítve a portré mód -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, orientation=portrait"> 
     <title>Titkos Küldetés - A Pókok Köve</title>
     
     <!-- GPS és Ikonok -->
@@ -39,6 +39,29 @@
             visibility: hidden; 
             opacity: 0;
             transition: opacity 0.5s ease-in-out; 
+        }
+
+        /* Fekvő tájolás tiltása, csak a portré (álló) mód látható */
+        @media only screen and (orientation: landscape) {
+            body::after {
+                content: "Kérlek, tartsd függőlegesen a telefont!";
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #1a1a1a;
+                color: #ff4500;
+                font-size: 2em;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                text-align: center;
+            }
+            body > *:not(style):not(script):not(.full-width-image-container) {
+                display: none !important;
+            }
         }
         
         /* Teljes szélességű KÉP (Háttér) */
@@ -778,13 +801,13 @@
             setTimeout(startCompassTracking, 2000);
         }
         
-        function setDistanceStatus(message, isError = false) {
+        function setDistanceStatus(message) {
             distanceStatus.textContent = message;
         }
 
         function startCompassTracking() {
             if (!("geolocation" in navigator)) {
-                setDistanceStatus("Hiba: A böngészője nem támogatja a helymeghatározást.", true);
+                setDistanceStatus("Hiba: A böngészője nem támogatja a helymeghatározást.");
                 console.error("Geolocation API not supported.");
                 return;
             }
@@ -794,7 +817,8 @@
                 watchId = null;
             }
             
-            setDistanceStatus("Helymeghatározás indítása, kérjük várjon...", true);
+            // MÓDOSÍTOTT: Egyszerűsített állapotüzenet indításkor
+            setDistanceStatus("Helyzetmeghatározás indítása...");
             distanceDisplay.textContent = "-- M"; 
 
             watchId = navigator.geolocation.watchPosition(
@@ -805,14 +829,16 @@
                     const tavolsag = tavolsagotKiszamol(latDeg, lonDeg, COMPASS_LAT, COMPASS_LON);
                     
                     distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
-                    setDistanceStatus(`Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`);
-
+                    
+                    // MÓDOSÍTVA: Eltávolítva a pontosság (accuracy) kijelzése.
+                    setDistanceStatus("GPS aktív, közeledj a célhoz.");
+                    
                     if (tavolsag <= COMPASS_RADIUS) {
                         setDistanceStatus("Cél elérve! Átirányítás 5 másodperc múlva...");
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                         setTimeout(() => {
-                            window.location.href = COMPASS_SUCCESS_LINK; // Átirányítás a 011.html-re
+                            window.location.href = COMPASS_SUCCESS_LINK; 
                         }, 5000);
                         return;
                     }
@@ -827,10 +853,10 @@
                     }
                     
                     if (error.code === error.PERMISSION_DENIED) {
-                        setDistanceStatus("Hiba: Kérjük, engedélyezze a helymeghatározást (engedély letiltva).");
+                        setDistanceStatus("Hiba: Kérjük, engedélyezze a helymeghatározást.");
                         distanceDisplay.textContent = "X";
                     } else if (error.code === error.POSITION_UNAVAILABLE) {
-                         setDistanceStatus("Hiba: A helyzetadatok nem érhetők el (rossz GPS vétel). Újrapróbálkozás...");
+                         setDistanceStatus("Hiba: A helyzetadatok nem érhetők el. Újrapróbálkozás...");
                          distanceDisplay.textContent = "X";
                          restartCompassTracking(); 
                     } else if (error.code === error.TIMEOUT) {
