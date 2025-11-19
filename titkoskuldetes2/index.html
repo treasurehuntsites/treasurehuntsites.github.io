@@ -636,7 +636,7 @@
             galleryModal.style.display = "none";
         }
 
-        // --- TÁVOLSÁG/GPS FUNKCIÓK (Javított GPS indítás) ---
+        // --- TÁVOLSÁG/GPS FUNKCIÓK (Javított GPS indítás és Timeout) ---
         
         function tavolsagotKiszamol(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -689,10 +689,16 @@
                 },
                 
                 (error) => {
+                    // JAVÍTÁS: Törli a folyamatos figyelést hiba esetén, és pontos üzenetet ír
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                    
                     if (error.code === error.PERMISSION_DENIED) {
                         distanceStatus.textContent = "Hiba: Kérjük, engedélyezze a helymeghatározást.";
                     } else if (error.code === error.POSITION_UNAVAILABLE) {
                          distanceStatus.textContent = "Hiba: A helyzetadatok nem érhetők el (pl. rossz GPS vétel).";
+                    } else if (error.code === error.TIMEOUT) {
+                         distanceStatus.textContent = "Hiba: Túl sokáig tartott a helyzet meghatározása. Próbáld meg újra, vagy menj ki a szabadba.";
                     } else {
                         distanceStatus.textContent = "Hiba a helymeghatározásban.";
                     }
@@ -701,8 +707,10 @@
                 
                 {
                     enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
+                    // JAVÍTÁS: Megnövelt timeout a GPS jel stabilizálására (15 mp)
+                    timeout: 15000, 
+                    // JAVÍTÁS: Rövid maximumAge, hogy friss pozíciót kapjunk
+                    maximumAge: 1000 
                 }
             );
         }
