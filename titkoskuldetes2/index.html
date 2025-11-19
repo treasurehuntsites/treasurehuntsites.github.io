@@ -19,16 +19,12 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* Fő tartalom görgethetővé tétele */
             min-height: 100vh;
             text-align: center;
             padding-bottom: 60px; 
             overflow-y: auto; 
-            /* A fő tartalom (képet és dobozt is tartalmazó) középre igazításához flexbox kell */
-            justify-content: center; 
         }
 
-        /* GPS Modal esetén letiltjuk a görgetést */
         body.gps-active {
              overflow: hidden;
              touch-action: none;
@@ -51,27 +47,20 @@
             object-position: center top; 
         }
 
-        /* --- SZÖVEGDOBOZ MÓDOSÍTÁSA: Nincs fix pozíció, nincs háttér (halványítás) --- */
         .content-box {
-            /* Háttér eltávolítva: a mögöttes kép nem halványul el, ltszik */
-            /* background-color: rgba(0, 0, 0, 0.7); <-- Törölve */
+            background-color: rgba(0, 0, 0, 0.7); 
             padding: 40px; 
-            margin: auto; /* Középre igazítja a flex-konténerben (body) */
-            border-radius: 10px; 
+            margin: 0; 
+            border-radius: 10px 10px 0 0; 
             max-width: 800px;
-            width: calc(100% - 40px); /* Kisebb margó a széleken */
-            /* Keret megmarad, hogy elkülönítse a szöveget a képtől */
+            width: calc(100% - 20px); 
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8a2be2;
             box-sizing: border-box;
-            
-            /* Pozíció eltávolítva, mert a body flex-konténerként középre igazítja:
             position: fixed; 
             bottom: 50px; 
             left: 50%;
             transform: translateX(-50%); 
-            */
-            
             z-index: 10;
             text-align: left;
             min-height: 250px; 
@@ -80,25 +69,15 @@
             justify-content: space-between; 
             opacity: 0; 
             transition: opacity 0.5s ease-in-out;
-            
-            /* Hogy a szövegdoboz háttere ténylegesen átlátszó legyen: */
-            background-color: transparent; 
-            /* Mivel eltávolítottuk a fix pozíciót, a tartalomdoboz a menü fölött, de a kép közepén lesz */
-            margin-top: 10vh; /* Kicsit lejjebb tolja a dobozt, hogy ne fedje el a kép felső részét */
-            margin-bottom: 70px; /* Hely a fix menünek */
         }
-        
-        /* Adok egy enyhe árnyékot a szövegnek a jobb olvashatóság érdekében a kép felett */
+
         #story-text-display {
             font-size: 1.3em;
             font-weight: 700;
             line-height: 1.6;
             margin-bottom: 20px;
             white-space: pre-wrap; 
-            text-shadow: 0 0 5px #000000, 0 0 5px #000000; /* Kettős árnyék a kontrasztért */
         }
-
-        /* A többi CSS stílus változatlan marad... */
 
         .audio-container {
             text-align: center;
@@ -127,17 +106,8 @@
             border-top: 1px dashed #8a2be2;
             min-height: 48px;
             width: 100%;
-            background-color: rgba(26, 26, 26, 0.9); /* Adok egy sötét hátteret az interakciós sávnak */
-            margin-left: -40px;
-            margin-right: -40px;
-            padding-left: 40px;
-            padding-right: 40px;
-            width: calc(100% + 80px); /* Teljes szélesség a kereten belül */
-            box-sizing: border-box;
-            border-radius: 0 0 10px 10px;
-            margin-top: 10px;
         }
-        
+
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -203,7 +173,6 @@
             margin-top: 10px;
             font-weight: 700;
             color: #ff4500;
-            text-shadow: none; /* A message ne kapjon árnyékot */
         }
 
         .avatar-image {
@@ -292,7 +261,7 @@
 
 
         /* --------------------------------------------------- */
-        /* --- GPS MODAL STÍLUSOK (COMPASS.HTML KIVONAT) --- */
+        /* --- GPS MODAL STÍLUSOK (MÓDOSÍTVA: CENTRÁLÁS) --- */
         /* --------------------------------------------------- */
         #gpsModal {
             display: none;
@@ -302,13 +271,14 @@
             top: 0;
             width: 100%;
             height: 100%;
-            /* Háttér áttetsző, hogy a mögöttes kép látszódjon */
             background-color: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(2px);
+            /* Centrált elhelyezés biztosítása */
+            display: flex; /* Csak akkor látszik, ha aktív */
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-            padding: 20px;
+            /* Extra belső margó a tartalomnak, hogy ne érjen a szélekhez */
+            padding: 20px; 
         }
         
         #gpsModal.active {
@@ -320,13 +290,20 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 100%;
-            max-width: 400px;
+            
+            /* Max. szélesség beállítása, hogy ne terjedjen túl nagyra asztali gépen */
+            max-width: 400px; 
+            /* A szélesség most már relatív a padding-hoz, de a maximum méret korlátozott */
+            width: 100%; 
+            
             background-color: #0d0d0d;
             border: 3px solid #00ffff;
             border-radius: 10px;
             padding: 30px 20px;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            
+            /* Biztosítja, hogy a tartalom a modal belső padding-jén belül maradjon */
+            box-sizing: border-box; 
         }
 
         #distance-title {
@@ -452,7 +429,6 @@
             <a href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" class="gps-map-button">
                 🗺️ Térkép
             </a>
-            
         </div>
     </div>
     
