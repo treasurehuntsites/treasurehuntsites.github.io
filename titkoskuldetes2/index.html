@@ -4,6 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Titkos Küldetés</title>
+    
+    <!-- JAVÍTÁS: Permissions Policy meta tag hozzáadva a helymeghatározás engedélyezéséhez -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -342,13 +346,9 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: #0d0d0d;
-            background-image: 
-                linear-gradient(0deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px), 
-                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-position: 0 0;
-            background-blend-mode: overlay; 
+            /* JAVÍTÁS: Háttérszín és rács eltávolítva/átlátszóvá téve, hogy az eredeti kép látszódjon */
+            background-color: transparent; 
+            background-image: none;
             
             /* Amikor display: flex-re vált, ezek az elrendezési tulajdonságok érvényesülnek: */
             flex-direction: column;
@@ -360,7 +360,8 @@
         .distance-content {
             padding: 20px;
             max-width: 90%;
-            background-color: rgba(0, 0, 0, 0.8);
+            /* EZ A KONTÉNER MEGTARJA A SÖTÉT, KIEMELT HÁTTERET */
+            background-color: rgba(0, 0, 0, 0.85); 
             border-radius: 10px;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
             border: 2px solid #00ffff;
@@ -382,6 +383,17 @@
             color: #aaaaaa;
             font-size: 1.1em;
             margin-bottom: 25px;
+            /* ÚJ JAVÍTÁS: Alapértelmezésben rejtett, a hibákat a JS teszi láthatóvá */
+            visibility: hidden; 
+            height: 0; /* Hogy ne foglaljon helyet a rejtett elem */
+            margin-top: -20px; /* Kompenzáció a margóra */
+        }
+        
+        /* Amikor látható, visszakapja a normál stílust (a JS adja hozzá a .visible osztályt hiba esetén) */
+        #distance-status.visible {
+            visibility: visible;
+            height: auto;
+            margin-top: 10px;
         }
 
         #distance-modal-map-button {
@@ -409,9 +421,11 @@
 <body>
 
     <div class="full-width-image-container">
+        <!-- Ez a kép a fő háttérkép -->
         <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos jelenet">
     </div>
 
+    <!-- Ez a tartalomdoboz az utolsó (jelszó kérés) szövegdoboz -->
     <div class="content-box" id="content-box">
         <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
         
@@ -667,11 +681,22 @@
             console.log("GPS Hiba történt, újrapróbálkozás 2 másodperc múlva...");
             setTimeout(startCompassTracking, 2000);
         }
+        
+        // Segédfüggvény a státusz megjelenítéséhez
+        function setDistanceStatus(message, isError = false) {
+            distanceStatus.textContent = message;
+            // Ha hiba van, vagy ha nincs távolság (pl. "-- M"), akkor láthatóvá tesszük, egyébként rejtjük
+            if (isError || message.includes("Hiba") || message.includes("várjon")) {
+                distanceStatus.classList.add('visible');
+            } else {
+                distanceStatus.classList.remove('visible');
+            }
+        }
 
 
         function startCompassTracking() {
             if (!("geolocation" in navigator)) {
-                distanceStatus.textContent = "Hiba: A böngészője nem támogatja a helymeghatározást.";
+                setDistanceStatus("Hiba: A böngészője nem támogatja a helymeghatározást.", true);
                 console.error("Geolocation API not supported.");
                 return;
             }
@@ -683,7 +708,7 @@
             }
             
             // Azonnali visszajelzés a felhasználónak
-            distanceStatus.textContent = "Helymeghatározás indítása, kérjük várjon...";
+            setDistanceStatus("Helymeghatározás indítása, kérjük várjon...", true);
             distanceDisplay.textContent = "-- M"; 
 
             console.log("Calling watchPosition...");
@@ -699,11 +724,13 @@
                     
                     // Frissíti a kijelzőt
                     distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
-                    distanceStatus.textContent = `Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`;
+                    
+                    // Frissítjük a státuszt, de láthatatlan marad, ha sikeres a lekérés.
+                    setDistanceStatus(`Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`, false);
 
                     // Ellenőrzi az átirányítást
                     if (tavolsag <= COMPASS_RADIUS) {
-                        distanceStatus.textContent = "Cél elérve! Átirányítás 5 másodperc múlva...";
+                        setDistanceStatus("Cél elérve! Átirányítás 5 másodperc múlva...", true);
                         // Leállítja a helyzetfigyelést
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
@@ -724,18 +751,18 @@
                     }
                     
                     if (error.code === error.PERMISSION_DENIED) {
-                        distanceStatus.textContent = "Hiba: Kérjük, engedélyezze a helymeghatározást (engedély letiltva).";
+                        setDistanceStatus("Hiba: Kérjük, engedélyezze a helymeghatározást (engedély letiltva).", true);
                         distanceDisplay.textContent = "X";
                     } else if (error.code === error.POSITION_UNAVAILABLE) {
-                         distanceStatus.textContent = "Hiba: A helyzetadatok nem érhetők el (rossz GPS vétel). Újrapróbálkozás...";
+                         setDistanceStatus("Hiba: A helyzetadatok nem érhetők el (rossz GPS vétel). Újrapróbálkozás...", true);
                          distanceDisplay.textContent = "X";
                          restartCompassTracking(); // Újrapróbálkozás
                     } else if (error.code === error.TIMEOUT) {
-                         distanceStatus.textContent = "Hiba: Túl sokáig tartott a helyzet meghatározása. Újrapróbálkozás...";
+                         setDistanceStatus("Hiba: Túl sokáig tartott a helyzet meghatározása. Újrapróbálkozás...", true);
                          distanceDisplay.textContent = "X";
                          restartCompassTracking(); // Újrapróbálkozás
                     } else {
-                        distanceStatus.textContent = "Hiba a helymeghatározásban.";
+                        setDistanceStatus("Hiba a helymeghatározásban.", true);
                         distanceDisplay.textContent = "X";
                     }
                 },
@@ -751,8 +778,9 @@
         }
 
         function showDistanceModal() {
-            // Fontos: Elrejti a fő tartalomdobozt és beállítja a modal stílust
+            // FONTOS JAVÍTÁS: Elrejti a fő tartalomdobozt (a jelszókérőt), hogy ne takarja a képet.
             contentBox.style.display = 'none'; 
+            
             document.body.classList.add('modal-open');
             // A display: none a CSS-ben van beállítva, itt állítjuk át flex-re
             distanceModal.style.display = 'flex'; 
