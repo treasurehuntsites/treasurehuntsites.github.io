@@ -342,13 +342,9 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: #0d0d0d;
-            background-image: 
-                linear-gradient(0deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px), 
-                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            background-position: 0 0;
-            background-blend-mode: overlay; 
+            /* JAVÍTÁS: Háttérszín és rács eltávolítva/átlátszóvá téve, hogy az eredeti kép látszódjon */
+            background-color: transparent; 
+            background-image: none;
             
             /* Amikor display: flex-re vált, ezek az elrendezési tulajdonságok érvényesülnek: */
             flex-direction: column;
@@ -360,7 +356,8 @@
         .distance-content {
             padding: 20px;
             max-width: 90%;
-            background-color: rgba(0, 0, 0, 0.8);
+            /* EZ A KONTÉNER MEGTARJA A SÖTÉT, KIEMELT HÁTTERET */
+            background-color: rgba(0, 0, 0, 0.85); 
             border-radius: 10px;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
             border: 2px solid #00ffff;
@@ -409,9 +406,11 @@
 <body>
 
     <div class="full-width-image-container">
+        <!-- Ez a kép a fő háttérkép -->
         <img id="story-image" src="https://content.actionbound.com/user/5d77f26bdf17445d808bcb28/image/1757442206.jpg" alt="Titokzatos jelenet">
     </div>
 
+    <!-- Ez a tartalomdoboz az utolsó (jelszó kérés) szövegdoboz -->
     <div class="content-box" id="content-box">
         <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
         
@@ -454,6 +453,11 @@
     </div>
     
     <div class="fixed-menu-bar">
+        <!-- VISSZAHELYEZVE: Térkép gomb -->
+        <button id="map-button" class="menu-button" title="Térkép">
+            <i class="fa-solid fa-map-location-dot"></i>
+        </button>
+        
         <button id="image-button" class="menu-button" title="Képgaléria">
             <i class="fa-solid fa-image"></i>
         </button>
@@ -497,6 +501,7 @@
         const COMPASS_LON = 19.036570;    
         const COMPASS_RADIUS = 25;       
         const SUCCESS_LINK = "5571.html"; // Átirányítás innen
+        const MAP_URL_FOR_MENU = 'https://www.google.com/maps/d/u/0/viewer?mid=1qTBS42KcRDJRlwSLY1FUDSbAwHxP3wo&ll=47.426209499999985%2C19.038944499999992&z=17';
         // ------------------------------------------------
 
         // KÉP URL-ek
@@ -563,6 +568,7 @@
         const avatarImg = document.getElementById('avatar-img');
         
         const imageButton = document.getElementById('image-button');
+        const mapButton = document.getElementById('map-button'); // Visszahelyezett térkép gomb
         
         // Távolság Modal DOM elemek és állapot
         const distanceModal = document.getElementById('distanceModal');
@@ -744,10 +750,11 @@
         }
 
         function showDistanceModal() {
-            // Fontos: Elrejti a fő tartalomdobozt és beállítja a modal stílust
+            // FONTOS JAVÍTÁS: Elrejti a fő tartalomdobozt (a jelszókérőt), hogy ne takarja a képet.
             contentBox.style.display = 'none'; 
+            
             document.body.classList.add('modal-open');
-            // JAVÍTVA: A display: none a CSS-ben van beállítva, itt állítjuk át flex-re
+            // A display: none a CSS-ben van beállítva, itt állítjuk át flex-re
             distanceModal.style.display = 'flex'; 
             
             // Elindítja a GPS követést a modal megjelenésekor
@@ -862,7 +869,7 @@
                 localStorage.removeItem('gameProgress'); 
                 stopAllAudio();
                 
-                // Modal megjelenítése és GPS indítása CSAK A JELSZÓ ELLENŐRZÉS UTÁN
+                // JAVÍTVA: Modal megjelenítése és GPS indítása CSAK A JELSZÓ ELLENŐRZÉS UTÁN
                 showDistanceModal();
 
             } else {
@@ -883,6 +890,12 @@
         
         // Képgaléria menü gomb eseménykezelője
         imageButton.addEventListener('click', openGallery);
+        
+        // ÚJ: Térkép menü gomb eseménykezelője (visszahelyezve)
+        mapButton.addEventListener('click', () => {
+            // Megnyitja a térképet egy új lapon, ahogy az eredeti kódban volt
+            window.open(MAP_URL_FOR_MENU);
+        });
         
 
         window.onload = () => {
