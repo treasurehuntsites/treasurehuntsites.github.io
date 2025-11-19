@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Titkos Küldetés</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         /* --- Zoomolás és Görgetés Letiltása (A távolságmodal miatt) --- */
         html, body.modal-open {
@@ -332,7 +332,7 @@
             color: #00ffff;
         }
         
-        /* --- ÚJ: Távolság Modal (Compass HUD) STÍLUSOK --- */
+        /* --- Távolság Modal (Compass HUD) STÍLUSOK --- */
         #distanceModal {
             display: none; 
             position: fixed;
@@ -467,6 +467,7 @@
       </div>
     </div>
     
+    <!-- ÚJ: Távolság Modal (Compass HUD) -->
     <div id="distanceModal">
         <div class="distance-content">
             <h1>CÉLPONT KERESÉSE</h1>
@@ -477,11 +478,14 @@
             
             <p id="distance-status">Engedélyezze a helymeghatározást a távolság méréséhez!</p>
             
+            <!-- Térkép gomb -->
             <a href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" id="distance-modal-map-button">
                 🗺️ Térkép
             </a>
         </div>
     </div>
+    <!-- END ÚJ: Távolság Modal -->
+    
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
 
@@ -558,11 +562,10 @@
         
         const imageButton = document.getElementById('image-button');
         
-        // ÚJ DOM elemek
+        // Távolság Modal DOM elemek és állapot
         const distanceModal = document.getElementById('distanceModal');
         const distanceDisplay = document.getElementById('distance-modal-display');
         const distanceStatus = document.getElementById('distance-status');
-        const distanceMapButton = document.getElementById('distance-modal-map-button');
         let watchId = null; // Helyzetfigyelés azonosítója
         
         // GALÉRIA DOM elemek
@@ -633,7 +636,7 @@
             galleryModal.style.display = "none";
         }
 
-        // --- TÁVOLSÁG/GPS FUNKCIÓK (Átemelve a compass.html-ből) ---
+        // --- TÁVOLSÁG/GPS FUNKCIÓK (Javított GPS indítás) ---
         
         function tavolsagotKiszamol(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
@@ -656,6 +659,10 @@
                 distanceStatus.textContent = "Hiba: A böngészője nem támogatja a helymeghatározást.";
                 return;
             }
+            
+            // JAVÍTÁS: Azonnali visszajelzés a felhasználónak
+            distanceStatus.textContent = "Helymeghatározás indítása, kérjük várjon...";
+            distanceDisplay.textContent = "-- M"; 
 
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
@@ -666,7 +673,7 @@
                     
                     // Frissíti a kijelzőt
                     distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
-                    distanceStatus.textContent = `Pontosság: ±${position.coords.accuracy.toFixed(0)} m.`;
+                    distanceStatus.textContent = `Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`;
 
                     // Ellenőrzi az átirányítást
                     if (tavolsag <= COMPASS_RADIUS) {
@@ -684,9 +691,12 @@
                 (error) => {
                     if (error.code === error.PERMISSION_DENIED) {
                         distanceStatus.textContent = "Hiba: Kérjük, engedélyezze a helymeghatározást.";
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                         distanceStatus.textContent = "Hiba: A helyzetadatok nem érhetők el (pl. rossz GPS vétel).";
                     } else {
                         distanceStatus.textContent = "Hiba a helymeghatározásban.";
                     }
+                    distanceDisplay.textContent = "Hiba";
                 },
                 
                 {
@@ -698,8 +708,11 @@
         }
 
         function showDistanceModal() {
+            // Fontos: Elrejti a fő tartalomdobozt és beállítja a modal stílust
+            contentBox.style.display = 'none'; 
             document.body.classList.add('modal-open');
             distanceModal.style.display = 'flex';
+            
             // Elindítja a GPS követést a modal megjelenésekor
             startCompassTracking(); 
         }
@@ -812,11 +825,8 @@
                 localStorage.removeItem('gameProgress'); 
                 stopAllAudio();
                 
-                // --- ÚJ LOGIKA: Modal megjelenítése és GPS indítása ---
-                // Eltünteti a történet konténert a háttérben
-                contentBox.style.display = 'none'; 
+                // Modal megjelenítése és GPS indítása
                 showDistanceModal();
-                // -----------------------------------------------------
 
             } else {
                 messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
@@ -837,18 +847,13 @@
         // Képgaléria menü gomb eseménykezelője
         imageButton.addEventListener('click', openGallery);
         
-        // Eltávolítva a régi térkép gomb!
-        // mapButton.addEventListener('click', () => {
-        //     window.open('https://www.google.com/maps/d/u/0/viewer?mid=1qTBS42KcRDJRlwSLY1FUDSbAwHxP3wo&ll=47.426209499999985%2C19.038944499999992&z=17');
-        // });
-
 
         window.onload = () => {
             loadProgress(); 
             showStoryPart();
         };
         
-        // --- ÚJ: Google Forms küldése a betöltéskor (a compass.html-ből) ---
+        // Google Forms küldése a betöltéskor
         const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMxfTwsgk0nyIiuJ1o9mWHbRkyPA9hBI792mABbOzJOVlONA/formResponse";
         fetch(FORM_URL, {
             method: 'POST',
