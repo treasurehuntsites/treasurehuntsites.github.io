@@ -19,10 +19,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            /* Fő tartalom görgethetővé tétele */
             min-height: 100vh;
             text-align: center;
             padding-bottom: 60px; 
-            overflow-y: auto; /* Alapértelmezett görgetés visszaállítva */
+            overflow-y: auto; 
+            /* A fő tartalom (képet és dobozt is tartalmazó) középre igazításához flexbox kell */
+            justify-content: center; 
         }
 
         /* GPS Modal esetén letiltjuk a görgetést */
@@ -48,20 +51,27 @@
             object-position: center top; 
         }
 
+        /* --- SZÖVEGDOBOZ MÓDOSÍTÁSA: Nincs fix pozíció, nincs háttér (halványítás) --- */
         .content-box {
-            background-color: rgba(0, 0, 0, 0.7); 
+            /* Háttér eltávolítva: a mögöttes kép nem halványul el, ltszik */
+            /* background-color: rgba(0, 0, 0, 0.7); <-- Törölve */
             padding: 40px; 
-            margin: 0; 
-            border-radius: 10px 10px 0 0; 
+            margin: auto; /* Középre igazítja a flex-konténerben (body) */
+            border-radius: 10px; 
             max-width: 800px;
-            width: calc(100% - 20px); /* Reszponzív szélesség, mobilra optimalizálva */
+            width: calc(100% - 40px); /* Kisebb margó a széleken */
+            /* Keret megmarad, hogy elkülönítse a szöveget a képtől */
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8a2be2;
             box-sizing: border-box;
+            
+            /* Pozíció eltávolítva, mert a body flex-konténerként középre igazítja:
             position: fixed; 
             bottom: 50px; 
             left: 50%;
             transform: translateX(-50%); 
+            */
+            
             z-index: 10;
             text-align: left;
             min-height: 250px; 
@@ -70,15 +80,25 @@
             justify-content: space-between; 
             opacity: 0; 
             transition: opacity 0.5s ease-in-out;
+            
+            /* Hogy a szövegdoboz háttere ténylegesen átlátszó legyen: */
+            background-color: transparent; 
+            /* Mivel eltávolítottuk a fix pozíciót, a tartalomdoboz a menü fölött, de a kép közepén lesz */
+            margin-top: 10vh; /* Kicsit lejjebb tolja a dobozt, hogy ne fedje el a kép felső részét */
+            margin-bottom: 70px; /* Hely a fix menünek */
         }
-
+        
+        /* Adok egy enyhe árnyékot a szövegnek a jobb olvashatóság érdekében a kép felett */
         #story-text-display {
             font-size: 1.3em;
             font-weight: 700;
             line-height: 1.6;
             margin-bottom: 20px;
             white-space: pre-wrap; 
+            text-shadow: 0 0 5px #000000, 0 0 5px #000000; /* Kettős árnyék a kontrasztért */
         }
+
+        /* A többi CSS stílus változatlan marad... */
 
         .audio-container {
             text-align: center;
@@ -107,8 +127,17 @@
             border-top: 1px dashed #8a2be2;
             min-height: 48px;
             width: 100%;
+            background-color: rgba(26, 26, 26, 0.9); /* Adok egy sötét hátteret az interakciós sávnak */
+            margin-left: -40px;
+            margin-right: -40px;
+            padding-left: 40px;
+            padding-right: 40px;
+            width: calc(100% + 80px); /* Teljes szélesség a kereten belül */
+            box-sizing: border-box;
+            border-radius: 0 0 10px 10px;
+            margin-top: 10px;
         }
-
+        
         .interaction-container {
             display: flex;
             justify-content: space-between;
@@ -174,6 +203,7 @@
             margin-top: 10px;
             font-weight: 700;
             color: #ff4500;
+            text-shadow: none; /* A message ne kapjon árnyékot */
         }
 
         .avatar-image {
@@ -272,7 +302,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            /* 5. A háttér látszódjon, áttetsző fekete overlay */
+            /* Háttér áttetsző, hogy a mögöttes kép látszódjon */
             background-color: rgba(0, 0, 0, 0.7); 
             backdrop-filter: blur(2px);
             justify-content: center;
@@ -320,7 +350,6 @@
         }
 
         #statusz {
-            /* 2. Pontosság kijelzés elrejtése a felugró ablakban */
             display: none; 
         }
 
@@ -424,7 +453,7 @@
                 🗺️ Térkép
             </a>
             
-            </div>
+        </div>
     </div>
     
     <script>
@@ -505,7 +534,6 @@
         const gpsModal = document.getElementById('gpsModal');
         const distanceDisplay = document.getElementById('distance-display');
         const statuszElem = document.getElementById('statusz');
-        // const closeGpsModalButton = document.getElementById('close-gps-modal'); // Eltávolítva
         
         let watchId = null; // A GPS figyelés ID-ja
         
@@ -671,7 +699,6 @@
         }
 
         function startGpsTracking() {
-            // Elem beállítása hiba esetére
             statuszElem.style.display = 'none'; 
             statuszElem.textContent = "Kérjük, engedélyezze a helymeghatározást!";
 
@@ -695,12 +722,11 @@
 
                     if (tavolsag <= SUGAR_METER) {
                         statuszElem.textContent = "Cél elérve! Átirányítás 5 másodperc múlva..."; 
-                        statuszElem.style.display = 'block'; // Átirányítás üzenetét mutatjuk
+                        statuszElem.style.display = 'block'; 
                         
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                         setTimeout(() => {
-                            // Cím küldése a Sheets-nek
                             fetch("https://docs.google.com/forms/d/e/1FAIpQLScMxfTwsgk0nyIiuJ1o9mWHbRkyPA9hBI792mABbOzJOVlONA/formResponse", {
                                 method: 'POST', mode: 'no-cors' 
                             });
@@ -709,7 +735,6 @@
                         return;
                     }
                     
-                    // 2. Pontossági adat kiírásának eltávolítása/elrejtése
                     statuszElem.style.display = 'none';
                 },
                 
@@ -719,7 +744,7 @@
                     } else {
                         statuszElem.textContent = "Hiba a helymeghatározásban. Kérjük, próbálja újra.";
                     }
-                    statuszElem.style.display = 'block'; // Ha hiba van, írja ki
+                    statuszElem.style.display = 'block'; 
                     distanceDisplay.textContent = "-- M";
                 },
                 
@@ -731,8 +756,6 @@
             );
         }
         
-        // stopGpsTracking eltávolítva, mivel a modal csak az átirányításkor tűnik el.
-
         // ---------------------------------------------------
         // --- ESEMÉNYKEZELŐK ---
         // ---------------------------------------------------
@@ -790,7 +813,7 @@
         });
         
         playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
-        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudio2, '2'));
+        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
         
         imageButton.addEventListener('click', openGallery);
         
@@ -798,8 +821,6 @@
             window.open('https://www.google.com/maps/d/u/0/viewer?mid=1qTBS42KcRDJRlwSLY1FUDSbAwHxP3wo&ll=47.426209499999985%2C19.038944499999992&z=17');
         });
         
-        // --- GPS MODAL Események (Vissza gomb eltávolítva) ---
-        // Nincs eseménykezelő a GPS modal bezárására, mert a cél a folyamatos nyomkövetés.
 
         window.onload = () => {
             loadProgress(); 
