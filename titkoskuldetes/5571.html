@@ -1,26 +1,3 @@
-<div id="help-modal">
-        <div class="help-content">
-            <p id="help-text-display"></p>
-            <div style="display: flex; justify-content: space-between; gap: 10px;">
-                <button id="help-close-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Bezárás</button>
-                <button id="help-next-button" style="flex-grow: 1;">Tovább</button>
-            </div>
-        </div>
-    </div>
-    ```
-
-### 2. CSS Módosítás: A "Bezárás" Gomb Stílusa (Inline)
-
-Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az oldal többi gombjához.
-
-### 3. JavaScript Módosítás: Logika Frissítése
-
-1.  Hozzáadtam a `helpCloseButton` DOM elemét.
-2.  Módosítottam a `showHelpMessage` funkciót, hogy a gombok feliratát és láthatóságát (ha az utolsó lépésnél vagyunk) pontosan kezelje.
-
-**A frissített, teljes kód:**
-
-```html
 <!doctype html>
 <html lang="hu">
 <head>
@@ -44,6 +21,11 @@ Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az o
             min-height: 100vh;
             text-align: center;
             padding-bottom: 60px; 
+            
+            /* 🚀 JAVÍTÁS A FOUC (szöveg előzetes megjelenése) ELLEN */
+            visibility: hidden; 
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out; 
         }
         
         /* ÚJ: Fekvő tájolás tiltása, csak a portré (álló) mód látható */
@@ -108,8 +90,9 @@ Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az o
             display: flex; 
             flex-direction: column;
             justify-content: space-between; 
-            opacity: 0; 
-            transition: opacity 0.5s ease-in-out;
+            /* 🚀 JAVÍTÁS: A body kezeli a fő opacityt, ez itt mindig 1 kell legyen */
+            opacity: 1; 
+            transition: none;
         }
 
         /* Történet szövege */
@@ -830,41 +813,42 @@ Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az o
 
         function showStoryPart() {
             messageDisplay.textContent = ''; 
-            contentBox.style.opacity = 0;
+            
+            // 🛑 JAVÍTÁS: Eltávolítottuk a contentBox opacity átmenetet, mivel azt a body kezeli
+            
+            // Cseréld ki a kép forrását még azelőtt, hogy a body láthatóvá válna (ha éppen a storyImage-re várunk)
+            // Itt a setTimeout már felesleges, mert a láthatósági átmenetet a body kezeli
+            
+            audioContainer1.style.display = 'none';
+            audioContainer2.style.display = 'none';
+            storyDisplay.innerHTML = ''; 
 
-            setTimeout(() => {
-                audioContainer1.style.display = 'none';
-                audioContainer2.style.display = 'none';
-                storyDisplay.innerHTML = ''; 
-
-                if (currentPartIndex < storyPages.length) {
-                    const currentPage = storyPages[currentPartIndex];
+            if (currentPartIndex < storyPages.length) {
+                const currentPage = storyPages[currentPartIndex];
+                
+                updateAvatar(currentPartIndex); 
+                
+                if (currentPage.type === 'text' || currentPage.type === 'audio') {
+                    storyDisplay.innerHTML = currentPage.content;
                     
-                    updateAvatar(currentPartIndex); 
-                    
-                    if (currentPage.type === 'text' || currentPage.type === 'audio') {
-                        storyDisplay.innerHTML = currentPage.content;
-                        
-                        if (currentPage.type === 'audio') {
-                            if (currentPage.audioId === 1) {
-                                audioContainer1.style.display = 'block';
-                            } else if (currentPage.audioId === 2) {
-                                audioContainer2.style.display = 'block';
-                            }
+                    if (currentPage.type === 'audio') {
+                        if (currentPage.audioId === 1) {
+                            audioContainer1.style.display = 'block';
+                        } else if (currentPage.audioId === 2) {
+                            audioContainer2.style.display = 'block';
                         }
                     }
-                    
-                    storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
-                    
-                } else {
-                    // Kód bevitelnél
-                    updateAvatar(currentPartIndex);
-                    storyDisplay.innerHTML = 'Add meg a kódot!';
                 }
+                
+                storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
+                
+            } else {
+                // Kód bevitelnél
+                updateAvatar(currentPartIndex);
+                storyDisplay.innerHTML = 'Add meg a kódot!';
+            }
 
-                contentBox.style.opacity = 1;
-                updateButtons();
-            }, 500);
+            updateButtons();
         }
         
         // --- ESEMÉNYKEZELŐK ---
@@ -935,7 +919,10 @@ Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az o
 
         // 🛑 MÓDOSÍTOTT: Súgó eseménykezelők
         if (helpButton) {
-            helpButton.addEventListener('click', showHelpMessage);
+            helpButton.addEventListener('click', () => {
+                 currentHelpIndex = 0; // Mindig az első segítséggel kezdjük
+                 showHelpMessage();
+            });
         }
 
         if (helpNextButton) {
@@ -947,11 +934,28 @@ Az új gombhoz egyszerű stílusokat adtam hozzá inline, hogy illeszkedjen az o
             helpCloseButton.addEventListener('click', closeHelpModal);
         }
 
-
-        window.onload = () => {
+        
+        // 🚀 JAVÍTÁS: EZ A FUNKCIÓ INDÍTJA EL A TARTALOM MEGJELENÍTÉSÉT
+        function initializeApp() {
             loadProgress(); 
             showStoryPart();
-        };
+            
+            // 1. A body láthatóvá tétele (a CSS átmenettel)
+            document.body.style.visibility = 'visible';
+            document.body.style.opacity = 1;
+        }
+
+        // FIGYELJÜK A HÁTTÉRKÉP (story-image) BETÖLTÉSÉT
+        if (storyImage.complete && storyImage.naturalWidth !== 0) {
+            // Ha a kép már a kód futása előtt betöltődött (cache-ből)
+            initializeApp();
+        } else {
+            // Megvárjuk, amíg a kép betöltődik
+            storyImage.addEventListener('load', initializeApp);
+            
+            // Ha a kép valamiért nem tölt be (broken link), akkor is induljon el a játék
+            storyImage.addEventListener('error', initializeApp);
+        }
     </script>
 </body>
 </html>
