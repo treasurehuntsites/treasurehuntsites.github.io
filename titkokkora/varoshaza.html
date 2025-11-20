@@ -726,13 +726,11 @@
         const TOURIST_AVATAR_URL = "Img/turista.png"; // Turista avatár (T)
         const PAINTER_AVATAR_URL = "Img/festo.png"; // Festő avatár (F)
         
-        // GALÉRIA KÉPEK LISTÁJA (1935.html - maradt az eredeti)
-        const galleryImages = [
-            { url: STABLE_IMAGE_URL, title: "Helyszín" },
-            { url: "Img/1757450864.jpg", title: "Nyom 1" },
-            { url: "Img/1757450882.jpg", title: "Nyom 2" },
-            { url: "Img/1757450898.jpg", title: "Nyom 3" },
-            { url: "Img/1757450917.jpg", title: "Nyom 4" }
+        // GALÉRIA KÉPEK TELJES LISTÁJA ÉS FELOLDÁSI FÜGGVÉNY
+        const ALL_GALLERY_ITEMS = [
+            { id: 'helyszin', url: STABLE_IMAGE_URL, title: "Helyszín", unlocked: true }, 
+            // NYOM KÉPEK ELTÁVOLÍTVA
+            { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false } // Új feloldandó elem
         ];
 
         // TÖRTÉNETRÉSZEK (FRISSÍTVE az új szöveggel és interakciókkal)
@@ -992,7 +990,16 @@
         // GALÉRIA FUNKCIÓK
         function populateGallery() {
             galleryContainer.innerHTML = ''; 
-            galleryImages.forEach((image) => {
+            
+            // Ellenőrzi, hogy fel van-e oldva a portré
+            const isPortraitUnlocked = localStorage.getItem('isPortraitUnlocked') === 'true';
+            
+            // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva, vagy alapból láthatóak
+            const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
+                item.unlocked || (item.id === 'portre' && isPortraitUnlocked)
+            );
+
+            visibleItems.forEach((image) => {
                 const thumbnailDiv = document.createElement('div');
                 thumbnailDiv.className = 'gallery-thumbnail';
                 const img = document.createElement('img');
@@ -1000,6 +1007,19 @@
                 img.alt = image.title;
                 thumbnailDiv.onclick = () => openFullImage(image.url);
                 thumbnailDiv.appendChild(img);
+                
+                const title = document.createElement('div');
+                title.style.cssText = `
+                    position: absolute; bottom: 0; left: 0; right: 0; 
+                    background-color: rgba(0, 0, 0, 0.7); 
+                    color: white; font-size: 0.9em; padding: 5px; 
+                    text-align: center;
+                `;
+                title.textContent = image.title;
+                thumbnailDiv.style.position = 'relative'; 
+                thumbnailDiv.style.height = '180px'; 
+                
+                thumbnailDiv.appendChild(title);
                 galleryContainer.appendChild(thumbnailDiv);
             });
         }
@@ -1326,6 +1346,12 @@
         document.querySelector('#full-image-display .close-gallery').onclick = () => { history.back(); };
 
         nextButton.addEventListener('click', () => {
+            // UNLOCK LOGIC for PORTRAIT: 58. index után
+            if (currentPartIndex === 58) {
+                localStorage.setItem('isPortraitUnlocked', 'true');
+                console.log("Festő Portréja feloldva!");
+            }
+            
             const forcedNextIndex = nextButton.dataset.forcedNextIndex;
             if (forcedNextIndex !== undefined && forcedNextIndex !== '') {
                 // Kényszerített ugrás a megadott indexre
