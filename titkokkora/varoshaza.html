@@ -154,6 +154,7 @@
 
         .interaction-container {
             display: flex;
+            /* Flex-grow-val kezelt Vissza gomb */
             justify-content: space-between; 
             align-items: center;
             width: 100%;
@@ -172,9 +173,15 @@
             transition: background-color 0.3s, transform 0.1s;
             text-transform: uppercase;
             box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
-            /* Új stílusok a kért több gombhoz */
-            flex-grow: 1; 
+            /* A Folytatás gomb legyen teljes szélességű az index 4-nél */
             margin: 5px;
+        }
+        
+        .page-button#next-page-button.full-width {
+            width: 100%;
+            flex-grow: 1; /* Biztosítja a teljes szélességet */
+            margin-left: 0;
+            margin-right: 0;
         }
         
         .page-button:hover:not(:disabled) {
@@ -199,7 +206,7 @@
             margin: 0;
         }
         
-        /* ÚJ: Diszkrét Vissza Gomb a Választásokhoz és Szekvenciális oldalakhoz is */
+        /* ÚJ: Diszkrét Vissza Gomb - CSAK CHOICE ESETEKBEN */
         .discreet-back-button {
             position: absolute;
             top: 5px; /* Belülről fentről */
@@ -730,72 +737,67 @@
 
         // TÖRTÉNETRÉSZEK (FRISSÍTVE az új szöveggel és interakciókkal)
         const storyPages = [
-            // 0. Bevezetés
+            // 0. Bevezetés (A régi indexekkel: 0-3)
             { type: 'text', content: `Késő este érkeztem Budapestre.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
             { type: 'text', content: `Egy taxi elvitt Budafokra, ekkor már minden kihalt volt.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
             { type: 'text', content: `A Városháza térig csak 5 percet kellett sétálni.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
-            { type: 'text', content: `Kicsit elkéstem, remélem Éva türelmes volt és megvár.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 3
+            { type: 'text', content: `Kicsit elkéstem, remélem Éva türelmes volt és megvár.`, speaker: 'Mark', image: STABLE_IMAGE_URL }, 
 
-            // 4. ÚJ VÁLASZTÁSI LEHETŐSÉG (Körbenézel)
-            { 
-                type: 'text', 
-                content: ``, // Üres tartalom, csak a gomb a lényeg
-                speaker: 'Narrator', 
-                image: STABLE_IMAGE_URL,
-                nextButtonText: 'körbenézel' // Kért gomb szöveg
-            }, // Index 4
-
-            // 5. (Volt 4)
+            // 4. (Régi index 5)
             { type: 'text', content: `Éva nincs itt.. Lehet, hogy túl későn érkeztem.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
 
-            // 6. (Volt 5) VÁLASZTÁS PONT 1 (Multi-choice)
+            // 5. (Régi index 6) VÁLASZTÁS PONT 1 (Multi-choice)
             { 
                 type: 'choice', 
                 content: ``, 
                 speaker: 'Narrator', 
                 image: STABLE_IMAGE_URL,
                 choices: [
-                    { text: 'Áll egy turista, odamész hozzá', nextIndex: 7 }, // Turista ág (7) -- Index shifted
-                    { text: 'Egy festőt látsz, megnézed mit fest', nextIndex: 9 }  // Festő ág (9) -- Index shifted
+                    // Indexek: Turista ág (6), Festő ág (8)
+                    { text: 'Áll egy turista, odamész hozzá', nextIndex: 6 }, 
+                    { text: 'Egy festőt látsz, megnézed mit fest', nextIndex: 8 }  
                 ]
             },
 
-            // --- TURISTA ÁG (7-8) ---
-            // 7. (Volt 6) Mark kérdez
+            // --- TURISTA ÁG (6-7) ---
+            // 6. Mark kérdez
             { type: 'text', content: `Jó estét kívánok, nem látott erre véletlenül egy nőt várakozni?`, speaker: 'Mark', image: STABLE_IMAGE_URL },
-            // 8. (Volt 7) Turista válaszol (nextIndex: 6 visszaugrik a választáshoz, ami a 6-os index)
-            { type: 'text', content: `Nem láttam senkit.`, speaker: 'Tourist', image: STABLE_IMAGE_URL, nextIndex: 6 }, // Index shifted
+            // 7. Turista válaszol (nextIndex: 5 visszaugrik a választáshoz)
+            { type: 'text', content: `Nem láttam senkit.`, speaker: 'Tourist', image: STABLE_IMAGE_URL, nextIndex: 5 }, 
 
-            // --- FESTŐ ÁG (9-13) ---
-            // 9. (Volt 8) Festő ág 1
+            // --- FESTŐ ÁG (8-12) ---
+            // 8. Festő ág 1
             { type: 'text', content: `Az állványon egy félig kész kréta rajzot látsz.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
-            // 10. (Volt 9)
+            // 9.
             { type: 'text', content: `szép munka!`, speaker: 'Mark', image: STABLE_IMAGE_URL },
-            // 11. (Volt 10)
+            // 10.
             { type: 'text', content: `Jó estét uram! Szeretne egy kréta rajzot magáról?`, speaker: 'Painter', image: STABLE_IMAGE_URL },
-            // 12. (Volt 11)
+            // 11.
             { type: 'text', content: `Nem köszönöm, csak kérdezni szeretnék valamit.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
-            // 13. (Volt 12)
+            // 12.
             { type: 'text', content: `Ah, értem, csak várjon egy kicsit amig befejezem a munkám előbb.`, speaker: 'Painter', image: STABLE_IMAGE_URL },
 
-            // 14. (Volt 13) VÁLASZTÁS PONT 2 (Multi-choice)
+            // 13. VÁLASZTÁS PONT 2 (Multi-choice)
             { 
                 type: 'choice', 
                 content: ``, 
                 speaker: 'Narrator', 
                 image: STABLE_IMAGE_URL,
                 choices: [
-                    // A Festő/Turista szálak utáni igazi folytatás:
-                    { text: 'Oda mész es megvizsgálod a közeli szobrot', nextIndex: 15 }, // Index shifted
-                    // Visszatérés a festőhöz (11-es indexre, Mark kérdésére)
-                    { text: 'Vissza mész a festőhöz, hogy tovább kérdezz', nextIndex: 11 }  // Index shifted
+                    // A választás Index 14-re mutat, ami mostantól a szobros ág kezdete
+                    { text: 'Oda mész es megvizsgálod a közeli szobrot', nextIndex: 14 }, 
+                    { text: 'Vissza mész a festőhöz, hogy tovább kérdezz', nextIndex: 10 }  
                 ]
             },
             
-            // 15. (Volt 14) Ideiglenes folytatás (A kódkérés előtti utolsó lépés, ha a szobrot választja)
-            { type: 'text', content: `Körülnézel a szobor körül, és egy fém dobozt találsz a lábánál.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
+            // --- SZOBROS ÁG (14-16) - FRISSÍTVE AZ EGYMONDATOS MEGKÖZELÍTÉSRE ---
+            // 14. Új 1. mondat:
+            { type: 'text', content: `Oda mész a szoborhoz.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
+            // 15. Új 2. mondat:
+            { type: 'text', content: `A szobor elég furcsán néz ki, valami jelet mutat az ujjaival, mintha csak valami rejtjeles üzenetet közvetítene.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
+            // 16. Új 3. mondat: (Utolsó lépés a jelszó előtt)
+            { type: 'text', content: `A talpazata masszív kőből van csinálva.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
 
-            // Ezután a kód kérés következne, amit az `updateButtons` automatikusan kezel, ha currentPartIndex eléri a `storyPages.length` értéket.
         ];
 
         const CORRECT_PASSWORD = "6715"; 
@@ -826,12 +828,12 @@
         const contentBox = document.getElementById('content-box');
         const storyDisplay = document.getElementById('story-text-display');
         const nextButton = document.getElementById('next-page-button');
-        const prevButton = document.getElementById('prev-page-button'); // Visszaállítva
+        const prevButton = document.getElementById('prev-page-button'); 
         const interactionContainer = document.getElementById('interaction-container'); 
         const multiChoiceContainer = document.getElementById('multi-choice-container'); 
         const choice1Button = document.getElementById('choice-1-button'); 
         const choice2Button = document.getElementById('choice-2-button'); 
-        const discreetBackButton = document.getElementById('discreet-back-button'); // Diszkrét "Vissza" gomb
+        const discreetBackButton = document.getElementById('discreet-back-button'); 
         const passwordContainer = document.getElementById('password-container'); 
         const backButtonPassword = document.getElementById('back-button-password'); 
         const passwordInput = document.getElementById('password-input');
@@ -1091,13 +1093,21 @@
             stopAllAudio(); 
             multiChoiceContainer.style.display = 'none'; 
             passwordContainer.classList.remove('visible');
-            discreetBackButton.style.display = 'none'; // Revert: Csak a choice-nál kell
+            discreetBackButton.style.display = 'none'; // Alapértelmezett: diszkrét nyíl elrejtve
+            
+            // Visszaállítjuk a gombokat az alapértelmezett állapotukra (teljes szélesség nélkül)
+            nextButton.classList.remove('full-width'); 
+            prevButton.style.visibility = 'visible'; 
+            prevButton.disabled = false;
+
 
             if (currentPartIndex < storyPages.length) {
                 const currentPage = storyPages[currentPartIndex];
-
-                if (currentPage.type === 'choice') {
-                    // Több gombos választás: Csak a diszkrét nyíl és a választási gombok látszanak
+                
+                const isChoicePage = currentPage.type === 'choice';
+                
+                if (isChoicePage) {
+                    // 1. CHOICE PAGE LOGIC (Discreet back button + choice buttons)
                     interactionContainer.style.display = 'none';
                     multiChoiceContainer.style.display = 'flex';
                     
@@ -1111,15 +1121,19 @@
                     discreetBackButton.style.display = 'flex';
                     discreetBackButton.disabled = currentPartIndex === 0;
 
-
                 } else {
-                    // Szekvenciális oldal: A standard Vissza/Folytatás gombok látszanak
+                    // 2. SEQUENTIAL PAGE LOGIC (Default bottom buttons)
                     interactionContainer.style.display = 'flex';
+                    multiChoiceContainer.style.display = 'none';
                     
-                    // Diszkrét gomb elrejtve, a hagyományos gomb vezérli a visszalépést
-                    prevButton.disabled = currentPartIndex === 0; 
+                    // Vissza gomb láthatósága
+                    prevButton.style.visibility = 'visible';
+                    prevButton.disabled = currentPartIndex === 0;
                     
-                    // Custom button text / forced next index logic
+                    // Nincs többé teljes szélességű gomb logikája a 4-es indexen
+                    nextButton.classList.remove('full-width');
+                    
+                    // Folytatás gomb beállítása
                     const customText = currentPage.nextButtonText;
                     const nextIndexDefined = currentPage.nextIndex !== undefined;
                     
@@ -1135,8 +1149,9 @@
                 }
 
             } else {
-                // Kód kérés mód 
+                // 3. PASSWORD PAGE LOGIC
                 interactionContainer.style.display = 'none';
+                multiChoiceContainer.style.display = 'none';
                 passwordContainer.classList.add('visible');
                 discreetBackButton.style.display = 'none';
             }
