@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Titkos Küldetés</title>
+    
+    <!-- JAVÍTÁS: Permissions Policy meta tag hozzáadva a helymeghatározás engedélyezéséhez -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* ÚJ: Biztosítja a sötét hátteret az egész dokumentumnak */
+        html {
+            background-color: #1a1a1a; 
+        }
+        
+        /* --- Zoomolás és Görgetés Letiltása (A távolságmodal miatt) --- */
+        html, body.modal-open {
+            overflow: hidden;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Alapvető reszet és sötét háttér */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Play', sans-serif;
+            color: #e0e0e0; 
+            background-color: #1a1a1a; 
+            /* VISSZAÁLLÍTVA: flex container for centering */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            /* Extra hely az alulra fixált menü miatt! */
+            padding-bottom: 60px; 
+            /* Megakadályozza a görgetést, ha a tartalom nem magasabb, mint a képernyő */
+            overflow: hidden; 
+        }
+
+        /* Teljes szélességű KÉP (Háttér) */
+        .full-width-image-container {
+            width: 100%;
+            height: 100vh; 
+            overflow: hidden;
+            position: fixed; /* VISSZAÁLLÍTVA: fixed - Fix háttérkép */
+            top: 0;
+            left: 0;
+            z-index: 0; 
+        }
+
+        .full-width-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            object-position: center top; 
+        }
+
+        /* Tartalom doboz - FIX ALULRA ZÁRVA */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.7); 
+            padding: 40px; 
+            margin: 0; 
+            border-radius: 10px 10px 0 0; 
+            max-width: 800px;
+            width: calc(100% - 20px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+            border: 3px solid #8a2be2;
+            box-sizing: border-box;
+            position: fixed; 
+            bottom: 50px; 
+            left: 50%;
+            transform: translateX(-50%); 
+            z-index: 10;
+            text-align: left;
+            min-height: 250px; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: space-between; 
+            opacity: 0; /* Megtartva az átmenethez */
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Történet szövege */
+        #story-text-display {
+            font-size: 1.3em;
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap; 
+        }
+        
+        /* Audio gombok... */
+        .audio-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .audio-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #1a1a1a;
+            background-color: #00FFFF; 
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .audio-button:hover {
+            background-color: #00DDEE;
+        }
+
+        /* --- ALSÓ INTERAKCIÓS SÁV (a történet gombjai) --- */
+        .bottom-bar {
+            padding-top: 10px;
+            border-top: 1px dashed #8a2be2;
+            min-height: 48px;
+            width: 100%;
+        }
+
+        .interaction-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .page-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #ffffff;
+            background-color: #8a2be2;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+        }
+        
+        .page-button:hover:not(:disabled) {
+            background-color: #7b1cd1;
+            transform: translateY(-1px);
+        }
+
+        .page-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        /* Jelszó konténer */
+        #password-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        #password-container.visible {
+            display: flex;
+        }
+        
+        #password-input {
+            padding: 12px;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            background-color: #2c2c2c;
+            color: #00ffff;
+            font-size: 1.2em;
+            text-align: center;
+            font-family: 'Play', sans-serif;
+            margin-bottom: 5px; 
+        }
+        
+        .password-interaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        #check-password-button, #back-button-password {
+            padding: 12px 20px; 
+            font-size: 1.1em; 
+        }
+        
+        #back-button-password {
+            color: #ffffff;
+            background-color: #8a2be2; 
+        }
+        
+        #check-password-button {
+            color: #ffffff;
+            background-color: #00ffff;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4); 
+            flex-grow: 1; 
+        }
+        
+        #check-password-button:hover {
+            background-color: #00ddee;
+            transform: translateY(-1px); 
+        }
+
+        #message {
+            margin-top: 10px;
+            font-weight: 700;
+            color: #ff4500;
+        }
+
+        /* Avatar kép */
+        .avatar-image {
+            position: absolute;
+            top: -50px; 
+            left: -10px; 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            z-index: 20; 
+            display: block; 
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); 
+            transition: opacity 0.3s ease-in-out; 
+        }
+        
+        /* --- FIX ALSÓ MENÜSOR --- */
+        .fixed-menu-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #1a1a1a;
+            border-top: 2px solid #8a2be2;
+            z-index: 50; 
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.3s;
+        }
+
+        .menu-button:hover {
+            color: #00ffff;
+        }
+
+        /* --- GALÉRIA MODAL STÍLUSOK --- */
+        #galleryModal {
+            display: none; 
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            background-color: rgba(0, 0, 0, 0.95);
+        }
+
+        .gallery-content {
+            position: relative;
+            margin: auto;
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gallery-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 16px;
+            font-size: 2em;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .gallery-nav:hover {
+            opacity: 1;
+        }
+
+        .prev-gallery {
+            left: 0;
+        }
+
+        .next-gallery {
+            right: 0;
+        }
+
+        .close-gallery {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 110;
+        }
+        
+        .close-gallery:hover,
+        .close-gallery:focus {
+            color: #00ffff;
+        }
+        
+        /* --- Távolság Modal (Compass HUD) STÍLUSOK --- */
+        #distanceModal {
+            /* JAVÍTÁS: display: none a kezdeti rejtéshez */
+            display: none; 
+            position: fixed;
+            z-index: 200; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            /* JAVÍTÁS: Háttérszín és rács eltávolítva/átlátszóvá téve, hogy az eredeti kép látszódjon */
+            background-color: transparent; 
+            background-image: none;
+            
+            /* Amikor display: flex-re vált, ezek az elrendezési tulajdonságok érvényesülnek: */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .distance-content {
+            padding: 20px;
+            max-width: 90%;
+            /* EZ A KONTÉNER MEGTARJA A SÖTÉT, KIEMELT HÁTTERET */
+            background-color: rgba(0, 0, 0, 0.85); 
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            border: 2px solid #00ffff;
+        }
+
+        #distance-modal-display {
+            font-size: 5em;
+            font-weight: bold;
+            color: #00ff00; /* Neon zöld a távolságra */
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        #distance-status {
+            color: #aaaaaa;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            /* ÚJ JAVÍTÁS: Alapértelmezésben rejtett, a hibákat a JS teszi láthatóvá */
+            visibility: hidden; 
+            height: 0; /* Hogy ne foglaljon helyet a rejtett elem */
+            margin-top: -20px; /* Kompenzáció a margóra */
+        }
+        
+        /* Amikor látható, visszakapja a normál stílust (a JS adja hozzá a .visible osztályt hiba esetén) */
+        #distance-status.visible {
+            visibility: visible;
+            height: auto;
+            margin-top: 10px;
+        }
+
+        #distance-modal-map-button {
+            background-color: transparent;
+            border: 2px solid #00ffff; 
+            color: #00ffff; 
+            padding: 15px 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+        }
+
+        #distance-modal-map-button:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 1);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- ELTÁVOLÍTVA: #scroll-pad - eltávolítva a háttérproblémák megelőzése érdekében. -->
+
+    <div class="full-width-image-container">
+        <!-- Ez a kép a fő háttérkép -->
+        <img id="story-image" src="Img/konyvtar.jpg" alt="Titokzatos jelenet">
+    </div>
+
+    <!-- Ez a tartalomdoboz az utolsó (jelszó kérés) szövegdoboz -->
+    <div class="content-box" id="content-box">
+        <img id="avatar-img" class="avatar-image" src="https://github.com/treasurehuntsites/treasurehuntsites.github.io/blob/main/Img/1740218605.png?raw=true" alt="Szereplő avatar">
+        
+        <p id="story-text-display"></p>
+        
+        <div id="audio-container-1" class="audio-container" style="display:none;">
+             <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
+        </div>
+        <div id="audio-container-2" class="audio-container" style="display:none;">
+             <button id="play-audio-button-2" class="audio-button">▶️ Lejátszás (2)</button>
+        </div>
+
+
+        <div class="bottom-bar">
+            <div class="interaction-container" id="interaction-container">
+                <button id="prev-page-button" class="page-button" disabled>
+                    Vissza
+                </button>
+                
+                <button id="next-page-button" class="page-button">
+                    Folytatás
+                </button>
+            </div>
+
+            <div id="password-container">
+                <p>Add meg a kódot:</p>
+                <input type="password" id="password-input" maxlength="4">
+                
+                <div class="password-interaction">
+                    <button id="back-button-password" class="page-button">
+                        Vissza
+                    </button>
+                    <button id="check-password-button" class="page-button">
+                        ELLENŐRZÉS
+                    </button>
+                </div>
+                <p id="message"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="fixed-menu-bar">
+        <!-- VISSZAHELYEZVE: Térkép gomb -->
+        <button id="map-button" class="menu-button" title="Térkép">
+            <i class="fa-solid fa-map-location-dot"></i>
+        </button>
+        
+        <button id="image-button" class="menu-button" title="Képgaléria">
+            <i class="fa-solid fa-image"></i>
+        </button>
+    </div>
+    
+    <div id="galleryModal">
+      <span class="close-gallery" onclick="closeGallery()">×</span>
+      <div class="gallery-content">
+          <a class="gallery-nav prev-gallery" onclick="prevGalleryImage()">❮</a>
+          <img class="gallery-image" id="galleryImageDisplay" src="">
+          <a class="gallery-nav next-gallery" onclick="nextGalleryImage()">❯</a>
+      </div>
+    </div>
+    
+    <!-- ÚJ: Távolság Modal (Compass HUD) -->
+    <div id="distanceModal">
+        <div class="distance-content">
+            <h1>CÉLPONT KERESÉSE</h1>
+            
+            <div id="distance-modal-display">
+                -- M
+            </div>
+            
+            <!-- Az alapértelmezett szöveget a JS fogja felülírni -->
+            <p id="distance-status">Helyzetmeghatározás indítása...</p>
+            
+            <!-- Térkép gomb -->
+            <a href="https://www.google.com/maps/d/u/0/viewer?mid=1jaaxNriWkeGPzFJC4e--k0CU2QyBFx8&ll=47.453898687406785%2C19.01940665000001&z=13" target="_blank" id="distance-modal-map-button">
+                🗺️ Térkép
+            </a>
+        </div>
+    </div>
+    <!-- END ÚJ: Távolság Modal -->
+    
+    <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
+    <audio id="story-audio-2" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok2.mp3" preload="auto"></audio>
+
+    <script>
+        // --- CÉL ADATOK (Átemelve a compass.html-ből) ---
+        const COMPASS_LAT = 47.428073;    
+        const COMPASS_LON = 19.036570;    
+        const COMPASS_RADIUS = 25;       
+        const SUCCESS_LINK = "5571.html"; // Átirányítás innen
+        const MAP_URL_FOR_MENU = 'https://www.google.com/maps/d/u/0/viewer?mid=1qTBS42KcRDJRlwSLY1FUDSbAwHxP3wo&ll=47.426209499999985%2C19.038944499999992&z=17';
+        // ------------------------------------------------
+
+        // KÉP URL-ek
+        const STABLE_IMAGE_URL = "Img/konyvtar.jpg";
+        // Új Avatar URL-ek
+        const FRANCOIS_AVATAR_URL = "Img/Francois.png"; 
+        const MARTIN_AVATAR_URL = "Img/Martintelefonal2.jpg";
+        // Új Háttérkép
+        const LIVING_ROOM_IMAGE_URL = "Img/nappali.jpg"; 
+        
+        const PUZZLE_IMAGE_URL = "Img/1757454039.jpg"; 
+
+        // GALÉRIA KÉPEK LISTÁJA
+        // VÁLTOZTATÁS: Üres tömbre cserélve, ahogy kérted
+        const galleryImages = [];
+        let currentGalleryIndex = 0;
+
+
+        // --- Segéd FÜGGVÉNYEK ---
+
+        function saveProgress() {
+            localStorage.setItem('gameProgress', currentPartIndex);
+        }
+
+        function loadProgress() {
+            const savedIndex = localStorage.getItem('gameProgress');
+            if (savedIndex !== null) {
+                currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length); 
+            } else {
+                currentPartIndex = 0;
+            }
+        }
+        
+        function stopAllAudio() {
+             storyAudio1.pause();
+             storyAudio1.currentTime = 0;
+             playAudioButton1.innerHTML = "▶️ Lejátszás (1)";
+             
+             storyAudio2.pause();
+             storyAudio2.currentTime = 0;
+             playAudioButton2.innerHTML = "▶️ Lejátszás (2)";
+        }
+
+        function toggleAudio(audioElement, buttonElement, buttonText) {
+            if (audioElement.paused) {
+                stopAllAudio(); 
+                audioElement.play().catch(error => {
+                    console.error('Autoplay failed, user interaction needed.', error);
+                });
+                buttonElement.innerHTML = `⏸️ Szünet (${buttonText})`;
+            } else {
+                audioElement.pause();
+                buttonElement.innerHTML = `▶️ Lejátszás (${buttonText})`;
+            }
+        }
+        
+        // --- GALÉRIA FUNKCIÓK ---
+        
+        function showGalleryImage(index) {
+            // Ellenőrizzük, hogy van-e kép a galériában
+            if (galleryImages.length === 0) {
+                console.warn("A galéria üres. Nincs megjeleníthető kép.");
+                closeGallery();
+                // Opcionális: itt lehetne egy üzenetet megjeleníteni
+                return;
+            }
+            
+            currentGalleryIndex = (index + galleryImages.length) % galleryImages.length;
+            galleryImageDisplay.src = galleryImages[currentGalleryIndex].url;
+            galleryImageDisplay.alt = galleryImages[currentGalleryIndex].title;
+        }
+
+        function nextGalleryImage() {
+            showGalleryImage(currentGalleryIndex + 1);
+        }
+
+        function prevGalleryImage() {
+            showGalleryImage(currentGalleryIndex - 1);
+        }
+
+        function openGallery() {
+            if (galleryImages.length === 0) {
+                 // Ha üres a galéria, ne nyissuk meg a modalt.
+                 console.log("A galéria jelenleg üres, a gomb inaktív.");
+                 return;
+            }
+            
+            showGalleryImage(0); // Mindig az első képpel kezdünk
+            galleryModal.style.display = "block";
+        }
+
+        function closeGallery() {
+            galleryModal.style.display = "none";
+        }
+
+        // --- TÁVOLSÁG/GPS FUNKCIÓK (Javított GPS indítás és Újrapróbálkozás) ---
+        
+        function tavolsagotKiszamol(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            
+            return R * c; 
+        }
+        
+        function restartCompassTracking() {
+            console.log("GPS Hiba történt, újrapróbálkozás 2 másodperc múlva...");
+            setTimeout(startCompassTracking, 2000);
+        }
+        
+        // Segédfüggvény a státusz megjelenítéséhez
+        function setDistanceStatus(message, isError = false) {
+            distanceStatus.textContent = message;
+            // Ha hiba van, vagy ha nincs távolság (pl. "-- M"), akkor láthatóvá tesszük, egyébként rejtjük
+            if (isError || message.includes("Hiba") || message.includes("várjon")) {
+                distanceStatus.classList.add('visible');
+            } else {
+                distanceStatus.classList.remove('visible');
+            }
+        }
+
+
+        function startCompassTracking() {
+            if (!("geolocation" in navigator)) {
+                setDistanceStatus("Hiba: A böngészője nem támogatja a helymeghatározást.", true);
+                console.error("Geolocation API not supported.");
+                return;
+            }
+            
+            // Ha már fut a figyelés, először leállítjuk
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            
+            // Azonnali visszajelzés a felhasználónak
+            setDistanceStatus("Helymeghatározás indítása, kérjük várjon...", true);
+            distanceDisplay.textContent = "-- M"; 
+
+            console.log("Calling watchPosition...");
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const latDeg = position.coords.latitude;
+                    const lonDeg = position.coords.longitude;
+                    
+                    console.log(`GPS OK: Lat=${latDeg}, Lon=${lonDeg}, Accuracy=${position.coords.accuracy}`);
+
+                    const tavolsag = tavolsagotKiszamol(latDeg, lonDeg, COMPASS_LAT, COMPASS_LON);
+                    
+                    // Frissíti a kijelzőt
+                    distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
+                    
+                    // Frissítjük a státuszt, de láthatatlan marad, ha sikeres a lekérés.
+                    setDistanceStatus(`Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`, false);
+
+                    // Ellenőrzi az átirányítást
+                    if (tavolsag <= COMPASS_RADIUS) {
+                        setDistanceStatus("Cél elérve! Átirányítás 5 másodperc múlva...", true);
+                        // Leállítja a helyzetfigyelést
+                        navigator.geolocation.clearWatch(watchId);
+                        watchId = null;
+                        setTimeout(() => {
+                            window.location.href = SUCCESS_LINK;
+                        }, 5000);
+                        return;
+                    }
+                },
+                
+                (error) => {
+                    console.error("GPS Error Code:", error.code, "Message:", error.message);
+                    
+                    // JAVÍTÁS: Törli a folyamatos figyelést hiba esetén
+                    if (watchId) {
+                        navigator.geolocation.clearWatch(watchId);
+                        watchId = null;
+                    }
+                    
+                    if (error.code === error.PERMISSION_DENIED) {
+                        setDistanceStatus("Hiba: Kérjük, engedélyezze a helymeghatározást (engedély letiltva).", true);
+                        distanceDisplay.textContent = "X";
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                         setDistanceStatus("Hiba: A helyzetadatok nem érhetők el (rossz GPS vétel). Újrapróbálkozás...", true);
+                         distanceDisplay.textContent = "X";
+                         restartCompassTracking(); // Újrapróbálkozás
+                    } else if (error.code === error.TIMEOUT) {
+                         setDistanceStatus("Hiba: Túl sokáig tartott a helyzet meghatározása. Újrapróbálkozás...", true);
+                         distanceDisplay.textContent = "X";
+                         restartCompassTracking(); // Újrapróbálkozás
+                    } else {
+                        setDistanceStatus("Hiba a helymeghatározásban.", true);
+                        distanceDisplay.textContent = "X";
+                    }
+                },
+                
+                {
+                    enableHighAccuracy: true,
+                    // Megnövelt timeout a GPS jel stabilizálására (15 mp)
+                    timeout: 15000, 
+                    // Friss pozíció kérése
+                    maximumAge: 0 
+                }
+            );
+        }
+
+        function showDistanceModal() {
+            // FONTOS JAVÍTÁS: Elrejti a fő tartalomdobozt (a jelszókérőt), hogy ne takarja a képet.
+            contentBox.style.display = 'none'; 
+            
+            document.body.classList.add('modal-open');
+            // A display: none a CSS-ben van beállítva, itt állítjuk át flex-re
+            distanceModal.style.display = 'flex'; 
+            
+            // Elindítja a GPS követést a modal megjelenésekor
+            startCompassTracking(); 
+        }
+        
+        // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
+
+        function updateButtons() {
+            stopAllAudio(); 
+
+            if (currentPartIndex < storyPages.length) {
+                // Normál lapozó mód 
+                interactionContainer.style.display = 'flex';
+                passwordContainer.classList.remove('visible');
+                
+                prevButton.disabled = currentPartIndex === 0;
+                nextButton.textContent = 'Folytatás';
+            } else {
+                // Kód kérés mód 
+                interactionContainer.style.display = 'none';
+                passwordContainer.classList.add('visible');
+            }
+        }
+
+        function updateAvatar(pageIndex) {
+            const page = storyPages[pageIndex];
+            
+            if (page && page.speaker) {
+                if (page.speaker === 'Francois' && page.avatar) {
+                    avatarImg.src = page.avatar;
+                    avatarImg.alt = 'Francois avatar';
+                    avatarImg.style.opacity = 1; 
+                } else if (page.speaker === 'Martin' && page.avatar) {
+                    avatarImg.src = page.avatar;
+                    avatarImg.alt = 'Martin avatar';
+                    avatarImg.style.opacity = 1; 
+                } else if (page.speaker === 'Narrator') {
+                    // Narrátor esetén elrejtjük az avatart
+                    avatarImg.style.opacity = 0;
+                }
+            } else if (pageIndex >= storyPages.length) {
+                // Kód bevitelnél
+                avatarImg.style.opacity = 0;
+            }
+        }
+
+        function showStoryPart() {
+            messageDisplay.textContent = ''; 
+            contentBox.style.opacity = 0;
+
+            // Azonnali megjelenítés: eltávolítva a setTimeout
+            // A tartalom betöltése után azonnal láthatóvá tesszük a dobozt.
+            
+            audioContainer1.style.display = 'none';
+            audioContainer2.style.display = 'none';
+            storyDisplay.innerHTML = ''; 
+
+            if (currentPartIndex < storyPages.length) {
+                const currentPage = storyPages[currentPartIndex];
+                
+                updateAvatar(currentPartIndex); 
+                
+                if (currentPage.type === 'text' || currentPage.type === 'audio') {
+                    // Név nélkül jelenítjük meg a szöveget, ahogy a felhasználó kérte
+                    storyDisplay.innerHTML = currentPage.content;
+                    
+                    if (currentPage.type === 'audio') {
+                        if (currentPage.audioId === 1) {
+                            audioContainer1.style.display = 'block';
+                        } else if (currentPage.audioId === 2) {
+                            audioContainer2.style.display = 'block';
+                        }
+                    }
+                }
+                
+                storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
+                
+            } else {
+                // Kód bevitelnél
+                updateAvatar(currentPartIndex);
+                storyDisplay.innerHTML = 'Add meg a kódot, amit a papíron találsz!';
+            }
+
+            contentBox.style.opacity = 1; // Fél másodperc helyett azonnal
+            updateButtons();
+        }
+        
+        // --- ESEMÉNYKEZELŐK ---
+        
+        nextButton.addEventListener('click', () => {
+            currentPartIndex++;
+            saveProgress();
+            showStoryPart();
+        });
+
+        prevButton.addEventListener('click', () => {
+            if (currentPartIndex > 0) {
+                currentPartIndex--;
+                saveProgress();
+                showStoryPart();
+            }
+        });
+        
+        backButtonPassword.addEventListener('click', () => {
+            currentPartIndex = storyPages.length - 1; 
+            saveProgress();
+            showStoryPart();
+        });
+
+        checkButton.addEventListener('click', () => {
+            const enteredPassword = passwordInput.value.trim();
+
+            if (enteredPassword === CORRECT_PASSWORD) {
+                messageDisplay.textContent = 'Kód elfogadva! Tovább lépés...';
+                messageDisplay.style.color = '#00FF00';
+                localStorage.removeItem('gameProgress'); 
+                stopAllAudio();
+                
+                // Modal megjelenítése és GPS indítása CSAK A JELSZÓ ELLENŐRZÉS UTÁN
+                showDistanceModal();
+
+            } else {
+                messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
+                messageDisplay.style.color = '#FF4500';
+                passwordInput.value = '';
+            }
+        });
+
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkButton.click(); 
+            }
+        });
+        
+        playAudioButton1.addEventListener('click', () => toggleAudio(storyAudio1, playAudioButton1, '1'));
+        playAudioButton2.addEventListener('click', () => toggleAudio(storyAudio2, playAudioButton2, '2'));
+        
+        // Képgaléria menü gomb eseménykezelője
+        imageButton.addEventListener('click', openGallery);
+        
+        // ÚJ: Térkép menü gomb eseménykezelője (visszahelyezve)
+        mapButton.addEventListener('click', () => {
+            // Megnyitja a térképet egy új lapon, ahogy az eredeti kódban volt
+            window.open(MAP_URL_FOR_MENU);
+        });
+        
+
+        window.onload = () => {
+            loadProgress(); 
+            showStoryPart();
+        };
+        
+        // Google Forms küldése a betöltéskor
+        const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScMxfTwsgk0nyIiuJ1o9mWHbRkyPA9hBI792mABbOzJOVlONA/formResponse";
+        fetch(FORM_URL, {
+            method: 'POST',
+            mode: 'no-cors'
+        }).then(() => {
+            console.log("Látogatási adat sikeresen elküldve a Google Sheets felé.");
+        }).catch(error => {
+            console.error("Hiba történt a látogatási kérés küldésekor:", error);
+        });
+        // ---------------------------------------------------------------------
+
+        // EREDETI TÖRTÉNETRÉSZEK - FRISSÍTVE A KÉRÉS SZERINT, NÉV NÉLKÜL
+        const storyPages = [
+            // ----------------------------------------------------------------------------------
+            // Jelenet 1: Párbeszéd (Háttérkép: STABLE_IMAGE_URL = "Img/konyvtar.jpg")
+            // ----------------------------------------------------------------------------------
+            { type: 'text', content: `Jó reggelt, Francois vagyok.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Még mindig úgy vagy vele, hogy átpasszolnád valakinek az archiválási munkáidat?`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Nos, tudod a véleményemet arról a rengeteg régi papírról.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Szóval, mit szólnál hozzá, ha egy időre magára hagynád az archívumot?`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Mi a helyzet, egy újabb unalmas látogatás a Britt határnál, régi könyvek után kutatva?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Ezúttal nem.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Lássuk csak… 1945, egy frissen felfedezett német bunker a háború vége tájáról.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Komolyan mondod?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Hol?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Magyarországon.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Mikor indulunk?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Sajnos nem vagyok már olyan fiatal, mint régen.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Egyedül kell menned, de tudok neked segíteni még innen is ha kell.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Szabad vagy ma délután?`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Igen.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Rendben.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Gyere, amint tudsz.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Számítok rád.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Megbeszéltük.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Nagybátyám hírei kissé rejtélyesek voltak, de ez csak növelte a kíváncsiságomat.`, speaker: 'Narrator', avatar: '', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Egy új budapesti bunker – ez nem olyan felfedezés, ami minden nap megtörténik.`, speaker: 'Narrator', avatar: '', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `De miért ez a sietség?`, speaker: 'Narrator', avatar: '', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Már majdnem 5 óra.`, speaker: 'Narrator', avatar: '', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Ideje többet megtudni.`, speaker: 'Narrator', avatar: '', image: STABLE_IMAGE_URL },
+            
+            // ----------------------------------------------------------------------------------
+            // Jelenet 2: Jelenetváltás (Háttérkép: LIVING_ROOM_IMAGE_URL)
+            // ----------------------------------------------------------------------------------
+            { type: 'text', content: `Köszönöm, hogy nem késtél.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Jelek szerint felgyorsultuak a dolgok.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Hallgatlak.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Csak néhányan tudják, amit most el fogok mondani neked.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Hallottál már a német Nibiru projektről?`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A Nibiru?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A 12. bolygó?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Mi köze van ennek a németekhez?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Igen, a 12. bolygó.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A németek beleásták magukat mindenféle technológiába, ami segíthetett volna nekik a háborús helyzetükben.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Képzeld el, mit jelentett volna nekik egy másik, magasan fejlett faj technológiája.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `De a 12. bolygó csak egy mítosz.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Mit gondolsz?`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Én is azt hittem, hogy az, de most már ez nem fontos.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A lényeg az, hogy a németek hittek benne, és évekig gyűjtöttek róla információt.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Azt hiszem, nem voltak messze a céltól.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Van egy halvány sejtésem, pontosan mit is fedeztek fel, de Nibiru biztosan nem csak egy mítosz.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Igen, folytasd.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Nincs már időm arra, hogy beavassalak az összes felfedezésembe.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Azonban az létezik, ebben biztos vagyok.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `De térjünk a munkához.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A felfedezésről szóló információk egy volt kolléganőmtől Budapestről származnak.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Minden el van intézve.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Budapestre mész, és találkozol vele Budafokon a Városháza téren.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Ma este?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Az a kontaktod... egy nő?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Pontosan.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Gyorsan kell cselekednünk.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Az engedélyt a felfedezési helyszínre való belépéshez és minden rendelkezésre álló információt ott fog neked átadni.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Ez elég sietős!`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Amúgy mit gondolsz, mit kéne ott találjak?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Még nem tudom.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Tudod, a háború végén a németek minden értéket elrejtettek, hogy a szövetségesek ne foglalhassák le.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A régészeti kutatásaik eredményeit soha nem találták meg.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Nincs nyom, hol kellene keresni a kincset.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Azonban 1945 áprilisának végén Magyarország még németek által ellenőrzött terület volt, az ahol a magyar kapcsolataink is szerepelnek.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Honnan fogom felismerni a nőt?`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A Városháza tér forgalmas terület.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A Városháza tér nappal zsúfolt.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `De te majd késő éjszaka érkezel, amikor alig lézengenek páran.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Amúgy meg van rólad egy fényképe.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Minden elő lett készítve.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A neve Éva.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A repülőjegy itt van előtted ebben a borítékban.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Martin, ez most valami nagy dolog.`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Rendben van, felhivlak, amint megérkeztem a helyszínre.`, speaker: 'Martin', avatar: MARTIN_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Sok sikert!`, speaker: 'Francois', avatar: FRANCOIS_AVATAR_URL, image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Valamivel több információval jöttem el a kastélyból, mint amivel odamentem.`, speaker: 'Narrator', avatar: '', image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `A Nagybátyám nagyon magabiztos az említett dolgokban.`, speaker: 'Narrator', avatar: '', image: LIVING_ROOM_IMAGE_URL },
+            { type: 'text', content: `Induljunk el válaszokat keresni Európa szívébe.`, speaker: 'Narrator', avatar: '', image: LIVING_ROOM_IMAGE_URL } 
+        ];
+
+    </script>
+</body>
+</html>
