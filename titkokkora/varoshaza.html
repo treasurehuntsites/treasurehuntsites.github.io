@@ -884,7 +884,25 @@
             { type: 'text', content: `Rendben, köszönöm azért.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
             // 58. F
             { type: 'text', content: `Élvezze ezt az estét, uram!`, speaker: 'Painter', image: STABLE_IMAGE_URL },
-            // Utána jön a jelszóbeviteli képernyő (storyPages.length)
+            
+            // 59. (ÚJ) VÁLASZTÁS PONT 3 (Multi-choice)
+            { 
+                type: 'choice', 
+                content: `Hová mész tovább?`, 
+                speaker: 'Narrator', 
+                image: STABLE_IMAGE_URL,
+                choices: [
+                    // Index 60 (Jelszóbeviteli képernyőre ugrás, mert a 60-as oldal törölve lett)
+                    { text: 'Megvizsgálod a telefonfülkét', nextIndex: 61 }, 
+                    // Index 61 -> 60 (A Festő ág új indexe)
+                    { text: 'Kérdezel még valamit a festőtől', nextIndex: 60 }  
+                ]
+            },
+            
+            // 60. (Eredeti index 61) Festő ág (további kérdés)
+            { type: 'text', content: `Mostmár hagyjon békén, nincs több mondanivalóm.`, speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 59 }, // Vissza a választáshoz
+            
+            // Utána jön a jelszóbeviteli képernyő (storyPages.length = 61)
         ];
 
         const CORRECT_PASSWORD = "6715"; 
@@ -892,10 +910,7 @@
         
         // SEGÍTSÉG ADATOK
         const HELP_MESSAGES = [
-            "Tedd az érmeket a megfelelő helyekre a térképen.",
-            "Az ábrákon lévő egyik erme számát kell a térképen beazonosítani és onnan felépíteni a mintát.",
-            "A kód a fehér vonalak kereszteződése alatti számok.",
-            "A kód: 6715"
+            "egy kis mágnessel rögzített üvegcsét keress"
         ];
         
         // GPS ADATOK
@@ -1216,7 +1231,7 @@
                 const isChoicePage = currentPage.type === 'choice';
                 
                 if (isChoicePage) {
-                    // 1. CHOICE PAGE LOGIC (Discreet back button + choice buttons)
+                    // 1. CHOICE PAGE LOGIC (Diszkrét vissza gomb + választási gombok)
                     interactionContainer.style.display = 'none';
                     multiChoiceContainer.style.display = 'flex';
                     
@@ -1231,7 +1246,7 @@
                     discreetBackButton.disabled = currentPartIndex === 0;
 
                 } else {
-                    // 2. SEQUENTIAL PAGE LOGIC (Default bottom buttons)
+                    // 2. SEQUENTIAL PAGE LOGIC (Alapértelmezett alsó gombok)
                     interactionContainer.style.display = 'flex';
                     multiChoiceContainer.style.display = 'none';
                     
@@ -1374,6 +1389,7 @@
         });
 
         backButtonPassword.addEventListener('click', () => {
+            // A jelszóbeviteli képernyőről az utolsó történetoldalra lépünk vissza
             currentPartIndex = storyPages.length - 1; 
             saveProgress();
             showStoryPart();
