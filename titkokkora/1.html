@@ -41,30 +41,6 @@
             transition: opacity 0.5s ease-in-out; 
         }
         
-        /* KIKAPCSOLVA AZ ELŐNÉZET MIATT: EREDETI FEKVŐ TÁJOLÁS ZÁR 
-        @media only screen and (orientation: landscape) {
-            body::after {
-                content: "Kérlek, tartsd függőlegesen a telefont!";
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: #1a1a1a;
-                color: #ff4500;
-                font-size: 2em;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 9999;
-                text-align: center;
-            }
-            body > *:not(style):not(script):not(.full-width-image-container) {
-                display: none !important;
-            }
-        }
-        */
-        
         /* Teljes szélességű KÉP (Háttér) */
         .full-width-image-container {
             width: 100%;
@@ -706,7 +682,7 @@
             <p id="distance-status">Helyzetmeghatározás indítása...</p>
             
             <!-- Térkép gomb (GPS modal térkép linkje) -->
-            <a href="https://www.google.com/maps/d/u/0/viewer?mid=1-NCNROdWZxo0gzFuRnp4LTX6tI2qPTw&ll=47.4224795%2C19.04094669999999&z=17" target="_blank" id="distance-modal-map-button">
+            <a href="https://www.google.com/maps/d/u/0/viewer?mid=1t62q3UeSpBQEZ3sIYC2W8DdaZnndCmA&ll=47.42704060000001%2C19.039302600000006&z=17" target="_blank" id="distance-modal-map-button">
                 🗺️ Térkép
             </a>
         </div>
@@ -730,7 +706,9 @@
         const ALL_GALLERY_ITEMS = [
             { id: 'helyszin', url: STABLE_IMAGE_URL, title: "Helyszín", unlocked: true }, 
             // NYOM KÉPEK ELTÁVOLÍTVA
-            { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false } // Új feloldandó elem
+            { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false }, // Új feloldandó elem
+            // ÚJ: Cetli kép a galériába, a cetli megjelenésekor ez is feloldódik
+            { id: 'cetli', url: "Img/cetli.png", title: "Titkos üzenet", unlocked: false }
         ];
 
         // TÖRTÉNETRÉSZEK (FRISSÍTVE az új szöveggel és interakciókkal)
@@ -753,7 +731,7 @@
                 choices: [
                     // Indexek: Turista ág (6), Festő ág (8)
                     { text: 'Áll egy turista, odamész hozzá', nextIndex: 6 }, 
-                    { text: 'Egy festőt látsz, megnézed mit fest', nextIndex: 8 }  
+                    { text: 'Egy festőt látsz, megnézed mit fest', nextIndex: 8 } 
                 ]
             },
 
@@ -767,7 +745,7 @@
             // 8. Festő ág 1
             { type: 'text', content: `Az állványon egy félig kész kréta rajzot látsz.`, speaker: 'Narrator', image: STABLE_IMAGE_URL },
             // 9.
-            { type: 'text', content: `szép munka!`, speaker: 'Mark', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Szép munka!`, speaker: 'Mark', image: STABLE_IMAGE_URL },
             // 10.
             { type: 'text', content: `Jó estét uram! Szeretne egy kréta rajzot magáról?`, speaker: 'Painter', image: STABLE_IMAGE_URL },
             // 11.
@@ -785,7 +763,7 @@
                     // Szobor ág
                     { text: 'Oda mész es megvizsgálod a közeli szobrot', nextIndex: 14 }, 
                     // Festő ág: a kért bővebb párbeszéd kezdetére mutat
-                    { text: 'Vissza mész a festőhöz, hogy tovább kérdezz', nextIndex: 16 }  
+                    { text: 'Vissza mész a festőhöz, hogy tovább kérdezz', nextIndex: 16 } 
                 ]
             },
             
@@ -801,7 +779,7 @@
             // 17. F
             { type: 'text', content: `Igen, nagyon szép.`, speaker: 'Painter', image: STABLE_IMAGE_URL },
             // 18. F
-            { type: 'text', content: `Szóval, erdekli esetleg a szerény művészetem?`, speaker: 'Painter', image: STABLE_IMAGE_URL },
+            { type: 'text', content: `Szóval, érdekli esetleg a szerény művészetem?`, speaker: 'Painter', image: STABLE_IMAGE_URL },
             // 19. F
             { type: 'text', content: `Nézze meg micsoda remekmű ez a Városházáról!`, speaker: 'Painter', image: STABLE_IMAGE_URL },
             // 20. M
@@ -884,26 +862,52 @@
             { type: 'text', content: `Rendben, köszönöm azért.`, speaker: 'Mark', image: STABLE_IMAGE_URL },
             // 58. F
             { type: 'text', content: `Élvezze ezt az estét, uram!`, speaker: 'Painter', image: STABLE_IMAGE_URL },
-            // Utána jön a jelszóbeviteli képernyő (storyPages.length)
+            
+            // 59. VÁLASZTÁS PONT 3 (Multi-choice)
+            { 
+                type: 'choice', 
+                content: `Hová mész tovább?`, 
+                speaker: 'Narrator', 
+                image: STABLE_IMAGE_URL,
+                choices: [
+                    // MÓDOSÍTVA: Index 62 (Az új jelszóbeviteli képernyőre ugrás, mert a 61-es a cetli)
+                    { text: 'Megvizsgálod a telefonfülkét', nextIndex: 62 }, 
+                    // Index 60 (A Festő ág új indexe)
+                    { text: 'Kérdezel még valamit a festőtől', nextIndex: 60 } 
+                ]
+            },
+            
+            // 60. Festő ág (további kérdés)
+            { type: 'text', content: `Mostmár hagyjon békén, nincs több mondanivalóm.`, speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 59 }, // Vissza a választáshoz
+            
+            // 61. ÚJ: A SIKERES JELSZÓ UTÁNI CETLI MEGJELENÍTŐ OLDAL
+            { 
+                type: 'note_image', 
+                content: ``, // Kérésnek megfelelően üres a szöveg, csak a kép látszik
+                speaker: 'Narrator', 
+                image: "Img/cetli.png" ,
+                nextButtonText: 'Bezárás', // Egyedi gomb felirat
+                customAction: 'open_distance_modal' // Egyedi akció a GPS modal indításához
+            },
+            
+            // 62. Az új Jelszóbeviteli képernyő indexe (storyPages.length = 62)
         ];
 
-        const CORRECT_PASSWORD = "6715"; 
-        const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1eDRKffLdbbTQZSj64cPr3R8zvPH-03k&ll=47.4224795%2C19.04094669999999&z=17'; // Menü térkép
+        const CORRECT_PASSWORD = "8127"; 
+        const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1t62q3UeSpBQEZ3sIYC2W8DdaZnndCmA&ll=47.42704060000001%2C19.039302600000006&z=17'; // Menü térkép
         
         // SEGÍTSÉG ADATOK
         const HELP_MESSAGES = [
-            "Tedd az érmeket a megfelelő helyekre a térképen.",
-            "Az ábrákon lévő egyik erme számát kell a térképen beazonosítani és onnan felépíteni a mintát.",
-            "A kód a fehér vonalak kereszteződése alatti számok.",
-            "A kód: 6715"
+            "A készülék alján keresgélj!",
+            "A kód: 8127" 
         ];
         
         // GPS ADATOK
-        const COMPASS_LAT = 47.426785;   
-        const COMPASS_LON = 19.037315;   
-        const COMPASS_RADIUS = 25;       
-        const SUCCESS_LINK = "6715.html"; 
-        const GPS_MODAL_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1-NCNROdWZxo0gzFuRnp4LTX6tI2qPTw&ll=47.4224795%2C19.04094669999999&z=17'; 
+        const COMPASS_LAT = 47.426785; 
+        const COMPASS_LON = 19.037315; 
+        const COMPASS_RADIUS = 25; 
+        const SUCCESS_LINK = "next.html"; 
+        const GPS_MODAL_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1t62q3UeSpBQEZ3sIYC2W8DdaZnndCmA&ll=47.42704060000001%2C19.039302600000006&z=17'; 
         // ------------------------------------
 
         
@@ -993,10 +997,12 @@
             
             // Ellenőrzi, hogy fel van-e oldva a portré
             const isPortraitUnlocked = localStorage.getItem('isPortraitUnlocked') === 'true';
+            // ÚJ: Ellenőrzi, hogy fel van-e oldva a cetli (ha már látta, az is fel van oldva)
+            const isNoteUnlocked = currentPartIndex > 60; 
             
             // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva, vagy alapból láthatóak
             const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
-                item.unlocked || (item.id === 'portre' && isPortraitUnlocked)
+                item.unlocked || (item.id === 'portre' && isPortraitUnlocked) || (item.id === 'cetli' && isNoteUnlocked)
             );
 
             visibleItems.forEach((image) => {
@@ -1143,7 +1149,7 @@
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                         setTimeout(() => {
-                            window.location.href = SUCCESS_LINK; // Átirányítás a 6715.html-re
+                            window.location.href = SUCCESS_LINK; // Átirányítás a next.html-re
                         }, 5000);
                         return;
                     }
@@ -1207,6 +1213,7 @@
             // Visszaállítjuk a gombokat az alapértelmezett állapotukra (teljes szélesség nélkül)
             nextButton.classList.remove('full-width'); 
             prevButton.style.visibility = 'visible'; 
+            prevButton.style.display = 'block'; // Visszaállítja a Vissza gombot (alapértelmezett)
             prevButton.disabled = false;
 
 
@@ -1214,9 +1221,10 @@
                 const currentPage = storyPages[currentPartIndex];
                 
                 const isChoicePage = currentPage.type === 'choice';
+                const isFinalNotePage = currentPage.customAction === 'open_distance_modal'; // Az új cetli oldal
                 
                 if (isChoicePage) {
-                    // 1. CHOICE PAGE LOGIC (Discreet back button + choice buttons)
+                    // 1. CHOICE PAGE LOGIC (Diszkrét vissza gomb + választási gombok)
                     interactionContainer.style.display = 'none';
                     multiChoiceContainer.style.display = 'flex';
                     
@@ -1231,16 +1239,14 @@
                     discreetBackButton.disabled = currentPartIndex === 0;
 
                 } else {
-                    // 2. SEQUENTIAL PAGE LOGIC (Default bottom buttons)
+                    // 2. SEQUENTIAL PAGE LOGIC (Alapértelmezett alsó gombok)
                     interactionContainer.style.display = 'flex';
                     multiChoiceContainer.style.display = 'none';
+                    interactionContainer.style.justifyContent = 'space-between'; // ALAPÉRTELMEZETT VISSZAÁLLÍTÁS
                     
                     // Vissza gomb láthatósága
                     prevButton.style.visibility = 'visible';
                     prevButton.disabled = currentPartIndex === 0;
-                    
-                    // Nincs többé teljes szélességű gomb logikája
-                    nextButton.classList.remove('full-width');
                     
                     // Folytatás gomb beállítása
                     const customText = currentPage.nextButtonText;
@@ -1255,6 +1261,17 @@
                     }
                     
                     nextButton.dataset.forcedNextIndex = nextIndexDefined ? currentPage.nextIndex : '';
+                    
+                    // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (Cetli oldal):
+                    if (isFinalNotePage) {
+                        nextButton.classList.remove('full-width'); 
+                        interactionContainer.style.justifyContent = 'center'; // KÖZÉPRE IGAZÍTÁS
+                        prevButton.style.display = 'none'; // TELJES ELTÁVOLÍTÁS
+                        prevButton.disabled = true;
+                    } else {
+                         // Ha nincs custom action, marad az alapértelmezett (space-between, prevButton block)
+                         prevButton.style.display = 'block'; // Biztosítja, hogy alapértelmezettként megjelenjen
+                    }
                 }
 
             } else {
@@ -1295,6 +1312,7 @@
 
         function showStoryPart() {
             messageDisplay.textContent = ''; 
+            passwordInput.value = ''; // Töröljük a jelszó inputot
             contentBox.style.opacity = 0;
 
             setTimeout(() => {
@@ -1307,8 +1325,12 @@
                     
                     updateAvatar(currentPartIndex); 
                     
-                    if (currentPage.type === 'text' || currentPage.type === 'audio' || currentPage.type === 'choice') {
-                        storyDisplay.innerHTML = currentPage.content;
+                    if (currentPage.type === 'text' || currentPage.type === 'audio' || currentPage.type === 'choice' || currentPage.type === 'note_image') {
+                        // Ha a tartalom üres (note_image), ne jelenítsünk meg üres szöveget
+                        if (currentPage.content.trim() !== '') {
+                           storyDisplay.innerHTML = currentPage.content;
+                        }
+                        
                         if (currentPage.type === 'audio') {
                             if (currentPage.audioId === 1) {
                                 audioContainer1.style.display = 'block';
@@ -1321,8 +1343,10 @@
                     storyImage.src = currentPage.image || STABLE_IMAGE_URL; 
                     
                 } else {
+                    // Jelszó beviteli képernyő: Index 62 (storyPages.length)
                     updateAvatar(currentPartIndex);
-                    storyDisplay.innerHTML = 'Add meg a kódot!';
+                    storyImage.src = STABLE_IMAGE_URL; // Alap kép visszaállítása a fülkére
+                    storyDisplay.innerHTML = 'Nézz körül az igazi fülkében!';
                 }
 
                 contentBox.style.opacity = 1;
@@ -1352,6 +1376,19 @@
                 console.log("Festő Portréja feloldva!");
             }
             
+            const currentPage = storyPages[currentPartIndex];
+            
+            // ÚJ LOGIKA: Egyedi akció kezelése (Cetli bezárása -> GPS modal)
+            if (currentPage && currentPage.customAction === 'open_distance_modal') {
+                 // Az új Cetli kép feloldása a galériában
+                localStorage.setItem('isNoteUnlocked', 'true');
+                stopAllAudio();
+                localStorage.removeItem('gameProgress'); // Töröljük a mentést, ha elindítjuk a GPS-t
+                showDistanceModal(); 
+                return;
+            }
+
+
             const forcedNextIndex = nextButton.dataset.forcedNextIndex;
             if (forcedNextIndex !== undefined && forcedNextIndex !== '') {
                 // Kényszerített ugrás a megadott indexre
@@ -1374,7 +1411,8 @@
         });
 
         backButtonPassword.addEventListener('click', () => {
-            currentPartIndex = storyPages.length - 1; 
+            // A jelszóbeviteli képernyőről az utolsó történetoldalra lépünk vissza (Index 60)
+            currentPartIndex = 60; 
             saveProgress();
             showStoryPart();
         });
@@ -1383,14 +1421,16 @@
             const enteredPassword = passwordInput.value.trim();
 
             if (enteredPassword === CORRECT_PASSWORD) {
-                messageDisplay.textContent = 'Kód elfogadva! GPS Cél keresése indul...';
+                messageDisplay.textContent = 'Kód elfogadva! Egy üzenetet találtál...';
                 messageDisplay.style.color = '#00FF00';
-                localStorage.removeItem('gameProgress'); 
-                stopAllAudio();
                 
-                // AZ ÁTIRÁNYÍTÁS HELYETT A GPS MODAL MEGNYITÁSA
-                setTimeout(showDistanceModal, 1000);
-
+                // MÓDOSÍTVA: Ugrás az új CETLI oldalra (Index 61)
+                setTimeout(() => {
+                    currentPartIndex = 61; // Új cetli oldal indexe
+                    saveProgress();
+                    showStoryPart(); // Megjeleníti a cetli oldalt
+                }, 1000);
+                
             } else {
                 messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
                 messageDisplay.style.color = '#FF4500';
@@ -1416,8 +1456,8 @@
 
         if (helpButton) {
             helpButton.addEventListener('click', () => {
-                 currentHelpIndex = 0; 
-                 showHelpMessage();
+                currentHelpIndex = 0; 
+                showHelpMessage();
             });
         }
 
@@ -1442,7 +1482,13 @@
         // ÚJ: Diszkrét Vissza gomb eseménykezelő (csak a choice képernyőn látszik)
         discreetBackButton.addEventListener('click', () => {
             if (currentPartIndex > 0) {
-                currentPartIndex--;
+                // Visszaugrunk a legutolsó szekvenciális oldalra
+                let targetIndex = currentPartIndex - 1;
+                while (targetIndex > 0 && storyPages[targetIndex].type === 'choice') {
+                    targetIndex--;
+                }
+                currentPartIndex = targetIndex; 
+
                 saveProgress();
                 showStoryPart();
             }
