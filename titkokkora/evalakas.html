@@ -714,10 +714,12 @@
             const FRANCOIS_AVATAR_URL = "Img/Francois.png"; 
             const MARK_PHONE_AVATAR_URL = "Img/Martintelefonal2.jpg"; 
             const LUCEB_AVATAR_URL = "Img/Csengo.png"; // ÚJ LUCEB/FESU AVATAR
+            const UZENOFAL_IMAGE_URL = "Img/uzenofal.jpg"; // ÚJ KÉP URL
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
                 { id: 'helyszin', url: STABLE_IMAGE_URL, title: "Helyszín", unlocked: true }, 
+                { id: 'uzenofal', url: UZENOFAL_IMAGE_URL, title: "Lakóközösség üzenőfala", unlocked: false }, // ÚJ ÜZENŐFAL GALÉRIA ELEM
                 { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false },
                 { id: 'cetli', url: "Img/cetli.png", title: "Titkos üzenet", unlocked: false }
             ];
@@ -742,7 +744,7 @@
                     choices: [
                         { text: 'Odamész a közeli kapualjhoz', nextIndex: 6 }, 
                         { text: 'Megvizsgálod a kőkorlátot', nextIndex: 49 }, 
-                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 130 } // OLD 128 -> NEW 130 (+2)
+                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 130 } 
                     ]
                 },
 
@@ -834,19 +836,19 @@
                 
                 // --- ÚJ ZSÁKUTCA ÁG: ÜZENŐFAL (49, 50, 51, 52) ---
                 // Index 49: Az üzenőfal 1. mondat
-                { type: 'text', content: 'Valami jógaóra hirdetését látod kirakva, látszólag semmi különös.', speaker: 'Narrator', image: 'Img/uzenofal.jpg', nextIndex: 50 }, 
+                { type: 'text', content: 'Valami jógaóra hirdetését látod kirakva, látszólag semmi különös.', speaker: 'Narrator', image: UZENOFAL_IMAGE_URL, nextIndex: 50, unlockImage: 'uzenofal' }, // UNLOCK
                 // Index 50: Az üzenőfal 2. mondat
-                { type: 'text', content: 'De mégis úgy érzed, mintha valami nem stimmelne a kifüggesztett hirdetéssel.', speaker: 'Narrator', image: 'Img/uzenofal.jpg', nextIndex: 51 }, 
+                { type: 'text', content: 'De mégis úgy érzed, mintha valami nem stimmelne a kifüggesztett hirdetéssel.', speaker: 'Narrator', image: UZENOFAL_IMAGE_URL, nextIndex: 51 }, 
                 
                 // --- ÚJ PASSWORD OLDAL (51) ---
                 { 
                     type: 'password', 
-                    content: 'A hirdetés lehet, hogy egy kódot rejt?', // MÓDOSÍTOTT SZÖVEG
+                    content: 'A hirdetés lehet, hogy egy kódot rejt?', 
                     speaker: 'Narrator', 
-                    image: 'Img/uzenofal.jpg',
-                    correctPassword: '214', // MÓDOSÍTOTT KÓD
+                    image: UZENOFAL_IMAGE_URL,
+                    correctPassword: '214', 
                     isCaseInsensitive: false,
-                    helpMessage: 'A kód egy háromjegyű szám.', // MÓDOSÍTOTT SÚGÓ
+                    helpMessage: 'A kód egy háromjegyű szám.', 
                     nextIndexSuccess: 52, 
                     backIndex: 48 
                 },
@@ -856,7 +858,7 @@
                     type: 'text', 
                     content: 'A kód beütése után a kis fémtábla helyén egy rejtett kapcsoló aktiválódott. Visszatérsz a lépcsőházba.', 
                     speaker: 'Narrator', 
-                    image: 'Img/uzenofal.jpg',
+                    image: UZENOFAL_IMAGE_URL,
                     nextIndex: 48 
                 },
 
@@ -1119,10 +1121,15 @@
                 const isPortraitUnlocked = localStorage.getItem('isPortraitUnlocked') === 'true';
                 // Ellenőrzi, hogy fel van-e oldva a cetli
                 const isNoteUnlocked = localStorage.getItem('isNoteUnlocked') === 'true'; 
+                // Ellenőrzi, hogy fel van-e oldva az üzenőfal
+                const isUzenofalUnlocked = localStorage.getItem('isUzenofalUnlocked') === 'true'; 
                 
                 // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
-                    item.unlocked || (item.id === 'portre' && isPortraitUnlocked) || (item.id === 'cetli' && isNoteUnlocked)
+                    item.unlocked || 
+                    (item.id === 'portre' && isPortraitUnlocked) || 
+                    (item.id === 'cetli' && isNoteUnlocked) ||
+                    (item.id === 'uzenofal' && isUzenofalUnlocked) // ÚJ ELLENŐRZÉS
                 );
 
                 visibleItems.forEach((image) => {
@@ -1412,7 +1419,7 @@
                     }
 
                 } else {
-                    // Ezt az ágat már nem használjuk a beágyazott password oldalak miatt, de tartaléknak hagyjuk.
+                    // Ezt az ágat már nem használjuk a beágyazott password oldalak miatt, de tartalékknak hagyjuk.
                     interactionContainer.style.display = 'none';
                     passwordContainer.classList.remove('visible');
                     discreetBackButton.style.display = 'none';
@@ -1461,6 +1468,12 @@
 
                     if (currentPartIndex < storyPages.length) {
                         const currentPage = storyPages[currentPartIndex];
+                        
+                        // Kép feloldási logikája
+                        if (currentPage.unlockImage) {
+                            localStorage.setItem(`is${currentPage.unlockImage.charAt(0).toUpperCase() + currentPage.unlockImage.slice(1)}Unlocked`, 'true');
+                            console.log(`Kép feloldva: ${currentPage.unlockImage}`);
+                        }
                         
                         updateAvatar(currentPartIndex); 
                         
