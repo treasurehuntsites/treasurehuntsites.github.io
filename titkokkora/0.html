@@ -655,7 +655,7 @@
                         ELLENŐRZÉS
                     </button>
                 </div>
-                <!-- ÚJ: Szoba link konténer -->
+                <!-- ÚJ: Szoba link konténer (Most már csak a tartója, a gombot eltávolítottam a JS-ből) -->
                 <div id="room-link-container" style="display: none; margin-top: 10px; width: 100%;">
                     <button id="room-link-button" class="page-button full-width">
                         Szoba
@@ -728,7 +728,7 @@
         (function() {
             // --- KÉP/TÖRTÉNET ADATOK ---
             const STABLE_IMAGE_URL = "Img/varoshaza.jpg"; 
-            const CSENGOK_IMAGE_URL = "Img/csengok.jpg"; // FRISSÍTVE: .jpg-re a kérésnek megfelelően
+            const CSENGOK_IMAGE_URL = "Img/csengok.jpg"; 
             const KORLAT_IMAGE_URL = "Img/Korlat.jpg"; // KORLÁT KÉP URL
             const G_CODE_IMAGE_URL = "Img/G.jpg"; // KORRIGÁLVA: A helyettesítő URL helyett az Img/G.jpg kép
             const MARK_AVATAR_URL = "Img/Martin2.png"; 
@@ -740,6 +740,8 @@
             const UZENOFAL_IMAGE_URL = "Img/uzenofal.jpg"; 
             const CETLI_REKESZ_IMAGE_IMAGE_URL = "Img/1763970872341.png"; // ÚJ KÉP
             const CETLI_IMAGE_URL = "Img/cetli.png"; // Kód cetli a galériába
+            const APARTMENT_IMAGE_URL = "Img/EvaApartman.jpg"; // APARTMAN KÉP
+            const MUCI_IMAGE_URL = "Img/Muci.png"; // KUTYA KÉP
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
@@ -748,7 +750,8 @@
                 { id: 'korlat', url: KORLAT_IMAGE_URL, title: "Kőkorlát", unlocked: false }, 
                 { id: 'korlat_code', url: G_CODE_IMAGE_URL, title: "G Kód", unlocked: false }, // G.jpg fájl
                 { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false },
-                { id: 'cetli', url: CETLI_IMAGE_URL, title: "Titkos üzenet", unlocked: false }
+                { id: 'cetli', url: CETLI_IMAGE_URL, title: "Titkos üzenet", unlocked: false },
+                { id: 'muci', url: MUCI_IMAGE_URL, title: "Muci (Nyakkörv)", unlocked: false } // ÚJ KÉP
             ];
 
             // TÖRTÉNETRÉSZEK
@@ -761,21 +764,21 @@
                     image: STABLE_IMAGE_URL,
                     choices: [
                         { text: 'Odamész a közeli kapualjhoz', nextIndex: 1 }, 
-                        { text: 'Megvizsgálod a kőkorlátot', nextIndex: 44 }, 
-                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 125 } 
+                        { text: 'Megvizsgálod a kőkorlátot', nextIndex: 47 }, 
+                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 133 } // ÚJ JUMP AZ ÚJ SZEKVENCIÁHOZ
                     ]
                 },
 
                 // --- KAPUALJ ÁG - ÉVA CSENGETÉS (1-7) - Eredeti 6-12 ---
-                { type: 'text', content: 'Megnyomod Éva kapucsengőjét.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 1 <--- Kép változik
-                { type: 'text', content: 'Senki sem válaszol.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 2
-                { type: 'text', content: 'Megnyomod mégegyszer.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 3
+                { type: 'text', content: 'Megnyomod Éva kapucsengőjét.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 1 <--- KÉP VÁLTOZIK, BACK FIX
+                { type: 'text', content: 'Senki sem válaszol.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 2
+                { type: 'text', content: 'Megnyomod mégegyszer.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 3
                 
                 // ÚJ LÉPÉSEK (Index 4-7) - Eredeti 9-12
-                { type: 'text', content: 'Nincs válasz.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },          // 4
-                { type: 'text', content: 'Vajon hol lehet ilyenkor?', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 5
-                { type: 'text', content: 'Meg kéne próbáljak egy másik csengőt, hogy bejussak a házba.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 6
-                { type: 'text', content: 'Remélhetőleg valaki hajlandó lesz kinyitni a a kaput ezen a késő esti órán.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8 }, // 7
+                { type: 'text', content: 'Nincs válasz.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },          // 4
+                { type: 'text', content: 'Vajon hol lehet ilyenkor?', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 5
+                { type: 'text', content: 'Meg kéne próbáljak egy másik csengőt, hogy bejussak a házba.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 6
+                { type: 'text', content: 'Remélhetőleg valaki hajlandó lesz kinyitni a a kaput ezen a késő esti órán.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8, backIndex: 8 }, // 7
                 
                 // --- VÁLASZTÁS PONT (Index 8): 4 CSENGŐ - Eredeti 13 ---
                 { 
@@ -788,43 +791,44 @@
                         { text: 'Becsöngetsz a cimke nélküli csengőn', nextIndex: 15 }, // Eredeti 20 -> 15
                         { text: 'Becsöngetsz a Nagy A. csengőn', nextIndex: 21 }, // Eredeti 26 -> 21
                         { text: 'Megnyomod a másik cimke nélküli csengőt', nextIndex: 26 } // Eredeti 31 -> 26
-                    ]
+                    ],
+                    backIndex: 0 // Vissza a külső választáshoz
                 },
                 
                 // --- LUCEB/FESU PÁRBESZÉD (Index 9-14) - Eredeti 14-19 ---
-                { type: 'text', content: 'Jó estét, szeretnék bejutni a házba de zárva van az ajtó. Be tudna esetleg engedni?', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, // 9
-                { type: 'text', content: 'Azert van zárva, mert késő éjszaka van épp! Ki maga egyébként?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Martinnak hívnak és Évahoz jöttem az ötödik emeletre...', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Most rögtön beszelnem kéne vele. Kinyitná az ajtót kérem?', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Sajnálom, de így nem tudom kinyitni az ajtót. Jöjjön vissza amikor itthon van.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 8 }, 
-                { type: 'text', content: 'Nincs válasz, csak a saját lépteid visszhangoznak a csendben.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8 }, 
+                { type: 'text', content: 'Jó estét, szeretnék bejutni a házba de zárva van az ajtó. Be tudna esetleg engedni?', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 9
+                { type: 'text', content: 'Azert van zárva, mert késő éjszaka van épp! Ki maga egyébként?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Martinnak hívnak és Évahoz jöttem az ötödik emeletre...', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Most rögtön beszelnem kéne vele. Kinyitná az ajtót kérem?', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Sajnálom, de így nem tudom kinyitni az ajtót. Jöjjön vissza amikor itthon van.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 8, backIndex: 8 }, 
+                { type: 'text', content: 'Nincs válasz, csak a saját lépteid visszhangoznak a csendben.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8, backIndex: 8 }, 
                 
                 // --- CÍMKE NÉLKÜLI CSENGŐ PÁRBESZÉD (Index 15-20) - Eredeti 20-25 ---
                 { type: 'text', content: 'Igen, tessék?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 15
-                { type: 'text', content: 'Jó estét kívánok, azt szeretném megkérdezni, hogy kinyitná e nekem a kaput esetleg? Évával szeretnék beszélni az ötödikről.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Tudja maga egyáltalán, hány óra van? Azért van zár a kapun, hogy az olyanok mint maga ne tudjanak itt bajt keverni.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Ha ismeri Évát csöngessen be hozzá!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'De hát..', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: '<i>Nem válaszol, a fenébe is.</i>', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8 }, // 20
+                { type: 'text', content: 'Jó estét kívánok, azt szeretném megkérdezni, hogy kinyitná e nekem a kaput esetleg? Évával szeretnék beszélni az ötödikről.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Tudja maga egyáltalán, hány óra van? Azért van zár a kapun, hogy az olyanok mint maga ne tudjanak itt bajt keverni.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Ha ismeri Évát csöngessen be hozzá!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'De hát..', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: '<i>Nem válaszol, a fenébe is.</i>', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8, backIndex: 8 }, // 20
 
                 // --- NAGY A. CSENGŐ PÁRBESZÉD (Index 21-25) - Eredeti 26-30 ---
                 { type: 'text', content: 'Ki az?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 21
-                { type: 'text', content: 'Öö.. Pizza futár, a 81-es lakóhoz jöttem.', speaker: 'Mark', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Éjszaka? Engem bolondnak néz? Fáradt vagyok es aludni akarok! Ne nyomogassa a csengőt!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: 'Amúgy pedig nincs a tömbben 81-es lakás!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, 
-                { type: 'text', content: '<i>Na a futáros próbálkozás nem jott be.</i>', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8 }, // 25
+                { type: 'text', content: 'Öö.. Pizza futár, a 81-es lakóhoz jöttem.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Éjszaka? Engem bolondnak néz? Fáradt vagyok es aludni akarok! Ne nyomogassa a csengőt!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: 'Amúgy pedig nincs a tömbben 81-es lakás!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, 
+                { type: 'text', content: '<i>Na a futáros próbálkozás nem jott be.</i>', speaker: 'Mark', image: CSENGOK_IMAGE_URL, nextIndex: 8, backIndex: 8 }, // 25
 
                 // --- CIMKE NÉLKÜLI SIKERES PÁRBESZÉD (Index 26-39) - Eredeti 31-44 ---
-                { type: 'text', content: 'Mit akar?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, // 26
-                { type: 'text', content: 'Be kell jutnom a házba, sürgősen beszelnem kell Évával az ötödikről!', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Évával? Miért nem hozzá csenget be?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Csöngettem, de nem válaszol.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Azt hiszem otthon van pedig.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Ma este találkoznunk kellett volna, de nem jött el.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Már próbálkozom egy ideje, itthon kell lennije.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
+                { type: 'text', content: 'Mit akar?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 26
+                { type: 'text', content: 'Be kell jutnom a házba, sürgősen beszelnem kell Évával az ötödikről!', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Évával? Miért nem hozzá csenget be?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Csöngettem, de nem válaszol.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Azt hiszem otthon van pedig.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Ma este találkoznunk kellett volna, de nem jött el.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Már próbálkozom egy ideje, itthon kell lennije.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
                 
                 // Index 33: KÓD KÉRÉSÉRE VALÓ UTALÁS - Eredeti 38
-                { type: 'text', content: 'Oh, remélem semmi baja nincs? Ott találja a belépőkódot egy kis fémtáblán az ajtón.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 34 }, // 33
+                { type: 'text', content: 'Oh, remélem semmi baja nincs? Ott találja a belépőkódot egy kis fémtáblán az ajtón.', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 34, backIndex: 8 }, // 33
                 
                 // Index 34: PASSWORD OLDAL (beloberk) - Eredeti 39
                 { 
@@ -840,20 +844,20 @@
                 },
                 
                 // Index 35: (Eredeti folytatás, most már zsákutca) - Eredeti 40
-                { type: 'text', content: 'Ha bármi baj van kérem csöngessen be megint rendben?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL }, // 35
-                { type: 'text', content: 'Szerintem csak elaludt és azért nem hallja a csengetést, ne aggódjon.', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Reméljük, hogy csak ennyi, biztosan igaza van!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Rendben, viszlát!', speaker: 'Mark', image: CSENGOK_IMAGE_URL },
-                { type: 'text', content: 'Viszlát!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 40 }, // 39
+                { type: 'text', content: 'Ha bármi baj van kérem csöngessen be megint rendben?', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 }, // 35
+                { type: 'text', content: 'Szerintem csak elaludt és azért nem hallja a csengetést, ne aggódjon.', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Reméljük, hogy csak ennyi, biztosan igaza van!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Rendben, viszlát!', speaker: 'Mark', image: CSENGOK_IMAGE_URL, backIndex: 8 },
+                { type: 'text', content: 'Viszlát!', speaker: 'Luceb', image: CSENGOK_IMAGE_URL, nextIndex: 40, backIndex: 8 }, // 39
                 
                 // --- ÁTVEZETŐ OLDAL A BEJUTÁS UTÁN (40-42) - Eredeti 45-47 --- 
                 // Index 40: Első mondat - Eredeti 45
-                { type: 'text', content: '<i>Amúgy igaza lehet a hölgynek. Van egy rossz előérzetem ezzel kapcsolatban.</i>', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 40
+                { type: 'text', content: '<i>Amúgy igaza lehet a hölgynek. Van egy rossz előérzetem ezzel kapcsolatban.</i>', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 43 }, // 40
                 // Index 41: Második mondat - Eredeti 46
-                { type: 'text', content: 'A kapu kattan, és lassan kinyílik. Belépsz az árnyékos folyosóra.', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 41
+                { type: 'text', content: 'A kapu kattan, és lassan kinyílik. Belépsz az árnyékos folyosóra.', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 43 }, // 41
                 
                 // 42: Harmadik mondat + ugrás a választásra - Eredeti 47
-                { type: 'text', content: 'Bejutottál a lépcsőházba és körülnézel.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 43 }, // 42
+                { type: 'text', content: 'Bejutottál a lépcsőházba és körülnézel.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 43, backIndex: 43 }, // 42
 
                 // 43. VÁLASZTÁS PONT 2: BENT A HÁZBAN - Eredeti 48
                 { 
@@ -864,8 +868,9 @@
                     choices: [
                         { text: 'Megnézed a lakóközösség üzenőfalát', nextIndex: 46 }, // Kódkérő (214) - Eredeti 51 -> 46
                         { text: 'Elindulsz a lépcsőn felfelé', nextIndex: 49 }, // LOCK LOGIKA IDE MUTAT - Eredeti 54 -> 49
-                        { text: 'Megvizsgálod a járólapot a lábad alatt', nextIndex: 53 } // Eredeti 58 -> 53
-                    ]
+                        { text: 'Megvizsgálod a járólapot a lábad alatt', nextIndex: 59 } // Eredeti 58 -> 59
+                    ],
+                    backIndex: 42 // Vissza a lépcsőházi belépő szöveg utolsó mondatára
                 },
                 
                 // --- KÜLSŐ KORLÁT ÁG (44-45) - Eredeti 49-50 ---
@@ -889,7 +894,7 @@
                     correctPassword: 'G', 
                     isCaseInsensitive: false,
                     helpMessage: 'Egyetlen nagybetű.', 
-                    nextIndexSuccess: 54, // Eredeti 59 -> 54
+                    nextIndexSuccess: 61, // Eredeti 59 -> 61
                     backIndex: 0 // Visszavezet a külső főválasztáshoz
                 },
                 
@@ -917,7 +922,8 @@
                     image: UZENOFAL_IMAGE_URL, // Háttérkép megmarad: UZENOFAL
                     unlockImage: 'cetli', // CETLI KÉP FELOLDÁSA a galériában
                     nextIndex: 43, // Vissza a választáshoz
-                    customAction: 'unlock_stairs' // Feloldja a lépcsőt
+                    customAction: 'unlock_stairs', // Feloldja a lépcsőt
+                    backIndex: 43 // Vissza a lépcsőház választáshoz
                 },
 
                 // --- LOCKED PAGE (48) - Eredeti 53 ---
@@ -930,40 +936,84 @@
                     backIndex: 43 // Visszavisz a belső választáshoz (Index 43)
                 },
 
-                // --- LÉPCSŐN FELFELÉ ÁG (49 - 52) - Eredeti 54-57 ---
+                // --- LÉPCSŐN FELFELÉ ÁG (49 - 53 ÚJ) ---
                 // Index 49: Felsétálsz - Eredeti 54
-                { type: 'text', content: 'Felsétálsz Éva apartmanjához.', speaker: 'Narrator', image: 'Img/lepcsohaz.jpg', nextIndex: 50 }, // Eredeti 55 -> 50
+                { type: 'text', content: 'Felsétálsz Éva apartmanjához.', speaker: 'Narrator', image: 'Img/lepcsohaz.jpg', nextIndex: 50, backIndex: 43 }, // BACK FIX
                 
                 // Index 50: Ajtó nyitva - Eredeti 55
-                { type: 'text', content: 'Az ajtót résnyire nyitva találod.', speaker: 'Narrator', image: 'Img/lepcsohaz.jpg', nextIndex: 51 }, // Eredeti 56 -> 51
+                { type: 'text', content: 'Az ajtót résnyire nyitva találod.', speaker: 'Narrator', image: 'Img/lepcsohaz.jpg', nextIndex: 51, backIndex: 43 }, // BACK FIX
                 
-                // Index 51: PASSWORD (Széf: 69420) - Eredeti 56
+                // ÚJ: Belépsz a lakásba - Eredeti 56 (megszűnt)
+                { type: 'text', content: 'Belépsz a lakásba.', speaker: 'Narrator', image: APARTMENT_IMAGE_URL, nextIndex: 52, backIndex: 54 }, // BACK FIX
+                
+                // ÚJ: Mi ez a nagy rendetlenség? - Eredeti 57 (megszűnt)
+                { type: 'text', content: 'Mi ez a nagy rendetlenség?', speaker: 'Mark', image: APARTMENT_IMAGE_URL, nextIndex: 53, backIndex: 54 }, // BACK FIX
+                
+                // ÚJ: Oh, egy retikül.. - Eredeti 58 (megszűnt)
+                { type: 'text', content: 'Oh, egy retikül.. Itt van benne Éva személyije.', speaker: 'Mark', image: APARTMENT_IMAGE_URL, nextIndex: 54, backIndex: 54 }, // BACK FIX
+                
+                // ÚJ VÁLASZTÁS (Lakásban) - Eredeti 59
+                { 
+                    type: 'choice', 
+                    content: 'Mit teszel a lakásban?', 
+                    speaker: 'Narrator', 
+                    image: APARTMENT_IMAGE_URL, 
+                    choices: [
+                        { 
+                            text: 'Körbenézel a szobában', 
+                            externalUrl: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory' // <-- EXTERNAL LINK
+                        }, 
+                        { text: 'Benyitsz a fürdőszobába', nextIndex: 55 }, // Eredeti 56 -> 55
+                        { text: 'Megpróbálod kinyitni a széfet', nextIndex: 58 } // <-- ÚJ GOMB IDE MUTAT
+                    ],
+                    backIndex: 43 // Vissza a lépcsőház választáshoz
+                }, // 54
+                
+                // ÚJ: Fürdőszoba - KUTYA SZEKVENCIA START - Eredeti 55 (megszűnt)
+                { 
+                    type: 'text', 
+                    content: 'A fürdőszobában egy elpusztult kutya fekszik.', 
+                    speaker: 'Narrator', 
+                    image: APARTMENT_IMAGE_URL, 
+                    nextIndex: 56,
+                    backIndex: -1, // NE LEGYEN VISSZA GOMB
+                    unlockImage: 'muci' // <-- ÚJ: Muci.png feloldása
+                }, // 55
+
+                // ÚJ: KUTYA SZEKVENCIA 2
+                { 
+                    type: 'text', 
+                    content: 'Megérinted, még meleg a teste.', 
+                    speaker: 'Narrator', 
+                    image: APARTMENT_IMAGE_URL, 
+                    nextIndex: 57,
+                    backIndex: -1 // NE LEGYEN VISSZA GOMB
+                }, // 56
+
+                // ÚJ: KUTYA SZEKVENCIA 3 (Vissza a választáshoz)
+                { 
+                    type: 'text', 
+                    content: 'A nyakában nyakörvet látsz.', 
+                    speaker: 'Narrator', 
+                    image: APARTMENT_IMAGE_URL, 
+                    nextIndex: 54, // VISSZA A LAKÁS VÁLASZTÁSHOZ
+                    backIndex: -1 // NE LEGYEN VISSZA GOMB
+                }, // 57
+                
+                // ÚJ: SZÉF JELSZÓ OLDAL - Index 58
                 { 
                     type: 'password', 
                     content: 'Mi a kódja a bent talált széfnek?', 
                     speaker: 'Narrator', 
-                    image: 'Img/EvaApartman.jpg', 
+                    image: APARTMENT_IMAGE_URL,
                     correctPassword: '69420', 
                     isCaseInsensitive: false,
-                    helpMessage: 'Öt számjegyű kód. Nézd meg a cetlit!', 
-                    nextIndexSuccess: 52, // Eredeti 57 -> 52
-                    backIndex: 43,
-                    externalLink: {
-                        text: 'Szoba',
-                        url: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory'
-                    } 
-                },
-                
-                // Index 52: PASSWORD SIKERES - Eredeti 57
-                { 
-                    type: 'text', 
-                    content: 'Sikeresen kinyitottad a széfet!', 
-                    speaker: 'Narrator', 
-                    image: 'Img/EvaApartman.jpg',
-                    nextIndex: 43 
-                },
-                
-                // --- JÁRÓLAP ÁG (53) - Eredeti 58 ---
+                    helpMessage: 'Nézz körbe a szobában.',
+                    nextIndexSuccess: 54, // Sikeres kód után visszaugrik a választáshoz
+                    backIndex: 54, // Vissza a lakás választáshoz
+                }, // 58
+
+                // --- JÁRÓLAP ÁG (59) - Eredeti 56 ---
                 { 
                     type: 'text', 
                     content: 'A Járólapok öregek, kopottak, némelyik lötyög is. Különös mintát vagy titkot nem rejt a lábad alatt lévő padló.', 
@@ -971,9 +1021,9 @@
                     image: 'Img/lepcsohaz.jpg', 
                     nextIndex: 43,
                     backIndex: 43 // Vissza a belső választáshoz 
-                }, 
+                }, // 59
 
-                // --- KŐKORLÁT SIKER OLDAL (54) - Eredeti 59 ---
+                // --- KŐKORLÁT SIKER OLDAL (60) - Eredeti 57 ---
                 { 
                     type: 'text', 
                     content: "Beteszed a talált betűt az inventorydba.", 
@@ -982,125 +1032,126 @@
                     nextIndex: 0, // Vissza a külső főválasztáshoz (Eredeti 5 -> 0)
                     unlockImage: 'korlat_code', 
                     backIndex: 0 // Vissza a külső főválasztáshoz
-                },
+                }, // 60
                 
-                // --- SHIFTED FESTŐ ÁG UTÁN - CÉLPONTOK (55-től) - Eredeti 60-tól ---
-                { type: 'text', content: '12', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 55 (Volt 60)
-                { type: 'text', content: '13 (Festő Visszaugrás Cél)', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 43 }, // Index 56 (Volt 61)
+                // --- SHIFTED FESTŐ ÁG UTÁN - CÉLPONTOK (61-től) - Eredeti 58-tól ---
+                { type: 'text', content: '12', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '13 (Festő Visszaugrás Cél)', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 43, backIndex: 103 }, // BACK FIX
 
-                // A FESTŐ ÁG (Index 62 volt) -> ÚJ Index 57
-                { type: 'text', content: '20', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 57
-                { type: 'text', content: '21', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 58
-                { type: 'text', content: '22', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 59
-                { type: 'text', content: '23', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 60
-                { type: 'text', content: '24', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 61
-                { type: 'text', content: '25', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 62
-                { type: 'text', content: '26', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 63
-                { type: 'text', content: '27', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 64
-                { type: 'text', content: '28', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 65
-                { type: 'text', content: '29', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // Index 66
-                { type: 'text', content: '30', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // Index 67
-                { type: 'text', content: '31', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 68
-                { type: 'text', content: '32', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 69
-                { type: 'text', content: '33', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 70
-                { type: 'text', content: '34', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // Index 71
-                { type: 'text', content: '35', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 72
-                { type: 'text', content: '36', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 73
-                { type: 'text', content: '37', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 74
-                { type: 'text', content: '38', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 75
-                { type: 'text', content: '39', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 76
+                // A FESTŐ ÁG (Index 63 volt) -> ÚJ Index 63
+                { type: 'text', content: '20', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '21', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '22', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '23', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '24', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '25', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '26', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '27', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '28', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '29', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '30', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '31', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '32', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '33', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '34', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '35', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '36', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // BACK FIX
+                { type: 'text', content: '37', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 80
+                { type: 'text', content: '38', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 81
+                { type: 'text', content: '39', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 82
+                { type: 'text', content: '40', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 83
+                { type: 'text', content: '41', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 84
+                { type: 'text', content: '42', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 85
+                { type: 'text', content: '43', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 86
+                { type: 'text', content: '44', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 87
+                { type: 'text', content: '45', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 88
+                { type: 'text', content: '46', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 89
+                { type: 'text', content: '47', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 90
+                { type: 'text', content: '48', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 91
+                { type: 'text', content: '49', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 92
+                { type: 'text', content: '50', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 93
+                { type: 'text', content: '51', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 94
+                { type: 'text', content: '52', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 95
+                { type: 'text', content: '53', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 96
+                { type: 'text', content: '54', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 97
+                { type: 'text', content: '55', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 98
+                { type: 'text', content: '56', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 99
+                { type: 'text', content: '57', speaker: 'Mark', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 100
+                { type: 'text', content: '58', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 101
+                { type: 'text', content: '59', speaker: 'Painter', image: STABLE_IMAGE_URL, backIndex: 103 }, // Index 102
 
-                // --- FOLYTATÁS ---
-                { type: 'text', content: '40', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 77
-                { type: 'text', content: '41', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 78
-                { type: 'text', content: '42', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 79
-                { type: 'text', content: '43', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 80
-                { type: 'text', content: '44', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 81
-                { type: 'text', content: '45', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 82
-                { type: 'text', content: '46', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 83
-                { type: 'text', content: '47', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 84
-                { type: 'text', content: '48', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 85
-                { type: 'text', content: '49', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 86
-                { type: 'text', content: '50', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 87
-                { type: 'text', content: '51', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 88
-                { type: 'text', content: '52', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 89
-                { type: 'text', content: '53', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 90
-                { type: 'text', content: '54', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 91
-                { type: 'text', content: '55', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 92
-                { type: 'text', content: '56', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 93
-                { type: 'text', content: '57', speaker: 'Mark', image: STABLE_IMAGE_URL }, // Index 94
-                { type: 'text', content: '58', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 95
-                { type: 'text', content: '59', speaker: 'Painter', image: STABLE_IMAGE_URL }, // Index 96
-
-                // 97. VÁLASZTÁS PONT 3 (Multi-choice) - Eredeti 102
+                // 103. VÁLASZTÁS PONT 3 (Multi-choice) - Eredeti 102
                 { 
                     type: 'choice', 
                     content: '59', 
                     speaker: 'Narrator', 
                     image: STABLE_IMAGE_URL,
                     choices: [
-                        { text: 'Megvizsgálod a telefonfülkét', nextIndex: 130 }, // Eredeti 135 -> 130
-                        { text: 'Kérdezel még valamit a festőtől', nextIndex: 102 }, // Eredeti 107 -> 102
-                        { text: 'Felhívod a Professzort', nextIndex: 128 } // Eredeti 133 -> 128
-                    ]
-                },
+                        { text: 'Megvizsgálod a telefonfülkét', nextIndex: 137 }, // Eredeti 133 -> 137 (4-gyel nőtt)
+                        { text: 'Kérdezel még valamit a festőtől', nextIndex: 105 }, // Eredeti 104 -> 105
+                        { text: 'Felhívod a Professzort', nextIndex: 135 } // Eredeti 131 -> 135 (4-gyel nőtt)
+                    ],
+                    backIndex: 102 // Vissza a 102-es szövegre
+                }, // 103
                 
-                // 102. Festő ág (további kérdés) - Eredeti 107
-                { type: 'text', content: '60', speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 97 }, // Eredeti 102 -> 97
+                // 105. Festő ág (további kérdés) - Eredeti 103
+                { type: 'text', content: '60', speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 103, backIndex: 103 }, // BACK FIX
                 
-                // 103. CETLI MEGJELENÍTŐ OLDAL (A sikeres jelszó után jelenik meg) - Eredeti 108
+                // 106. CETLI MEGJELENÍTŐ OLDAL (A sikeres jelszó után jelenik meg) - Eredeti 104
                 { 
                     type: 'note_image', 
                     content: '61', 
                     speaker: 'Narrator', 
                     image: CETLI_IMAGE_URL ,
                     nextButtonText: 'Bezárás', 
-                },
+                    backIndex: 103 // Vissza a választási ponthoz
+                }, // 105
                 
-                // --- TELEFONHÍVÁS (104-125) - Eredeti 109-130 ---
-                { type: 'text', content: '62', speaker: 'MarkPhone', image: STABLE_IMAGE_URL }, // 104
-                { type: 'text', content: '63', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '64', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '65', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '66', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '67', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '68', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '69', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '70', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '71', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '72', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '73', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '74', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '75', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '76', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '77', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '78', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '79', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '80', speaker: 'Francois', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '81', speaker: 'MarkPhone', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '82', speaker: 'Narrator', image: STABLE_IMAGE_URL },
-                { type: 'text', content: '83', speaker: 'Narrator', image: STABLE_IMAGE_URL }, // 125
+                // --- TELEFONHÍVÁS (107-128) - Eredeti 105-126 ---
+                { type: 'text', content: '62', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 106
+                { type: 'text', content: '63', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 107
+                { type: 'text', content: '64', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 108
+                { type: 'text', content: '65', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 109
+                { type: 'text', content: '66', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 110
+                { type: 'text', content: '67', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 111
+                { type: 'text', content: '68', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 112
+                { type: 'text', content: '69', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 113
+                { type: 'text', content: '70', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 114
+                { type: 'text', content: '71', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 115
+                { type: 'text', content: '72', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 116
+                { type: 'text', content: '73', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 117
+                { type: 'text', content: '74', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 118
+                { type: 'text', content: '75', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 119
+                { type: 'text', content: '76', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 120
+                { type: 'text', content: '77', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 121
+                { type: 'text', content: '78', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 122
+                { type: 'text', content: '79', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 123
+                { type: 'text', content: '80', speaker: 'Francois', image: STABLE_IMAGE_URL, backIndex: 103 }, // 124
+                { type: 'text', content: '81', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, backIndex: 103 }, // 125
+                { type: 'text', content: '82', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 103 }, // 126
+                { type: 'text', content: '83', speaker: 'Narrator', image: STABLE_IMAGE_URL, backIndex: 103 }, // 127
 
-                // 126. Narrator (Utolsó oldal - Indítja a GPS-t) - Eredeti 131
+                // 128. Narrator (Utolsó oldal - Indítja a GPS-t) - Eredeti 127
                 { 
                     type: 'text', 
                     content: '83', 
                     speaker: 'Narrator', 
                     image: STABLE_IMAGE_URL,
                     nextButtonText: 'tovább', 
-                    customAction: 'open_distance_modal' 
-                },
+                    customAction: 'open_distance_modal',
+                    backIndex: 103 // Vissza a választási ponthoz
+                }, // 128
 
-                // 127. Harmadik választás zsákutca (Professzor hívás) - Eredeti 132
-                { type: 'text', content: '85', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, nextIndex: 97 }, // Eredeti 102 -> 97
+                // 129. Harmadik választás zsákutca (Professzor hívás) - Eredeti 128
+                { type: 'text', content: '85', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, nextIndex: 103, backIndex: 103 }, // BACK FIX
 
-                // 128. Első választás zsákutca (Körbemész, szétnézel) - Eredeti 133
-                { type: 'text', content: '86', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 0 }, // Eredeti 5 -> 0
+                // 130. Első választás zsákutca (Körbemész, szétnézel) - Eredeti 129
+                { type: 'text', content: '86', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 0, backIndex: 0 }, // BACK FIX
                 
-                // 129. Kapualj Zsákutca - Eredeti 134
-                { type: 'text', content: '87', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 56 }, // Eredeti 61 -> 56
+                // 131. Kapualj Zsákutca - Eredeti 130
+                { type: 'text', content: '87', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 62, backIndex: 0 }, // BACK FIX
 
-                // 130. Jelszóbeviteli képernyő - Eredeti 135
+                // 132. Jelszóbeviteli képernyő - Eredeti 131
                 { 
                     type: 'password',
                     content: 'Nézz körül az igazi fülkében! (Telepítsd a helymeghatározást, ha nem működik)',
@@ -1109,9 +1160,48 @@
                     correctPassword: '8127',
                     isCaseInsensitive: false,
                     helpMessage: 'A készülék alján keresgélj!',
-                    nextIndexSuccess: 103, // Eredeti 108 -> 103
-                    backIndex: 97 // Eredeti 102 -> 97
-                }
+                    nextIndexSuccess: 105, // Eredeti 104 -> 105
+                    backIndex: 103 // Eredeti 102 -> 103
+                }, // 132
+                
+                // --- KÁLVÁRIAHEGY ÚJ ÁG (133-136) ---
+                { type: 'text', content: 'Nem tudod, mit is kéne most igazából csinálnod, ezért megindulsz felfelé a kis utcán.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 134, backIndex: 0 }, // 133
+                { type: 'text', content: 'A felhős égbolton keresztül süt le rád a Hold, és kísértetiessé varázsolja az épületeket.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 135, backIndex: 0 }, // 134
+                { type: 'text', content: 'Egyszer csak valami különöset veszel észre az útmenti ház falán.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 136, backIndex: 0 }, // 135
+                { type: 'text', content: 'Valami nem stimmel.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 137, backIndex: 0 }, // 136
+
+                // 137. Narrator (Utolsó oldal - Indítja a GPS-t) - Eredeti 128
+                { 
+                    type: 'text', 
+                    content: '83', 
+                    speaker: 'Narrator', 
+                    image: STABLE_IMAGE_URL,
+                    nextButtonText: 'tovább', 
+                    customAction: 'open_distance_modal',
+                    backIndex: 0 // Vissza a választási ponthoz
+                }, // 137
+
+                // 138. Harmadik választás zsákutca (Professzor hívás) - Eredeti 129
+                { type: 'text', content: '85', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, nextIndex: 103, backIndex: 103 }, // BACK FIX
+
+                // 139. Első választás zsákutca (Körbemész, szétnézel) - Eredeti 130
+                { type: 'text', content: '86', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 0, backIndex: 0 }, // BACK FIX
+                
+                // 140. Kapualj Zsákutca - Eredeti 131
+                { type: 'text', content: '87', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 62, backIndex: 0 }, // BACK FIX
+
+                // 141. Jelszóbeviteli képernyő - Eredeti 132
+                { 
+                    type: 'password',
+                    content: 'Nézz körül az igazi fülkében! (Telepítsd a helymeghatározást, ha nem működik)',
+                    speaker: 'Narrator',
+                    image: STABLE_IMAGE_URL,
+                    correctPassword: '8127',
+                    isCaseInsensitive: false,
+                    helpMessage: 'A készülék alján keresgélj!',
+                    nextIndexSuccess: 105, // Eredeti 104 -> 105
+                    backIndex: 103 // Eredeti 102 -> 103
+                } // 141
             ];
 
             const CORRECT_PASSWORD = "8127"; // Ezt már csak tartalék/referencia
@@ -1236,6 +1326,8 @@
                 const isKorlatUnlocked = localStorage.getItem('isKorlatUnlocked') === 'true'; 
                 // Ellenőrzi, hogy fel van-e oldva a G kód kép
                 const isKorlatCodeUnlocked = localStorage.getItem('isKorlatCodeUnlocked') === 'true'; 
+                // ÚJ: Ellenőrzi, hogy fel van-e oldva a Muci kép
+                const isMuciUnlocked = localStorage.getItem('isMuciUnlocked') === 'true'; 
                 
                 // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
@@ -1244,7 +1336,8 @@
                     (item.id === 'cetli' && isNoteUnlocked) ||
                     (item.id === 'uzenofal' && isUzenofalUnlocked) ||
                     (item.id === 'korlat' && isKorlatUnlocked && !isKorlatCodeUnlocked) || // Kőkorlát csak akkor látszik, ha a G kód még nincs feloldva
-                    (item.id === 'korlat_code' && isKorlatCodeUnlocked) // G Kód
+                    (item.id === 'korlat_code' && isKorlatCodeUnlocked) || // G Kód
+                    (item.id === 'muci' && isMuciUnlocked) // ÚJ: Muci Kép
                 );
 
                 visibleItems.forEach((image) => {
@@ -1521,7 +1614,9 @@
                             if (choices[index]) {
                                 button.style.display = 'block';
                                 button.textContent = choices[index].text;
-                                button.dataset.nextIndex = choices[index].nextIndex;
+                                button.dataset.nextIndex = choices[index].nextIndex || ''; // Use empty string if none
+                                // HOZZÁADVA: Külső URL beállítása
+                                button.dataset.externalUrl = choices[index].externalUrl || ''; 
                             } else {
                                 button.style.display = 'none'; // Elrejti, ha kevesebb van
                             }
@@ -1545,14 +1640,8 @@
                         // Állítsuk be a súgó gombot
                         helpButton.style.display = currentPage.helpMessage ? 'block' : 'none';
                         
-                        // ÚJ: Külső link gomb kezelése
-                        if (currentPage.externalLink) {
-                            roomLinkContainer.style.display = 'block';
-                            roomLinkButton.textContent = currentPage.externalLink.text;
-                            roomLinkButton.dataset.url = currentPage.externalLink.url;
-                        } else {
-                            roomLinkContainer.style.display = 'none';
-                        }
+                        // A széf oldalon nincs externalLink beállítva, ezért rejtve marad
+                        roomLinkContainer.style.display = 'none';
                         
                         // Állítsuk be a bemenet paramétereit (max hossz, type)
                         passwordInput.type = currentPage.isCaseInsensitive ? 'text' : 'password';
@@ -1574,7 +1663,14 @@
                         
                         nextButton.dataset.forcedNextIndex = nextIndexDefined ? currentPage.nextIndex : '';
                         
-                        // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (Cetli oldal (112) és a párbeszéd vége (135)):
+                        // Speciális: Vissza gomb elrejtése a kutyás szekvenciánál
+                        if (currentPage.backIndex === -1) {
+                            prevButton.style.display = 'none';
+                        } else {
+                            prevButton.style.display = 'block'; 
+                        }
+
+                        // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (Cetli oldal (113) és a párbeszéd vége (137)):
                         if (currentPartIndex === 113 || currentPartIndex === 137) { 
                             interactionContainer.style.justifyContent = 'center'; 
                             prevButton.style.display = 'none'; // Teljes eltávolítás
@@ -1635,6 +1731,11 @@
                         
                         // Kép feloldási logikája
                         if (currentPage.unlockImage) {
+                            // Speciális kezelés a kőkorlát eltüntetésére (ha feloldjuk a G-t)
+                            if (currentPage.unlockImage === 'korlat_code') {
+                                localStorage.setItem('isKorlatUnlocked', 'false'); 
+                            }
+                            
                             localStorage.setItem(`is${currentPage.unlockImage.charAt(0).toUpperCase() + currentPage.unlockImage.slice(1)}Unlocked`, 'true');
                             console.log(`Kép feloldva: ${currentPage.unlockImage}`);
                         }
@@ -1780,7 +1881,7 @@
                     }
                     // A 214-es kód logikáját most a következő oldal (Index 47) végzi a `customAction` segítségével. - Eredeti 52
                     
-                    if (currentPartIndex === 130) { // Telefonfülke (8127) kód - Eredeti 135
+                    if (currentPartIndex === 132) { // Telefonfülke (8127) kód - Eredeti 135
                         localStorage.setItem('isNoteUnlocked', 'true');
                         messageDisplay.textContent = 'Kód elfogadva! Egy üzenetet találtál...';
                     }
@@ -1841,7 +1942,14 @@
             // Choice button eseménykezelők
             [choice1Button, choice2Button, choice3Button, choice4Button].filter(Boolean).forEach(button => {
                 button.addEventListener('click', (e) => {
+                    const externalUrl = e.currentTarget.dataset.externalUrl; 
                     const chosenNextIndex = parseInt(e.currentTarget.dataset.nextIndex);
+
+                    // ÚJ LOGIKA: Külső link megnyitása, ha van
+                    if (externalUrl) {
+                        window.open(externalUrl, '_blank');
+                        return; // Ne folytassuk a történetet
+                    }
                     
                     // EGYEDI LOGIKA: LÉPCSŐ ZÁR (Index 43) - Eredeti 48
                     if (currentPartIndex === 43 && e.currentTarget === choice2Button) {
@@ -1866,17 +1974,18 @@
 
             // Diszkrét Vissza gomb eseménykezelő (csak a choice képernyőn látszik)
             discreetBackButton.addEventListener('click', () => {
-                if (currentPartIndex > 0) {
-                    // Visszakeresi az előző nem-választó oldalt
-                    let targetIndex = currentPartIndex - 1;
-                    while (targetIndex > 0 && storyPages[targetIndex].type === 'choice') {
-                        targetIndex--;
-                    }
-                    currentPartIndex = targetIndex; 
-
-                    saveProgress();
-                    showStoryPart();
+                const currentPage = storyPages[currentPartIndex];
+                
+                // Ha a választás oldalon van backIndex definiálva, azt használjuk
+                if (currentPage.type === 'choice' && currentPage.backIndex !== undefined) {
+                    currentPartIndex = currentPage.backIndex;
+                } else if (currentPartIndex > 0) {
+                    // Alapértelmezett viselkedés
+                    currentPartIndex--;
                 }
+
+                saveProgress();
+                showStoryPart();
             });
 
 
