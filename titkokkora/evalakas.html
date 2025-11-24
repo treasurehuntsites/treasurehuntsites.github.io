@@ -11,12 +11,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" xintegrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* --- Zoomolás és Görgetés Letiltása (A távolságmodal miatt) --- */
-        html, body.modal-open {
+        /* --- Zoomolás és Görgetés Letiltása (Modal nyitáskor) --- */
+        html {
+            overflow-x: hidden;
+            overflow-y: auto; 
+        }
+
+        /* Amikor egy modal nyitva van, a főoldal görgetését letiltjuk */
+        body.modal-open {
             overflow: hidden;
             height: 100%;
             touch-action: none;
         }
+
 
         /* Alapvető reszet és sötét háttér */
         body {
@@ -28,7 +35,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            /* A görgetés engedélyezve: */
+            overflow-y: auto;
             min-height: 100vh;
+            touch-action: auto; 
             text-align: center;
             padding-bottom: 60px; 
             
@@ -43,22 +53,23 @@
             width: 100%;
             height: 100vh; 
             overflow: hidden;
-            position: fixed; 
+            position: absolute; /* Fixed-ről absolute-ra, hogy a body-val együtt görgethető legyen */
             top: 0;
             left: 0;
             z-index: 0; 
+            min-height: 100vh;
         }
 
         .full-width-image-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Az "object-fit: contain;" helyett használom, hogy kitöltse a hátteret */
+            object-fit: cover; 
             object-position: center top; 
         }
 
         /* Tartalom doboz - FIX ALULRA ZÁRVA */
         .content-box {
-            background-color: rgba(0, 0, 0, 0.85); /* Sötétebb háttér */
+            background-color: rgba(0, 0, 0, 0.85); 
             padding: 40px 20px 10px 20px; 
             margin: 0; 
             border-radius: 10px 10px 0 0; 
@@ -67,7 +78,7 @@
             box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
             border: 3px solid #8a2be2;
             box-sizing: border-box;
-            position: fixed; 
+            position: fixed; /* Fixen marad alul, mint UI overlay */
             bottom: 50px; 
             left: 50%;
             transform: translateX(-50%); 
@@ -88,7 +99,7 @@
             line-height: 1.6;
             margin-bottom: 20px;
             white-space: pre-wrap; 
-            flex-grow: 1; /* Hogy kitöltse a helyet */
+            flex-grow: 1; 
         }
         
         /* Audio gombok... */
@@ -384,7 +395,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.98);
-            overflow: auto; 
+            overflow: hidden; 
         }
         
         .full-image-content {
@@ -393,6 +404,7 @@
             display: flex;
             align-items: center; 
             justify-content: center; 
+            overflow: hidden;
         }
 
         #fullImageDisplay {
@@ -401,9 +413,11 @@
             height: auto;
             max-width: 100%; 
             max-height: 100%;
-            touch-action: pan-x pan-y; 
-            cursor: move;
+            touch-action: auto; /* Panning letiltva, csak a nagyítás engedélyezett */
+            cursor: zoom-in;
             margin: auto;
+            /* Zoomhoz hozzáadott átmenet */
+            transition: transform 0.3s ease-in-out; 
         }
 
         .close-gallery {
@@ -723,6 +737,7 @@
             const MARK_PHONE_AVATAR_URL = "Img/Martintelefonal2.jpg"; 
             const LUCEB_AVATAR_URL = "Img/Csengo.png"; 
             const UZENOFAL_IMAGE_URL = "Img/uzenofal.jpg"; 
+            const CETLI_REKESZ_IMAGE_URL = "Img/1763970872341.png"; // ÚJ KÉP
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
@@ -792,7 +807,7 @@
                 { type: 'text', content: 'Nincs válasz, csak a saját lépteid visszhangoznak a csendben.', speaker: 'Mark', image: STABLE_IMAGE_URL, nextIndex: 13 }, 
                 
                 // --- CÍMKE NÉLKÜLI CSENGŐ PÁRBESZÉD (Index 20-25) ---
-                { type: 'text', content: 'Igen, tessék?', speaker: 'Luceb', image: STABLE_IMAGE_URL, backIndex: 13 }, // <-- JAVÍTVA
+                { type: 'text', content: 'Igen, tessék?', speaker: 'Luceb', image: STABLE_IMAGE_URL, backIndex: 13 }, 
                 { type: 'text', content: 'Jó estét kívánok, azt szeretném megkérdezni, hogy kinyitná e nekem a kaput esetleg? Évával szeretnék beszélni az ötödikről.', speaker: 'Mark', image: STABLE_IMAGE_URL }, 
                 { type: 'text', content: 'Tudja maga egyáltalán, hány óra van? Azért van zár a kapun, hogy az olyanok mint maga ne tudjanak itt bajt keverni.', speaker: 'Luceb', image: STABLE_IMAGE_URL }, 
                 { type: 'text', content: 'Ha ismeri Évát csöngessen be hozzá!', speaker: 'Luceb', image: STABLE_IMAGE_URL }, 
@@ -800,7 +815,7 @@
                 { type: 'text', content: '<i>Nem válaszol, a fenébe is.</i>', speaker: 'Mark', image: STABLE_IMAGE_URL, nextIndex: 13 }, 
 
                 // --- NAGY A. CSENGŐ PÁRBESZÉD (Index 26-30) ---
-                { type: 'text', content: 'Ki az?', speaker: 'Luceb', image: STABLE_IMAGE_URL, backIndex: 13 }, // <-- JAVÍTVA
+                { type: 'text', content: 'Ki az?', speaker: 'Luceb', image: STABLE_IMAGE_URL, backIndex: 13 }, 
                 { type: 'text', content: 'Öö.. Pizza futár, a 81-es lakóhoz jöttem.', speaker: 'Mark', image: STABLE_IMAGE_URL }, 
                 { type: 'text', content: 'Éjszaka? Engem bolondnak néz? Fáradt vagyok es aludni akarok! Ne nyomogassa a csengőt!', speaker: 'Luceb', image: STABLE_IMAGE_URL }, 
                 { type: 'text', content: 'Amúgy pedig nincs a tömbben 81-es lakás!', speaker: 'Luceb', image: STABLE_IMAGE_URL }, 
@@ -903,9 +918,11 @@
                 // Index 52 (Rejtett rekesz)
                 { 
                     type: 'text', 
-                    content: 'A kód beütése után egy 4 számjegyű kódot tatalmazó papírcetli jelenik meg egy titkos rekeszben, amit épp most nyitott ki egy rugó.', 
+                    // INLINE IMAGE a rekesz illusztrációjához (keret nélkül, fent)
+                    content: '<img src="Img/1763970872341.png" style="width: 80%; max-width: 250px; height: auto; margin: 0 auto 15px auto; display: block;">A kód beütése után egy 4 számjegyű kódot tatalmazó papírcetli jelenik meg egy titkos rekeszben, amit épp most nyitott ki egy rugó.', 
                     speaker: 'Narrator', 
-                    image: UZENOFAL_IMAGE_URL,
+                    image: UZENOFAL_IMAGE_URL, // Háttérkép megmarad: UZENOFAL
+                    unlockImage: 'cetli', // CETLI KÉP FELOLDÁSA a galériában
                     nextIndex: 53 // Ugrás az új kód oldalra
                 },
                 
@@ -1119,7 +1136,6 @@
             const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1t62q3UeSpBQEZ3sIYC2W8DdaZnndCmA&ll=47.42704060000001%2C19.039302600000006&z=17'; // Menü térkép
             
             // SEGÍTSÉG ADATOK
-            // Az old help messages-t már nem használjuk direktben a jelszavakhoz, de itt tartjuk a kompatibilitás kedvéért.
             const HELP_MESSAGES = [
                 "A készülék alján keresgélj!",
                 "A kód: 8127" 
@@ -1137,6 +1153,11 @@
             let currentPartIndex = 0;
             let currentHelpIndex = 0;
             let watchId = null; 
+            
+            // --- KÉP NAGYÍTÁS/KICINYÍTÉS ÁLLAPOT ---
+            let currentScale = 1.0; 
+            const MAX_SCALE = 2.5; 
+            const MIN_SCALE = 1.0; 
             
             // DOM elemek
             const contentBox = document.getElementById('content-box');
@@ -1266,8 +1287,27 @@
                 });
             }
             
+            function setScaleTransform() {
+                fullImageDisplay.style.transform = `scale(${currentScale})`;
+                fullImageDisplay.style.cursor = currentScale > MIN_SCALE ? 'zoom-out' : 'zoom-in';
+            }
+
+            function toggleZoom() {
+                if (currentScale > MIN_SCALE) {
+                    currentScale = MIN_SCALE; // Zoom Out
+                } else {
+                    currentScale = MAX_SCALE; // Zoom In
+                }
+                setScaleTransform();
+            }
+
             function openFullImage(imageUrl) {
                 fullImageDisplay.src = imageUrl;
+                
+                // RESET ZOOM
+                currentScale = MIN_SCALE; 
+                setScaleTransform(); 
+                
                 fullImageDisplayModal.style.display = 'flex'; // Flexre állítva a centírozás miatt
                 galleryModal.style.display = 'none'; 
                 history.pushState(null, null, '#full-image');
@@ -1288,6 +1328,26 @@
                 fullImageDisplayModal.style.display = 'none'; 
             }
 
+            // --- DRAG/PAN LOGIC (ELTÁVOLÍTVA ÉS HELYETTESÍTVE ZOOMMAL) ---
+            // Dupla kattintás/koppintás a nagyításhoz
+            let lastTap = 0;
+            fullImageDisplay.addEventListener('click', (e) => {
+                const now = new Date().getTime();
+                const timesince = now - lastTap;
+                
+                if (timesince < 300 && timesince > 0) {
+                    e.preventDefault(); // Megakadályozza a dupla kattintás alapértelmezett viselkedését
+                    toggleZoom();
+                } 
+                lastTap = now;
+            });
+            
+            // Dupla kattintás az egérrel (Desktop)
+            fullImageDisplay.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                toggleZoom();
+            });
+            
             // SÚGÓ FUNKCIÓK
             function closeHelpModal() {
                 helpModal.style.display = 'none';
