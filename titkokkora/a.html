@@ -748,6 +748,7 @@
             const EVA_APARTMAN_IMAGE_URL = GITHUB_BASE_URL + "EvaApartman.jpg"; // Új konstans a lakás képhez (tartaléknak)
             const SZOBARENDETLEN_IMAGE_URL = GITHUB_BASE_URL + "szobarendetlen.png"; // ÚJ konstans a rendetlen szoba képhez
             const EVALAK_IMAGE_URL = GITHUB_BASE_URL + "evalak.jpg"; // ÚJ konstans a lakás külső képhez
+            const MUCI_IMAGE_URL = GITHUB_BASE_URL + "Muci.png"; // ÚJ konstans Muci képhez (kérésre)
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
@@ -758,7 +759,9 @@
                 { id: 'portre', url: GITHUB_BASE_URL + "portre.png", title: "Festő Portréja", unlocked: false },
                 { id: 'cetli', url: CETLI_IMAGE_URL, title: "Titkos üzenet", unlocked: false },
                 { id: 'emlektabla', url: EMLEKTABLA_IMAGE_URL, title: "Furcsa fal", unlocked: false }, 
-                { id: 'vas_t_kep', url: CETLI_REKESZ_IMAGE_IMAGE_URL, title: "üvegcse kód", unlocked: false } 
+                { id: 'vas_t_kep', url: CETLI_REKESZ_IMAGE_IMAGE_URL, title: "üvegcse kód", unlocked: false },
+                { id: 'muci', url: MUCI_IMAGE_URL, title: "Muci", unlocked: false }, // ÚJ KÉP
+                { id: 'szobarendetlen', url: SZOBARENDETLEN_IMAGE_URL, title: "Rendetlen Szoba", unlocked: false } // ÚJ KÉP
             ];
 
             // TÖRTÉNETRÉSZEK
@@ -963,7 +966,7 @@
                     speaker: 'Narrator', 
                     image: SZOBARENDETLEN_IMAGE_URL, 
                     choices: [
-                        // Hozzáadva az externalUrl, nextIndex visszaugrik 54-re
+                        // KÖRÜLNÉZEL: External URL megnyitása és kép feloldása
                         { text: 'Körbenézel a szobában', nextIndex: 54, externalUrl: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory' }, 
                         { text: 'Benyitsz a fürdőszobába', nextIndex: 55 }, // ÚJ 55
                         { text: 'Megpróbálod kinyitni a széfet', nextIndex: 56 } // ÚJ 56
@@ -977,6 +980,7 @@
                     speaker: 'Narrator', 
                     image: SZOBARENDETLEN_IMAGE_URL, // MÓDOSÍTVA
                     nextIndex: 54, 
+                    unlockImage: 'muci' // ÚJ: Feloldja a Muci.png képet
                     // TÖRÖLVE: backIndex: 54 
                 }, 
                 
@@ -1248,6 +1252,11 @@
                 const isVasTKepUnlocked = localStorage.getItem('isVas_t_kepUnlocked') === 'true';
                 // ÚJ: Az emléktábla kép ellenőrzése
                 const isEmlektablaUnlocked = localStorage.getItem('isEmlektablaUnlocked') === 'true';
+                // ÚJ: Muci kép ellenőrzése
+                const isMuciUnlocked = localStorage.getItem('isMuciUnlocked') === 'true'; 
+                // ÚJ: Szobarendetlen kép ellenőrzése
+                const isSzobarendetlenUnlocked = localStorage.getItem('isSzobarendetlenUnlocked') === 'true'; 
+
                 
                 // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
@@ -1258,7 +1267,9 @@
                     (item.id === 'korlat' && isKorlatUnlocked && !isKorlatCodeUnlocked) || // Kőkorlát csak akkor látszik, ha a G kód még nincs feloldva
                     (item.id === 'korlat_code' && isKorlatCodeUnlocked) || // G Kód
                     (item.id === 'vas_t_kep' && isVasTKepUnlocked) || // Vas T kép
-                    (item.id === 'emlektabla' && isEmlektablaUnlocked) // ÚJ: Emléktábla éjjel
+                    (item.id === 'emlektabla' && isEmlektablaUnlocked) || // ÚJ: Emléktábla éjjel
+                    (item.id === 'muci' && isMuciUnlocked) || // ÚJ: Muci kép
+                    (item.id === 'szobarendetlen' && isSzobarendetlenUnlocked) // ÚJ: Szobarendetlen kép
                 );
 
                 visibleItems.forEach((image) => {
@@ -1886,6 +1897,12 @@
                 button.addEventListener('click', (e) => {
                     const currentPage = storyPages[currentPartIndex];
                     const chosenChoice = currentPage.choices ? currentPage.choices[index] : null;
+
+                    // EGYEDI LOGIKA A LAKÁSBELI KÖRÜLNÉZÉS GOMBHOZ (Index 54, Choice 0)
+                    if (currentPartIndex === 54 && index === 0) {
+                        localStorage.setItem('isSzobarendetlenUnlocked', 'true');
+                        console.log("Szobarendetlen kép feloldva a galériában!");
+                    }
 
                     // KÜLSŐ LINK KEZELÉSE
                     if (chosenChoice && chosenChoice.externalUrl) {
