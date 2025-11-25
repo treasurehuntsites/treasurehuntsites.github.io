@@ -750,6 +750,7 @@
                 { id: 'korlat_code', url: G_CODE_IMAGE_URL, title: "G Kód", unlocked: false }, // G.jpg fájl
                 { id: 'portre', url: "Img/portre.png", title: "Festő Portréja", unlocked: false },
                 { id: 'cetli', url: CETLI_IMAGE_URL, title: "Titkos üzenet", unlocked: false },
+                { id: 'emlektabla', url: EMLEKTABLA_IMAGE_URL, title: "Furcsa fal", unlocked: false }, // MÓDOSÍTVA: "Emléktábla éjjel" -> "Furcsa fal"
                 // ÚJ: A vas T mögötti rekesz képe
                 { id: 'vas_t_kep', url: CETLI_REKESZ_IMAGE_IMAGE_URL, title: "üvegcse kód", unlocked: false } 
             ];
@@ -1015,20 +1016,20 @@
                 // --- ÚJ KÁLVÁRIAHEGY ÁG (Index 58-62) ---
                 
                 // 58. Kálváriahegy 1. mondat (Eredeti 125)
-                { type: 'text', content: 'Nem tudod, mit is kéne most igazából csinálnod, ezért megindulsz felfelé a kis utcán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 59, backIndex: 0 }, // FRISSÍTVE: Háttérkép változik
+                { type: 'text', content: 'Nem tudod, mit is kéne most igazából csinálnod, ezért megindulsz felfelé a kis utcán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 59, backIndex: 0, unlockImage: 'emlektabla' }, // MÓDOSÍTVA: Feloldja az emléktábla képet
                 
                 // 59. Kálváriahegy 2. mondat (Eredeti 126)
-                { type: 'text', content: 'A felhős égbolton keresztül süt le rád a Hold, és kísértetiessé varázsolja az épületeket.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 60, backIndex: 58 }, // FRISSÍTVE: Háttérkép
+                { type: 'text', content: 'A felhős égbolton keresztül süt le rád a Hold, és kísértetiessé varázsolja az épületeket.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 60, backIndex: 58 }, 
                 
                 // 60. Kálváriahegy 3. mondat (Eredeti 127) -> Vezet a jelszó oldalra.
-                { type: 'text', content: 'Egyszer csak valami különöset veszel észre az útmenti ház falán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 61, backIndex: 59 }, // FRISSÍTVE: Háttérkép
+                { type: 'text', content: 'Egyszer csak valami különöset veszel észre az útmenti ház falán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 61, backIndex: 59 }, 
                 
                 // 61. Kálváriahegy Password Oldal (WAS 128)
                 { 
                     type: 'password', 
                     content: 'Mi a kód, amit a ház falán találtál?', 
                     speaker: 'Narrator', 
-                    image: EMLEKTABLA_IMAGE_URL, // FRISSÍTVE: Háttérkép
+                    image: EMLEKTABLA_IMAGE_URL, 
                     correctPassword: '1238', 
                     isCaseInsensitive: false,
                     helpMessage: 'A rozsdás vas T mögött.', 
@@ -1039,7 +1040,7 @@
                 // 62. Kálváriahegy Sikeroldal (WAS 129)
                 { 
                     type: 'text', 
-                    content: 'Egy kis üvegcsét találtál. Beteszed a hátizsákodba.', // FRISSÍTETT SZÖVEG
+                    content: 'Egy kis üvegcsét találtál. Beteszed a hátizsákodba, és az üvegcse kód képe hozzáadódik a Galériádhoz.', // FRISSÍTETT SZÖVEG
                     speaker: 'Narrator', 
                     image: EMLEKTABLA_IMAGE_URL, // FRISSÍTVE: Háttérkép
                     nextButtonText: 'Tovább', 
@@ -1208,6 +1209,8 @@
                 const isKorlatCodeUnlocked = localStorage.getItem('isKorlatCodeUnlocked') === 'true'; 
                 // ÚJ: A vas T kép ellenőrzése
                 const isVasTKepUnlocked = localStorage.getItem('isVas_t_kepUnlocked') === 'true';
+                // ÚJ: Az emléktábla kép ellenőrzése
+                const isEmlektablaUnlocked = localStorage.getItem('isEmlektablaUnlocked') === 'true';
                 
                 // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => 
@@ -1217,7 +1220,8 @@
                     (item.id === 'uzenofal' && isUzenofalUnlocked) ||
                     (item.id === 'korlat' && isKorlatUnlocked && !isKorlatCodeUnlocked) || // Kőkorlát csak akkor látszik, ha a G kód még nincs feloldva
                     (item.id === 'korlat_code' && isKorlatCodeUnlocked) || // G Kód
-                    (item.id === 'vas_t_kep' && isVasTKepUnlocked) // ÚJ: Vas T kép
+                    (item.id === 'vas_t_kep' && isVasTKepUnlocked) || // Vas T kép
+                    (item.id === 'emlektabla' && isEmlektablaUnlocked) // ÚJ: Emléktábla éjjel
                 );
 
                 visibleItems.forEach((image) => {
