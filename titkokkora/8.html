@@ -751,6 +751,8 @@
             const MUCI_IMAGE_URL = GITHUB_BASE_URL + "Muci.png"; // ÚJ konstans Muci képhez (kérésre)
             const RETICUL_IMAGE_URL = GITHUB_BASE_URL + "retikul.png"; // ÚJ konstans Retikül képhez
             const RETICUL1_IMAGE_URL = GITHUB_BASE_URL + "retikul1.png"; // ÚJ konstans Retikül képhez (inline)
+            const PENDRIVE_IMAGE_URL = GITHUB_BASE_URL + "pendrivefull.png"; // ÚJ konstans a Pendrive képhez
+            const LAPTOP_IMAGE_URL = GITHUB_BASE_URL + "laptop.png"; // ÚJ konstans a Laptop képhez (visual prompt)
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
@@ -764,7 +766,9 @@
                 { id: 'vas_t_kep', url: CETLI_REKESZ_IMAGE_IMAGE_URL, title: "üvegcse kód", unlocked: false },
                 { id: 'muci', url: MUCI_IMAGE_URL, title: "Muci", unlocked: false }, // ÚJ KÉP
                 { id: 'szobarendetlen', url: SZOBARENDETLEN_IMAGE_URL, title: "Rendetlen Szoba", unlocked: false }, // ÚJ KÉP
-                { id: 'retikul', url: RETICUL_IMAGE_URL, title: "Retikül és Személyi", unlocked: false } // ÚJ KÉP (Retikül)
+                { id: 'retikul', url: RETICUL_IMAGE_URL, title: "Retikül és Személyi", unlocked: false }, // ÚJ KÉP (Retikül)
+                { id: 'pendrive', url: PENDRIVE_IMAGE_URL, title: "Pendrive", unlocked: false }, // ÚJ KÉP (Pendrive)
+                { id: 'laptop_screen', url: LAPTOP_IMAGE_URL, title: "Laptop Képernyő", unlocked: false } // ÚJ KÉP (Laptop képernyő)
             ];
 
             // TÖRTÉNETRÉSZEK
@@ -778,7 +782,7 @@
                     choices: [
                         { text: 'Odamész a közeli kapualjhoz', nextIndex: 1 }, 
                         { text: 'Megvizsgálod a kőkorlátot', nextIndex: 44 }, 
-                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 64 } // KORRIGÁLVA: 63 -> 64
+                        { text: 'Felsétálsz a Kálváriahegy útra', nextIndex: 65 } // KORRIGÁLVA: 64 -> 65
                     ]
                 },
 
@@ -880,7 +884,7 @@
                     choices: [
                         { text: 'Megnézed a lakóközösség üzenőfalát', nextIndex: 46 }, // Kódkérő (214) - Eredeti 51 -> 46
                         { text: 'Elindulsz a lépcsőn felfelé', nextIndex: 49 }, // LOCK LOGIKA IDE MUTAT - Eredeti 54 -> 49
-                        { text: 'Megvizsgálod a járólapot a lábad alatt', nextIndex: 59 } // KORRIGÁLVA: 58 -> 59 (Ez most 59, mert 58 a Safe Success)
+                        { text: 'Megvizsgálod a járólapot a lábad alatt', nextIndex: 60 } // KORRIGÁLVA: 59 -> 60 (Ez most 60, mert 59 a Laptop)
                     ]
                 },
                 
@@ -905,7 +909,7 @@
                     correctPassword: 'G', 
                     isCaseInsensitive: false,
                     helpMessage: 'Egyetlen nagybetű.', 
-                    nextIndexSuccess: 60, // KORRIGÁLVA: 59 -> 60
+                    nextIndexSuccess: 61, // KORRIGÁLVA: 60 -> 61
                     backIndex: 0 // Visszavezet a külső főválasztáshoz
                 },
                 
@@ -981,7 +985,8 @@
                         // KÖRÜLNÉZEL: External URL megnyitása és kép feloldása
                         { text: 'Körbenézel a szobában', nextIndex: 54, externalUrl: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory' }, 
                         { text: 'Benyitsz a fürdőszobába', nextIndex: 55 }, // ÚJ 55
-                        { text: 'Megpróbálod kinyitni a széfet', nextIndex: 57 } // KORRIGÁLVA: 56 -> 57
+                        { text: 'Megpróbálod kinyitni a széfet', nextIndex: 57 }, // KORRIGÁLVA: 56 -> 57
+                        { text: 'Bekapcsolod a laptopot a földön', nextIndex: 59 } // ÚJ GOMB, ÚJ INDEX: 59
                     ]
                 },
                 
@@ -1025,10 +1030,26 @@
                     content: 'Sikeresen kinyitottad a széfet! Találtál egy pendrive-ot.', 
                     speaker: 'Narrator', 
                     image: SZOBARENDETLEN_IMAGE_URL, // MÓDOSÍTVA
-                    nextIndex: 54 // Vissza a választásra
+                    nextIndex: 54, // Vissza a választásra
+                    unlockImage: 'pendrive' // ÚJ: Pendrive kép feloldása
+                },
+                
+                // 59. ÚJ: Laptop bekapcsolása (PASSWORD OLDALLÁ ALAKÍTVA)
+                {
+                    type: 'password',
+                    content: `<img src="${LAPTOP_IMAGE_URL}" style="width: 100%; max-width: 300px; height: auto; margin: 0 auto 15px auto; display: block;">A laptop kéri a jelszót.`,
+                    speaker: 'Narrator',
+                    image: SZOBARENDETLEN_IMAGE_URL,
+                    correctPassword: '1342', // KÓD: 1342
+                    isCaseInsensitive: false,
+                    helpMessage: 'Négy számjegyű kód.', 
+                    nextIndexSuccess: 54, // Vissza a választásra
+                    backIndex: 54,
+                    unlockImage: 'laptop_screen' // Feloldja a laptop képernyőjét a galériában
                 },
 
-                // 59. JÁRÓLAP ÁG <- OLD 58
+
+                // 60. JÁRÓLAP ÁG <- OLD 59 (ELTOLVA)
                 { 
                     type: 'text', 
                     content: 'A Járólapok öregek, kopottak, némelyik lötyög is. Különös mintát vagy titkot nem rejt a lábad alatt lévő padló.', 
@@ -1038,7 +1059,7 @@
                     backIndex: 43 // Vissza a belső választáshoz 
                 }, 
 
-                // --- KŐKORLÁT SIKER OLDAL (60) <- OLD 59 ---
+                // --- KŐKORLÁT SIKER OLDAL (61) <- OLD 60 ---
                 { 
                     type: 'text', 
                     content: "Beteszed a talált betűt a hátizsákodba.", // MÓDOSÍTVA
@@ -1049,23 +1070,23 @@
                     backIndex: 0 // Vissza a külső főválasztáshoz
                 },
                 
-                // 61. VÁLASZTÁS PONT 3 (Multi-choice) <- OLD 60
+                // 62. VÁLASZTÁS PONT 3 (Multi-choice) <- OLD 61
                 { 
                     type: 'choice', 
                     content: 'A Festő elhallgat. Mit teszel?', 
                     speaker: 'Narrator', 
                     image: STABLE_IMAGE_URL,
                     choices: [
-                        { text: 'Megvizsgálod a telefonfülkét', nextIndex: 73 }, // KORRIGÁLVA: 72 -> 73
-                        { text: 'Kérdezel még valamit a festőtől', nextIndex: 62 }, // KORRIGÁLVA: 61 -> 62
-                        { text: 'Felhívod a Professzort', nextIndex: 70 } // KORRIGÁLVA: 69 -> 70
+                        { text: 'Megvizsgálod a telefonfülkét', nextIndex: 74 }, // KORRIGÁLVA: 73 -> 74
+                        { text: 'Kérdezel még valamit a festőtől', nextIndex: 63 }, // KORRIGÁLVA: 62 -> 63
+                        { text: 'Felhívod a Professzort', nextIndex: 71 } // KORRIGÁLVA: 70 -> 71
                     ]
                 },
                 
-                // 62. Festő ág (további kérdés) <- OLD 61
-                { type: 'text', content: 'Megkérdezel még valamit a festőtől.', speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 61 }, // KORRIGÁLVA: 60 -> 61
+                // 63. Festő ág (további kérdés) <- OLD 62
+                { type: 'text', content: 'Megkérdezel még valamit a festőtől.', speaker: 'Painter', image: STABLE_IMAGE_URL, nextIndex: 62 }, // KORRIGÁLVA: 61 -> 62
                 
-                // 63. CETLI MEGJELENÍTŐ OLDAL <- OLD 62
+                // 64. CETLI MEGJELENÍTŐ OLDAL <- OLD 63
                 { 
                     type: 'note_image', 
                     content: 'Találtál egy titkos üzenetet!', 
@@ -1074,18 +1095,18 @@
                     nextButtonText: 'Bezárás', 
                 },
 
-                // --- ÚJ KÁLVÁRIAHEGY ÁG (Index 64-68) ---
+                // --- ÚJ KÁLVÁRIAHEGY ÁG (Index 65-69) ---
                 
-                // 64. Kálváriahegy 1. mondat <- OLD 63 (KORRIGÁLVA: Ez most a Kálváriahegy ág startja)
-                { type: 'text', content: 'Nem tudod, mit is kéne most igazából csinálnod, ezért megindulsz felfelé a kis utcán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 65, backIndex: 0, unlockImage: 'emlektabla' }, 
+                // 65. Kálváriahegy 1. mondat <- OLD 64 
+                { type: 'text', content: 'Nem tudod, mit is kéne most igazából csinálnod, ezért megindulsz felfelé a kis utcán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 66, backIndex: 0, unlockImage: 'emlektabla' }, 
                 
-                // 65. Kálváriahegy 2. mondat <- OLD 64
-                { type: 'text', content: 'A felhős égbolton keresztül süt le rád a Hold, és kísértetiessé varázsolja az épületeket.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 66, backIndex: 64 }, 
+                // 66. Kálváriahegy 2. mondat <- OLD 65
+                { type: 'text', content: 'A felhős égbolton keresztül süt le rád a Hold, és kísértetiessé varázsolja az épületeket.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 67, backIndex: 65 }, 
                 
-                // 66. Kálváriahegy 3. mondat <- OLD 65
-                { type: 'text', content: 'Egyszer csak valami különöset veszel észre az útmenti ház falán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 67, backIndex: 65 }, 
+                // 67. Kálváriahegy 3. mondat <- OLD 66
+                { type: 'text', content: 'Egyszer csak valami különöset veszel észre az útmenti ház falán.', speaker: 'Narrator', image: EMLEKTABLA_IMAGE_URL, nextIndex: 68, backIndex: 66 }, 
                 
-                // 67. Kálváriahegy Password Oldal <- OLD 66
+                // 68. Kálváriahegy Password Oldal <- OLD 67
                 { 
                     type: 'password', 
                     content: 'Mi a kód, amit a ház falán találtál?', 
@@ -1094,11 +1115,11 @@
                     correctPassword: '1342', // KÓD MÓDOSÍTVA: 1238 -> 1342
                     isCaseInsensitive: false,
                     helpMessage: 'A rozsdás vas T mögött.', 
-                    nextIndexSuccess: 68, // KORRIGÁLVA: 67 -> 68
-                    backIndex: 66 // KORRIGÁLVA: 65 -> 66
+                    nextIndexSuccess: 69, // KORRIGÁLVA: 68 -> 69
+                    backIndex: 67 // KORRIGÁLVA: 66 -> 67
                 }, 
 
-                // 68. Kálváriahegy Sikeroldal <- OLD 67
+                // 69. Kálváriahegy Sikeroldal <- OLD 68
                 { 
                     type: 'text', 
                     content: 'Egy kis üvegcsét találtál. Beteszed a hátizsákodba.', // MÓDOSÍTVA: Eltávolítva a galériára utaló szöveg
@@ -1107,12 +1128,12 @@
                     nextButtonText: 'Tovább', 
                     unlockImage: 'vas_t_kep', 
                     nextIndex: 0, 
-                    backIndex: 67 // KORRIGÁLVA: 66 -> 67
+                    backIndex: 68 // KORRIGÁLVA: 67 -> 68
                 }, 
 
-                // --- GPS ÉS ZSÁKUTCÁK (Index 69-73) ---
+                // --- GPS ÉS ZSÁKUTCÁK (Index 70-74) ---
 
-                // 69. Narrator (WAS 68): Utolsó oldal - Indítja a GPS-t 
+                // 70. Narrator (WAS 69): Utolsó oldal - Indítja a GPS-t 
                 { 
                     type: 'text', 
                     content: 'Megtaláltad a titkos térkép koordinátáját. Indítsd el a GPS-t.',
@@ -1120,19 +1141,19 @@
                     image: STABLE_IMAGE_URL,
                     nextButtonText: 'tovább', 
                     customAction: 'open_distance_modal',
-                    backIndex: 61 // KORRIGÁLVA: 60 -> 61
+                    backIndex: 62 // KORRIGÁLVA: 61 -> 62
                 }, 
 
-                // 70. Harmadik választás zsákutca (WAS 69): Professzor hívás
-                { type: 'text', content: 'A professzor nem veszi fel, valószínűleg alszik.', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, nextIndex: 61 }, // KORRIGÁLVA: 60 -> 61
+                // 71. Harmadik választás zsákutca (WAS 70): Professzor hívás
+                { type: 'text', content: 'A professzor nem veszi fel, valószínűleg alszik.', speaker: 'MarkPhone', image: STABLE_IMAGE_URL, nextIndex: 62 }, // KORRIGÁLVA: 61 -> 62
 
-                // 71. Első választás zsákutca (WAS 70): Körbemész, szétnézel
+                // 72. Első választás zsákutca (WAS 71): Körbemész, szétnézel
                 { type: 'text', content: 'Körbesétáltad a területet, de semmi érdekeset nem találtál.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 0 }, 
 
-                // 72. Kapualj Zsákutca (WAS 71)
+                // 73. Kapualj Zsákutca (WAS 72)
                 { type: 'text', content: 'A kapualj felé indulsz, de nem tudsz bejutni a kód nélkül.', speaker: 'Narrator', image: STABLE_IMAGE_URL, nextIndex: 0 }, // Zsákutca vissza a főválasztáshoz
 
-                // 73. (Régi 72) Jelszóbeviteli képernyő 
+                // 74. (Régi 73) Jelszóbeviteli képernyő 
                 { 
                     type: 'password',
                     content: 'Nézz körül az igazi fülkében! (Telepítsd a helymeghatározást, ha nem működik)',
@@ -1141,8 +1162,8 @@
                     correctPassword: '8127',
                     isCaseInsensitive: false,
                     helpMessage: 'A készülék alján keresgélj!',
-                    nextIndexSuccess: 63, // KORRIGÁLVA: 62 -> 63
-                    backIndex: 61 // KORRIGÁLVA: 60 -> 61
+                    nextIndexSuccess: 64, // KORRIGÁLVA: 63 -> 64
+                    backIndex: 62 // KORRIGÁLVA: 61 -> 62
                 } 
             ];
 
@@ -1278,6 +1299,10 @@
                 const isSzobarendetlenUnlocked = localStorage.getItem('isSzobarendetlenUnlocked') === 'true'; 
                 // ÚJ: Retikül kép ellenőrzése
                 const isReticulUnlocked = localStorage.getItem('isReticulUnlocked') === 'true'; 
+                // ÚJ: Pendrive kép ellenőrzése
+                const isPendriveUnlocked = localStorage.getItem('isPendriveUnlocked') === 'true'; 
+                // ÚJ: Laptop Képernyő kép ellenőrzése
+                const isLaptopScreenUnlocked = localStorage.getItem('isLaptop_screenUnlocked') === 'true'; 
 
                 
                 // Filterezzük a galéria elemeket az alapján, hogy fel vannak-e oldva
@@ -1292,7 +1317,9 @@
                     (item.id === 'emlektabla' && isEmlektablaUnlocked) || // ÚJ: Emléktábla éjjel
                     (item.id === 'muci' && isMuciUnlocked) || // ÚJ: Muci kép
                     (item.id === 'szobarendetlen' && isSzobarendetlenUnlocked) || // ÚJ: Szobarendetlen kép
-                    (item.id === 'retikul' && isReticulUnlocked) // ÚJ: Retikül kép
+                    (item.id === 'retikul' && isReticulUnlocked) || // ÚJ: Retikül kép
+                    (item.id === 'pendrive' && isPendriveUnlocked) || // ÚJ: Pendrive kép
+                    (item.id === 'laptop_screen' && isLaptopScreenUnlocked) // ÚJ: Laptop Képernyő
                 );
 
                 visibleItems.forEach((image) => {
@@ -1629,11 +1656,11 @@
                         
                         nextButton.dataset.forcedNextIndex = nextIndexDefined ? currentPage.nextIndex : '';
                         
-                        // Kiegészítő feltétel: Belső zsákutca oldalak (55, 56, 58) vagy GPS oldal (69) esetén a Vissza gomb elrejtése
-                        const isInternalDeadEnd = [55, 56, 58].includes(currentPartIndex);
+                        // Kiegészítő feltétel: Belső zsákutca oldalak (55, 56, 58, 59) vagy GPS oldal (70) esetén a Vissza gomb elrejtése
+                        const isInternalDeadEnd = [55, 56, 58, 59].includes(currentPartIndex);
                         
                         // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (GPS modal előtti oldal) ÉS BELSŐ ZSÁKUTCA
-                        if (currentPartIndex === 69 || isInternalDeadEnd) { 
+                        if (currentPartIndex === 70 || isInternalDeadEnd) { 
                             interactionContainer.style.justifyContent = 'center'; 
                             prevButton.style.display = 'none'; // Teljes eltávolítás
                             prevButton.disabled = true;
@@ -1851,16 +1878,23 @@
                     }
                     // A 214-es kód logikáját most a következő oldal (Index 47) végzi a `customAction` segítségével. - Eredeti 52
                     
-                    if (currentPartIndex === 73) { // Telefonfülke (8127) kód - SHIFTED
+                    if (currentPartIndex === 74) { // Telefonfülke (8127) kód - SHIFTED
                         localStorage.setItem('isNoteUnlocked', 'true');
                         messageDisplay.textContent = 'Kód elfogadva! Egy üzenetet találtál...';
                     }
                     
-                    // ÚJ: Kálváriahegy (67-es index) - Eltávolítja a "Furcsa fal" képet
-                    if (currentPartIndex === 67) { 
+                    // ÚJ: Kálváriahegy (68-as index) - Eltávolítja a "Furcsa fal" képet
+                    if (currentPartIndex === 68) { 
                         localStorage.setItem('isEmlektablaUnlocked', 'false'); // Eltávolítja a "Furcsa fal" képet a galériából
                         messageDisplay.textContent = 'Kód elfogadva! Egy apró rekeszt találtál...';
                     }
+                    
+                    // ÚJ: Laptop (59-es index)
+                    if (currentPartIndex === 59) {
+                        messageDisplay.textContent = 'Kód elfogadva! A laptop feloldva. Nézd meg a galériát!';
+                        // A laptop képernyő feloldása már az unlockImage-ben meg van oldva.
+                    }
+
                     
                     // Ugrás a sikeres oldalra
                     setTimeout(() => {
