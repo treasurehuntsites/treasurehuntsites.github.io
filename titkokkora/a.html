@@ -971,7 +971,7 @@
                     speaker: 'Narrator', 
                     image: 'Img/EvaApartman.jpg', 
                     nextIndex: 54, 
-                    backIndex: 54 
+                    // TÖRÖLVE: backIndex: 54 
                 }, 
                 
                 // 56. Széf Password (Visszaállítva a korábbi funkció) <- OLD 57
@@ -984,11 +984,8 @@
                     isCaseInsensitive: false,
                     helpMessage: 'Öt számjegyű kód. Nézd meg a cetlit!', 
                     nextIndexSuccess: 57, // Siker ugrás 57-re
-                    backIndex: 54, // Vissza a választásra
-                    externalLink: {
-                        text: 'Szoba',
-                        url: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory'
-                    } 
+                    // TÖRÖLVE: backIndex: 54, // Vissza a választásra
+                    // TÖRÖLVE: externalLink: { text: 'Szoba', url: 'https://roomescapemaker.com/u/MoonPhantom/GhostStory' } 
                 },
                 
                 // 57. Széf Password Siker <- OLD 58
@@ -1591,11 +1588,18 @@
                         
                         nextButton.dataset.forcedNextIndex = nextIndexDefined ? currentPage.nextIndex : '';
                         
-                        // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (GPS modal előtti oldal)
-                        if (currentPartIndex === 68) { // 68 a GPS előtti oldal új indexe
+                        // Kiegészítő feltétel: Belső zsákutca oldalak (55, 57) vagy GPS oldal (68) esetén a Vissza gomb elrejtése
+                        const isInternalDeadEnd = [55, 57].includes(currentPartIndex);
+                        
+                        // CÉLPONT ELÉRÉS GOMB LEKEZELÉSÉHEZ (GPS modal előtti oldal) ÉS BELSŐ ZSÁKUTCA
+                        if (currentPartIndex === 68 || isInternalDeadEnd) { 
                             interactionContainer.style.justifyContent = 'center'; 
                             prevButton.style.display = 'none'; // Teljes eltávolítás
                             prevButton.disabled = true;
+                        } else {
+                            interactionContainer.style.justifyContent = 'space-between';
+                            prevButton.style.display = 'block';
+                            prevButton.disabled = currentPartIndex === 0;
                         }
                     }
 
