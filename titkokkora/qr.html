@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Leolvasó</title>
+    <title>QR Kód Konfiguráció</title>
     <!-- Tailwind CSS a stílusokhoz -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -18,63 +18,19 @@
             }
         }
     </script>
-    <style>
-        /* A videó és a canvas a teljes szélességet kitölti a fő konténerben */
-        #video, #canvas {
-            width: 100%;
-            height: 100%;
-        }
-        /* A canvas elrejtése, csak a dekódoláshoz használjuk */
-        #canvas {
-            display: none;
-        }
-        /* Célkereszt jelzés a QR kódhoz */
-        .scanner-frame {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 300px;
-            height: 80%;
-            max-height: 300px;
-            border: 5px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-        }
-        @media (min-width: 640px) {
-             .scanner-frame {
-                max-width: 400px;
-                max-height: 400px;
-            }
-        }
-    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4 font-sans">
 
     <!-- Fő alkalmazás konténer -->
-    <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-4">
-        <h1 class="text-3xl font-bold text-center text-primary">QR Kód Átirányító</h1>
-        <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center">
+    <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-6">
+        <h1 class="text-3xl font-bold text-center text-primary border-b pb-4">QR Kód Konfiguráció (Admin)</h1>
+        
+        <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center bg-yellow-50 rounded-lg p-2 border border-yellow-200">
             Betöltés...
         </p>
 
-        <!-- QR Kód Olvasó Rész -->
-        <div id="video-container" class="relative w-full aspect-square bg-gray-200 rounded-xl overflow-hidden shadow-inner">
-            <video id="video" playsinline></video>
-            <div id="scanner-frame" class="scanner-frame"></div>
-        </div>
-
-        <button id="start-scan-button" class="w-full py-3 bg-primary text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition duration-150" style="display: none;">
-            Kamera Engedélyezése és Indítás
-        </button>
-
-        <!-- Rejtett Canvas a feldolgozáshoz -->
-        <canvas id="canvas" style="display: none;"></canvas>
-
         <!-- Konfigurációs Rész (Firestore adatok) -->
-        <div class="pt-4 border-t mt-4 border-gray-200 space-y-4">
-            <h2 class="text-xl font-semibold text-gray-800">Konfiguráció (Admin)</h2>
+        <div class="space-y-4">
             <p class="text-xs text-gray-500">
                 A beolvasott kód tartalma ehhez az értékhez lesz hasonlítva. Ha egyezik, a megadott URL-re irányít át. A felhasználó azonosítója: <span id="user-id" class="font-mono text-xs bg-gray-200 px-1 py-0.5 rounded">Betöltés...</span>
             </p>
@@ -89,20 +45,19 @@
                 <input type="url" id="redirect-url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-secondary focus:border-secondary" placeholder="pl.: https://pelda.hu/sikeres">
             </div>
 
-            <button id="save-config-button" class="w-full py-2 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 transition duration-150">
+            <button id="save-config-button" class="w-full py-3 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 transition duration-150">
                 Konfiguráció Mentése
             </button>
         </div>
 
     </div>
 
-    <!-- Firebase és jsQR Scriptek -->
+    <!-- Firebase Scriptek -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import jsQR from "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
-
+        
         // Global Firebase változók (Canvas környezetből)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-qr-app-id';
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
@@ -110,23 +65,15 @@
 
         // UI elemek
         const statusMessage = document.getElementById('status-message');
-        const startScanButton = document.getElementById('start-scan-button');
         const targetValueInput = document.getElementById('target-value');
         const redirectUrlInput = document.getElementById('redirect-url');
         const saveConfigButton = document.getElementById('save-config-button');
         const userIdDisplay = document.getElementById('user-id');
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
 
         // Állapotváltozók
         let db, auth;
         let userId = null;
         let isAuthReady = false;
-        let targetValue = '';
-        let redirectUrl = '';
-        let stream = null;
-        let scanning = false;
 
         // --- Firebase Inicializálás és Hitelesítés ---
         try {
@@ -139,10 +86,9 @@
                     userId = user.uid;
                     isAuthReady = true;
                     userIdDisplay.textContent = userId;
-                    statusMessage.textContent = 'Hitelesítés sikeres. Adatbázis betöltése...';
+                    statusMessage.textContent = 'Hitelesítés sikeres. Konfiguráció betöltése...';
                     setupFirestoreListener();
                 } else {
-                    // Vendég bejelentkezés, ha az auth token nincs meg
                     await signInAnonymously(auth);
                 }
             });
@@ -152,7 +98,7 @@
                     .catch(error => {
                         console.error("Custom token hiba:", error);
                         statusMessage.textContent = `Hiba a bejelentkezéskor: ${error.code}`;
-                        signInAnonymously(auth); // Próba anonim bejelentkezéssel
+                        signInAnonymously(auth); 
                     });
             } else {
                  signInAnonymously(auth);
@@ -174,16 +120,13 @@
             onSnapshot(qrConfigRef(), (doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
-                    targetValue = data.targetValue || '';
-                    redirectUrl = data.redirectUrl || '';
-                    targetValueInput.value = targetValue;
-                    redirectUrlInput.value = redirectUrl;
+                    targetValueInput.value = data.targetValue || '';
+                    redirectUrlInput.value = data.redirectUrl || '';
 
-                    statusMessage.textContent = `Konfiguráció betöltve: Célkód (${targetValue.length} kar.), Átirányítás (${redirectUrl})`;
+                    statusMessage.textContent = `Konfiguráció betöltve. Utolsó frissítés: ${data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'Nincs'}`;
                 } else {
-                    statusMessage.textContent = "Konfiguráció nem található. Kérem, mentse el a beállításokat.";
+                    statusMessage.textContent = "Konfiguráció nem található. Kérem, mentse el a beállításokat a kezdéshez.";
                 }
-                startScanButton.style.display = 'block';
             }, (error) => {
                 console.error("Hiba az adatok lekérésekor:", error);
                 statusMessage.textContent = `Hiba a konfiguráció betöltésekor: ${error.message}`;
@@ -200,7 +143,7 @@
             const newRedirectUrl = redirectUrlInput.value.trim();
 
             if (!newTargetValue || !newRedirectUrl) {
-                statusMessage.textContent = "Kérem, töltse ki mindkét konfigurációs mezőt!";
+                statusMessage.textContent = "Hiba: Kérem, töltse ki mindkét konfigurációs mezőt!";
                 return;
             }
 
@@ -215,8 +158,6 @@
                     updaterId: userId
                 });
                 statusMessage.textContent = "Konfiguráció sikeresen elmentve!";
-                targetValue = newTargetValue;
-                redirectUrl = newRedirectUrl;
             } catch (error) {
                 console.error("Hiba a mentéskor:", error);
                 statusMessage.textContent = `Hiba a konfiguráció mentésekor: ${error.message}`;
@@ -225,108 +166,6 @@
                 saveConfigButton.textContent = "Konfiguráció Mentése";
             }
         });
-
-        // --- QR Kód Szkennelés Logika ---
-
-        // Kamera indítása
-        startScanButton.addEventListener('click', initializeCamera);
-
-        async function initializeCamera() {
-            if (scanning) return;
-
-            try {
-                // Kamera engedély kérése (hátsó kamera preferálása)
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-
-                video.srcObject = stream;
-                video.setAttribute("playsinline", true); // iOS-en szükséges
-                video.play();
-                startScanButton.style.display = 'none';
-
-                // Várakozás a videó betöltésére, majd elindítja a szkennelő ciklust
-                video.addEventListener('loadedmetadata', () => {
-                    scanning = true;
-                    statusMessage.textContent = "Keresés: Tartsa a QR kódot a célkeresztben.";
-                    requestAnimationFrame(tick);
-                });
-
-            } catch (err) {
-                console.error("Hiba a kamera elérésénél: ", err);
-                statusMessage.textContent = "Hiba: Nem sikerült elérni a kamerát. Kérem, engedélyezze a hozzáférést.";
-                startScanButton.style.display = 'block';
-            }
-        }
-
-        // Szkennelő Ciklus
-        function tick() {
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Beállítás a canvas mérete a videóhoz
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-
-                // Videó keret rajzolása a canvas-ra
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                // Kép adatainak lekérése a jsQR számára
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    // Invertálás megkísérlése a sötét hátterű kódokhoz
-                    inversionAttempts: "dontInvert",
-                });
-
-                if (code) {
-                    handleQrCode(code.data);
-                    return; // Megállítja a ciklust
-                }
-            }
-
-            if (scanning) {
-                requestAnimationFrame(tick);
-            }
-        }
-
-        // --- QR Kód Feldolgozás ---
-
-        function handleQrCode(scannedValue) {
-            scanning = false;
-            statusMessage.textContent = `QR kód beolvasva: ${scannedValue}`;
-
-            // Kamera leállítása
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-
-            if (!targetValue || !redirectUrl) {
-                statusMessage.textContent = "Hiba: A cél QR kód vagy átirányítási URL nincs beállítva az admin felületen.";
-                return;
-            }
-
-            // Összehasonlítás
-            if (scannedValue === targetValue) {
-                statusMessage.textContent = `Siker! A kód egyezik. Átirányítás ${redirectUrl} oldalra 3 másodperc múlva...`;
-                console.log(`Sikeres egyezés. Átirányítás: ${redirectUrl}`);
-
-                // 3 másodperc múlva átirányítás
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 3000);
-            } else {
-                statusMessage.textContent = `Hiba! A kód (${scannedValue}) NEM egyezik a célkóddal (${targetValue}). Próbálja újra 5 másodperc múlva.`;
-                console.log(`Eltérés. Beolvasott: ${scannedValue}, Cél: ${targetValue}`);
-
-                // Újraindítás 5 másodperc múlva
-                setTimeout(() => {
-                    scanning = true;
-                    initializeCamera();
-                }, 5000);
-            }
-        }
     </script>
-
-    <!-- jsQR és Firebase importok a modulon kívül, a kód olvashatóságáért -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </body>
 </html>
