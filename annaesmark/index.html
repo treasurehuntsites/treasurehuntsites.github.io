@@ -746,47 +746,36 @@
                 { id: 'helyszin', url: PHONE_BOOTH_URL, title: "Telefonfülke", unlocked: true }, 
             ];
 
-            // TÖRTÉNETRÉSZEK - AZ ELSŐ KÉT ELEM TÖRLÉSE ÉS INDEXEK FRISSÍTÉSE
+            // TÖRTÉNETRÉSZEK - AZ UTOLSÓ OLDAL ELTÁVOLÍTVA A KÓD BEVITEL UTÁN
             const storyPages = [
                 // JELENET 1: Telefonfülke Bevezetés (New 0 - 5)
-                // (Old 0: §RESET Törölve)
-                // (Old 1: §H Törölve)
-                { type: 'text', content: '§N Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.', speaker: 'Narrator', image: PHONE_BOOTH_URL }, // New 0 (Old 2)
-                { type: 'text', content: '§N Anna türelmetlenül dobolt az ujjaival az üvegfalon.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 1 (Old 3) - §A -> §N módosítva az avatar elrejtéséhez
-                { type: 'text', content: '§A Biztos, hogy ez az a fülke? Már húsz perce itt állunk, és semmi.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 2 (Old 4)
-                { type: 'text', content: '§M Türelem, Anna. Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot', speaker: 'Mark', image: PHONE_BOOTH_URL }, // New 3 (Old 5)
-                { type: 'text', content: '§N Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.', speaker: 'Narrator', image: PHONE_BOOTH_URL }, // New 4 (Old 6)
-                { type: 'text', content: '§A Nézd Márk, mi lehet ez? Mi van ha megnyomom?', speaker: 'Anna', image: PHONE_BOOTH_URL, nextIndex: 6 }, // New 5 (Old 7). nextIndex: 8 - 2 = 6
+                { type: 'text', content: '§N Egy sötét, nyirkos estén, a város zajától nem messze, két titkos ügynök, Anna és Márk, egy telefonfülkében várakozott.', speaker: 'Narrator', image: PHONE_BOOTH_URL }, // New 0
+                { type: 'text', content: '§N Anna türelmetlenül dobolt az ujjaival az üvegfalon.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 1 - §A -> §N módosítva az avatar elrejtéséhez
+                { type: 'text', content: '§A Biztos, hogy ez az a fülke? Már húsz perce itt állunk, és semmi.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 2
+                { type: 'text', content: '§M Türelem, Anna. Ha a kontaktunk nem tévedett, akkor itt kapjuk meg az első nyomot', speaker: 'Mark', image: PHONE_BOOTH_URL }, // New 3
+                { type: 'text', content: '§N Ahogy Márk befejezte a mondatot, Anna észrevett egy furcsa tárgyat a fülkében.', speaker: 'Narrator', image: PHONE_BOOTH_URL }, // New 4
+                { type: 'text', content: '§A Nézd Márk, mi lehet ez? Mi van ha megnyomom?', speaker: 'Anna', image: PHONE_BOOTH_URL, nextIndex: 6 }, // New 5
 
                 // JELENET 2: Hangüzenetek (New 6-7) - AUDIO BUTTONS
-                { type: 'audio', content: '§N', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 7, audioId: 1 }, // New 6 (Old 8). nextIndex: 9 - 2 = 7
-                { type: 'audio', content: '§N', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 8, audioId: 2 }, // New 7 (Old 9). nextIndex: 10 - 2 = 8
+                { type: 'audio', content: '§N', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 7, audioId: 1 }, // New 6
+                { type: 'audio', content: '§N', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 8, audioId: 2 }, // New 7
 
                 // JELENET 3: Kapszula megtalálása (New 8-10)
-                { type: 'text', content: '§A Egy üvegkapszulát? Ez valami rejtvény!', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 8 (Old 10)
-                { type: 'text', content: '§M Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve.', speaker: 'Mark', image: PHONE_BOOTH_URL }, // New 9 (Old 11)
-                { type: 'text', content: '§N Néhány perc múlva Márk talált egy kis üvegkapszulát, mikor kinyitotta a tetjét, egy összetekert papírt húzott ki belőle.', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 11 }, // New 10 (Old 12). nextIndex: 13 - 2 = 11
+                { type: 'text', content: '§A Egy üvegkapszulát? Ez valami rejtvény!', speaker: 'Anna', image: PHONE_BOOTH_URL }, // New 8
+                { type: 'text', content: '§M Már meg is van! Itt volt pont a fejünk felett mágnessel rögzítve.', speaker: 'Mark', image: PHONE_BOOTH_URL }, // New 9
+                { type: 'text', content: '§N Néhány perc múlva Márk talált egy kis üvegkapszulát, mikor kinyitotta a tetjét, egy összetekert papírt húzott ki belőle.', speaker: 'Narrator', image: PHONE_BOOTH_URL, nextIndex: 11 }, // New 10
 
-                // JELENET 4: Kód Kérés (New 11)
+                // JELENET 4: Kód Kérés (New 11) - Ez az utolsó oldal
                 { 
                     type: 'password', 
-                    content: '§KOD', // A kért szöveg törölve
+                    content: '§KOD', 
                     correctPassword: '5132', 
-                    nextIndexSuccess: 12, // Old 14 - 2 = 12
-                    backIndex: 10, // Old 12 - 2 = 10
+                    nextIndexSuccess: -1, // Jelölő: ezt az indexet a checkButton fogja kezelni a modal elindításához
+                    backIndex: 10, 
                     helpMessage: 'Papíron lévő számok' 
                 }, 
 
-                // JELENET 5: FINAL/SUCCESS - FRISSÍTVE A GPS MODAL ELINDÍTÁSÁRA (New 12)
-                { 
-                    type: 'text', 
-                    content: '§N A megfejtett kód elvezett Benneteket a következő pont koordinátáihoz. Indítsd el a távolságmérést a folytatáshoz!', 
-                    speaker: 'Narrator', 
-                    image: PHONE_BOOTH_URL, 
-                    nextButtonText: 'Távolságmérés indítása', 
-                    customAction: 'open_distance_modal', // <-- Ez indítja a GPS modált
-                    type: 'final' 
-                }
+                // (JELENET 5: FINAL/SUCCESS - Törölve, a logikája áthelyezve a checkButton-be)
             ];
 
             // ------------------------------------
@@ -1356,9 +1345,9 @@
                 const currentPage = storyPages[currentPartIndex];
                 
                 // GPS modal - Ez a feltételnek kell legfelül lennie, hogy felülírja a default Továbbot.
+                // EZ A RÉSZ CSAK AKKOR FUT LE, HA VAN MÉG EGY KÖZTES OLDAL! A kérés most az volt, hogy ez ne legyen.
                 if (currentPage && currentPage.customAction === 'open_distance_modal') {
                     stopAllAudio();
-                    // localStorage.removeItem('gameProgress'); // Hagyjuk meg a progress-t, hogy vissza tudjon jönni
                     showDistanceModal(); 
                     return;
                 }
@@ -1425,9 +1414,15 @@
                     messageDisplay.style.color = '#00FF00';
                     
                     setTimeout(() => {
-                        currentPartIndex = currentPage.nextIndexSuccess; 
-                        saveProgress();
-                        showStoryPart(); 
+                        // KÓD: Ha a jelszó oldalról (index 11) jöttünk, indítsuk el a GPS modalt közvetlenül
+                        if (currentPartIndex === 11) {
+                            showDistanceModal();
+                        } else {
+                            // Egyébként folytassuk a normál történetfolyamot
+                            currentPartIndex = currentPage.nextIndexSuccess; 
+                            saveProgress();
+                            showStoryPart(); 
+                        }
                     }, 1000);
                     
                 } else {
