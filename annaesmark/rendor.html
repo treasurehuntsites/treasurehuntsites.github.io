@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>GPS Követés Mozgó Célponttal</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAo9T0XLYJk976X4UaT68Q8z16jB22p2D30T4uY="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-2qE2C2b2r2A60k52J67B547w379xM9M3r50Lq7v8i7Q="
+            crossorigin=""></script>
+
+    <style>
+        #map { height: 400px; width: 100%; margin-top: 15px; }
+        .distance-info { font-size: 1.2em; }
+        .distance-warning { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 Mozgó Célpont Követése</h1>
+    <p>A célpont a Te **kezdeti pozíciód** felé közeledik 5 km/h sebességgel.</p>
+    <div id="status-info">Várjuk a GPS pozíciót...</div>
+    <div id="distance-info" class="distance-info"></div>
+    <div id="map"></div>
+
+    <script>
+        // --- 1. Konfiguráció ---
+        const REDIRECT_URL = "https://www.google.com";
+        const START_DISTANCE_METERS = 50; // Kezdeti távolság 50 méter
+        const REDIRECT_RADIUS_METERS = 10; // Átirányítási küszöb (10 méter)
+        const TARGET_SPEED_KPH = 5; // Célpont sebessége 5 km/h
+        const UPDATE_INTERVAL_MS = 5000; // GPS frissítési gyakoriság (5 másodperc)
+
+        // Sebesség m/ms-ban: 5 km/h = 5000 m / 3600 s * 1000 ms = 0.001388... m/ms
+        const TARGET_SPEED_MPS = TARGET_SPEED_KPH * 1000 / 3600; 
+
+        // Állapotváltozók
+        let map;
+        let userMarker, targetMarker;
+        let userStartPos = null; // A kezdeti pozíciód
+        let targetPos = null;    // A célpont aktuális pozíciója
+        let lastTargetUpdateTime = Date.now();
+        let targetDirection;     // Irány a célpont mozgatásához (bearing)
+        let trackingStarted = false;
+
+        // --- 2. Geometriai függvények ---
+
+        // Konvertálás radiánra
+        function toRad(deg) { return deg * (Math.PI / 180); }
+        // Konvertálás fokra
+        function toDeg(rad) { return rad * (180 / Math.PI); }
+
+        // Haversine távolságszámítás (méterben)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Pont számítása távolságra és irányra (bearing) egy másik ponttól
+        function calculateTargetPosition(lat, lon, distanceMeters, bearing) {
+            const R = 6371e3; // Föld sugara méterben
+            const dist = distanceMeters / R; // Távolság radiánban
+            const brng = toRad(bearing);
+
+            const lat1 = toRad(lat);
+            const lon1 = toRad(lon);
+
+            let lat2 = Math.asin(Math.sin(lat1) * Math.cos(dist) +
+                                 Math.cos(lat1) * Math.sin(dist) * Math.cos(brng));
+            let lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(dist) * Math.cos(lat1),
+                                          Math.cos(dist) - Math.sin(lat1) * Math.sin(lat2));
+
+            return { lat: toDeg(lat2), lon: toDeg(lon2) };
+        }
+
+        // Két pont közötti irány számítása (bearing fokban)
+        function calculateBearing(lat1, lon1, lat2, lon2) {
+            const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+            const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+                      Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+            return (toDeg(Math.atan2(y, x)) + 360) % 360; // 0-360 fok
+        }
+
+        // --- 3. Célpont Mozgató és Kezdő Pozíció Beállító Függvények ---
+
+        // Célpont kezdeti pozíciójának beállítása (50m-re a felhasználótól)
+        function setupTarget(userLat, userLon) {
+            // Véletlenszerű irány (0-360 fok) a kezdeti pont elhelyezésére
+            const randomBearing = Math.random() * 360; 
+            
+            // Kiszámítjuk a célpont kezdő pozícióját 50m-re
+            targetPos = calculateTargetPosition(userLat, userLon, START_DISTANCE_METERS, randomBearing);
+            
+            // Kiszámítjuk azt az irányt, amerre a célpontnak mozognia kell (a kezdeti pozíció felé)
+            targetDirection = calculateBearing(targetPos.lat, targetPos.lon, userLat, userLon);
+            
+            lastTargetUpdateTime = Date.now();
+            
+            console.log(`Célpont kezdeti pozíciója (${START_DISTANCE_METERS}m-re) beállítva. Irány: ${targetDirection.toFixed(2)} fok.`);
+        }
+
+        // Célpont mozgatása (a saját Kezdeti Pozíciód felé)
+        function moveTarget() {
+            const now = Date.now();
+            const deltaTimeMs = now - lastTargetUpdateTime;
+            lastTargetUpdateTime = now;
+
+            // Távolság, amennyit a célpont megtett (méterben)
+            const distanceMoved = TARGET_SPEED_MPS * (deltaTimeMs / 1000); 
+
+            // Célpont aktuális távolsága a kezdeti pozíciótól
+            let currentDistToStart = calculateDistance(targetPos.lat, targetPos.lon, userStartPos.lat, userStartPos.lon);
+            
+            // Ha már túl közel van (0.1m-nél), megállítjuk
+            if (currentDistToStart < 0.1) {
+                targetPos.lat = userStartPos.lat;
+                targetPos.lon = userStartPos.lon;
+                return;
+            }
+
+            // Kiszámítjuk a célpont új pozícióját
+            const newPos = calculateTargetPosition(targetPos.lat, targetPos.lon, distanceMoved, targetDirection);
+            targetPos.lat = newPos.lat;
+            targetPos.lon = newPos.lon;
+        }
+
+        // --- 4. GPS pozíció frissítése és fő logika ---
+        function updatePosition(position) {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            const userCoords = [userLat, userLon];
+
+            document.getElementById('status-info').textContent = `Aktuális pozíciód: ${userLat.toFixed(5)}, ${userLon.toFixed(5)}`;
+
+            if (!trackingStarted) {
+                // Kezdeti beállítások (csak egyszer fut le)
+                userStartPos = { lat: userLat, lon: userLon };
+                setupTarget(userLat, userLon); // Célpont 50m-re a kezdeti pozíciódtól
+                trackingStarted = true;
+                
+                // Térkép inicializálása
+                map = L.map('map').setView(userCoords, 17);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                // Felhasználó jelölő (piros)
+                userMarker = L.marker(userCoords, { title: "Pozíciód" }).addTo(map)
+                    .bindPopup("Jelenlegi pozíciód").openPopup();
+                
+                // Célpont jelölő (kék)
+                targetMarker = L.marker([targetPos.lat, targetPos.lon], { title: "Mozgó Célpont" }).addTo(map)
+                    .bindPopup("Mozgó Célpont (50m-ről indul)").openPopup();
+            }
+
+            // 1. Célpont mozgatása
+            moveTarget();
+
+            // 2. Távolság számítása: Célpont aktuális pozíciója ÉS a Te aktuális pozíciód között
+            const distance = calculateDistance(userLat, userLon, targetPos.lat, targetPos.lon);
+            const formattedDistance = distance.toFixed(1);
+
+            // 3. Térkép és jelölők frissítése
+            userMarker.setLatLng(userCoords);
+            targetMarker.setLatLng([targetPos.lat, targetPos.lon]);
+            map.setView(userCoords, map.getZoom()); 
+
+            document.getElementById('distance-info').innerHTML = 
+                `Távolság a célponttól: **${formattedDistance} m** (Sebesség: ${TARGET_SPEED_KPH} km/h)`;
+
+            // 4. Átirányítási logika
+            if (distance <= REDIRECT_RADIUS_METERS) {
+                document.getElementById('distance-info').innerHTML = `<span class="distance-warning">10 méteren belül! Átirányítás...</span>`;
+                // window.location.href = REDIRECT_URL; // Éles átirányítás
+                console.log(`Átirányítás a ${REDIRECT_URL} címre (${distance.toFixed(1)}m)!`);
+                alert(`Átirányítás a ${REDIRECT_URL} címre (${distance.toFixed(1)}m)!`);
+                navigator.geolocation.clearWatch(watchId); // Leállítjuk a GPS követést
+            }
+
+            console.log(`Pozíció frissítve: ${userLat.toFixed(5)}, Célpont: ${targetPos.lat.toFixed(5)}. Távolság: ${formattedDistance} m`);
+        }
+
+        // --- 5. Hiba kezelése és Indítás ---
+        function errorCallback(error) {
+            let message = "Hiba a GPS-szel! Kérlek engedélyezd a helymeghatározást és próbálj újra.";
+            document.getElementById('status-info').innerHTML = `<span class="distance-warning">${message}</span>`;
+            console.error("GPS Hiba:", error);
+        }
+        
+        // Fő indítási logika
+        let watchId;
+        if ("geolocation" in navigator) {
+            const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+            watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, options);
+            // Az 5 másodpercenkénti frissítést a böngésző a watchPosition hívással igyekszik tartani.
+        } else {
+            document.getElementById('status-info').innerHTML = `<span class="distance-warning">A böngésző nem támogatja a helymeghatározást.</span>`;
+        }
+    </script>
+
+</body>
+</html>
