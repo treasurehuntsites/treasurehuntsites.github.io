@@ -289,27 +289,30 @@
         // --- 6. Hiba kezelése és Indítás ---
         function errorCallback(error) {
             let message = "Hiba a GPS-szel! Kérlek engedélyezd a helymeghatározást és próbálj újra.";
+            
+            // Explicit naplózás a hiba beazonosításához, még ha az objektum üres is
+            const consoleMsg = `GPS Error Code: ${error.code} | Message: ${error.message || 'Nincs üzenet.'}`;
+            
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message = "Engedély megtagadva! Kérlek, engedélyezd a helymeghatározást a böngésződben.";
+                    message = "Engedély megtagadva! (Hibakód: 1). Kérlek, ellenőrizd a böngésző és a telefon/táblagép helymeghatározási beállításait.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    message = "Pozíció nem elérhető! Próbálj jobb vételű helyre menni.";
+                    message = "Pozíció nem elérhető! (Hibakód: 2). Gyenge GPS vétel (pl. beltér) vagy kikapcsolt helymeghatározási szolgáltatás.";
                     break;
                 case error.TIMEOUT:
-                    // Ez a hiba az emelt időkeret ellenére is előfordulhat
-                    message = "Pozíció lekérdezés túllépte az időkeretet (15 mp). Rossz vétel, vagy helymeghatározási szolgáltatás kikapcsolva?";
+                    message = "Pozíció lekérdezés túllépte az időkeretet (30 mp). (Hibakód: 3). Kérlek, helyezkedj el jobb vételű helyen (pl. szabadban).";
                     break;
             }
             document.getElementById('status-info').innerHTML = `<span class="distance-warning">${message}</span>`;
-            console.error("GPS Hiba:", error);
+            console.error(consoleMsg, error); // Naplózzuk a részleteket
         }
         
         // Fő indítási logika
         window.onload = function() {
             if ("geolocation" in navigator) {
-                // IDŐKERET EMELÉSE 5000-ről 15000-re (15 másodperc)
-                const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }; 
+                // IDŐKERET 30000-re (30 másodperc)
+                const options = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }; 
                 // Elindítjuk a folyamatos követést
                 watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, options);
             } else {
