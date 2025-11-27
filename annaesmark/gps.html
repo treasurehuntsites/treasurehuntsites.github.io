@@ -124,6 +124,10 @@
         const CIRCLE_INTERVAL_METERS = 5;               // Körök közötti távolság (5m-ként)
         const MAX_CIRCLE_RADIUS = 50;                   // Maximális kör sugara
         
+        // MOCK/Szimulációs beállítások
+        const MOCK_LAT = 47.4979; // Budapest, Szabadság-híd
+        const MOCK_LON = 19.0402; // Budapest, Szabadság-híd
+        
         // Állapotváltozók
         let map;
         let userStartPos = null;    
@@ -136,6 +140,8 @@
         let trackingStarted = false;
         let circles = [];           
         let watchId = null;         // GPS követési azonosító
+        let mockIntervalId = null;  // Mock követési azonosító
+        let isMockMode = false;     // Szimulációs mód jelző
 
         // Ikonváltozók
         let userIcon, targetIcon, startPointIcon;
@@ -192,9 +198,8 @@
             return (toDeg(Math.atan2(y, x)) + 360) % 360; 
         }
 
-        // --- 3. Vizuális elemek rajzolása és Mozgatás Logikája (a többi változatlan) ---
+        // --- 3. Vizuális elemek rajzolása és Mozgatás Logikája ---
         function drawCircles(centerLat, centerLon) {
-             // ... (a drawCircles függvény tartalma változatlan)
             circles.forEach(circle => map.removeLayer(circle));
             circles = [];
 
@@ -239,60 +244,104 @@
             targetPos.lat = newPos.lat;
             targetPos.lon = newPos.lon;
         }
+        
+        // --- 4. Mock (Szimulációs) követés ---
+        function startMockTracking() {
+            if (isMockMode) {
+                // Szimulált pozíció objektum létrehozása
+                const mockPosition = {
+                    coords: {
+                        latitude: MOCK_LAT,
+                        longitude: MOCK_LON,
+                        accuracy: 10
+                    },
+                    timestamp: Date.now()
+                };
+                
+                // Első frissítés azonnal
+                updatePosition(mockPosition);
 
-        // --- 4. GPS pozíció frissítése és fő logika ---
+                // Folyamatos szimulált frissítés 5 másodpercenként
+                mockIntervalId = setInterval(() => {
+                    // A szimulált pozíció nem változik, csak a célpont mozog
+                    updatePosition(mockPosition);
+                }, 5000); 
+                
+                document.getElementById('status-info').innerHTML = `<span style="color: #f59e0b; font-weight: bold;">⚠️ SZIMULÁCIÓS ÜZEMMÓD: Fix ${MOCK_LAT.toFixed(4)}, ${MOCK_LON.toFixed(4)} koordináták</span>`;
+            }
+        }
+
+        // --- 5. GPS pozíció frissítése és fő logika ---
         function updatePosition(position) {
             const userLat = position.coords.latitude;
             const userLon = position.coords.longitude;
             const userCoords = [userLat, userLon];
 
             if (!trackingStarted) {
+                
+                // ******************************************************
+                // JAVÍTÁS: Robusztus ellenőrzés az L.divIcon függvényre
+                if (typeof L === 'undefined' || typeof L.divIcon !== 'function') {
+                    console.error("Kritikus hiba: L.divIcon nem elérhető. Leállítjuk az inicializálást.");
+                    // Mivel ez a hiba valószínűleg a Mock módban jön létre, itt nem hívunk hideLoading-ot vagy showError-t.
+                    // A hiba a 'errorCallback' hívási láncban keletkezik, és ott kezeljük a végleges hibát.
+                    return; 
+                }
+                
+                // Ikonok létrehozása (HA L.divIcon függvény)
+                userIcon = L.divIcon({ className: 'user-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
+                targetIcon = L.divIcon({ className: 'target-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
+                startPointIcon = L.divIcon({ className: 'start-point-icon', html: '<div></div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+                // ******************************************************
+                
                 userStartPos = { lat: userLat, lon: userLon };
                 setupTarget(userLat, userLon); 
                 trackingStarted = true;
                 
-                // Ikonok létrehozása
-                userIcon = L.divIcon({ className: 'user-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
-                targetIcon = L.divIcon({ className: 'target-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
-                startPointIcon = L.divIcon({ className: 'start-point-icon', html: '<div></div>', iconSize: [28, 28], iconAnchor: [14, 14] });
-
                 // Térkép inicializálása
                 map = L.map('map').setView(userCoords, 18);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
                 // Jelölők hozzáadása
                 startPointMarker = L.marker([userStartPos.lat, userStartPos.lon], { icon: startPointIcon, title: "Kezdeti Pozíciód" }).addTo(map).bindPopup("Ez a Kezdeti Pozíciód (FIX CÉLPONTJA a mozgó pontnak)").openPopup();
-                userMarker = L.marker(userCoords, { icon: userIcon, title: "Jelenlegi Pozíciód" }).addTo(map).bindPopup("Jelenlegi Pozíciód").openPopup();
+                userMarker = L.marker(userCoords, { icon: userIcon, title: "Jelenlegi Pozíciód" }).addTo(map).bindPopup(isMockMode ? "Szimulált pozíciód" : "Jelenlegi pozíciód").openPopup();
                 targetMarker = L.marker([targetPos.lat, targetPos.lon], { icon: targetIcon, title: "Mozgó Célpont" }).addTo(map).bindPopup("Mozgó Célpont (50m-ről indul, 5 km/h sebességgel a kezdeti pont felé)").openPopup();
 
                 drawCircles(userStartPos.lat, userStartPos.lon);
                 hideLoading(); // Elrejtjük a loading overlay-t
             }
 
-            moveTarget();
+            // Csak akkor mozgatjuk a célpontot, ha az alkalmazás már inicializálva van
+            if (map) { 
+                moveTarget();
 
-            const distance = calculateDistance(userLat, userLon, targetPos.lat, targetPos.lon);
-            const formattedDistance = distance.toFixed(1);
+                const distance = calculateDistance(userLat, userLon, targetPos.lat, targetPos.lon);
+                const formattedDistance = distance.toFixed(1);
 
-            userMarker.setLatLng(userCoords);
-            targetMarker.setLatLng([targetPos.lat, targetPos.lon]);
-            map.setView(userCoords, map.getZoom(), {animate: true}); 
-            
-            document.getElementById('status-info').className = 'status-info'; 
-            document.getElementById('status-info').textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
-            document.getElementById('distance-info').innerHTML = `Távolság a közeledő célponttól: **${formattedDistance} m**`;
+                userMarker.setLatLng(userCoords);
+                targetMarker.setLatLng([targetPos.lat, targetPos.lon]);
+                map.setView(userCoords, map.getZoom(), {animate: true}); 
+                
+                if (!isMockMode) {
+                    document.getElementById('status-info').className = 'status-info'; 
+                    document.getElementById('status-info').textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
+                }
+                document.getElementById('distance-info').innerHTML = `Távolság a közeledő célponttól: **${formattedDistance} m**`;
 
-            if (distance <= REDIRECT_RADIUS_METERS) {
-                document.getElementById('distance-info').innerHTML = `<span class="distance-warning">10 méteres körzetbe ért a célpont! Átirányítás a ${REDIRECT_URL} címre...</span>`;
-                // window.location.href = REDIRECT_URL; // Éles átirányítás
-                alert(`ÁTIRÁNYÍTÁS! A célpont távolsága: ${distance.toFixed(1)} m. (A funkció fut.)`);
-                navigator.geolocation.clearWatch(watchId); 
+                if (distance <= REDIRECT_RADIUS_METERS) {
+                    document.getElementById('distance-info').innerHTML = `<span class="distance-warning">10 méteres körzetbe ért a célpont! Átirányítás a ${REDIRECT_URL} címre...</span>`;
+                    // window.location.href = REDIRECT_URL; // Éles átirányítás
+                    alert(`ÁTIRÁNYÍTÁS! A célpont távolsága: ${distance.toFixed(1)} m. (A funkció fut.)`);
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                    if (mockIntervalId) clearInterval(mockIntervalId);
+                    trackingStarted = false; // Megállítjuk a további frissítéseket
+                }
             }
         }
 
-        // --- 5. Hiba kezelés és Indítás ---
+        // --- 6. Hiba kezelés és Indítás ---
         function errorCallback(error) {
-            // Megállítjuk a folyamatos követést, ha hiba van
+            // Megállítjuk a valós követést, ha hiba van
             if (watchId) navigator.geolocation.clearWatch(watchId);
 
             hideLoading();
@@ -300,66 +349,38 @@
             
             const consoleMsg = `GPS Error Code: ${error.code} | Message: ${error.message || 'Nincs üzenet.'}`;
             
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    message = "Engedély megtagadva! (Hibakód: 1). Kérlek, engedélyezd a helymeghatározást a böngésző beállításaiban.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message = "Pozíció nem elérhető! (Hibakód: 2). Gyenge GPS vétel vagy kikapcsolt helymeghatározás.";
-                    break;
-                case error.TIMEOUT:
-                    message = "Pozíció lekérdezés túllépte az időkeretet! (Hibakód: 3). Próbálj szabadban lenni.";
-                    break;
-                default:
-                    message = `Ismeretlen GPS hiba (Kód: ${error.code}).`;
+            if (error.code === error.PERMISSION_DENIED) {
+                 // Ha jogosultsági hiba van, átváltunk Szimulációs módra
+                isMockMode = true;
+                startMockTracking();
+                message = "Engedély megtagadva! A böngésző blokkolja a GPS-t. ÁTKAPCSOLÁS SZIMULÁCIÓS ÜZEMMÓDRA. (A térkép Budapestet mutatja, és a célpont mozog.)";
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+                message = "Pozíció nem elérhető! (Hibakód: 2). Gyenge GPS vétel vagy kikapcsolt helymeghatározás.";
+            } else if (error.code === error.TIMEOUT) {
+                message = "Pozíció lekérdezés túllépte az időkeretet! (Hibakód: 3). Próbálj szabadban lenni.";
+            } else {
+                message = `Ismeretlen GPS hiba (Kód: ${error.code}).`;
             }
             showError(message);
             console.error(consoleMsg, error);
         }
 
-        // Kétlépcsős inicializáló logika
-        function tryInitialLocation() {
-            // Próbáljuk meg egyszer, 20 másodpercig
-            const initialOptions = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }; 
-
-            navigator.geolocation.getCurrentPosition(
-                // Siker: Azonnal elkezdjük a folyamatos figyelést
-                (position) => {
-                    // console.log("Sikerült az egyszeri lekérés, indul a figyelés.");
-                    startWatching(position);
-                },
-                // Hiba
-                (error) => {
-                    if (error.code === error.TIMEOUT) {
-                        // Ha az egyszeri lekérés timeoutolt, azonnal elindítjuk a watchPosition-t 30 másodperccel
-                        showLoading('Hosszú keresés... Folyamatos figyelés indítása.');
-                        startWatching(null);
-                    } else {
-                        // Ha permission denied vagy unavailable, akkor megjelenítjük a hibát
-                        errorCallback(error);
-                    }
-                },
-                initialOptions
-            );
-        }
-
-        function startWatching(initialPosition) {
-             const watchOptions = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }; 
-             
-             if (initialPosition) {
-                 // Ha már van pozíció, frissítjük a térképet, mielőtt a watch elindul
-                 updatePosition(initialPosition);
-             }
-             
-             // Elindítjuk a folyamatos figyelést
-             watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, watchOptions);
+        // Fő indítási pont
+        function startGeolocationTracking() {
+            const watchOptions = { 
+                enableHighAccuracy: true, 
+                timeout: 30000, 
+                maximumAge: 0 
+            }; 
+            
+            // Elindítjuk a valós idejű figyelést
+            watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, watchOptions);
         }
         
-        // Fő indítási pont
         window.onload = function() {
             if ("geolocation" in navigator) {
                 showLoading('GPS pozíció keresése...');
-                tryInitialLocation();
+                startGeolocationTracking();
             } else {
                 showError("A böngésző nem támogatja a helymeghatározást.");
             }
