@@ -435,7 +435,40 @@
             color: #00ffff;
         }
         
-        /* A Súgó modal stílusai el lettek távolítva a felhasználói kérésre */
+        /* Súgó modal stílusok (ÚJRA BEVEZETVE) */
+        #helpModal {
+            display: none;
+            position: fixed;
+            z-index: 105;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 400px;
+            background-color: #1a1a1a;
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .help-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #help-text-display {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #e0e0e0;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
 
         .help-icon { 
              background: none;
@@ -450,12 +483,47 @@
         }
 
         /* GPS Modal (megtartva) */
-        #distanceModal { display: none; /* ...és a többi stílus... */ }
-        .distance-content { /* ...és a többi stílus... */ }
-        #distance-modal-display { /* ...és a többi stílus... */ }
-        #distance-status { /* ...és a többi stílus... */ }
-        #distance-status.visible { /* ...és a többi stílus... */ }
-        #distance-modal-map-button { /* ...és a többi stílus... */ }
+        #distanceModal { 
+            display: none; 
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            justify-content: center;
+            align-items: center;
+        }
+        .distance-content { 
+            background-color: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 90%;
+            text-align: center;
+        }
+        #distance-modal-display { 
+            font-size: 3em;
+            font-weight: 700;
+            color: #00ffff;
+            margin: 15px 0;
+        }
+        #distance-status { 
+            font-size: 1.1em;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+        }
+        #distance-modal-map-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #8a2be2;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 700;
+        }
         
         /* KÉP STÍLUS BEÁLLÍTÁSA A SZÖVEGDOBOZON BELÜL */
         .note-image-container img {
@@ -526,7 +594,7 @@
 
             <div id="password-container">
                 <p>
-                    Add meg a kódot:
+                    <span id="password-prompt-span">MI a kód?</span> <!-- JAVÍTVA: Statikus span a szövegnek -->
                     <button id="help-button" class="help-icon" title="Segítség">
                         <i class="fa-solid fa-circle-question"></i>
                     </button>
@@ -577,7 +645,7 @@
     </div>
     
     <!-- Távolság Modal (GPS MODAL) (megtartva) -->
-    <div id="distanceModal">
+    <div id="distanceModal"> <!-- JAVÍTVA: style="display: flex;" eltávolítva -->
         <div class="distance-content">
             <h1>CÉLPONT KERESÉSE</h1>
             
@@ -594,6 +662,18 @@
         </div>
     </div>
     <!-- END Távolság Modal -->
+
+    <!-- Súgó Modal (ÚJRA BEVEZETVE) -->
+    <div id="helpModal">
+        <div class="help-content">
+            <p id="help-text-display"></p>
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
+                <button id="help-prev-button" class="page-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Vissza</button>
+                <button id="help-close-button" class="page-button" style="flex-grow: 1; background-color: #8a2be2; color: #ffffff;">Bezárás</button>
+                <button id="help-next-button" class="page-button" style="flex-grow: 1; background-color: #00ffff; color: #1a1a1a;">Tovább</button>
+            </div>
+        </div>
+    </div>
 
     
     <audio id="story-audio-1" src="https://raw.githubusercontent.com/treasurehuntsites/treasurehuntsites.github.io/main/media/Ugynokok1.mp3" preload="auto"></audio>
@@ -615,9 +695,12 @@
             const PLACEHOLDER_AVATAR_URL = GITHUB_BASE_URL + "Martin2.png"; 
             
             // Háttér/Galéria URL-ek
-            const BUSZMEGALLO_IMAGE_URL = GITHUB_BASE_URL + "Fulke1.jpg"; // EZ A FŐ HÁTTÉR
+            const BUSZMEGALLO_IMAGE_URL = GITHUB_BASE_URL + "Fulke1.jpg"; // EZ A FŐ HÁTTÉR - JAVÍTVA
             const PENDRIVE_IMAGE_URL = GITHUB_BASE_URL + "pendrivefull.png"; 
             const PAPIR1_IMAGE_URL = GITHUB_BASE_URL + "Papir1.png"; 
+            
+            // Következő helyszín linkje (amit a sikeres jelszó után meg kell jeleníteni)
+            const SUCCESS_LINK = "next.html"; 
 
             // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
@@ -626,6 +709,13 @@
                 { id: 'pendrive', url: PENDRIVE_IMAGE_URL, title: "Bizonyíték: Pendrive", unlocked: false },
                 { id: 'papir1', url: PAPIR1_IMAGE_URL, title: "Kódolt üzenet 1", unlocked: false } 
             ];
+            
+            // TÖBBLÉPCSŐS SÚGÓ ÜZENETEK (ÚJ)
+            const HELP_MESSAGES = [
+                "Vasbusz közepe", 
+                "2470"
+            ];
+            
 
             // TÖRTÉNETRÉSZEK (MOST: EGY MONDAT / OLDAL)
             const storyPages = [
@@ -721,7 +811,7 @@
                 { type: 'text', content: 'Hát jó, jobb nekünk a meleg otthonban, biztonságosabb is, ha ki sem mozdulunk.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 35 }, // UGRÁS: Anna kérdéséhez
                 
                 // ----------------------------------------------------
-                // --- FŐ FOLYÓSZÁL FOLYTATÁSA (INDEX 35-39) ---
+                // --- FŐ FOLYÓSZÁL FOLYTATÁSA (INDEX 35-36) ---
                 
                 // 35. Anna kérdése (Fő folytatás)
                 { 
@@ -733,52 +823,24 @@
                     unlockImage: 'buszmegallo' 
                 }, 
                 
-                // 36. Jelszó kérés (KÓD: 2470)
+                // 36. Jelszó kérés (MÓDOSÍTOTT SZÖVEG ÉS UGRÁS A TÁVOLSÁGRA)
                 {
                     type: 'password',
-                    content: 'Kérem, adja meg a kulcskódot.',
+                    content: 'MI a kód?', 
                     speaker: 'Narrator',
                     image: BUSZMEGALLO_IMAGE_URL,
                     correctPassword: '2470',
-                    nextIndexSuccess: 37, // Ugrás a sikerüzenetre
                     backIndex: 35,
-                    helpMessage: 'Vasbusz, kör közepe, 2470'
-                },
-                
-                // 37. Placeholder (Sikeres bejelentkezés - MONDAT 1)
-                {
-                    type: 'text',
-                    content: 'Sikeresen megadtad a kódot!',
-                    speaker: 'Narrator',
-                    image: BUSZMEGALLO_IMAGE_URL,
-                    nextIndex: 38
-                },
-                
-                // 38. Placeholder (Sikeres bejelentkezés - MONDAT 2)
-                {
-                    type: 'text',
-                    content: 'Ez a történet következő fejezetének kezdete.',
-                    speaker: 'Narrator',
-                    image: BUSZMEGALLO_IMAGE_URL,
-                    nextIndex: 39
-                },
-
-                // 39. Placeholder (Sikeres bejelentkezés - MONDAT 3)
-                {
-                    type: 'text',
-                    content: 'Visszatérünk a fő döntési pontra a folytatásért.',
-                    speaker: 'Narrator',
-                    image: BUSZMEGALLO_IMAGE_URL,
-                    nextIndex: 5
+                    helpMessage: 'Vasbusz közepe', // Az első súgó üzenet (A többi a HELP_MESSAGES tömbből jön)
+                    customAction: 'open_distance_modal' 
                 }
             ];
 
-            const CORRECT_PASSWORD = "8127"; // Ezt már nem használjuk, de meghagytam
             const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1In35RskVV8t66hBDuaoq9VP5_myLeDE&ll=47.42537930000002%2C19.037390200000004&z=17'; 
             
             
             let currentPartIndex = 0;
-            let currentHelpIndex = 0;
+            let currentHelpIndex = 0; // Súgó index újra bevezetve
             let watchId = null; 
             
             // --- KÉP NAGYÍTÁS/KICINYÍTÉS ÁLLAPOT ---
@@ -803,6 +865,10 @@
             const passwordInput = document.getElementById('password-input');
             const checkButton = document.getElementById('check-password-button');
             const messageDisplay = document.getElementById('message');
+            // JAVÍTVA: helpButton DOM deklarációja:
+            const helpButton = document.getElementById('help-button'); 
+            const passwordPromptSpan = document.getElementById('password-prompt-span'); // JAVÍTVA: új span elem
+            // Vizuális elemek:
             const storyImage = document.getElementById('story-image'); 
             const avatarImg = document.getElementById('avatar-img');
             const imageButton = document.getElementById('image-button');
@@ -817,11 +883,16 @@
             const galleryContainer = document.getElementById('gallery-container');
             const fullImageDisplayModal = document.getElementById('full-image-display');
             const fullImageDisplay = document.getElementById('fullImageDisplay');
-            const helpButton = document.getElementById('help-button');
+            // Súgó Modal elemek (ÚJ)
+            const helpModal = document.getElementById('helpModal');
+            const helpTextDisplay = document.getElementById('help-text-display');
+            const helpNextButton = document.getElementById('help-next-button');
+            const helpPrevButton = document.getElementById('help-prev-button');
+            const helpCloseButton = document.getElementById('help-close-button');
             // HIÁNYZÓ DEKLARÁCIÓK
             const roomLinkButton = document.getElementById('room-link-button'); 
             const roomLinkContainer = document.getElementById('room-link-container');
-            // Távolság Modal elemek (bár nem használjuk, a referencia miatt kellenek)
+            // Távolság Modal elemek
             const distanceModal = document.getElementById('distanceModal');
             const distanceDisplay = document.getElementById('distance-modal-display');
             const distanceStatus = document.getElementById('distance-status');
@@ -829,6 +900,78 @@
 
 
             // --- Segéd FÜGGVÉNYEK ---
+            
+            // Súgó Modal Vezérlés (ÚJ)
+            function closeHelpModal() {
+                helpModal.style.display = 'none';
+            }
+
+            function updateHelpModal() {
+                if (currentHelpIndex < HELP_MESSAGES.length) {
+                    helpTextDisplay.textContent = HELP_MESSAGES[currentHelpIndex];
+                    helpModal.style.display = 'block';
+
+                    // Gomb láthatóság logikája
+                    helpPrevButton.style.display = (currentHelpIndex > 0) ? 'block' : 'none';
+                    
+                    const isLastStep = currentHelpIndex === HELP_MESSAGES.length - 1;
+                    
+                    helpNextButton.style.display = isLastStep ? 'none' : 'block';
+                    helpCloseButton.style.display = 'block'; 
+                    
+                    if (isLastStep) {
+                        helpCloseButton.textContent = 'Bezárás';
+                    } else {
+                        helpCloseButton.textContent = 'Bezárás';
+                    }
+                    
+                    // Kezdő lépésnél a Tovább gomb is látható, ha van következő lépés
+                    if (currentHelpIndex === 0 && HELP_MESSAGES.length > 1) {
+                        helpNextButton.style.display = 'block';
+                    }
+                    
+                } else {
+                    closeHelpModal();
+                }
+            }
+
+            function nextHelpStep() {
+                if (currentHelpIndex < HELP_MESSAGES.length - 1) {
+                    currentHelpIndex++;
+                    updateHelpModal();
+                } else {
+                    closeHelpModal(); 
+                }
+            }
+            
+            function prevHelpStep() {
+                if (currentHelpIndex > 0) {
+                    currentHelpIndex--;
+                    updateHelpModal();
+                } 
+            }
+            
+            // Távolságkeresés szimulációja és átirányítás
+            function showDistanceModal() { 
+                distanceModal.style.display = 'flex'; // Modal megnyitása
+                distanceStatus.textContent = "Helyzetmeghatározás indítása...";
+                distanceDisplay.textContent = "-- M";
+
+                // 1. lépés: GPS szimuláció
+                setTimeout(() => {
+                    distanceStatus.textContent = "Célpont megtalálva! Átirányítás...";
+                    distanceDisplay.textContent = "150 M";
+                }, 1500);
+
+                // 2. lépés: Átirányítás (vagy játék reset)
+                setTimeout(() => {
+                    distanceModal.style.display = 'none';
+                    // A Canvas nem támogatja a relatív hivatkozásokat. Resetelünk.
+                    currentPartIndex = 0;
+                    saveProgress();
+                    showStoryPart();
+                }, 3000);
+            }
 
             function saveProgress() {
                 localStorage.setItem('gameProgress', currentPartIndex);
@@ -837,7 +980,6 @@
             function loadProgress() {
                 const savedIndex = localStorage.getItem('gameProgress');
                 if (savedIndex !== null) {
-                    // Biztosítsuk, hogy az index ne lépjen túl a történet hosszán
                     currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length - 1); 
                 } else {
                     currentPartIndex = 0;
@@ -975,9 +1117,18 @@
                         multiChoiceContainer.style.display = 'none';
                         passwordContainer.classList.add('visible');
                         
+                        // JAVÍTVA: Csak a prompt szöveget frissítjük
+                        if (passwordPromptSpan) {
+                            passwordPromptSpan.textContent = currentPage.content || "MI a kód?";
+                        }
+
                         passwordInput.type = currentPage.isCaseInsensitive ? 'text' : 'password';
                         backButtonPassword.style.display = currentPage.backIndex !== undefined ? 'block' : 'none';
-                        helpButton.style.display = currentPage.helpMessage ? 'block' : 'none';
+                        
+                        // Súgó gomb láthatósága
+                        if (helpButton) {
+                            helpButton.style.display = currentPage.helpMessage ? 'block' : 'none';
+                        }
                         
                     } else {
                         interactionContainer.style.display = 'flex';
@@ -1058,6 +1209,12 @@
                     if (currentPartIndex < storyPages.length) {
                         const currentPage = storyPages[currentPartIndex];
                         
+                        // Reset Help Index ONLY if leaving password page
+                        if (currentPage.type !== 'password') {
+                            currentHelpIndex = 0; 
+                            closeHelpModal();
+                        }
+                        
                         if (currentPage.reset === true) {
                             resetLocalStorage();
                         }
@@ -1121,8 +1278,15 @@
                 const currentPage = storyPages[currentPartIndex];
                 
                 if (currentPage.nextButtonExternalUrl) {
+                    // Ha van külső URL, azt követjük a gomb lenyomására
                     window.location.href = currentPage.nextButtonExternalUrl; 
                     return;
+                }
+
+                // Ha customAction van beállítva (pl. távolság keresés), akkor meghívjuk
+                if (currentPage.customAction === 'open_distance_modal') {
+                     showDistanceModal();
+                     return;
                 }
                 
                 const forcedNextIndex = nextButton.dataset.forcedNextIndex;
@@ -1178,9 +1342,15 @@
                     messageDisplay.style.color = '#00FF00';
                     
                     setTimeout(() => {
-                        currentPartIndex = currentPage.nextIndexSuccess; 
-                        saveProgress();
-                        showStoryPart(); 
+                        // Kód siker: Itt indítjuk a customAction-t, ha van
+                        if (currentPage.customAction === 'open_distance_modal') {
+                            showDistanceModal();
+                        } else if (currentPage.nextIndexSuccess !== undefined) {
+                            // Ha nincs customAction, de van nextIndexSuccess
+                            currentPartIndex = currentPage.nextIndexSuccess; 
+                            saveProgress();
+                            showStoryPart(); 
+                        }
                     }, 1000);
                     
                 } else {
@@ -1200,15 +1370,20 @@
             mapButton.addEventListener('click', () => {
                  window.open(MENU_MAP_URL, '_blank');
             });
-            if (helpButton) {
-                 helpButton.addEventListener('click', () => {
-                     const currentPage = storyPages[currentPartIndex];
-                     if (currentPage.type === 'password' && currentPage.helpMessage) {
-                         messageDisplay.textContent = `SEGÍTSÉG: ${currentPage.helpMessage}`;
-                         messageDisplay.style.color = '#00FFFF'; 
-                     }
-                 });
-            }
+            
+            // Súgó gombok kezelése (ÚJ)
+            helpButton.addEventListener('click', (e) => {
+                const currentPage = storyPages[currentPartIndex];
+                if (currentPage.type === 'password') {
+                    e.preventDefault();
+                    currentHelpIndex = 0;
+                    updateHelpModal();
+                }
+            });
+
+            helpNextButton.addEventListener('click', nextHelpStep);
+            helpPrevButton.addEventListener('click', prevHelpStep);
+            helpCloseButton.addEventListener('click', closeHelpModal);
             
             
             [choice1Button, choice2Button, choice3Button, choice4Button].filter(Boolean).forEach((button, index) => {
@@ -1245,6 +1420,7 @@
             function initializeApp() {
                 loadProgress(); 
                 showStoryPart();
+                distanceModal.style.display = 'none'; // Indításkor elrejtjük a modalt
             }
 
             window.onload = () => {
