@@ -435,45 +435,8 @@
             color: #00ffff;
         }
         
-        /* Súgó modal (megtartva) */
-        #help-modal { 
-            display: none; 
-            position: fixed;
-            z-index: 102; 
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .help-content { 
-            background-color: #2c2c2c; 
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 400px;
-            width: 90%;
-            border: 2px solid #00ffff;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-            text-align: center;
-        }
-        #help-text-display { 
-            margin-bottom: 20px;
-            font-size: 1.1em;
-            color: #ffffff;
-            font-weight: 400;
-        }
-        #help-next-button { 
-            background-color: #00ffff !important; 
-            color: #1a1a1a !important; 
-        }
-        #help-close-button { 
-            background-color: #555555 !important; 
-            color: #ffffff !important; 
-        }
+        /* A Súgó modal stílusai el lettek távolítva a felhasználói kérésre */
+
         .help-icon { 
              background: none;
              border: none;
@@ -509,7 +472,8 @@
         <!-- Háttérkép (Teljes URL használatával) -->
         <img id="story-image" 
              src="https://treasurehuntsites.github.io/annaesmark/Img/Fulke1.jpg" 
-             alt="Titokzatos jelenet">
+             alt="Titokzatos jelenet"
+             onerror="this.src='https://placehold.co/1280x720/101010/8A2BE2?text=KÉP+HIBA+Fulke1.jpg'"> <!-- Biztonsági placeholder -->
     </div>
 
     <div class="content-box" id="content-box">
@@ -612,16 +576,6 @@
         <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
     </div>
     
-    <div id="help-modal">
-        <div class="help-content">
-            <p id="help-text-display"></p>
-            <div style="display: flex; justify-content: space-between; gap: 10px;">
-                <button id="help-close-button" class="page-button" style="flex-grow: 1; background-color: #555555; color: #ffffff;">Bezárás</button>
-                <button id="help-next-button" class="page-button" style="flex-grow: 1; background-color: #00ffff; color: #1a1a1a; display: none;">Tovább</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Távolság Modal (GPS MODAL) (megtartva) -->
     <div id="distanceModal">
         <div class="distance-content">
@@ -653,148 +607,101 @@
             const GITHUB_BASE_URL = "https://treasurehuntsites.github.io/annaesmark/Img/";
             
             // Avatár URL-ek (a teljes URL-ek a GITHUB_BASE_URL-ből épülnek fel)
-            const MARK_AVATAR_URL = GITHUB_BASE_URL + "Martin2.png"; // Eredeti URL: Martin2.png
-            const ANNA_AVATAR_URL = GITHUB_BASE_URL + "Anna.png"; // Eredeti URL: Anna.png
-            const LUCA_AVATAR_URL = GITHUB_BASE_URL + "Luca.png"; // Eredeti URL: Luca.png
-            const POLICE_AVATAR_URL = GITHUB_BASE_URL + "Rendor.png"; // Eredeti URL: Rendor.png
-            const DAVID_AVATAR_URL = GITHUB_BASE_URL + "David.png"; // Eredeti URL: David.png
-            const PLACEHOLDER_AVATAR_URL = GITHUB_BASE_URL + "Martin2.png"; // Narrátor alapképe
+            const MARK_AVATAR_URL = GITHUB_BASE_URL + "Martin2.png"; 
+            const ANNA_AVATAR_URL = GITHUB_BASE_URL + "Anna.png"; 
+            const LUCA_AVATAR_URL = GITHUB_BASE_URL + "Luca.png"; 
+            const POLICE_AVATAR_URL = GITHUB_BASE_URL + "Rendor.png"; 
+            const DAVID_AVATAR_URL = GITHUB_BASE_URL + "David.png"; 
+            const PLACEHOLDER_AVATAR_URL = GITHUB_BASE_URL + "Martin2.png"; 
             
             // Háttér/Galéria URL-ek
-            const STABLE_IMAGE_URL = GITHUB_BASE_URL + "varoshaza.jpg"; // Alapértelmezett háttér (nem használt)
-            const BUSZMEGALLO_IMAGE_URL = GITHUB_BASE_URL + "Fulke1.jpg"; // FRISSÍTVE: Fülke háttér
+            const BUSZMEGALLO_IMAGE_URL = GITHUB_BASE_URL + "Fulke1.jpg"; // EZ A FŐ HÁTTÉR
             const PENDRIVE_IMAGE_URL = GITHUB_BASE_URL + "pendrivefull.png"; 
-            const PAPIR1_IMAGE_URL = GITHUB_BASE_URL + "Papir1.png"; // ÚJ KÉP
+            const PAPIR1_IMAGE_URL = GITHUB_BASE_URL + "Papir1.png"; 
 
-            // GALÉRIA KÉPEK (RESETELVE)
+            // GALÉRIA KÉPEK
             const ALL_GALLERY_ITEMS = [
-                // ÚJ: Alapértelmezett háttérkép
-                { id: 'buszmegallo', url: BUSZMEGALLO_IMAGE_URL, title: "Helyszín: Kosztolányi Dezső tér", unlocked: true }, // URL FRISSÍTVE
+                // Alapértelmezett háttérkép
+                { id: 'buszmegallo', url: BUSZMEGALLO_IMAGE_URL, title: "Helyszín: Kosztolányi Dezső tér", unlocked: true },
                 { id: 'pendrive', url: PENDRIVE_IMAGE_URL, title: "Bizonyíték: Pendrive", unlocked: false },
-                { id: 'papir1', url: PAPIR1_IMAGE_URL, title: "Kódolt üzenet 1", unlocked: false } // ÚJ GALÉRIA ELEM
+                { id: 'papir1', url: PAPIR1_IMAGE_URL, title: "Kódolt üzenet 1", unlocked: false } 
             ];
 
-            // TÖRTÉNETRÉSZEK (MINDEN MONDAT KÜLÖN RÉSZ)
+            // TÖRTÉNETRÉSZEK (MOST: EGY MONDAT / OLDAL)
             const storyPages = [
                 // --- BEVEZETÉS (INDEX 0-4) --- 
-                // 0. §N Anna és Márk fiatal, de tehetséges ügynökök voltak a titkos nemzetközi hírszerző ügynökségénél, az Árnyékban Járók Szövetségénél (ÁJSZ).
+                // 0. §N Anna és Márk fiatal, de tehetséges ügynökök voltak...
                 { type: 'text', content: 'Anna és Márk fiatal, de tehetséges ügynökök voltak a titkos nemzetközi hírszerző ügynökségénél, az Árnyékban Járók Szövetségénél (ÁJSZ).', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 1 }, 
                 
-                // 1. §N Nemrégiben egy szigorúan titkos művelet részletei szivárogtak ki, és a szövetség szerint egy áruló dolgozik a soraikban. (MÓDOSÍTVA: Narrátor beszél)
+                // 1. §N Nemrégiben egy szigorúan titkos művelet...
                 { type: 'text', content: 'Nemrégiben egy szigorúan titkos művelet részletei szivárogtak ki, és a szövetség szerint egy áruló dolgozik a soraikban.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 2 }, 
                 
-                // 2. §A Az ügy neve: „Árnyék Projekt”. (MÓDOSÍTVA: Anna beszél)
+                // 2. §A Az ügy neve: „Árnyék Projekt”.
                 { type: 'text', content: 'Az ügy neve: „Árnyék Projekt”.', speaker: 'Anna', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 3 }, 
                 
-                // 3. §N Egy bűnszervezet tervet szőtt, hogy átvágva a kormányok biztonsági rendszereit, feltörjék a világ titkos adatbázisait. (Splitted)
+                // 3. §N Egy bűnszervezet tervet szőtt...
                 { type: 'text', content: 'Egy bűnszervezet tervet szőtt, hogy átvágva a kormányok biztonsági rendszereit, feltörjék a világ titkos adatbázisait.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 4 }, 
                 
-                // 4. §N A szövetség információkat szerzett arról... (ugrás a választáshoz)
+                // 4. §N A szövetség információkat szerzett arról...
                 { type: 'text', content: 'A szövetség információkat szerzett arról, hogy a kulcsfontosságú adatok kódokba rejtve szétszórva vannak a város különböző pontjain.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 5 }, 
                 
-                // 5. VÁLASZTÁS PONT (A fenti szöveg utáni döntés)
+                // 5. VÁLASZTÁS PONT (FŐ DÖNTÉS)
                 { 
                     type: 'choice', 
                     content: '', 
                     speaker: 'Narrator', 
                     image: BUSZMEGALLO_IMAGE_URL, 
                     choices: [
-                        { text: 'Siessünk válaszokat találni', nextIndex: 31 }, // <-- EZ AZ UGRÁS A CÉL
-                        { text: 'Utána járunk a hely részletesebb történetének', nextIndex: 6 } // Path 2: Narratíva
-                    ]
+                        { text: 'Siessünk válaszokat találni', nextIndex: 35 }, // UGRÁS: KÓD FELÉ -> 35
+                        { text: 'Utána járunk a hely részletesebb történetének', nextIndex: 6 } // UGRÁS: TÖRTÉNETRE
+                    ],
+                    backIndex: 4
                 },
                 
-                // --- PATH 2: Utána járunk a hely részletesebb történetének (INDEX 6-18) --- 
-                // 6. §N A Kosztolányi Dezső tér mindig is különös hely volt a város szívében. (Splitted)
+                // --- PATH 2: A HELY TÖRTÉNETE (INDEX 6-18) --- 
                 { type: 'text', content: 'A Kosztolányi Dezső tér mindig is különös hely volt a város szívében.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 7 }, 
-                
-                // 7. §N Zajos, forgalmas, mégis mintha valami láthatatlan aura lengené körbe. (Splitted)
                 { type: 'text', content: 'Zajos, forgalmas, mégis mintha valami láthatatlan aura lengené körbe.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 8 }, 
-                
-                // 8. §N Az emberek sietve haladtak el mellette... (Already split)
                 { type: 'text', content: 'Az emberek sietve haladtak el mellette, de kevesen figyeltek fel arra a furcsa, elhagyatott pincére a Bukarest utca és az Ulaszló utca sarkán.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 9 }, 
-                
-                // 9. §N A helyiek csak „Sűlyesztőnek" nevezték. (Splitted)
                 { type: 'text', content: 'A helyiek csak „Sűlyesztőnek" nevezték.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 10 }, 
-                
-                // 10. §N Egy régi, használaton kívüli buszvégállomás mellett volt, kopott homlokzattal és a múlt porától beborított ablakokkal, melyeket gyakran nyitva találtak az arra járó figyelmesebb emberek. (Splitted)
                 { type: 'text', content: 'Egy régi, használaton kívüli buszvégállomás mellett volt, kopott homlokzattal és a múlt porától beborított ablakokkal, melyeket gyakran nyitva találtak az arra járó figyelmesebb emberek.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 11 }, 
-                
-                // 11. §N Sokan mondták, hogy az állomás valójában sosem működött. (Splitted)
                 { type: 'text', content: 'Sokan mondták, hogy az állomás valójában sosem működött.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 12 }, 
-                
-                // 12. §N Hogy miért épült meg, senki sem tudta biztosan. (Splitted)
                 { type: 'text', content: 'Hogy miért épült meg, senki sem tudta biztosan.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 13 }, 
-                
-                // 13. §N Csak a pletykák jártak, miszerint az épület és a környező pincék a város régi titkait rejtik, és hogy aki elég bátor, az akár válaszokat is találhat. (Splitted)
                 { type: 'text', content: 'Csak a pletykák jártak, miszerint az épület és a környező pincék a város régi titkait rejtik, és hogy aki elég bátor, az akár válaszokat is találhat.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 14 }, 
-                
-                // 14. §N Egyszer egy borongós őszi délutánon két barát, Dávid és Luca, a térre tévedt. (Splitted)
                 { type: 'text', content: 'Egyszer egy borongós őszi délutánon két barát, Dávid és Luca, a térre tévedt.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 15 }, 
-                
-                // 15. §N Mindketten rajongtak a rejtélyekért, és Dávid pont most olvasott egy régi cikket a Buszvégállomásról, amely szerint az egyik épületben titkos alagutak találhatók. (Splitted)
                 { type: 'text', content: 'Mindketten rajongtak a rejtélyekért, és Dávid pont most olvasott egy régi cikket a Buszvégállomásról, amely szerint az egyik épületben titkos alagutak találhatók.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 16 }, 
-                
-                // 16. §D Luca, gondolj bele. (Splitted) - DÁVID BESZÉL
                 { type: 'text', content: 'Luca, gondolj bele.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 17 }, 
-                
-                // 17. §D Ha igaz, hogy alagút húzódik az épületek alatt, lehet, hogy a háború idejéből maradt meg. (Splitted)
                 { type: 'text', content: 'Ha igaz, hogy alagút húzódik az épületek alatt, lehet, hogy a háború idejéből maradt meg.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 18 }, 
-                
-                // 18. §D Talán egy rejtekhely volt. (Splitted)
                 { type: 'text', content: 'Talán egy rejtekhely volt.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 19 }, // Ugrás a belső döntéshez
                 
-                // 19. BELSŐ VÁLASZTÁS PONT: (Megnéznétek a pincét?)
+                // 19. BELSŐ VÁLASZTÁS PONT (DÁVID/LUCA DÖNTÉSE)
                 { 
                     type: 'choice', 
                     content: '', 
                     speaker: 'Narrator', 
                     image: BUSZMEGALLO_IMAGE_URL, 
                     choices: [
-                        { text: 'Megnéznénk a pincét', nextIndex: 22 }, // Megnéznénk a pincét
-                        { text: 'Fontosabb a küldetés', nextIndex: 29 } // Ugrás Dávid/Luca párbeszédére
-                    ]
+                        { text: 'Megnéznénk a pincét', nextIndex: 20 }, // UGRÁS: PINCE
+                        { text: 'Fontosabb a küldetés', nextIndex: 33 } // UGRÁS: KÜLDETÉS FONTOSABB
+                    ],
+                    backIndex: 18
                 },
 
                 // ----------------------------------------------------
-                // --- PATH: PINCE MEGTEKINTÉSE (INDEX 22-28) ---
-                // 22. §L Vagy csak egy romos pince...
-                { type: 'text', content: 'Vagy csak egy romos pince, amiben patkányok laknak. De nézzük meg, úgyis unatkozom.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 23 }, 
+                // --- PATH: PINCE MEGTEKINTÉSE (INDEX 20-32) ---
+                { type: 'text', content: 'Vagy csak egy romos pince, amiben patkányok laknak.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 21 }, 
+                { type: 'text', content: 'De nézzük meg, úgyis unatkozom.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 22 }, 
+                { type: 'text', content: 'Odabent az idő megállni látszott.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 23 }, 
+                { type: 'text', content: 'Egymás mellett sorban faajtók raktárnak látszó helyiséget takartak, de az egyik ajtó nyitva volt.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 24 }, 
+                { type: 'text', content: 'A hely nagyrészt üres volt.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 25 }, 
+                { type: 'text', content: 'A falakon a pince régi, fakó térképe lógott, amelyek olyan folyosókat mutattak, amelyek már rég nem léteztek.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 26 }, 
+                { type: 'text', content: 'Az asztalokon megsárgult papírlapok hevertek, tele kézírással, amit nehéz volt kiolvasni.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 27 }, 
+                { type: 'text', content: 'Luca egy régi, nyikorgó számzáras ládikót nyitott ki a kód be volt már tekerve, és egy vastag könyvet talált benne.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 28 }, 
+                { type: 'text', content: 'A borítóján egyetlen szó állt: "Útvonal".', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 29 }, 
+                { type: 'text', content: 'Add ide, megnézem. Lehet, hogy a régi alagutakról szól.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 30 }, 
+                { type: 'text', content: 'Ahogy Dávid átlapozta a könyvet, egy rejtett zseb bukkant elő az egyik oldalán.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 31 }, 
+                { type: 'text', content: 'A zsebben egy kódolt üzenet volt, rajta a szöveg:', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 32 }, 
                 
-                // 23. §N Odabent az idố megállni látszott...
-                { type: 'text', content: 'Odabent az idő megállni látszott. Egymás mellett sorban faajtók raktárnak látszó helyiséget takartak, de az egyik ajtó nyitva volt. A hely nagyrészt üres volt.', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 24 }, 
-                
-                // 24. §N A falakon a pince régi, fakó térképe... (SPLIT PART 1)
-                { 
-                    type: 'text', 
-                    content: 'A falakon a pince régi, fakó térképe lógott, amelyek olyan folyosókat mutattak, amelyek már rég nem léteztek. Az asztalokon megsárgult papírlapok hevertek, tele kézírással, amit nehéz volt kiolvasni.', 
-                    speaker: 'Narrator', 
-                    image: BUSZMEGALLO_IMAGE_URL, 
-                    nextIndex: 25 // Ugrás a 25-ös új oldalra
-                }, 
-                
-                // 25. §N Luca egy régi, nyikorgó számzáras ládikót... (Beillesztve - Kézzel biztosított lépés)
-                { 
-                    type: 'text', 
-                    content: 'Luca egy régi, nyikorgó számzáras ládikót nyitott ki a kód be volt már tekerve, és egy vastag könyvet talált benne. A borítóján egyetlen szó állt: "Útvonal".', 
-                    speaker: 'Narrator', 
-                    image: BUSZMEGALLO_IMAGE_URL, 
-                    nextIndex: 26 
-                }, 
-                
-                // 26. §D Add ide, megnézem... (Beillesztve - Kézzel biztosított lépés)
-                { 
-                    type: 'text', 
-                    content: 'Add ide, megnézem. Lehet, hogy a régi alagutakról szól.', 
-                    speaker: 'David', 
-                    image: BUSZMEGALLO_IMAGE_URL, 
-                    nextIndex: 27 // Ugrás a rejtett zseb megtalálására
-                }, 
-                
-                // 27. §N Ahogy Dávid átlapozta a könyvet...
-                { type: 'text', content: 'Ahogy Dávid átlapozta a könyvet, egy rejtett zseb bukkant elő az egyik oldalán. A zsebben egy kódolt üzenet volt, rajta a szöveg:', speaker: 'Narrator', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 28 }, 
-                
-                // 28. §N KÓD/FOLYATÁS - EGYEDI KÉP/GALÉRIA FELOLDÁSA
+                // 32. KÉP/GALÉRIA FELOLDÁSA
                 { 
                     type: 'note_image', 
                     content: '', 
@@ -803,70 +710,72 @@
                     noteImageUrl: PAPIR1_IMAGE_URL, 
                     unlockImage: 'papir1', 
                     nextButtonText: 'Tovább', 
-                    nextIndex: 31, // Ugrás Anna kérdésére
-                    backIndex: 27 
+                    nextIndex: 35, // UGRÁS: Anna kérdésére
+                    backIndex: 31 
                 },
                 
                 // ----------------------------------------------------
-                // --- PATH: Fontosabb a küldetés (INDEX 29-30) ---
+                // --- KÜLDETÉS FONTOSABB ÁG (INDEX 33-34) ---
                 
-                // 29. §D Á hagyjuk, inkább hazamennék...
-                { type: 'text', content: 'Á hagyjuk, inkább hazamennék, fázom ebben a nyirkos időben.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 30 }, 
-
-                // 30. §L Hát jó, jobb nekünk a meleg otthonban...
-                { type: 'text', content: 'Hát jó, jobb nekünk a meleg otthonban, biztonságosabb is, ha ki sem mozdulunk.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 31 }, // Vissza Anna kérdéséhez
+                { type: 'text', content: 'Á hagyjuk, inkább hazamennék, fázom ebben a nyirkos időben.', speaker: 'David', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 34 }, 
+                { type: 'text', content: 'Hát jó, jobb nekünk a meleg otthonban, biztonságosabb is, ha ki sem mozdulunk.', speaker: 'Luca', image: BUSZMEGALLO_IMAGE_URL, nextIndex: 35 }, // UGRÁS: Anna kérdéséhez
                 
                 // ----------------------------------------------------
-                // --- FŐ FOLYÓSZÁL FOLYTATÁSA (INDEX 31-33) ---
+                // --- FŐ FOLYÓSZÁL FOLYTATÁSA (INDEX 35-39) ---
                 
-                // 31. ÚJ OLDAL: Anna kérdése (Fő folytatás)
+                // 35. Anna kérdése (Fő folytatás)
                 { 
                     type: 'text', 
                     content: 'Na most merre tovább?', 
                     speaker: 'Anna', 
                     image: BUSZMEGALLO_IMAGE_URL, 
-                    nextIndex: 32, // MÓDOSÍTVA: Kódkérő oldalra
-                    unlockImage: 'buszmegallo' // A galéria feloldás itt van megerősítve
+                    nextIndex: 36, // UGRÁS: Kódkérő oldalra
+                    unlockImage: 'buszmegallo' 
                 }, 
                 
-                // 32. ÚJ OLDAL: Jelszó kérés (KÓD: 2470)
+                // 36. Jelszó kérés (KÓD: 2470)
                 {
                     type: 'password',
                     content: 'Kérem, adja meg a kulcskódot.',
                     speaker: 'Narrator',
                     image: BUSZMEGALLO_IMAGE_URL,
                     correctPassword: '2470',
-                    nextIndexSuccess: 33, // Ugrás a placeholderre
-                    backIndex: 31,
+                    nextIndexSuccess: 37, // Ugrás a sikerüzenetre
+                    backIndex: 35,
                     helpMessage: 'Vasbusz, kör közepe, 2470'
                 },
                 
-                // 33. ÚJ OLDAL: Placeholder (A sikeres bejelentkezés utáni oldal)
+                // 37. Placeholder (Sikeres bejelentkezés - MONDAT 1)
                 {
                     type: 'text',
-                    content: 'Sikeresen megadtad a kódot! Ez a történet következő fejezetének kezdete. Visszatérünk a fő döntési pontra a folytatásért.',
+                    content: 'Sikeresen megadtad a kódot!',
+                    speaker: 'Narrator',
+                    image: BUSZMEGALLO_IMAGE_URL,
+                    nextIndex: 38
+                },
+                
+                // 38. Placeholder (Sikeres bejelentkezés - MONDAT 2)
+                {
+                    type: 'text',
+                    content: 'Ez a történet következő fejezetének kezdete.',
+                    speaker: 'Narrator',
+                    image: BUSZMEGALLO_IMAGE_URL,
+                    nextIndex: 39
+                },
+
+                // 39. Placeholder (Sikeres bejelentkezés - MONDAT 3)
+                {
+                    type: 'text',
+                    content: 'Visszatérünk a fő döntési pontra a folytatásért.',
                     speaker: 'Narrator',
                     image: BUSZMEGALLO_IMAGE_URL,
                     nextIndex: 5
                 }
             ];
 
-            const CORRECT_PASSWORD = "8127"; 
+            const CORRECT_PASSWORD = "8127"; // Ezt már nem használjuk, de meghagytam
             const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1In35RskVV8t66hBDuaoq9VP5_myLeDE&ll=47.42537930000002%2C19.037390200000004&z=17'; 
             
-            // SEGÍTSÉG ADATOK (tartalék)
-            const HELP_MESSAGES = [
-                "A kód négy számjegy."
-            ];
-            
-            // GPS ADATOK (tartalék)
-            const COMPASS_LAT = 47.426785; 
-            const COMPASS_LON = 19.037315; 
-            const COMPASS_RADIUS = 25; 
-            const SUCCESS_LINK = "next.html"; 
-            const GPS_MODAL_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1In35RskVV8t66hBDuaoq9VP5_myLeDE&ll=47.42537930000002%2C19.037390200000004&z=17';
-            // ------------------------------------
-
             
             let currentPartIndex = 0;
             let currentHelpIndex = 0;
@@ -909,15 +818,15 @@
             const fullImageDisplayModal = document.getElementById('full-image-display');
             const fullImageDisplay = document.getElementById('fullImageDisplay');
             const helpButton = document.getElementById('help-button');
-            const helpModal = document.getElementById('help-modal');
-            const helpTextDisplay = document.getElementById('help-text-display');
-            const helpNextButton = document.getElementById('help-next-button');
-            const helpCloseButton = document.getElementById('help-close-button'); 
+            // HIÁNYZÓ DEKLARÁCIÓK
+            const roomLinkButton = document.getElementById('room-link-button'); 
+            const roomLinkContainer = document.getElementById('room-link-container');
+            // Távolság Modal elemek (bár nem használjuk, a referencia miatt kellenek)
             const distanceModal = document.getElementById('distanceModal');
             const distanceDisplay = document.getElementById('distance-modal-display');
             const distanceStatus = document.getElementById('distance-status');
-            const roomLinkButton = document.getElementById('room-link-button'); 
-            const roomLinkContainer = document.getElementById('room-link-container'); 
+            const distanceModalMapButton = document.getElementById('distance-modal-map-button');
+
 
             // --- Segéd FÜGGVÉNYEK ---
 
@@ -928,14 +837,14 @@
             function loadProgress() {
                 const savedIndex = localStorage.getItem('gameProgress');
                 if (savedIndex !== null) {
-                    currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length - 1); // Max az utolsó indexre ugorjon
+                    // Biztosítsuk, hogy az index ne lépjen túl a történet hosszán
+                    currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length - 1); 
                 } else {
                     currentPartIndex = 0;
                 }
             }
             
             function stopAllAudio() {
-                // Megállítja és visszatekeri az összes audiót
                 storyAudio1.pause();
                 storyAudio1.currentTime = 0;
                 playAudioButton1.innerHTML = "▶️ Lejátszás (1)";
@@ -961,9 +870,7 @@
             function populateGallery() {
                 galleryContainer.innerHTML = ''; 
                 
-                // Gyűjtse össze az összes feloldott galéria elemet a localStorage-ből
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => {
-                    // Képek ellenőrzése a mentett állapot alapján
                     const isUnlocked = localStorage.getItem(`is${item.id.charAt(0).toUpperCase() + item.id.slice(1)}Unlocked`) === 'true';
                     return item.unlocked || isUnlocked;
                 });
@@ -1022,21 +929,6 @@
                 history.pushState(null, null, '#gallery');
             }
             
-            // SÚGÓ FUNKCIÓK
-            function closeHelpModal() {
-                helpModal.style.display = 'none';
-            }
-
-            function showHelpMessage() {
-                const currentPage = storyPages[currentPartIndex];
-                if (currentPage.type !== 'password' || !currentPage.helpMessage) return;
-
-                // A súgó gomb csak jelszó oldalon látszik
-                helpTextDisplay.textContent = currentPage.helpMessage;
-                helpModal.style.display = 'flex';
-                
-            }
-
             // --- TÖRTÉNET/INTERAKCIÓ FUNKCIÓK ---
 
             function updateButtons() {
@@ -1044,13 +936,12 @@
                 multiChoiceContainer.style.display = 'none'; 
                 passwordContainer.classList.remove('visible');
                 discreetBackButton.style.display = 'none'; 
-                roomLinkContainer.style.display = 'none'; 
+                roomLinkContainer.style.display = 'none';
                 
-                // Visszaállítjuk a gombokat az alapértelmezett állapotukra (szekvenciális nézet)
                 nextButton.classList.remove('full-width'); 
                 interactionContainer.style.justifyContent = 'space-between';
                 prevButton.style.display = 'block'; 
-                prevButton.disabled = currentPartIndex === 0; // Az első oldal le van tiltva
+                prevButton.disabled = currentPartIndex === 0; 
 
                 if (currentPartIndex < storyPages.length) {
                     const currentPage = storyPages[currentPartIndex];
@@ -1058,11 +949,9 @@
                     const isChoicePage = currentPage.type === 'choice';
                     const isPasswordPage = currentPage.type === 'password';
                     const isNoteImage = currentPage.type === 'note_image';
-                    const hasExternalUrl = currentPage.nextButtonExternalUrl !== undefined; 
 
                     
                     if (isChoicePage) {
-                         // CHOICE PAGE LOGIC 
                         interactionContainer.style.display = 'none';
                         multiChoiceContainer.style.display = 'flex';
                         discreetBackButton.style.display = 'flex';
@@ -1076,58 +965,30 @@
                                 button.style.display = 'block';
                                 button.textContent = choices[index].text;
                                 button.dataset.nextIndex = choices[index].nextIndex;
-                                if (choices[index].externalUrl) {
-                                    button.dataset.externalUrl = choices[index].externalUrl;
-                                } else {
-                                    delete button.dataset.externalUrl;
-                                }
                             } else {
                                 button.style.display = 'none';
                             }
                         });
 
                     } else if (isPasswordPage) {
-                        // PASSWORD PAGE LOGIC
                         interactionContainer.style.display = 'none';
                         multiChoiceContainer.style.display = 'none';
                         passwordContainer.classList.add('visible');
                         
-                        // Jelszó input típusa
                         passwordInput.type = currentPage.isCaseInsensitive ? 'text' : 'password';
-                        
-                        // Vissza gomb megjelenítése, ha van backIndex
                         backButtonPassword.style.display = currentPage.backIndex !== undefined ? 'block' : 'none';
-                        // Súgó gomb megjelenítése, ha van helpMessage
                         helpButton.style.display = currentPage.helpMessage ? 'block' : 'none';
                         
                     } else {
-                        // SEQUENTIAL PAGE / NOTE PAGE / TEXT LOGIC
                         interactionContainer.style.display = 'flex';
                         
                         const customText = currentPage.nextButtonText;
                         const nextIndexDefined = currentPage.nextIndex !== undefined;
                         
-                        if (customText) {
-                            nextButton.textContent = customText;
-                        } else {
-                            nextButton.textContent = 'Tovább';
-                        }
-                        
+                        nextButton.textContent = customText || 'Tovább';
                         nextButton.dataset.forcedNextIndex = nextIndexDefined ? currentPage.nextIndex : '';
-                        nextButton.dataset.externalUrl = hasExternalUrl ? currentPage.nextButtonExternalUrl : '';
 
-                        // A vissza gombot elrejtjük, ha nincs backIndex
-                        if (currentPage.backIndex === undefined && currentPartIndex > 0) {
-                            // Normál szekvenciális
-                            prevButton.disabled = currentPartIndex === 0;
-                        } else if (currentPage.backIndex !== undefined) {
-                            // Note Image, ahol van Back gomb
-                             prevButton.disabled = false;
-                        } else {
-                            prevButton.disabled = currentPartIndex === 0;
-                        }
-                        
-                        // NOTE_IMAGE specifikus kezelés
+                        // Vissza gomb logika note_image esetén
                         if (isNoteImage) {
                             if (currentPage.backIndex !== undefined) {
                                 nextButton.classList.remove('full-width'); 
@@ -1137,6 +998,10 @@
                                 nextButton.classList.add('full-width'); 
                                 prevButton.style.display = 'none'; 
                             }
+                        } else {
+                            // Normál szekvenciális oldalak
+                            prevButton.style.display = 'block'; 
+                            prevButton.disabled = currentPartIndex === 0;
                         }
                     }
 
@@ -1149,18 +1014,17 @@
                 let avatarUrl = PLACEHOLDER_AVATAR_URL;
                 let opacity = 1;
                 
-                if (speaker === 'Mark' || speaker === 'M') { // M for Márk
+                if (speaker === 'Mark' || speaker === 'M') { 
                     avatarUrl = MARK_AVATAR_URL;
-                } else if (speaker === 'Anna' || speaker === 'A') { // A for Anna
+                } else if (speaker === 'Anna' || speaker === 'A') { 
                     avatarUrl = ANNA_AVATAR_URL;
-                } else if (speaker === 'Luca' || speaker === 'L') { // L for Luca
+                } else if (speaker === 'Luca' || speaker === 'L') { 
                     avatarUrl = LUCA_AVATAR_URL; 
-                } else if (speaker === 'Police' || speaker === 'R') { // R for Rendőr
+                } else if (speaker === 'Police' || speaker === 'R') { 
                     avatarUrl = POLICE_AVATAR_URL;
-                } else if (speaker === 'David' || speaker === 'D') { // D for Dávid
+                } else if (speaker === 'David' || speaker === 'D') { 
                     avatarUrl = DAVID_AVATAR_URL;
-                } else { // Narrator/Nincs avatar/N/other
-                    // Narrátor esetén eltüntetjük (opacity 0)
+                } else { 
                     avatarUrl = PLACEHOLDER_AVATAR_URL; 
                     opacity = 0; 
                 }
@@ -1171,7 +1035,6 @@
             
             function resetLocalStorage() {
                 localStorage.clear();
-                // A galéria alapképeinek (ha vannak) feloldását nullázzuk.
                 ALL_GALLERY_ITEMS.forEach(item => {
                     localStorage.removeItem(`is${item.id.charAt(0).toUpperCase() + item.id.slice(1)}Unlocked`);
                 });
@@ -1182,7 +1045,6 @@
             function showStoryPart() {
                 messageDisplay.textContent = ''; 
                 passwordInput.value = ''; 
-                currentHelpIndex = 0; // Súgó index resetelése minden oldalváltáskor
                 contentBox.style.opacity = 0;
 
                 setTimeout(() => {
@@ -1191,26 +1053,21 @@
                     audioContainer2.style.display = 'none';
                     storyDisplay.innerHTML = ''; 
                     
-                    passwordContainer.classList.remove('visible'); // Mindig rejtsd el alapból
+                    passwordContainer.classList.remove('visible'); 
 
                     if (currentPartIndex < storyPages.length) {
                         const currentPage = storyPages[currentPartIndex];
                         
-                        // §RESET FELDOLGOZÁSA (Ha van)
                         if (currentPage.reset === true) {
                             resetLocalStorage();
                         }
                         
-                        // Kép eltávolítás logikája (§NG)
                         if (currentPage.removeImage) {
                             localStorage.removeItem(`is${currentPage.removeImage.charAt(0).toUpperCase() + currentPage.removeImage.slice(1)}Unlocked`);
-                            console.log(`Kép eltávolítva: ${currentPage.removeImage}`);
                         }
 
-                        // Kép feloldási logikája (§G)
                         if (currentPage.unlockImage) {
                             localStorage.setItem(`is${currentPage.unlockImage.charAt(0).toUpperCase() + currentPage.unlockImage.slice(1)}Unlocked`, 'true');
-                            console.log(`Kép feloldva: ${currentPage.unlockImage}`);
                         }
                         
                         updateAvatar(currentPartIndex); 
@@ -1223,7 +1080,6 @@
                         
                         // NOTE IMAGE TÍPUS KEZELÉSE
                         if (currentPage.type === 'note_image' && currentPage.noteImageUrl) {
-                            // Tartalom (szöveg + kép) hozzáadása. A keretet a CSS-ből vettem ki.
                             const imageHtml = `
                                 <div class="note-image-container" style="text-align: center; margin-top: 15px;">
                                     <img src="${currentPage.noteImageUrl}" alt="Kódolt üzenet" 
@@ -1236,7 +1092,6 @@
                         // Kép betöltése, háttérkép
                         const imageUrl = currentPage.image || BUSZMEGALLO_IMAGE_URL;
                         if (storyImage.src !== imageUrl) {
-                            // Csak akkor cseréljük a src-t, ha más, hogy ne zavarjuk a böngészőt.
                             storyImage.src = imageUrl; 
                         }
                         
@@ -1255,38 +1110,21 @@
             
             // --- ESEMÉNYKEZELŐK ---
             
-            // Modal bezárás a böngésző visszanyíllal
-            window.addEventListener('popstate', function(event) {
-                 // Az alapértelmezett viselkedés megmarad
-            });
-
-            // Zoom-in/out
             fullImageDisplay.addEventListener('dblclick', (e) => {
                  e.preventDefault();
                  toggleZoom();
             });
             
-            // openFullImage funkció globális elérhetővé tétele
             window.openFullImage = openFullImage;
 
             nextButton.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
                 
-                // KÜLSŐ URL KEZELÉSE
                 if (currentPage.nextButtonExternalUrl) {
                     window.location.href = currentPage.nextButtonExternalUrl; 
                     return;
                 }
                 
-                // EGYEDI AKCIÓ (GPS) (nincs használva)
-                if (currentPage && currentPage.customAction === 'open_distance_modal') {
-                    stopAllAudio();
-                    localStorage.removeItem('gameProgress'); 
-                    // showDistanceModal(); 
-                    return;
-                }
-                
-                // Ugrás a következő oldalra
                 const forcedNextIndex = nextButton.dataset.forcedNextIndex;
                 if (forcedNextIndex !== undefined && forcedNextIndex !== '') {
                     currentPartIndex = parseInt(forcedNextIndex);
@@ -1298,15 +1136,12 @@
                 showStoryPart();
             });
 
-            // Szekvenciális oldalak normál "Vissza" gombjának eseménykezelője
             prevButton.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
                 
-                // BACKINDEX (ha van)
                 if (currentPage.backIndex !== undefined) {
                     currentPartIndex = currentPage.backIndex;
                 } else if (currentPartIndex > 0) {
-                    // Normál lépés vissza
                     currentPartIndex--;
                 }
                 
@@ -1342,7 +1177,6 @@
                     messageDisplay.textContent = 'Kód elfogadva!';
                     messageDisplay.style.color = '#00FF00';
                     
-                    // Ugrás a sikeres oldalra
                     setTimeout(() => {
                         currentPartIndex = currentPage.nextIndexSuccess; 
                         saveProgress();
@@ -1362,7 +1196,6 @@
                 }
             });
             
-            // Audio/Menü eseménykezelők
             imageButton.addEventListener('click', openGallery);
             mapButton.addEventListener('click', () => {
                  window.open(MENU_MAP_URL, '_blank');
@@ -1370,27 +1203,19 @@
             if (helpButton) {
                  helpButton.addEventListener('click', () => {
                      const currentPage = storyPages[currentPartIndex];
-                     // A súgó gomb csak jelszó oldalon látszik
                      if (currentPage.type === 'password' && currentPage.helpMessage) {
-                         showHelpMessage();
+                         messageDisplay.textContent = `SEGÍTSÉG: ${currentPage.helpMessage}`;
+                         messageDisplay.style.color = '#00FFFF'; 
                      }
                  });
             }
-            if (helpNextButton) {
-                 // A helpNextButton most már csak bezárásként működik
-                 helpNextButton.addEventListener('click', closeHelpModal);
-            }
-            if (helpCloseButton) {
-                 helpCloseButton.addEventListener('click', closeHelpModal);
-            }
             
-            // Choice button eseménykezelők
+            
             [choice1Button, choice2Button, choice3Button, choice4Button].filter(Boolean).forEach((button, index) => {
                 button.addEventListener('click', (e) => {
                     const currentPage = storyPages[currentPartIndex];
                     const chosenChoice = currentPage.choices ? currentPage.choices[index] : null;
 
-                    // KÜLSŐ LINK KEZELÉSE
                     if (chosenChoice && chosenChoice.externalUrl) {
                         window.open(chosenChoice.externalUrl, '_blank');
                     }
@@ -1404,15 +1229,12 @@
                 });
             });
 
-            // Diszkrét Vissza gomb eseménykezelő
             discreetBackButton.addEventListener('click', () => {
-                // Visszakeresi a legutolsó nem-választó oldalt
                 let targetIndex = currentPartIndex - 1;
                 while (targetIndex > 0 && storyPages[targetIndex].type === 'choice') {
                     targetIndex--;
                 }
                 
-                // Mivel az utolsó lépés a választás volt, a cél az előtte lévő szövegoldal.
                 currentPartIndex = targetIndex; 
 
                 saveProgress();
