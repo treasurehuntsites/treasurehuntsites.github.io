@@ -632,7 +632,8 @@
     
     <!-- MODAL elemek (megtartva) -->
     <div id="galleryModal">
-      <span class="close-gallery" onclick="history.back();">×</span>
+      <!-- Módosítva a kérés szerint, history.back() helyett closeGallery() -->
+      <span class="close-gallery" onclick="closeGallery();">×</span>
       <div id="gallery-container">
       </div>
     </div>
@@ -641,7 +642,8 @@
         <div class="full-image-content">
             <img id="fullImageDisplay" src="" alt="Nagyított kép" />
         </div>
-        <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
+        <!-- Módosítva a kérés szerint, history.back() helyett closeFullImageDisplay() -->
+        <span class="close-gallery" style="z-index: 120;" onclick="closeFullImageDisplay();">×</span>
     </div>
     
     <!-- Távolság Modal (GPS MODAL) (megtartva) -->
@@ -859,6 +861,25 @@
             const distanceStatus = document.getElementById('distance-status');
             const distanceModalMapButton = document.getElementById('distance-modal-map-button');
 
+            // --- GALÉRIA / KÉP BEZÁRÁS FUNKCIÓK (Közvetlenül a modált zárják be) ---
+            
+            function closeGallery() {
+                galleryModal.style.display = 'none';
+                // Eltávolítjuk az URL hash-t, hogy ne legyen visszalépés
+                if (window.location.hash === '#gallery') {
+                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                }
+            }
+
+            function closeFullImageDisplay() {
+                fullImageDisplayModal.style.display = 'none';
+                // Eltávolítjuk az URL hash-t, hogy ne legyen visszalépés
+                if (window.location.hash === '#full-image') {
+                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                }
+            }
+            window.closeGallery = closeGallery;
+            window.closeFullImageDisplay = closeFullImageDisplay;
 
             // --- VALÓDI GPS FUNKCIÓK (A MINTAFÁJL STÍLUSÁBAN) ---
 
@@ -896,10 +917,10 @@
                     
                     // Játék reset szimulálva (a következő fejezet helyett)
                     setTimeout(() => {
-                         distanceModal.style.display = 'none';
-                         currentPartIndex = 0;
-                         saveProgress();
-                         showStoryPart();
+                            distanceModal.style.display = 'none';
+                            currentPartIndex = 0;
+                            saveProgress();
+                            showStoryPart();
                     }, 1500);
                 }
             }
@@ -1031,13 +1052,13 @@
                 
                 fullImageDisplayModal.style.display = 'flex'; 
                 galleryModal.style.display = 'none'; 
-                history.pushState(null, null, '#full-image');
+                history.pushState(null, null, '#full-image'); // URL hash hozzáadása
             }
             
             function openGallery() {
                 populateGallery(); 
                 galleryModal.style.display = "block";
-                history.pushState(null, null, '#gallery');
+                history.pushState(null, null, '#gallery'); // URL hash hozzáadása
             }
 
             // Súgó Modal Vezérlés
@@ -1252,8 +1273,8 @@
                             const imageHtml = `
                                 <div class="note-image-container" style="text-align: center; margin-top: 15px;">
                                     <img src="${currentPage.noteImageUrl}" alt="Kódolt üzenet" 
-                                         style="max-width: 100%; height: auto; border-radius: 5px; cursor: pointer;"
-                                         onclick="openFullImage('${currentPage.noteImageUrl}')">
+                                        style="max-width: 100%; height: auto; border-radius: 5px; cursor: pointer;"
+                                        onclick="openFullImage('${currentPage.noteImageUrl}')">
                                 </div>`;
                             storyDisplay.innerHTML += imageHtml;
                         }
