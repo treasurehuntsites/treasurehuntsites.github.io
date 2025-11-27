@@ -226,7 +226,7 @@
                 setupTarget(userLat, userLon); 
                 trackingStarted = true;
                 
-                // === JAVÍTÁS: Ikonok létrehozása itt, miután a Leaflet (L) biztosan betöltődött ===
+                // Ikonok létrehozása itt, miután a Leaflet (L) biztosan betöltődött
                 userIcon = L.divIcon({ className: 'user-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
                 targetIcon = L.divIcon({ className: 'target-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
                 startPointIcon = L.divIcon({ 
@@ -235,7 +235,6 @@
                     iconSize: [28, 28],
                     iconAnchor: [14, 14]
                 });
-                // =================================================================================
 
                 // Térkép inicializálása
                 map = L.map('map').setView(userCoords, 18); // Magas zoom a körökhöz
@@ -298,7 +297,8 @@
                     message = "Pozíció nem elérhető! Próbálj jobb vételű helyre menni.";
                     break;
                 case error.TIMEOUT:
-                    message = "Pozíció lekérdezés túllépte az időkeretet.";
+                    // Ez a hiba az emelt időkeret ellenére is előfordulhat
+                    message = "Pozíció lekérdezés túllépte az időkeretet (15 mp). Rossz vétel, vagy helymeghatározási szolgáltatás kikapcsolva?";
                     break;
             }
             document.getElementById('status-info').innerHTML = `<span class="distance-warning">${message}</span>`;
@@ -308,7 +308,8 @@
         // Fő indítási logika
         window.onload = function() {
             if ("geolocation" in navigator) {
-                const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+                // IDŐKERET EMELÉSE 5000-ről 15000-re (15 másodperc)
+                const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }; 
                 // Elindítjuk a folyamatos követést
                 watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, options);
             } else {
