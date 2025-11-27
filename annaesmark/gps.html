@@ -43,7 +43,27 @@
         .distance-info { font-size: 1.3em; font-weight: bold; color: #007bff; margin-top: 5px; }
         .distance-warning { color: #ef4444; font-weight: bold; animation: pulse 1s infinite; }
         .status-info { color: #059669; font-weight: 500; }
-
+        
+        /* ÚJ: GPS keresési animáció */
+        .searching-status {
+            color: #059669; 
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        .loading-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #059669;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: dot-pulse 1s infinite;
+        }
+        @keyframes dot-pulse {
+            0% { transform: scale(0.5); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.5); opacity: 0.5; }
+        }
         /* Animáció az átirányítási figyelmeztetéshez */
         @keyframes pulse {
             0% { transform: scale(1); opacity: 1; }
@@ -67,7 +87,10 @@
         <p>A térkép a kezdeti pozíciódtól számított köröket és a közeledő célpontot mutatja. Mozdulj el a ponttól, hogy lásd a mozgást!</p>
         
         <div class="info-box">
-            <div id="status-info" class="status-info">Várjuk a GPS pozíciót... (Engedélyezd a helymeghatározást)</div>
+            <div id="status-info" class="searching-status">
+                Várjuk a GPS pozíciót... (Engedélyezd a helymeghatározást) 
+                <span class="loading-dot"></span>
+            </div>
             <div id="distance-info" class="distance-info"></div>
         </div>
 
@@ -270,8 +293,12 @@
             userMarker.setLatLng(userCoords);
             targetMarker.setLatLng([targetPos.lat, targetPos.lon]);
             map.setView(userCoords, map.getZoom(), {animate: true}); 
+            
+            // Ha sikeresen meglett a pozíció, eltüntetjük a loading animációt
+            const statusElement = document.getElementById('status-info');
+            statusElement.className = 'status-info'; // Visszaállítjuk az alap stílusra
+            statusElement.textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
 
-            document.getElementById('status-info').textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
             document.getElementById('distance-info').innerHTML = 
                 `Távolság a közeledő célponttól: **${formattedDistance} m**`;
 
@@ -311,6 +338,13 @@
         // Fő indítási logika
         window.onload = function() {
             if ("geolocation" in navigator) {
+                // Kezdeti állapot beállítása a betöltésjelzővel
+                 document.getElementById('status-info').innerHTML = `
+                    Várjuk a GPS pozíciót... (Engedélyezd a helymeghatározást) 
+                    <span class="loading-dot"></span>
+                 `;
+                 document.getElementById('status-info').className = 'searching-status';
+
                 // IDŐKERET 30000-re (30 másodperc)
                 const options = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }; 
                 // Elindítjuk a folyamatos követést
