@@ -44,26 +44,39 @@
         .distance-warning { color: #ef4444; font-weight: bold; animation: pulse 1s infinite; }
         .status-info { color: #059669; font-weight: 500; }
         
-        /* ÚJ: GPS keresési animáció */
-        .searching-status {
-            color: #059669; 
-            font-weight: 700;
+        /* ÚJ: Teljes képernyős betöltésjelző */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
             display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            z-index: 1000;
+            font-size: 1.5rem;
+            color: #1e3a8a;
+            transition: opacity 0.3s;
         }
-        .loading-dot {
-            height: 8px;
-            width: 8px;
-            background-color: #059669;
+
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #0ea5e9;
             border-radius: 50%;
-            margin-left: 8px;
-            animation: dot-pulse 1s infinite;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            margin-bottom: 20px;
         }
-        @keyframes dot-pulse {
-            0% { transform: scale(0.5); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(0.5); opacity: 0.5; }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
+
         /* Animáció az átirányítási figyelmeztetéshez */
         @keyframes pulse {
             0% { transform: scale(1); opacity: 1; }
@@ -82,15 +95,18 @@
 </head>
 <body>
 
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-message">GPS pozíció keresése...</p>
+        <p style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">(Kérlek, engedélyezd a helymeghatározást és várj, amíg a telefonod befogja a jelet.)</p>
+    </div>
+
     <div class="container">
         <h1>🧭 GPS Követés & Mozgó Célpont</h1>
         <p>A térkép a kezdeti pozíciódtól számított köröket és a közeledő célpontot mutatja. Mozdulj el a ponttól, hogy lásd a mozgást!</p>
         
         <div class="info-box">
-            <div id="status-info" class="searching-status">
-                Várjuk a GPS pozíciót... (Engedélyezd a helymeghatározást) 
-                <span class="loading-dot"></span>
-            </div>
+            <div id="status-info" class="status-info">Inaktív.</div>
             <div id="distance-info" class="distance-info"></div>
         </div>
 
@@ -103,7 +119,6 @@
         const START_DISTANCE_METERS = 50;               // Célpont kezdeti távolsága (50m)
         const REDIRECT_RADIUS_METERS = 10;              // Átirányítási küszöb (10m)
         const TARGET_SPEED_KPH = 5;                     // Célpont sebessége (5 km/h)
-        // Sebesség m/s-ban: (5000 / 3600)
         const TARGET_SPEED_MPS = TARGET_SPEED_KPH * 1000 / 3600; 
 
         const CIRCLE_INTERVAL_METERS = 5;               // Körök közötti távolság (5m-ként)
@@ -120,37 +135,45 @@
         let targetDirection;        
         let trackingStarted = false;
         let circles = [];           
-        let watchId;                // GPS követési azonosító
+        let watchId = null;         // GPS követési azonosító
 
-        // Egyedi ikonok definiálása (L.divIcon a Leaflet-hez) - Ezeket csak a változókat deklaráljuk itt
-        let userIcon;
-        let targetIcon;
-        let startPointIcon;
+        // Ikonváltozók
+        let userIcon, targetIcon, startPointIcon;
         
+        // --- Segédfüggvények a loading overlay kezelésére ---
+        function showLoading(message) {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            document.getElementById('loading-message').textContent = message;
+            document.getElementById('status-info').textContent = 'Keresés indítva...';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('status-info').innerHTML = `<span class="distance-warning">${message}</span>`;
+        }
+
         // --- 2. Geometriai függvények (GPS számítások) ---
-        
-        // Konvertálás radiánra és fokra
         function toRad(deg) { return deg * (Math.PI / 180); }
         function toDeg(rad) { return rad * (180 / Math.PI); }
-
-        // Haversine távolságszámítás (méterben)
+        
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Föld sugara méterben
+            const R = 6371e3; 
             const dLat = toRad(lat2 - lat1);
             const dLon = toRad(lon2 - lon1);
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                       Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // Távolság méterben
+            return R * c; 
         }
 
-        // Új pozíció számítása távolságra és irányra egy ponttól
         function calculateNewPosition(lat, lon, distanceMeters, bearing) {
             const R = 6371e3; 
             const dist = distanceMeters / R; 
             const brng = toRad(bearing);
-
             const lat1 = toRad(lat);
             const lon1 = toRad(lon);
 
@@ -162,7 +185,6 @@
             return { lat: toDeg(lat2), lon: toDeg(lon2) };
         }
 
-        // Két pont közötti irány számítása (bearing fokban)
         function calculateBearing(lat1, lon1, lat2, lon2) {
             const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
             const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
@@ -170,11 +192,9 @@
             return (toDeg(Math.atan2(y, x)) + 360) % 360; 
         }
 
-        // --- 3. Vizuális elemek rajzolása ---
-
-        // Körök rajzolása a kezdeti pozíció (userStartPos) körül
+        // --- 3. Vizuális elemek rajzolása és Mozgatás Logikája (a többi változatlan) ---
         function drawCircles(centerLat, centerLon) {
-            // Töröljük a régi köröket
+             // ... (a drawCircles függvény tartalma változatlan)
             circles.forEach(circle => map.removeLayer(circle));
             circles = [];
 
@@ -182,7 +202,7 @@
                 const isRedirectZone = (r === REDIRECT_RADIUS_METERS);
                 
                 const circle = L.circle([centerLat, centerLon], {
-                    color: isRedirectZone ? '#ef4444' : '#a855f7', // Piros a 10m-es zónánál, Lila egyébként
+                    color: isRedirectZone ? '#ef4444' : '#a855f7', 
                     fillColor: isRedirectZone ? '#fca5a5' : '#e9d5ff',
                     fillOpacity: isRedirectZone ? 0.2 : 0.1,
                     radius: r,
@@ -190,7 +210,6 @@
                     dashArray: isRedirectZone ? '5, 5' : null 
                 }).addTo(map);
                 
-                // Felirat a körre (10m-es és 50m-es körön)
                 if (r % 10 === 0 || isRedirectZone) {
                      circle.bindTooltip(`${r} m`, { permanent: true, direction: "center", className: 'leaflet-tooltip-distance' });
                 }
@@ -198,159 +217,151 @@
             }
         }
 
-        // --- 4. Célpont Mozgatás Logikája ---
-
-        // Célpont kezdeti pozíciójának beállítása (50m-re a felhasználótól)
         function setupTarget(userLat, userLon) {
-            // Véletlen irány a kezdőponttól
             const randomBearing = Math.random() * 360; 
-            
-            // Célpont kezdő pozíciója 50m-re a userStartPos-tól
             targetPos = calculateNewPosition(userLat, userLon, START_DISTANCE_METERS, randomBearing);
-            
-            // Irány (bearing) a célpontból a kezdeti pozíció felé
             targetDirection = calculateBearing(targetPos.lat, targetPos.lon, userLat, userLon);
-            
             lastTargetUpdateTime = Date.now();
         }
 
-        // Célpont mozgatása (a userStartPos felé 5 km/h sebességgel)
         function moveTarget() {
             const now = Date.now();
             const deltaTimeMs = now - lastTargetUpdateTime;
             lastTargetUpdateTime = now;
-
-            // Kiszámítjuk, mennyi távolságot tett meg m/s sebességgel az eltelt idő alatt
             const distanceMoved = TARGET_SPEED_MPS * (deltaTimeMs / 1000); 
-
-            // Megállítjuk a célpontot, ha már elérte a kezdeti pontot
             let currentDistToStart = calculateDistance(targetPos.lat, targetPos.lon, userStartPos.lat, userStartPos.lon);
             if (currentDistToStart <= 0.1) { 
                 targetPos.lat = userStartPos.lat;
                 targetPos.lon = userStartPos.lon;
                 return;
             }
-
-            // Kiszámítjuk a célpont új pozícióját
             const newPos = calculateNewPosition(targetPos.lat, targetPos.lon, distanceMoved, targetDirection);
             targetPos.lat = newPos.lat;
             targetPos.lon = newPos.lon;
         }
 
-        // --- 5. GPS pozíció frissítése és fő logika ---
+        // --- 4. GPS pozíció frissítése és fő logika ---
         function updatePosition(position) {
             const userLat = position.coords.latitude;
             const userLon = position.coords.longitude;
             const userCoords = [userLat, userLon];
 
-            // Kezdeti beállítások (csak egyszer fut le az első sikeres GPS lekéréskor)
             if (!trackingStarted) {
                 userStartPos = { lat: userLat, lon: userLon };
                 setupTarget(userLat, userLon); 
                 trackingStarted = true;
                 
-                // Ikonok létrehozása itt, miután a Leaflet (L) biztosan betöltődött
+                // Ikonok létrehozása
                 userIcon = L.divIcon({ className: 'user-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
                 targetIcon = L.divIcon({ className: 'target-icon', iconSize: [22, 22], iconAnchor: [11, 11] });
-                startPointIcon = L.divIcon({ 
-                    className: 'start-point-icon', 
-                    html: '<div></div>',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
+                startPointIcon = L.divIcon({ className: 'start-point-icon', html: '<div></div>', iconSize: [28, 28], iconAnchor: [14, 14] });
 
                 // Térkép inicializálása
-                map = L.map('map').setView(userCoords, 18); // Magas zoom a körökhöz
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 19
-                }).addTo(map);
+                map = L.map('map').setView(userCoords, 18);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
-                // Kezdőpont jelölő (fix, zöld)
-                startPointMarker = L.marker([userStartPos.lat, userStartPos.lon], { icon: startPointIcon, title: "Kezdeti Pozíciód" }).addTo(map)
-                    .bindPopup("Ez a Kezdeti Pozíciód (FIX CÉLPONTJA a mozgó pontnak)").openPopup();
+                // Jelölők hozzáadása
+                startPointMarker = L.marker([userStartPos.lat, userStartPos.lon], { icon: startPointIcon, title: "Kezdeti Pozíciód" }).addTo(map).bindPopup("Ez a Kezdeti Pozíciód (FIX CÉLPONTJA a mozgó pontnak)").openPopup();
+                userMarker = L.marker(userCoords, { icon: userIcon, title: "Jelenlegi Pozíciód" }).addTo(map).bindPopup("Jelenlegi Pozíciód").openPopup();
+                targetMarker = L.marker([targetPos.lat, targetPos.lon], { icon: targetIcon, title: "Mozgó Célpont" }).addTo(map).bindPopup("Mozgó Célpont (50m-ről indul, 5 km/h sebességgel a kezdeti pont felé)").openPopup();
 
-                // Felhasználó aktuális pozíciójának jelölője (piros)
-                userMarker = L.marker(userCoords, { icon: userIcon, title: "Jelenlegi Pozíciód" }).addTo(map)
-                    .bindPopup("Jelenlegi Pozíciód").openPopup();
-                
-                // Célpont jelölő (kék)
-                targetMarker = L.marker([targetPos.lat, targetPos.lon], { icon: targetIcon, title: "Mozgó Célpont" }).addTo(map)
-                    .bindPopup("Mozgó Célpont (50m-ről indul, 5 km/h sebességgel a kezdeti pont felé)").openPopup();
-
-                // Körök rajzolása a kezdeti pozíció körül
                 drawCircles(userStartPos.lat, userStartPos.lon);
+                hideLoading(); // Elrejtjük a loading overlay-t
             }
 
-            // 1. Célpont mozgatása
             moveTarget();
 
-            // 2. Távolság számítása: Célpont aktuális pozíciója ÉS a Te aktuális pozíciód között
             const distance = calculateDistance(userLat, userLon, targetPos.lat, targetPos.lon);
             const formattedDistance = distance.toFixed(1);
 
-            // 3. Térkép és jelölők frissítése
             userMarker.setLatLng(userCoords);
             targetMarker.setLatLng([targetPos.lat, targetPos.lon]);
             map.setView(userCoords, map.getZoom(), {animate: true}); 
             
-            // Ha sikeresen meglett a pozíció, eltüntetjük a loading animációt
-            const statusElement = document.getElementById('status-info');
-            statusElement.className = 'status-info'; // Visszaállítjuk az alap stílusra
-            statusElement.textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('status-info').className = 'status-info'; 
+            document.getElementById('status-info').textContent = `GPS pozíció utoljára frissítve: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('distance-info').innerHTML = `Távolság a közeledő célponttól: **${formattedDistance} m**`;
 
-            document.getElementById('distance-info').innerHTML = 
-                `Távolság a közeledő célponttól: **${formattedDistance} m**`;
-
-            // 4. Átirányítási logika
             if (distance <= REDIRECT_RADIUS_METERS) {
                 document.getElementById('distance-info').innerHTML = `<span class="distance-warning">10 méteres körzetbe ért a célpont! Átirányítás a ${REDIRECT_URL} címre...</span>`;
                 // window.location.href = REDIRECT_URL; // Éles átirányítás
                 alert(`ÁTIRÁNYÍTÁS! A célpont távolsága: ${distance.toFixed(1)} m. (A funkció fut.)`);
                 navigator.geolocation.clearWatch(watchId); 
             }
-
-            console.log(`Pozíció frissítve: ${userLat.toFixed(5)}, Célpont: ${targetPos.lat.toFixed(5)}. Távolság: ${formattedDistance} m`);
         }
 
-        // --- 6. Hiba kezelése és Indítás ---
+        // --- 5. Hiba kezelés és Indítás ---
         function errorCallback(error) {
-            let message = "Hiba a GPS-szel! Kérlek engedélyezd a helymeghatározást és próbálj újra.";
+            // Megállítjuk a folyamatos követést, ha hiba van
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+
+            hideLoading();
+            let message;
             
-            // Explicit naplózás a hiba beazonosításához, még ha az objektum üres is
             const consoleMsg = `GPS Error Code: ${error.code} | Message: ${error.message || 'Nincs üzenet.'}`;
             
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message = "Engedély megtagadva! (Hibakód: 1). Kérlek, ellenőrizd a böngésző és a telefon/táblagép helymeghatározási beállításait.";
+                    message = "Engedély megtagadva! (Hibakód: 1). Kérlek, engedélyezd a helymeghatározást a böngésző beállításaiban.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    message = "Pozíció nem elérhető! (Hibakód: 2). Gyenge GPS vétel (pl. beltér) vagy kikapcsolt helymeghatározási szolgáltatás.";
+                    message = "Pozíció nem elérhető! (Hibakód: 2). Gyenge GPS vétel vagy kikapcsolt helymeghatározás.";
                     break;
                 case error.TIMEOUT:
-                    message = "Pozíció lekérdezés túllépte az időkeretet (30 mp). (Hibakód: 3). Kérlek, helyezkedj el jobb vételű helyen (pl. szabadban).";
+                    message = "Pozíció lekérdezés túllépte az időkeretet! (Hibakód: 3). Próbálj szabadban lenni.";
                     break;
+                default:
+                    message = `Ismeretlen GPS hiba (Kód: ${error.code}).`;
             }
-            document.getElementById('status-info').innerHTML = `<span class="distance-warning">${message}</span>`;
-            console.error(consoleMsg, error); // Naplózzuk a részleteket
+            showError(message);
+            console.error(consoleMsg, error);
+        }
+
+        // Kétlépcsős inicializáló logika
+        function tryInitialLocation() {
+            // Próbáljuk meg egyszer, 20 másodpercig
+            const initialOptions = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }; 
+
+            navigator.geolocation.getCurrentPosition(
+                // Siker: Azonnal elkezdjük a folyamatos figyelést
+                (position) => {
+                    // console.log("Sikerült az egyszeri lekérés, indul a figyelés.");
+                    startWatching(position);
+                },
+                // Hiba
+                (error) => {
+                    if (error.code === error.TIMEOUT) {
+                        // Ha az egyszeri lekérés timeoutolt, azonnal elindítjuk a watchPosition-t 30 másodperccel
+                        showLoading('Hosszú keresés... Folyamatos figyelés indítása.');
+                        startWatching(null);
+                    } else {
+                        // Ha permission denied vagy unavailable, akkor megjelenítjük a hibát
+                        errorCallback(error);
+                    }
+                },
+                initialOptions
+            );
+        }
+
+        function startWatching(initialPosition) {
+             const watchOptions = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }; 
+             
+             if (initialPosition) {
+                 // Ha már van pozíció, frissítjük a térképet, mielőtt a watch elindul
+                 updatePosition(initialPosition);
+             }
+             
+             // Elindítjuk a folyamatos figyelést
+             watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, watchOptions);
         }
         
-        // Fő indítási logika
+        // Fő indítási pont
         window.onload = function() {
             if ("geolocation" in navigator) {
-                // Kezdeti állapot beállítása a betöltésjelzővel
-                 document.getElementById('status-info').innerHTML = `
-                    Várjuk a GPS pozíciót... (Engedélyezd a helymeghatározást) 
-                    <span class="loading-dot"></span>
-                 `;
-                 document.getElementById('status-info').className = 'searching-status';
-
-                // IDŐKERET 30000-re (30 másodperc)
-                const options = { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }; 
-                // Elindítjuk a folyamatos követést
-                watchId = navigator.geolocation.watchPosition(updatePosition, errorCallback, options);
+                showLoading('GPS pozíció keresése...');
+                tryInitialLocation();
             } else {
-                document.getElementById('status-info').innerHTML = `<span class="distance-warning">A böngésző nem támogatja a helymeghatározást.</span>`;
+                showError("A böngésző nem támogatja a helymeghatározást.");
             }
         };
 
