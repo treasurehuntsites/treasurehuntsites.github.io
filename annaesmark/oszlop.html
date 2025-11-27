@@ -17,6 +17,7 @@
             height: 100%; 
             overflow-x: hidden;
             overflow-y: auto; 
+            background-color: #1a1a1a !important; /* FIX: Erős fekete háttér */
         }
 
         /* Amikor egy modal nyitva van, a főoldal görgetését letiltjuk */
@@ -35,7 +36,7 @@
             padding: 0;
             font-family: 'Play', sans-serif;
             color: #e0e0e0; 
-            background-color: #1a1a1a !important; /* FIX: Erősebb háttérszín a fehér elkerülésére */
+            background-color: #1a1a1a !important; /* FIX: Erős fekete háttér */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -89,7 +90,7 @@
             display: flex; 
             flex-direction: column;
             justify-content: space-between; 
-            opacity: 1; 
+            opacity: 1; /* FIX: Alapértelmezetten látható! */
             transition: opacity 0.5s ease-in-out;
         }
 
@@ -193,7 +194,7 @@
         /* Diszkrét Vissza Gomb - CSAK CHOICE ESETEKBEN */
         .discreet-back-button {
             position: absolute;
-            /* FIX: kicsit lejjebb vesszük, hogy látszódjon */
+            /* FIX: Lejjebb pozícionálva, hogy látszódjon */
             top: 10px; 
             left: 10px;
             z-index: 30; 
@@ -297,7 +298,7 @@
         /* Avatar kép */
         .avatar-image {
             position: absolute;
-            /* FIX: Lejjebb pozícionálva, hogy a content-box tetejéhez illeszkedjen */
+            /* FIX: Lejjebb pozícionálva, hogy látszódjon */
             top: -30px; 
             left: 10px; 
             width: 70px; 
@@ -558,7 +559,7 @@
             <i class="fa-solid fa-arrow-left"></i>
         </button>
         
-        <p id="story-text-display"></p>
+        <p id="story-text-display">Betöltés...</p>
         
         <div id="audio-container-1" class="audio-container" style="display:none;">
              <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
@@ -637,7 +638,8 @@
     
     <!-- MODAL elemek (megtartva) -->
     <div id="galleryModal">
-      <span class="close-gallery" onclick="history.back();">×</span>
+      <!-- FIX: Bezárás JS-sel, nem history.back()-kel -->
+      <span class="close-gallery" onclick="closeGalleryModal();">×</span>
       <div id="gallery-container">
       </div>
     </div>
@@ -646,7 +648,8 @@
         <div class="full-image-content">
             <img id="fullImageDisplay" src="" alt="Nagyított kép" />
         </div>
-        <span class="close-gallery" style="z-index: 120;" onclick="history.back();">×</span>
+        <!-- FIX: Bezárás JS-sel, nem history.back()-kel -->
+        <span class="close-gallery" style="z-index: 120;" onclick="closeFullImageModal();">×</span>
     </div>
     
     <!-- Távolság Modal (GPS MODAL) (megtartva) -->
@@ -717,61 +720,60 @@
                 "5 jegyű számkód" 
             ];
             
-            // TÖRTÉNETRÉSZEK (Indexelés 1-től 22-ig)
+            // TÖRTÉNETRÉSZEK (Indexelés 1-től 23-ig, 4 és 5 null)
             const storyPages = [
-                // Index 0: Ezt sosem használjuk, a 1-től indulunk
+                // Index 0: Ezt sosem használjuk
                 { type: 'text', content: 'Kezdő oldal. Kattints a Tovább gombra az induláshoz.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 1 },
 
-                // 1. Dialogue 1 (Eredeti 37)
+                // 1. Dialogue 1
                 { type: 'text', content: 'Szép munka volt Anna! Megszerezted a gránátot is?', speaker: 'Mark', image: OSZLOP_IMAGE_URL, nextIndex: 2 }, 
-                // 2. Dialogue 2 (Eredeti 38)
+                // 2. Dialogue 2
                 { type: 'text', content: 'Igen, megvan! Meleg helyzet volt!', speaker: 'Anna', image: OSZLOP_IMAGE_URL, nextIndex: 3 },
-                // 3. FŐ DÖNTÉS 2.0 (Eredeti 39)
+                // 3. FŐ DÖNTÉS
                 { type: 'choice', content: 'És most hogyan tovább?', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, 
                     choices: [
-                        { text: 'Gyorsan tovább álltok, nehogy valakibe belebotoljatok', nextIndex: 4 }, // Eredeti 4
-                        { text: 'Körülnéztek az oszlop környékén', nextIndex: 6 } // Eredeti 6
+                        { text: 'Körülnéztek az oszlop környékén', nextIndex: 6 } 
                     ],
                     backIndex: 2
                 },
-                // 4. TEMPORARY END A (Eredeti 4)
-                // FRISSÍTVE: Visszaugrik az 1. oldalra (Márk párbeszéd)
-                { type: 'text', content: 'Menjünk tovább, nehogy belefussunk véletlenül az ellenségbe.', speaker: 'Narrator', image: FULKE1_IMAGE_URL, nextIndex: 1 }, 
-                
-                // 6. COLUMN STORY B1 - Körülnézés az oszlopnál (Eredeti 6)
-                // TARTALOM ELLENŐRZÖTTEN HELYES: A rozoga oszlopon lévő szám...
+                // 4. (UNUSED/SKIP) - Null placeholder
+                null,
+                // 5. (UNUSED/SKIP) - Null placeholder
+                null,
+
+                // 6. COLUMN STORY B1
                 { type: 'text', content: 'A rozoga oszlopon lévő szám, évtizedek óta ott rozsdásodott a Kosztolányi Dezső tér egyik félreeső sarkában.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 7 },
-                // 7. COLUMN STORY B2 (Eredeti 7)
+                // 7. COLUMN STORY B2
                 { type: 'text', content: 'Látszólag nem volt jelentősége, mégis, amikor Anna és Márk egy kellemes őszi délután a téren sétálva megpillantották, valami furcsa érzés fogta el őket.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 8 },
-                // 8. COLUMN STORY B3 (Eredeti 8)
+                // 8. COLUMN STORY B3
                 { type: 'text', content: 'A szám szinte hívogatta őket, hogy felfedjék a történetét.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 9 },
-                // 9. COLUMN DIALOGUE M1 (Eredeti 9)
+                // 9. COLUMN DIALOGUE M1
                 { type: 'text', content: 'Miért van egy szám egy oszlopon? Ráadásul ilyen nagy? – töprengett Márk, miközben megérintette az oszlop fáját.', speaker: 'Mark', image: OSZLOP_IMAGE_URL, nextIndex: 10 },
-                // 10. COLUMN DIALOGUE A1 (Eredeti 10)
+                // 10. COLUMN DIALOGUE A1
                 { type: 'text', content: 'Lehet, hogy csak egy régi azonosító, talán a villamosvonalhoz tartozott” – válaszolt Anna, aki történészként mindig szeretett felfedezni elfeledett részleteket a város múltjából.', speaker: 'Anna', image: OSZLOP_IMAGE_URL, nextIndex: 11 },
-                // 11. COLUMN DISCOVERY N1 (Eredeti 11)
+                // 11. COLUMN DISCOVERY N1
                 { type: 'text', content: 'Ahogy közelebbről megnézték az oszlopot, Anna észrevett egy finom, alig látható karcolást a szám alatt.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 12 },
-                // 12. COLUMN DISCOVERY N2 (Eredeti 12)
+                // 12. COLUMN DISCOVERY N2
                 { type: 'text', content: 'A fa mélyén egy nyíl formájú jel látszott, amely lefelé mutatott.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 13 }, 
-                // 13. COLUMN DIALOGUE M2 (Eredeti 13)
+                // 13. COLUMN DIALOGUE M2
                 { type: 'text', content: 'Ez itt biztos nem véletlen – mondta Márk, és a nyíl irányát követve az oszlop tövében egy apró fémlapot találtak a földbe ágyazva.', speaker: 'Mark', image: OSZLOP_IMAGE_URL, nextIndex: 14 },
-                // 14. COLUMN DISCOVERY N3 (Eredeti 14)
+                // 14. COLUMN DISCOVERY N3
                 { type: 'text', content: 'A fémlapra egyetlen szót véstek: „Kövess.”', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 15 },
-                // 15. COLUMN DIALOGUE M3 (Eredeti 15)
+                // 15. COLUMN DIALOGUE M3
                 { type: 'text', content: '„Ez egy játék?” – kérdezte Márk, izgatottság csillogott a szemében.', speaker: 'Mark', image: OSZLOP_IMAGE_URL, nextIndex: 16 },
-                // 16. COLUMN DIALOGUE A2 (Eredeti 16)
+                // 16. COLUMN DIALOGUE A2
                 { type: 'text', content: 'Vagy talán valami több. Nézzük meg, hová vezet – felelte Anna.', speaker: 'Anna', image: OSZLOP_IMAGE_URL, nextIndex: 17 },
-                // 17. COLUMN DISCOVERY N4 (Eredeti 17)
+                // 17. COLUMN DISCOVERY N4
                 { type: 'text', content: 'A fémlapon még egy nyíl látszott, amely az egyik közeli járdaszegély felé mutatott.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 18 },
-                // 18. COLUMN N5 (Eredeti 18)
+                // 18. COLUMN N5
                 { type: 'text', content: 'Anna és Márk elindultak, követve a nyílakat.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 19 },
-                // 19. COLUMN N6 (Eredeti 19)
+                // 19. COLUMN N6
                 { type: 'text', content: 'A nyomok egy elhagyatott, omladozó épülethez vezettek, amelyről Anna azonnal tudta, hogy egy régi villamoskarbantartó műhely lehetett.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 20 }, 
-                // 20. COLUMN N7 (Eredeti 20)
+                // 20. COLUMN N7
                 { type: 'text', content: 'Az épület ajtaján egy rozsdás számzáras lakat lógott.', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 21 },
-                // 21. Márk jelszó felvezetés (Eredeti 21)
+                // 21. Márk jelszó felvezetés
                 { type: 'text', content: 'Ez túl egyszerű – jegyezte meg Márk.', speaker: 'Mark', image: OSZLOP_IMAGE_URL, nextIndex: 22 },
-                // 22. NEW PASSWORD GATE (GATE 2) (Eredeti 22)
+                // 22. NEW PASSWORD GATE (GATE 2)
                 { 
                     type: 'password', content: 'A kód nem lehet más, mint az oszlopnál talált szám.', 
                     speaker: 'Narrator', image: OSZLOP_IMAGE_URL,
@@ -779,13 +781,21 @@
                     helpMessages: HELP_MESSAGES_26690, 
                     nextIndexSuccess: 23 
                 },
-                // 23. NEXT SECTION PLACEHOLDER (Eredeti 22 Loop)
-                { type: 'text', content: 'Kód elfogadva. A titkos műhely tárva-nyitva áll. Készen álltok a behatolásra!', speaker: 'Narrator', image: OSZLOP_IMAGE_URL, nextIndex: 23 }
+                // 23. GPS TRIGGER PAGE (A kód elfogadása után ide jön, és azonnal aktiválja a modált, a tartalom rejtve marad.)
+                { 
+                    type: 'text', 
+                    content: 'Kód elfogadva! A titkos műhely tárva-nyitva áll. Készen álltok a behatolásra!', 
+                    speaker: 'Narrator', 
+                    image: OSZLOP_IMAGE_URL, 
+                    nextButtonText: 'Célpont keresése (GPS)',
+                    customAction: 'open_distance_modal', 
+                    nextIndex: 23 
+                }
 
             ];
 
             
-            let currentPartIndex = 0;
+            let currentPartIndex = 1; // FIX: Indulás az 1-es indexnél
             let currentHelpIndex = 0;
             let watchId = null; 
             
@@ -875,7 +885,7 @@
                     
                     setTimeout(() => {
                          distanceModal.style.display = 'none';
-                         currentPartIndex = 1; 
+                         currentPartIndex = 1; // Állítsuk be a következő indexet, amit a GPS elérése után szeretnénk
                          saveProgress();
                          showStoryPart();
                     }, 1500);
@@ -953,6 +963,16 @@
                     buttonElement.innerHTML = `▶️ Lejátszás (${buttonText})`;
                 }
             }
+            
+            // Modál bezáró függvények hozzáadása
+            window.closeGalleryModal = function() {
+                galleryModal.style.display = 'none';
+            }
+
+            window.closeFullImageModal = function() {
+                fullImageDisplayModal.style.display = 'none';
+            }
+
 
             // GALÉRIA FUNKCIÓK
             function populateGallery() {
@@ -960,7 +980,7 @@
                 
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => {
                     const isUnlocked = localStorage.getItem(`is${item.id.charAt(0).toUpperCase() + item.id.slice(1)}Unlocked`) === 'true';
-                    return item.unlocked || isUnlocked;
+                    return item.unlocked || item.unlockedByDefault; // Hozzáadtuk az alapértelmezett nyitást
                 });
 
                 visibleItems.forEach((image) => {
@@ -1008,13 +1028,13 @@
                 
                 fullImageDisplayModal.style.display = 'flex'; 
                 galleryModal.style.display = 'none'; 
-                history.pushState(null, null, '#full-image');
             }
+            
+            window.openFullImage = openFullImage; // Globális elérhetőség
             
             function openGallery() {
                 populateGallery(); 
                 galleryModal.style.display = "block";
-                history.pushState(null, null, '#gallery');
             }
 
             // Súgó Modal Vezérlés
@@ -1086,7 +1106,7 @@
                 prevButton.style.display = 'block'; 
                 prevButton.disabled = currentPartIndex === 1; // Kezdő index 1
 
-                if (currentPartIndex < storyPages.length) {
+                if (currentPartIndex < storyPages.length && storyPages[currentPartIndex] !== null) {
                     const currentPage = storyPages[currentPartIndex];
                     
                     const isChoicePage = currentPage.type === 'choice';
@@ -1102,6 +1122,9 @@
 
                         const choices = currentPage.choices || [];
                         const choiceButtons = [choice1Button, choice2Button, choice3Button, choice4Button]; 
+                        
+                        // FIX: Csak az 1. gombot használjuk, ha egy választás van (mint a 3. indexnél)
+                        // A kód csak egy gombot fog látni a choices tömben, a többi rejtve marad a 'display: none' miatt, de biztonságból megnézzük a length-et
                         
                         choiceButtons.forEach((button, index) => {
                             if (choices[index]) {
@@ -1150,8 +1173,15 @@
                                 prevButton.style.display = 'none'; 
                             }
                         } else {
-                            prevButton.style.display = 'block'; 
-                            prevButton.disabled = currentPartIndex === 1; // Kezdő index 1
+                            // Célpont keresése gomb, ha van customAction
+                            if (currentPage.customAction === 'open_distance_modal') {
+                                nextButton.textContent = 'Célpont keresése (GPS)';
+                                nextButton.classList.add('full-width'); 
+                                prevButton.style.display = 'none'; 
+                            } else {
+                                prevButton.style.display = 'block'; 
+                                prevButton.disabled = currentPartIndex === 1; // Kezdő index 1
+                            }
                         }
                     }
 
@@ -1159,7 +1189,10 @@
             }
 
             function updateAvatar(pageIndex) {
-                const speaker = pageIndex < storyPages.length ? storyPages[pageIndex].speaker : 'Narrator';
+                const currentPage = storyPages[pageIndex];
+                if (!currentPage) return;
+                
+                const speaker = currentPage.speaker;
                 
                 let avatarUrl = MARK_AVATAR_URL;
                 let display = 'block';
@@ -1189,18 +1222,28 @@
             function showStoryPart() {
                 messageDisplay.textContent = ''; 
                 passwordInput.value = ''; 
-                contentBox.style.opacity = 0;
+                // contentBox.style.opacity = 0; // Törölve, CSS-ben alapból 1.0
 
-                setTimeout(() => {
+                // FIX: A tartalom azonnali láthatósága
+                contentBox.style.opacity = 1; 
+
+                // A setTimeout itt már csak a következő lépésre vár, nem a tartalom megjelenítésére
+                setTimeout(() => { 
                     stopAllAudio(); 
                     audioContainer1.style.display = 'none';
                     audioContainer2.style.display = 'none';
-                    storyDisplay.innerHTML = ''; 
+                    storyDisplay.innerHTML = 'Hiba: Ismeretlen index.'; // Alapértelmezett hibaüzenet
                     
                     passwordContainer.classList.remove('visible'); 
 
-                    if (currentPartIndex < storyPages.length) {
-                        const currentPage = storyPages[currentPartIndex];
+                    if (currentPartIndex >= storyPages.length || storyPages[currentPartIndex] === null) {
+                        // VÉGE vagy hibás index: Ugrás a legelső történetpontra (Index 1)
+                        currentPartIndex = 1; 
+                    }
+                    
+                    const currentPage = storyPages[currentPartIndex];
+
+                    if (currentPage) {
                         
                         if (currentPage.type !== 'password') {
                             currentHelpIndex = 0; 
@@ -1249,15 +1292,9 @@
                             storyImage.src = imageUrl; 
                         }
                         
-                    } else {
-                        // VÉGE: Ugrás a legelső történetpontra (Index 1)
-                        currentPartIndex = 1; 
-                        updateAvatar(currentPartIndex);
-                        storyImage.src = OSZLOP_IMAGE_URL; 
-                        storyDisplay.innerHTML = storyPages[1].content; 
                     }
 
-                    contentBox.style.opacity = 1;
+                    // contentBox.style.opacity = 1; // Törölve
                     updateButtons();
                 }, 100); 
             }
@@ -1269,20 +1306,22 @@
                  toggleZoom();
             });
             
-            window.openFullImage = openFullImage;
+            window.openFullImage = openFullImage; // Globális elérhetőség
 
             nextButton.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
                 
+                // Ha a GPS modált kell megnyitni, megnyitjuk és visszatérünk.
+                if (currentPage.customAction === 'open_distance_modal') {
+                     showDistanceModal();
+                     return;
+                }
+
                 if (currentPage.nextButtonExternalUrl) {
                     window.location.href = currentPage.nextButtonExternalUrl; 
                     return;
                 }
 
-                if (currentPage.customAction === 'open_distance_modal') {
-                     showDistanceModal();
-                     return;
-                }
                 
                 const forcedNextIndex = nextButton.dataset.forcedNextIndex;
                 if (forcedNextIndex !== undefined && forcedNextIndex !== '') {
@@ -1291,6 +1330,11 @@
                     currentPartIndex++;
                 }
                 
+                // Ugrás a következő érvényes indexre, ha a következő null (pl. 4 vagy 5)
+                while(currentPartIndex < storyPages.length && storyPages[currentPartIndex] === null) {
+                    currentPartIndex++;
+                }
+
                 saveProgress();
                 showStoryPart();
             });
@@ -1298,12 +1342,14 @@
             prevButton.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
                 
-                if (currentPage.backIndex !== undefined) {
-                    currentPartIndex = currentPage.backIndex;
-                } else if (currentPartIndex > 1) {
-                    currentPartIndex--;
+                let targetIndex = currentPage.backIndex !== undefined ? currentPage.backIndex : currentPartIndex - 1;
+
+                if (targetIndex >= 1) {
+                    currentPartIndex = targetIndex;
+                } else {
+                    currentPartIndex = 1;
                 }
-                
+
                 saveProgress();
                 showStoryPart();
             });
@@ -1337,14 +1383,22 @@
                     messageDisplay.style.color = '#00FF00';
                     
                     setTimeout(() => {
-                        if (currentPage.nextIndexSuccess !== undefined) {
-                            currentPartIndex = currentPage.nextIndexSuccess; 
+                        const nextIndex = currentPage.nextIndexSuccess;
+                        if (nextIndex !== undefined) {
+                            currentPartIndex = nextIndex; 
                             saveProgress();
-                            showStoryPart(); 
-                        } else if (currentPage.customAction === 'open_distance_modal') {
-                            showDistanceModal(); 
+                            
+                            // FIX: Check if the success page (now index 23) has the GPS trigger action
+                            const successPage = storyPages[currentPartIndex];
+                            if (successPage && successPage.customAction === 'open_distance_modal') {
+                                // Ha a következő oldal a GPS trigger, azonnal nyissuk meg a modált
+                                showDistanceModal(); 
+                            } else {
+                                // Különben mutassuk a következő oldalt normálisan
+                                showStoryPart(); 
+                            }
                         }
-                    }, 1000);
+                    }, 1000); // 1 másodperc a "Kód elfogadva" üzenet megjelenítésére
                     
                 } else {
                     messageDisplay.textContent = 'Helytelen jelszó! Próbáld újra.';
@@ -1418,9 +1472,8 @@
                 distanceModal.style.display = 'none';
             }
 
-            window.onload = () => {
-                initializeApp(); 
-            };
+            // FIX: Gyorsabb inicializálás
+            document.addEventListener('DOMContentLoaded', initializeApp);
         })(); 
     </script>
 </body>
