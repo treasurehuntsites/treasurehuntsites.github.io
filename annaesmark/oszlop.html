@@ -489,7 +489,7 @@
             color: #ffffff;
         }
 
-        /* GPS Modal (megtartva) */
+        /* GPS Modal */
         #distanceModal { 
             display: none; 
             position: fixed;
@@ -501,6 +501,7 @@
             background-color: rgba(0, 0, 0, 0.95);
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(2px);
         }
         .distance-content { 
             background-color: rgba(0, 0, 0, 0.95);
@@ -516,9 +517,29 @@
             font-weight: 700;
             color: #00ffff;
             margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            background-color: rgba(0, 0, 0, 0.5);
         }
-        /* Eltávolítottam a distance-status elemet, hogy ne jelenjen meg szöveg */
         
+        #distance-status {
+            color: #aaaaaa;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            visibility: hidden; 
+            height: 0; 
+            margin-top: -20px; 
+            transition: all 0.3s;
+        }
+
+        #distance-status.visible {
+            visibility: visible;
+            height: auto;
+            margin-top: 10px;
+        }
+
         #distance-modal-map-button {
             display: inline-block;
             padding: 10px 20px;
@@ -649,7 +670,7 @@
         <span class="close-gallery" style="z-index: 120;" onclick="closeFullImageModal();">×</span>
     </div>
     
-    <!-- Távolság Modal (GPS MODAL) (megtartva) -->
+    <!-- Távolság Modal (GPS MODAL) -->
     <div id="distanceModal"> 
         <div class="distance-content">
             <h1>CÉLPONT KERESÉSE</h1>
@@ -657,6 +678,9 @@
             <div id="distance-modal-display">
                 -- M
             </div>
+            
+            <!-- Visszahelyezett status sor a mintadokumentum alapján -->
+            <p id="distance-status">Helyzetmeghatározás indítása...</p>
             
             <!-- Térkép gomb (GPS modal térkép linkje) -->
             <a href="#" target="_blank" id="distance-modal-map-button">
@@ -689,11 +713,11 @@
             const GITHUB_BASE_URL = "https://treasurehuntsites.github.io/annaesmark/Img/";
             
             // Avatár URL-ek
-            const MARK_AVATAR_URL = GITHUB_BASE_URL + "mark.png"; // FRISSÍTVE: mark.png
+            const MARK_AVATAR_URL = GITHUB_BASE_URL + "mark.png"; 
             const ANNA_AVATAR_URL = GITHUB_BASE_URL + "anna.png"; 
             // Meglévő képekhez placeholder, ha nincsenek feltöltve
             const FULKE1_IMAGE_URL = GITHUB_BASE_URL + "Fulke1.jpg";
-            const OSZLOP_IMAGE_URL = GITHUB_BASE_URL + "oszlop.jpg"; // Az új kép nevét használjuk
+            const OSZLOP_IMAGE_URL = GITHUB_BASE_URL + "oszlop.jpg"; 
             
             // Térképlinkek
             const MENU_MAP_URL = 'https://www.google.com/maps/d/u/0/viewer?mid=1In35RskVV8t66hBDuaoq9VP5_myLeDE&ll=47.42537930000002%2C19.037390200000004&z=17'; 
@@ -841,9 +865,11 @@
             const roomLinkContainer = document.getElementById('room-link-container');
             const distanceModal = document.getElementById('distanceModal');
             const distanceDisplay = document.getElementById('distance-modal-display');
-            // Eltávolítottam a distanceStatus változót
+            const distanceStatus = document.getElementById('distance-status'); // Visszahelyezve
+            const distanceModalMapButton = document.getElementById('distance-modal-map-button'); // Hozzáadva
 
-            // --- VALÓDI GPS FUNKCIÓK (CSAK A TEMPLATE-HEZ KELL) ---
+
+            // --- VALÓDI GPS FUNKCIÓK (A robusztus mintából átmásolva) ---
 
             function tavolsagotKiszamol(lat1, lon1, lat2, lon2) {
                 const R = 6371e3; 
@@ -859,61 +885,114 @@
 
                 return R * c; 
             }
-
-            function updateLocation(position) {
-                const userLat = position.coords.latitude;
-                const userLon = position.coords.longitude;
-                const tavolsag = tavolsagotKiszamol(userLat, userLon, TARGET_LAT, TARGET_LON);
-                
-                distanceDisplay.textContent = `${Math.round(tavolsag)} M`;
-                
-                if (tavolsag <= TARGET_RADIUS_M) {
-                    
-                    if (watchId) {
-                        navigator.geolocation.clearWatch(watchId);
-                        watchId = null;
-                    }
-                    
-                    setTimeout(() => {
-                         distanceModal.style.display = 'none';
-                         currentPartIndex = 1; // Állítsuk be a következő indexet, amit a GPS elérése után szeretnénk
-                         saveProgress();
-                         showStoryPart();
-                    }, 1500);
-                }
+            
+            function restartCompassTracking() {
+                console.log("GPS Hiba történt, újrapróbálkozás 2 másodperc múlva...");
+                setTimeout(startCompassTracking, 2000);
             }
 
-            function locationError(error) {
-                console.error(`Geolocation error: ${error.message}`);
-                distanceDisplay.textContent = "-- M";
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = null;
+            function setDistanceStatus(message, isError = false) {
+                distanceStatus.textContent = message;
+                
+                // Ha van üzenet (nem csak a távolság), vagy hiba/várjon, akkor láthatóvá tesszük.
+                const shouldBeVisible = isError || message.includes("várjon") || message.includes("Hiba");
+
+                if (shouldBeVisible) {
+                    distanceStatus.classList.add('visible');
+                    distanceDisplay.style.color = isError ? '#ff4500' : '#ffff00';
+                    distanceDisplay.style.boxShadow = `0 0 15px rgba(${isError ? '255, 69, 0, 0.5' : '255, 255, 0, 0.5'})`;
+                } else {
+                    distanceStatus.classList.remove('visible');
+                    // Tiszta működési állapot: távolság zöld/cián színű
+                    distanceDisplay.style.color = '#00ffff'; 
+                    distanceDisplay.style.boxShadow = `0 0 15px rgba(0, 255, 255, 0.5)`;
                 }
             }
 
             function startCompassTracking() {
-                if (navigator.geolocation) {
-                    const options = {
-                        enableHighAccuracy: true,
-                        timeout: 5000,
-                        maximumAge: 0
-                    };
-                    watchId = navigator.geolocation.watchPosition(updateLocation, locationError, options);
-                } else {
-                    console.error("A helymeghatározás nem támogatott a böngészőjében.");
+                if (!("geolocation" in navigator)) {
+                    setDistanceStatus("Hiba: A böngészője nem támogatja a helymeghatározást.", true);
+                    return;
                 }
+                
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                
+                setDistanceStatus("Helymeghatározás indítása, kérjük várjon...", false); // Nem hiba, csak várakozás
+                distanceDisplay.textContent = "-- M"; 
+
+                watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const latDeg = position.coords.latitude;
+                        const lonDeg = position.coords.longitude;
+                        
+                        // FIX: A távolság számítása a TARGET_LAT/LON konstansokkal
+                        const tavolsag = tavolsagotKiszamol(latDeg, lonDeg, TARGET_LAT, TARGET_LON);
+                        
+                        distanceDisplay.textContent = `${tavolsag.toFixed(0)} M`; 
+                        
+                        // Státusz beállítása pontossággal
+                        setDistanceStatus(`Pontosság: ±${position.coords.accuracy.toFixed(0)} m. Jelenlegi távolság:`, false);
+
+                        if (tavolsag <= TARGET_RADIUS_M) {
+                            setDistanceStatus("Cél elérve! Visszatérés...", true);
+                            navigator.geolocation.clearWatch(watchId);
+                            watchId = null;
+                            
+                            setTimeout(() => {
+                                 distanceModal.style.display = 'none';
+                                 // Ide jönne a következő történetindex, de a kérés az volt, hogy térjen vissza az 1. indexre
+                                 currentPartIndex = 1; 
+                                 saveProgress();
+                                 showStoryPart();
+                            }, 1500); // 1.5 másodperc a "Cél elérve" üzenetre
+                            return;
+                        }
+                    },
+                    
+                    (error) => {
+                        console.error("GPS Error Code:", error.code, "Message:", error.message);
+                        
+                        if (watchId) {
+                            navigator.geolocation.clearWatch(watchId);
+                            watchId = null;
+                        }
+                        
+                        if (error.code === error.PERMISSION_DENIED) {
+                            setDistanceStatus("Hiba: Kérjük, engedélyezze a helymeghatározást (engedély letiltva).", true);
+                            distanceDisplay.textContent = "X";
+                        } else if (error.code === error.POSITION_UNAVAILABLE) {
+                             setDistanceStatus("Hiba: A helyzetadatok nem érhetők el (rossz GPS vétel). Újrapróbálkozás...", true);
+                             distanceDisplay.textContent = "X";
+                             restartCompassTracking(); 
+                        } else if (error.code === error.TIMEOUT) {
+                             setDistanceStatus("Hiba: Túl sokáig tartott a helyzet meghatározása. Újrapróbálkozás...", true);
+                             distanceDisplay.textContent = "X";
+                             restartCompassTracking(); 
+                        } else {
+                            setDistanceStatus("Hiba a helymeghatározásban.", true);
+                            distanceDisplay.textContent = "X";
+                        }
+                    },
+                    
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000, 
+                        maximumAge: 0 
+                    }
+                );
             }
 
             function showDistanceModal() { 
+                contentBox.style.display = 'none';
+                document.body.classList.add('modal-open'); 
                 distanceModal.style.display = 'flex';
-                distanceDisplay.textContent = "GPS indítása..."; // Visszaállítottam ezt az üzenetet a távolság mezőbe a kezdeti betöltéshez
                 
                 distanceModalMapButton.href = GPS_MODAL_MAP_URL;
 
-                if (!watchId) {
-                    startCompassTracking();
-                }
+                startCompassTracking();
             }
             
             // --- JÁTÉK ÁLLAPOT KEZELÉS ---
@@ -969,8 +1048,9 @@
                 galleryContainer.innerHTML = ''; 
                 
                 const visibleItems = ALL_GALLERY_ITEMS.filter(item => {
+                    // Egyszerűsített feloldási logika (csak az alapértelmezett és a "fulke1" kép kezelése)
                     const isUnlocked = localStorage.getItem(`is${item.id.charAt(0).toUpperCase() + item.id.slice(1)}Unlocked`) === 'true';
-                    return item.unlocked || item.unlockedByDefault; // Hozzáadtuk az alapértelmezett nyitást
+                    return item.unlocked || isUnlocked;
                 });
 
                 visibleItems.forEach((image) => {
@@ -1113,8 +1193,6 @@
                         const choices = currentPage.choices || [];
                         const choiceButtons = [choice1Button, choice2Button, choice3Button, choice4Button]; 
                         
-                        // FIX: Csak az 1. gombot használjuk, ha egy választás van (mint a 3. indexnél)
-                        // A kód csak egy gombot fog látni a choices tömben, a többi rejtve marad a 'display: none' miatt, de biztonságból megnézzük a length-et
                         
                         choiceButtons.forEach((button, index) => {
                             if (choices[index]) {
@@ -1213,7 +1291,6 @@
             function showStoryPart() {
                 messageDisplay.textContent = ''; 
                 passwordInput.value = ''; 
-                // contentBox.style.opacity = 0; // Törölve, CSS-ben alapból 1.0
 
                 // FIX: A tartalom azonnali láthatósága
                 contentBox.style.opacity = 1; 
@@ -1285,7 +1362,6 @@
                         
                     }
 
-                    // contentBox.style.opacity = 1; // Törölve
                     updateButtons();
                 }, 100); 
             }
