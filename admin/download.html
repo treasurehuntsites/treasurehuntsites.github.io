@@ -19,6 +19,11 @@
         <p>A mentett konfiguráció beillesztése és letöltés indítása.</p>
     </div>
     <div id="error-message" style="display:none;"></div>
+    
+    <!-- DIAGNOSZTIKAI ELEMEK HOZZÁADVA -->
+    <button id="manual-check-button" style="display:none; margin-top: 30px;" class="btn-primary">Manuális LocalStorage ellenőrzés</button>
+    <pre id="ls-output" style="display: none; text-align: left; max-width: 80%; overflow-x: auto; background-color: #333; padding: 15px; border-radius: 5px; margin-top: 10px; color: #f0f0f0; border: 1px solid #00ffff;"></pre>
+    <!-- VÉGE -->
 
     <script id="game-template" type="text/template">
 <!doctype html>
@@ -302,7 +307,8 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
+        <!-- Diagnosztika: Hiba esetén ide írja a hibaüzenetet -->
+        <img id="story-image" src="" alt="Háttér" onerror="console.error('[DBG] Kép betöltési hiba a címen:', this.src); this.onerror=null; this.style.opacity='0';">
     </div>
 
     <div class="content-box content-hidden" id="content-box"> <!-- Hozzáadva a content-hidden osztályt a kezdeti elrejtéshez -->
@@ -311,7 +317,7 @@
             <i class="fa-solid fa-arrow-left"></i>
         </button>
 
-        <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
+        <img id="avatar-img" class="avatar-image" src="" alt="Avatar" onerror="this.onerror=null; this.style.opacity='0';">
         
         <p id="story-text-display"></p>
         
@@ -425,6 +431,7 @@
             const contentBox = document.getElementById('content-box');
 
             try {
+                console.log("[DBG] Játék indítása...");
                 // --- BIZTONSÁGOS INDÍTÁS ---
                 let CONFIG = getDefaultConfig();
                 
@@ -437,7 +444,7 @@
                      if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
                      if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
                      if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
-                     console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
+                     console.log("[DBG] Játék betöltve exportált (beágyazott) konfigurációval.");
                 } else {
                     // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
@@ -448,9 +455,9 @@
                             CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
                             CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
                             CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
-                            console.log("Játék betöltve LocalStorage konfigurációval.");
+                            console.log("[DBG] Játék betöltve LocalStorage konfigurációval (Preview mód).");
                         }
-                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
+                    } catch(e) { console.warn("[DBG] LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
                 }
 
                 let currentPartIndex = 0;
@@ -490,7 +497,10 @@
                 document.documentElement.style.setProperty('--bg-color', CONFIG.BODY_BG_COLOR);
                 document.documentElement.style.setProperty('--text-color', CONFIG.BODY_TEXT_COLOR);
                 
-                if (els.storyImage) els.storyImage.src = CONFIG.BACKGROUND_URL;
+                if (els.storyImage) {
+                    els.storyImage.src = CONFIG.BACKGROUND_URL;
+                    console.log(`[DBG] Globális háttér URL beállítva: ${CONFIG.BACKGROUND_URL}`);
+                }
                 
                 const audio1 = document.getElementById('story-audio-1');
                 if (audio1) audio1.src = CONFIG.MEDIA.AUDIO_1_URL;
@@ -516,7 +526,7 @@
                         if (saved !== null) {
                             currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
                         }
-                    } catch(e) { console.warn("Progress load failed:", e); }
+                    } catch(e) { console.warn("[DBG] Progress load failed:", e); }
                 }
                 function saveProgress() { 
                     try { 
@@ -557,12 +567,18 @@
                     if (!page) return;
 
                     let activeBg = CONFIG.BACKGROUND_URL;
+                    
+                    // Keresés az oldalspecifikus háttérre
                     for(let i = 0; i <= currentPartIndex; i++) {
                         if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
                             activeBg = storyPages[i].customBackgroundUrl;
                         }
                     }
-                    if (els.storyImage) els.storyImage.src = activeBg;
+                    if (els.storyImage) {
+                        els.storyImage.src = activeBg;
+                        console.log(`[DBG] Jelenlegi háttér URL: ${activeBg}`);
+                    }
+
 
                     const prefix = page.content.split(' ')[0];
                     let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
@@ -669,6 +685,7 @@
                 }
 
                 function showStory() {
+                    console.log(`[DBG] Oldal váltása: Index ${currentPartIndex}`);
                     // Átmeneti rejtés az oldalváltáskor
                     if (els.contentBox) els.contentBox.classList.add('content-hidden');
                     setTimeout(() => {
@@ -729,6 +746,8 @@
                         const img = document.createElement('img');
                         img.src = url;
                         img.alt = "Galéria Kép " + (index + 1);
+                        // Hozzáadott hibafigyelő a galéria képekhez
+                        img.onerror = function() { console.error(`[DBG] Galéria kép betöltési hiba a címen: ${url}`); this.onerror=null; this.style.opacity='0.2'; };
                         thumbnailDiv.onclick = () => openFullImage(url);
                         thumbnailDiv.appendChild(img);
                         els.galleryContainer.appendChild(thumbnailDiv);
@@ -922,7 +941,7 @@
 
 
                 loadProgress();
-                updateUI();
+                showStory(); // showStory hívása, ami meghívja az updateUI-t
                 
                 // A tartalom doboz lassú megjelenítése (initial fade-in)
                 if (els.contentBox) els.contentBox.classList.remove('content-hidden');
@@ -965,9 +984,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             const statusContainer = document.getElementById('status-container');
             const errorMessageContainer = document.getElementById('error-message');
+            const manualCheckButton = document.getElementById('manual-check-button');
+            const lsOutput = document.getElementById('ls-output');
             const STORAGE_KEY = 'DYNAMIC_CONFIG';
-            const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; // Megerősített, egyedi jelölő
-            const savedConfig = localStorage.getItem(STORAGE_KEY);
+            let savedConfig = localStorage.getItem(STORAGE_KEY);
             
             function displayError(message) {
                 const loader = document.querySelector('.loader');
@@ -979,6 +999,10 @@
 
             if (!savedConfig) {
                 displayError("Nincs mentett konfiguráció a böngészőben. Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.");
+                manualCheckButton.style.display = 'block';
+                lsOutput.style.display = 'block';
+                // Automatikus ellenőrzés futtatása is
+                checkLocalStorage();
                 return;
             }
 
@@ -997,6 +1021,8 @@
         window.GAME_CONFIG_INJECTED = ${safeConfigString};
     `;
                 
+                const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; // Megerősített, egyedi jelölő
+
                 // Kicseréljük az egyszerű jelölőt a valós konfigurációval
                 if (gameHtml.includes(INJECTION_TAG)) {
                     gameHtml = gameHtml.replace(INJECTION_TAG, injectionCode);
@@ -1026,6 +1052,31 @@
                 console.error("Export Error:", e);
                 displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
             }
+            
+            // Diagnosztika funkció
+            function checkLocalStorage() {
+                lsOutput.textContent = 'Összes LocalStorage kulcs és érték (első 100 karakter):\n\n';
+                try {
+                    let found = false;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        const displayValue = value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'NULL/EMPTY';
+                        lsOutput.textContent += `${key}: ${displayValue}\n`;
+                        if (key === STORAGE_KEY) found = true;
+                    }
+                    if (found) {
+                        lsOutput.textContent += `\nSIKER: A '${STORAGE_KEY}' kulcs megtalálható a LocalStorage-ban!`;
+                    } else {
+                         lsOutput.textContent += `\nHIBA: A '${STORAGE_KEY}' kulcs NEM található a LocalStorage-ban!`;
+                    }
+                } catch(e) {
+                    lsOutput.textContent = `HIBA a LocalStorage olvasása közben (valószínűleg biztonsági korlátozás): ${e.message}`;
+                }
+            }
+
+            manualCheckButton.onclick = checkLocalStorage;
+            
         });
     </script>
 </body>
