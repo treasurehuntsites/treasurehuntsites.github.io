@@ -984,3 +984,133 @@
     </script>
 </body>
 </html>
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusContainer = document.getElementById('status-container');
+            const errorMessageContainer = document.getElementById('error-message');
+            const manualCheckButton = document.getElementById('manual-check-button');
+            const lsOutput = document.getElementById('ls-output');
+            const STORAGE_KEY = 'DYNAMIC_CONFIG';
+            let savedConfig = localStorage.getItem(STORAGE_KEY);
+            
+            function displayError(message) {
+                const loader = document.querySelector('.loader');
+                if (loader) loader.style.display = 'none';
+                errorMessageContainer.style.display = 'block';
+                errorMessageContainer.innerHTML = '<h1>❌ Exportálási Hiba ❌</h1><p>' + message + '</p>';
+                statusContainer.innerHTML = '<h1>Hiba történt.</h1><p>Nézze meg a részleteket alább.</p>';
+            }
+
+            if (!savedConfig) {
+                displayError("Nincs mentett konfiguráció a böngészőben. Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.");
+                manualCheckButton.style.display = 'block';
+                lsOutput.style.display = 'block';
+                // Automatikus ellenőrzés futtatása is
+                checkLocalStorage();
+                return;
+            }
+
+            try {
+                // 1. Konfiguráció betöltése
+                let parsedConfig = JSON.parse(savedConfig);
+
+                // 2. Biztonsági mentés: GPS_COMPASS beállítása, ha hiányzik
+                if (!parsedConfig.GPS_COMPASS) {
+                    parsedConfig.GPS_COMPASS = {};
+                }
+                // Alapértelmezett beállítások biztosítása, amik a kódban kellenek
+                if (parsedConfig.GPS_COMPASS.SUCCESS_RADIUS_M === undefined) {
+                    parsedConfig.GPS_COMPASS.SUCCESS_RADIUS_M = 25; // Alapértelmezett 25 méter
+                }
+
+                const safeConfigString = JSON.stringify(parsedConfig); 
+                
+                // Játék sablon betöltése és normalizálás
+                let gameHtml = document.getElementById('game-template').textContent;
+                gameHtml = gameHtml.replace(/\r/g, ''); // Normalizáció a sorvégek miatt
+                
+                // Konfiguráció injektálása közvetlenül a JS objektumba
+                const injectionCode = `
+        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
+        window.GAME_CONFIG_INJECTED = ${safeConfigString};
+    `;
+                
+                const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$';
+
+                // Kicseréljük az egyszerű jelölőt a valós konfigurációval
+                if (gameHtml.includes(INJECTION_TAG)) {
+                    gameHtml = gameHtml.replace(INJECTION_TAG, injectionCode);
+                } else {
+                    throw new Error(`A jelölő ('${INJECTION_TAG}') hiányzik a game.html sablonból.`);
+                }
+
+                // 3. Letöltés indítása
+                const blob = new Blob([gameHtml], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'game.html';
+                document.body.appendChild(a);
+                
+                // Automatikus kattintás (a letöltés elindítása)
+                a.click();
+                
+                // --- KÉZI LETÖLTÉS FALLBACK ÉS STÁTUSZ FRISSÍTÉSE ---
+                // Eltávolítjuk az 'a' elem azonnali eltávolítását, és helyette mutatunk egy manuális gombot.
+                
+                setTimeout(() => {
+                    statusContainer.innerHTML = `
+                        <h1>✅ Kész!</h1>
+                        <p>A játék összeállítása befejeződött. Kérlek, ellenőrizd a letöltéseidet!</p>
+                        
+                        <p style="margin-top: 20px; font-weight: bold;">Ha a letöltés nem indult el automatikusan, kattints ide:</p>
+                        <a href="${url}" download="game.html" style="text-decoration: none; display: block;">
+                            <button class="btn-primary" style="margin-top: 10px; background-color: #00ffff; color: #1a1a1a;">
+                                ⬇️ Manuális Letöltés (game.html)
+                            </button>
+                        </a>
+                        
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: Ezt a fájlt fel kell tölteni a GitHub Pagesre vagy más webszerverre a képek és hangok helyes betöltéséhez!</p>
+                        <button onclick="window.close()" style="margin-top: 20px;">Bezárás</button>
+                    `;
+                    
+                    // A URL tisztítását itt már nem végezzük el, mert a manuális gomb használja.
+                    // Az URL a lap bezárásával tisztul.
+                }, 1000);
+
+            } catch (e) {
+                console.error("Export Error:", e);
+                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
+            }
+            
+            // Diagnosztika funkció
+            function checkLocalStorage() {
+                lsOutput.textContent = 'Összes LocalStorage kulcs és érték (első 100 karakter):\n\n';
+                try {
+                    let found = false;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        const displayValue = value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'NULL/EMPTY';
+                        lsOutput.textContent += `${key}: ${displayValue}\n`;
+                        if (key === STORAGE_KEY) found = true;
+                    }
+                    if (found) {
+                        lsOutput.textContent += `\nSIKER: A '${STORAGE_KEY}' kulcs megtalálható a LocalStorage-ban!`;
+                    } else {
+                         lsOutput.textContent += `\nHIBA: A '${STORAGE_KEY}' kulcs NEM található a LocalStorage-ban!`;
+                    }
+                } catch(e) {
+                    lsOutput.textContent = `HIBA a LocalStorage olvasása közben (valószínűleg biztonsági korlátozás): ${e.message}`;
+                }
+            }
+
+            manualCheckButton.onclick = checkLocalStorage;
+            
+        });
+    </script>
+</body>
+</html>
