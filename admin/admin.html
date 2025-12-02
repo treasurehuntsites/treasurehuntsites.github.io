@@ -275,9 +275,9 @@
             <a id="goToGameButton" href="game.html" target="_blank" class="btn-secondary w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center">
                 <i class="fa-solid fa-play mr-2"></i> Játék Megnyitása
             </a>
-            <a id="downloadPageButton" href="download.html" target="_blank" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
+            <button id="downloadPageButton" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
                 <i class="fa-solid fa-download mr-2"></i> Exportálás
-            </a>
+            </button>
         </div>
 
         <p id="message" class="text-center mt-4 text-xl font-bold"></p>
@@ -327,10 +327,10 @@
                 },
                 MEDIA: { AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3", AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3" },
                 storyPages: [
-                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.', nextIndex: 1 }, 
-                    { type: 'text', content: '§M Igen? Miről?', nextIndex: 2 }, 
-                    { type: 'audio', content: '§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.', audioId: 1, nextIndex: 3, backIndex: 1, nextButtonText: "Tovább a történetre" }, 
-                    { type: 'password', content: '§KOD Kérjük add meg a kódot.', correctPassword: '1940', nextIndexSuccess: -1, backIndex: 2, helpMessage: ['Keresd a megoldást a helyszínen.', '1940'] }, 
+                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.', nextIndex: 1, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'text', content: '§M Igen? Miről?', nextIndex: 2, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'audio', content: '§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.', audioId: 1, nextIndex: 3, backIndex: 1, nextButtonText: "Tovább a történetre", customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'password', content: '§KOD Kérjük add meg a kódot.', correctPassword: '1940', nextIndexSuccess: -1, backIndex: 2, helpMessage: ['Keresd a megoldást a helyszínen.', '1940'], customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
                 ],
             };
 
@@ -350,13 +350,14 @@
                 if (customAvatar && customAvatar.trim() !== '') {
                     avatarUrl = customAvatar;
                     if (['§M', '§A', '§R', '§N'].includes(prefix)) {
-                        cleanText = content.substring(3);
+                        cleanText = content.substring(prefix.length).trim();
                     }
                 } else {
                     if(prefix === '§M') { avatarUrl = fields.avatarMUrl.value; cleanText = content.substring(3); }
                     else if(prefix === '§A') { avatarUrl = fields.avatarAUrl.value; cleanText = content.substring(3); }
                     else if(prefix === '§R') { avatarUrl = fields.avatarRUrl.value; cleanText = content.substring(3); }
                     else if(['§N', '§KOD', '§H', '§RESET'].includes(prefix)) { isAvatarVisible = false; cleanText = content.substring(prefix.length).trim(); }
+                    else { isAvatarVisible = false; } // Ha nincs prefix
                 }
 
                 if (type === 'choice') { isAvatarVisible = false; }
@@ -391,11 +392,14 @@
                 let bgStyle = '';
                 if (customBg && customBg.trim() !== '') {
                     bgStyle = `background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${customBg}');`;
+                } else if (fields.backgroundUrl.value.trim() !== '') {
+                    bgStyle = `background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${fields.backgroundUrl.value}');`;
                 }
+
 
                 fields.previewContainer.innerHTML = `
                     <div class="game-preview-box" style="${bgStyle}">
-                        <div class="absolute top-0 right-0 bg-purple-600 text-xs px-2 py-1 rounded-bl">ELŐNÉZET</div>
+                        <div class="absolute top-0 right-0 bg-purple-600 text-xs px-2 py-1 rounded-bl">ELŐNÉZET (Index: ${currentLoadedIndex})</div>
                         <div class="flex items-start" style="padding-top: ${isAvatarVisible ? '30px' : '0'};">
                             <img src="${avatarUrl}" class="preview-avatar" style="display: ${isAvatarVisible ? 'block' : 'none'};" onerror="this.src='https://placehold.co/60?text=?'">
                             <div class="flex-1">
@@ -430,8 +434,6 @@
                 fields.passwordBlock.classList.add('hidden');
                 fields.choiceBlock.classList.add('hidden');
                 
-                if(fields.passwordPromptText.closest('div')) fields.passwordPromptText.closest('div').classList.add('hidden');
-
                 if (pageType === 'text') {
                     fields.textBlock.classList.remove('hidden');
                 } else if (pageType === 'audio') {
@@ -440,7 +442,6 @@
                 } else if (pageType === 'password') {
                     fields.textBlock.classList.remove('hidden');
                     fields.passwordBlock.classList.remove('hidden');
-                    // A globális prompt mező mindig látható, ha a password block látható
                 } else if (pageType === 'choice') {
                     fields.textBlock.classList.remove('hidden');
                     fields.choiceBlock.classList.remove('hidden');
@@ -498,7 +499,7 @@
                 currentStoryPages.splice(index, 1);
                 
                 if (currentStoryPages.length === 0) {
-                    currentStoryPages.push({ type: 'text', content: 'Új oldal', nextIndex: 1 });
+                    currentStoryPages.push({ type: 'text', content: 'Új oldal', nextIndex: 1, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" });
                 }
 
                 const newIndex = Math.max(0, index - 1);
@@ -539,7 +540,7 @@
                 
                 if (page.type === 'password') {
                     fields.correctPassword.value = page.correctPassword || '';
-                    fields.nextIndexSuccess.value = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : '';
+                    fields.nextIndexSuccess.value = page.nextIndexSuccess !== undefined ? fields.nextIndexSuccess : '';
                 }
 
                 if (page.type === 'choice') {
@@ -582,7 +583,10 @@
                 if (pageType === 'password') {
                     page.correctPassword = fields.correctPassword.value;
                     page.nextIndexSuccess = fields.nextIndexSuccess.value !== '' ? parseInt(fields.nextIndexSuccess.value) : undefined;
-                    if (!page.helpMessage) { page.helpMessage = ['Keresd a megoldást a helyszínen.', page.correctPassword]; }
+                    // A helpMessage-t csak akkor frissítjük, ha van correctPassword, de az oldalon nincs beállítva.
+                    if (page.correctPassword && !page.helpMessage) { 
+                        page.helpMessage = ['Keresd a megoldást a helyszínen.', page.correctPassword]; 
+                    }
                 } else {
                     delete page.correctPassword;
                     delete page.nextIndexSuccess;
@@ -609,7 +613,8 @@
                 const newPage = {
                     type: 'text',
                     content: `§N Új oldal hozzáadva (${newIndex}).`,
-                    nextIndex: newIndex + 1
+                    nextIndex: newIndex + 1,
+                    customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url"
                 };
                 
                 currentStoryPages.push(newPage);
@@ -672,8 +677,9 @@
                 newConfig.AVATARS.AVATAR_MAP['§R'] = fields.avatarRUrl.value;
                 
                 newConfig.MENU_LINKS.MAP_LINK_URL = fields.menuMapLink.value;
-                newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || newConfig.GPS_COMPASS.TARGET_LATITUDE;
-                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || newConfig.GPS_COMPASS.TARGET_LONGITUDE;
+                // Biztonságos float konverzió
+                newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
+                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 newConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL = fields.successRedirectUrl.value;
                 newConfig.GPS_COMPASS.MAP_BUTTON_URL = fields.gpsMapLink.value;
                 
@@ -682,7 +688,15 @@
                 newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
                 newConfig.storyPages = currentStoryPages;
 
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+                } catch (e) {
+                    console.error("Hiba a LocalStorage mentése közben:", e);
+                    MESSAGE_DISPLAY.textContent = `Mentési HIBA! A böngésző blokkolhatja a tárhelyet.`;
+                    MESSAGE_DISPLAY.style.color = '#FF5555';
+                    return;
+                }
+
 
                 if (showSuccess) {
                     MESSAGE_DISPLAY.textContent = 'Beállítások sikeresen elmentve!';
@@ -703,10 +717,24 @@
                 fields.customAvatarUrl.addEventListener('input', updatePreview); 
                 fields.customBackgroundUrl.addEventListener('input', updatePreview); 
                 fields.customGalleryUrl.addEventListener('input', updatePreview); 
+                fields.backgroundUrl.addEventListener('input', updatePreview); // Globális háttér változás
                 fields.audioNextButtonText.addEventListener('input', updatePreview); 
 
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
+                
+                // Exportálás gomb logika
+                document.getElementById('downloadPageButton').addEventListener('click', () => {
+                    // 1. Mentés kényszerítése az export előtt
+                    saveSettings(false); 
+                    
+                    // 2. Navigáció az exportáló oldalra (megtartva a target="_blank" viselkedést)
+                    window.open('download.html', '_blank');
+                    
+                    MESSAGE_DISPLAY.textContent = 'Exportálás indítása... (Ellenőrizze az új lapot)';
+                    MESSAGE_DISPLAY.style.color = '#00FFFF';
+                    setTimeout(() => MESSAGE_DISPLAY.textContent = '', 4000);
+                });
             });
         })();
     </script>
