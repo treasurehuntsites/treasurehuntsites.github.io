@@ -49,8 +49,7 @@
             display: flex; flex-direction: column; align-items: center;
             overflow-y: auto; min-height: 100vh; touch-action: auto; 
             text-align: center; padding-bottom: 60px; 
-            /* Kezdetben rejtett, de a JS hibakezelés felfedi */
-            visibility: hidden; opacity: 0; transition: opacity 0.5s ease-in-out; 
+            /* A stílus a JS töltés alatt is látni engedi a hátteret/alap elemeket */
         }
         
         /* Háttérkép */
@@ -297,7 +296,7 @@
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
 
-    <div class="content-box" id="content-box">
+    <div class="content-box" id="content-box" style="display: none;"> <!-- Hozzáadva: display: none; -->
         <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
@@ -408,6 +407,10 @@
         }
 
         (function() {
+            // A tartalom doboz alapértelmezett elrejtése
+            const contentBox = document.getElementById('content-box');
+            contentBox.style.display = 'none';
+
             try {
                 // --- BIZTONSÁGOS INDÍTÁS ---
                 let CONFIG = getDefaultConfig();
@@ -423,7 +426,7 @@
                         if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
                         if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
                         console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
-                     } catch(e) { console.error("Export config hiba a beágyazás után:", e); }
+                     } catch(e) { throw new Error("A beágyazott konfiguráció JSON-hibát tartalmaz. Részletek: " + e.message); }
                 } else {
                     // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
@@ -436,7 +439,7 @@
                             CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
                             console.log("Játék betöltve LocalStorage konfigurációval.");
                         }
-                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e); } 
+                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
                 }
 
                 let currentPartIndex = 0;
@@ -483,6 +486,9 @@
 
                 function loadProgress() {
                     try {
+                        // Ha exportált fájl, ne próbálja meg a LocalStorage-t (a PRELOADED_CONFIG a beágyazott config)
+                        if (INJECTED_CONFIG_JSON.length > 50) return; 
+
                         const saved = localStorage.getItem('gameProgress');
                         if (saved !== null) {
                             currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
@@ -490,7 +496,11 @@
                     } catch(e) { console.warn("Progress load failed:", e); }
                 }
                 function saveProgress() { 
-                    try { localStorage.setItem('gameProgress', currentPartIndex); } catch(e) {} 
+                    try { 
+                        // Ha exportált fájl, ne próbáljon meg LocalStorage-t használni
+                        if (INJECTED_CONFIG_JSON.length > 50) return;
+                        localStorage.setItem('gameProgress', currentPartIndex); 
+                    } catch(e) {} 
                 }
 
                 function stopAllAudio() {
@@ -610,6 +620,7 @@
                     
                     els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
                     els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
+                    els.contentBox.style.display = 'flex'; // Végre látható a tartalom
                 }
 
                 function showStory() {
@@ -747,7 +758,7 @@
                 document.getElementById('play-audio-button-2').onclick = () => toggleAudio('2');
 
                 function startGPS() {
-                    els.contentBox.style.display = 'none';
+                    contentBox.style.display = 'none';
                     els.distModal.style.display = 'flex';
                     const targetLat = parseFloat(GPS_COMPASS.TARGET_LATITUDE);
                     const targetLon = parseFloat(GPS_COMPASS.TARGET_LONGITUDE);
@@ -816,14 +827,13 @@
             } catch (err) {
                 // KRITIKUS HIBAKEZELÉS: Ha bármi elszáll, kiírjuk a képernyőre
                 console.error("Critical Start Error:", err);
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = 1;
+                document.body.style.backgroundColor = '#111'; // biztos fekete
                 document.body.innerHTML = `
-                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:#111; height:100vh;">
-                        <h1 style="font-size:2em; margin-bottom:10px;">⚠️ Hiba történt a betöltéskor</h1>
-                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudott elindulni az alábbi hiba miatt:</p>
-                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:800px; overflow:auto; text-align:left;">${err.message}\n\n${err.stack || ''}</pre>
-                        <p>Kérlek, ellenőrizd az exportálást vagy a konfigurációt.</p>
+                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;">
+                        <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
+                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg a böngésző biztonsági beállítása ('file://' protokoll korlátozás).</p>
+                        <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">Megoldás: Töltsd fel egy webszerverre (pl. GitHub Pages, Netlify) és onnan nyisd meg!</p>
+                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff;">Hiba: ${err.message}\n${err.stack || ''}</pre>
                     </div>
                 `;
             }
@@ -848,15 +858,15 @@
                 // 1. Mentett konfiguráció JSON string kinyerése
                 const configString = savedConfig;
                 
-                // 2. Parsolás és robusztus újra stringelés, hogy garantáltan tiszta JSON objektumként kerüljön beillesztésre
+                // 2. Parsolás és robusztus újra stringelés
                 const parsedConfig = JSON.parse(configString);
-                // JSON.stringify(JSON.parse(...)) biztosítja, hogy a konfigurációs objektum tiszta JS objektumként kerüljön beillesztésre
                 const safeConfigString = JSON.stringify(parsedConfig); 
                 
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
                 // Konfiguráció injektálása közvetlenül a JS változóba
+                // EZ A LEGMEGBÍZHATÓBB MÓDSZER: lecseréli a placeholder stringet a valós JSON stringre
                 gameHtml = gameHtml.replace(
                     "'!!!INJECTED_CONFIG_JSON_HERE!!!'", 
                     safeConfigString
