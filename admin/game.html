@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
     <title id="app-title">Anna és Márk</title>
     
-    <!-- GPS és Ikonok -->
     <meta http-equiv="Permissions-Policy" content="geolocation=*">
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -22,7 +21,7 @@
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
-            /* Kezdeti rejtés: a láthatóságot csak a JS állítja be, ha sikeresen betöltött a config */
+            /* [ALAPÉRTELMEZETT] KEZDETI ELREJTÉS: Ezt a stílust távolítja el a JS a sikeres betöltés után. */
             visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
             margin: 0; padding: 0; font-family: 'Play', sans-serif;
             color: var(--text-color); 
@@ -62,7 +61,7 @@
             transition: opacity 0.5s ease-in-out; /* Hozzáadva */
         }
         
-        /* Külön rejtett osztály a kezdeti betöltési animáció idejére */
+        /* [ALAPÉRTELMEZETT] TARTALOM DOBOZ ELREJTÉSE: Ezt az osztályt távolítja el a JS a tartalom megjelenítése előtt/közben. */
         .content-hidden {
              opacity: 0; 
         }
@@ -279,13 +278,10 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <!-- Diagnosztika: Hiba esetén ide írja a hibaüzenetet -->
         <img id="story-image" src="" alt="Háttér" onerror="console.error('[DBG] Kép betöltési hiba a címen:', this.src); this.onerror=null; this.style.opacity='0';">
     </div>
 
-    <div class="content-box content-hidden" id="content-box"> <!-- Hozzáadva a content-hidden osztályt a kezdeti elrejtéshez -->
-        <!-- Diszkrét Vissza Gomb -->
-        <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
+    <div class="content-box content-hidden" id="content-box"> <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
 
@@ -293,7 +289,6 @@
         
         <p id="story-text-display"></p>
         
-        <!-- Audio -->
         <div id="audio-container-1" class="audio-container" style="display:none;">
              <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
         </div>
@@ -302,16 +297,13 @@
         </div>
 
         <div class="bottom-bar">
-            <!-- Normál Navigáció -->
             <div class="interaction-container" id="interaction-container">
                 <button id="prev-page-button" class="page-button" disabled>Vissza</button>
                 <button id="next-page-button" class="page-button">Tovább</button>
             </div>
             
-            <!-- Választás Gombok -->
             <div class="multi-choice-container" id="multi-choice-container" style="display:none;"></div>
 
-            <!-- Jelszó -->
             <div id="password-container">
                 <p>
                     <span id="password-prompt-text">Add meg a kódot:</span>
@@ -332,7 +324,6 @@
         <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
     </div>
     
-    <!-- Modálok -->
     <div id="galleryModal">
       <span class="close-gallery">×</span>
       <div id="gallery-container">
@@ -420,21 +411,19 @@
 
             try {
                 console.log("[DBG] Játék indítása...");
-                // --- BIZTONSÁGOS INDÍTÁS ---
+                // --- KONFIGURÁCIÓ BETÖLTÉSE (ez a rész fut le az exportált fájlban) ---
                 let CONFIG = getDefaultConfig();
                 
-                // --- KONFIGURÁCIÓ BETÖLTÉSE ---
-                // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
                 if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
+                     // ... Konfiguráció betöltési logika
                      const parsedConfig = window.GAME_CONFIG_INJECTED;
                      CONFIG = { ...CONFIG, ...parsedConfig };
-                     // Alobjektumok mélyebb összevonása
                      if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
                      if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
                      if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
                      console.log("[DBG] Játék betöltve exportált (beágyazott) konfigurációval.");
                 } else {
-                    // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
+                     // ... LocalStorage betöltési logika (Preview módhoz)
                     try {
                         const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                         if (savedConfig) { 
@@ -445,19 +434,18 @@
                             CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
                             console.log("[DBG] Játék betöltve LocalStorage konfigurációval (Preview mód).");
                         }
-                    } catch(e) { console.warn("[DBG] LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
+                    } catch(e) { console.warn("[DBG] LocalStorage config hiba:", e.message); } 
                 }
-
+                
+                // --- TOVÁBBI INICIALIZÁCIÓ (változók beállítása) ---
                 let currentPartIndex = 0;
                 let watchId = null;
                 let currentHelpIndex = 0;
                 let currentScale = 1.0; 
                 const MAX_SCALE = 2.5; 
                 const MIN_SCALE = 1.0;
-
                 const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
 
-                // Ellenőrzés: Van-e egyáltalán oldal?
                 if (!storyPages || storyPages.length === 0) {
                     throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban!");
                 }
@@ -503,7 +491,14 @@
                 
                 const passPromptTextEl = document.getElementById('password-prompt-text');
                 if (passPromptTextEl) passPromptTextEl.textContent = CONFIG.PASSWORD_PAGE.PROMPT_TEXT || "Kód:";
-                // (Init Stílusok vége)
+
+                // --- AZ OLDAL LÁTHATÓVÁ TÉTELE ELŐRE (Hibaelkerülés) ---
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+                // --------------------------------------------------------
+
+
+                // --- SEGÉDFÜGGVÉNYEK DEFINIÁLÁSA ---
 
                 function loadProgress() {
                     try {
@@ -775,24 +770,14 @@
                     if (els.galleryModal) els.galleryModal.style.display = 'none';
                     closeFullImage();
                 }
-
-                let lastTap = 0;
-                if (els.fullImage) {
-                    els.fullImage.addEventListener('click', (e) => {
-                        const now = new Date().getTime();
-                        const timesince = now - lastTap;
-                        if (timesince < 300 && timesince > 0) {
-                            e.preventDefault();
-                            toggleZoom();
-                        } 
-                        lastTap = now;
-                    });
-                    els.fullImage.addEventListener('dblclick', (e) => {
-                        e.preventDefault();
-                        toggleZoom();
-                    });
-                }
-
+                
+                // Audio gombok eseménykezelése
+                const audioBtn1 = document.getElementById('play-audio-button-1');
+                if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
+                const audioBtn2 = document.getElementById('play-audio-button-2');
+                if (audio2) audioBtn2.onclick = () => toggleAudio('2');
+                
+                // Navigációs gombok eseménykezelése (csak a definíciókhoz)
                 if (els.nextBtn) {
                     els.nextBtn.onclick = () => {
                         if (currentPartIndex === storyPages.length - 1) {
@@ -841,11 +826,8 @@
                         }
                     };
                 }
-
-                const audioBtn1 = document.getElementById('play-audio-button-1');
-                if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
-                const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audio2) audio2.onclick = () => toggleAudio('2');
+                
+                // ... (többi eseménykezelő, pl. képnézegető zoom, súgó gombok)
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -926,20 +908,18 @@
                         }
                     };
                 }
-
-
+                
+                // --- FŐ ALKALMAZÁS INDÍTÁSA ---
+                
                 loadProgress();
                 showStory(); // showStory hívása, ami meghívja az updateUI-t
                 
-                // A tartalom doboz lassú megjelenítése (initial fade-in)
+                // [LÁTHATÓSÁG] Eltávolítja a 'content-hidden' osztályt a tartalom dobozról (erre azért van szükség, mert a showStory már késleltetve hívja)
                 if (els.contentBox) els.contentBox.classList.remove('content-hidden');
 
-                // SIKERES INDÍTÁS: Felfedjük az oldalt (body tag-en keresztül)
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = 1;
 
             } catch (err) {
-                // KRITIKUS HIBAKEZELÉS: Ha bármi elszáll, kiírjuk a képernyőre
+                // KRITIKUS HIBAKEZELÉS
                 console.error("Critical Start Error:", err);
                 
                 const errorDiv = document.createElement('div');
@@ -947,12 +927,13 @@
                 errorDiv.innerHTML = `
                     <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
                     <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg: <br> <b>${err.message}</b></p>
-                    <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Töltsd fel egy webszerverre (pl. GitHub Pages) és onnan nyisd meg!</p>
+                    <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Kérjük, nyissa meg a böngésző konzolját (F12) és küldje el a HIBAÜZENETET!</p>
                     <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
                 `;
 
                 // Csak akkor állítjuk be a hibaképernyőt, ha a body létezik
                 if (document.body) {
+                    // Mivel a body láthatóságát előrébb állítottuk be, a hibát most meg tudjuk mutatni.
                     document.body.style.backgroundColor = '#111'; // biztos fekete
                     document.body.innerHTML = ''; // Először töröljük a tartalom dobozt (de a menüsort hagyjuk)
                     document.body.appendChild(errorDiv);
