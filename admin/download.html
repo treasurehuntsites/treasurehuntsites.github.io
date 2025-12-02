@@ -298,7 +298,7 @@
 
     </style>
 </head>
-<body oncontextmenu="return false;"> 
+<body> 
     <div class="full-width-image-container">
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
@@ -839,7 +839,7 @@
                 const audioBtn1 = document.getElementById('play-audio-button-1');
                 if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                 const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audioBtn2) audioBtn2.onclick = () => toggleAudio('2');
+                if (audio2) audio2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -945,22 +945,89 @@
                     <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
                 `;
 
-                // --- MEGERŐSÍTETT HIBAKEZELÉS: Láthatóvá tesszük a body-t és a menüt ---
+                // Csak akkor állítjuk be a hibaképernyőt, ha a body létezik
                 if (document.body) {
                     document.body.style.backgroundColor = '#111'; // biztos fekete
-                    document.body.innerHTML = ''; // Töröljük a régi tartalmat
+                    document.body.innerHTML = ''; // Először töröljük a tartalom dobozt (de a menüsort hagyjuk)
                     document.body.appendChild(errorDiv);
 
-                    const fixedMenu = document.querySelector('.fixed-menu-bar');
-                    if (fixedMenu) {
-                        fixedMenu.style.display = 'flex'; // Fix: Kényszerítjük a menü láthatóságát
-                    }
-                    
+                    // Mivel itt dobódik a hiba, a body láthatóvá tétele is itt kell
                     document.body.style.visibility = 'visible';
                     document.body.style.opacity = 1;
                 }
             }
         })();
+    </script>
+</body>
+</html>
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusContainer = document.getElementById('status-container');
+            const STORAGE_KEY = 'DYNAMIC_CONFIG';
+            const savedConfig = localStorage.getItem(STORAGE_KEY);
+            
+            if (!savedConfig) {
+                statusContainer.innerHTML = '<h1 style="color:red">Hiba: Nincs mentett konfiguráció!</h1><p>Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.</p>';
+                return;
+            }
+
+            try {
+                // 1. Mentett konfiguráció JSON string kinyerése
+                const configString = savedConfig;
+                
+                // 2. Parsolás és robusztus újra stringelés
+                const parsedConfig = JSON.parse(configString);
+                // JSON.stringify() másodlagos futtatása is biztonságosabb, ha valamiért nem objektumként tárolódott.
+                const safeConfigString = JSON.stringify(parsedConfig); 
+                
+                // Játék sablon betöltése
+                let gameHtml = document.getElementById('game-template').textContent;
+                
+                // Konfiguráció injektálása közvetlenül a JS objektumba az injection script-ben
+                const injectionScriptCode = `
+    <script id="config-injection">
+        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
+        window.GAME_CONFIG_INJECTED = ${safeConfigString};
+    <\/script>
+    `;
+
+                // Kicseréljük az üres placeholder scriptet a valós konfigurációval
+                // Megkeressük az eredeti script id="config-injection" blokkot és lecseréljük
+                gameHtml = gameHtml.replace(
+                    /<script id="config-injection">[\s\S]*?<\/script>/,
+                    injectionScriptCode
+                );
+
+                // Ellenőrizzük, hogy a csere sikeres volt-e. Ha nem, valami hibádzik a sablonban.
+                if (gameHtml.includes('window.GAME_CONFIG_INJECTED = {};')) {
+                    throw new Error("A konfiguráció beillesztése a sablonba sikertelen.");
+                }
+
+                // Letöltés indítása
+                const blob = new Blob([gameHtml], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'game.html';
+                document.body.appendChild(a);
+                
+                // Automatikus kattintás (a letöltés elindítása)
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    statusContainer.innerHTML = '<h1>Kész!</h1><p>A játék letöltése elindult. Ne felejtsd el frissíteni a böngésző gyorsítótárát, ha a játékot egy helyi fájlból nyitod meg!</p><button onclick="window.close()">Bezárás</button>';
+                }, 1000);
+
+            } catch (e) {
+                console.error(e);
+                statusContainer.innerHTML = '<h1 style="color:red">Exportálási hiba történt!</h1><p>' + e.message + '</p><p>Kérlek, ellenőrizd, hogy a mentett adatok érvényesek-e, vagy próbáld meg újra elmenteni a beállításokat az Admin oldalon.</p>';
+            }
+        });
     </script>
 </body>
 </html>
