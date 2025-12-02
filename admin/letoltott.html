@@ -22,14 +22,14 @@
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
+            /* Kezdeti rejtés: a láthatóságot csak a JS állítja be, ha sikeresen betöltött a config */
+            visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
             margin: 0; padding: 0; font-family: 'Play', sans-serif;
             color: var(--text-color); 
             background-color: var(--bg-color);
             display: flex; flex-direction: column; align-items: center;
             overflow-y: auto; min-height: 100vh; touch-action: auto; 
             text-align: center; padding-bottom: 60px; 
-            /* Kezdetben rejtett, de a JS hibakezelés felfedi */
-            visibility: hidden; opacity: 0; transition: opacity 0.5s ease-in-out; 
         }
         
         /* Háttérkép */
@@ -58,7 +58,13 @@
             text-align: left;
             min-height: 250px; 
             display: flex; flex-direction: column; justify-content: space-between; 
-            opacity: 1; transition: opacity 0.5s ease-in-out;
+            opacity: 1; 
+            transition: opacity 0.5s ease-in-out; /* Hozzáadva */
+        }
+        
+        /* Külön rejtett osztály a kezdeti betöltési animáció idejére */
+        .content-hidden {
+             opacity: 0; 
         }
 
         /* Diszkrét Vissza Gomb */
@@ -267,22 +273,23 @@
             border-radius: 5px; font-size: 1.2em; font-weight: bold;
             text-decoration: none; transition: all 0.2s;
         }
-        #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
+        .distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
 
     </style>
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
+        <!-- Diagnosztika: Hiba esetén ide írja a hibaüzenetet -->
+        <img id="story-image" src="" alt="Háttér" onerror="console.error('[DBG] Kép betöltési hiba a címen:', this.src); this.onerror=null; this.style.opacity='0';">
     </div>
 
-    <div class="content-box" id="content-box">
+    <div class="content-box content-hidden" id="content-box"> <!-- Hozzáadva a content-hidden osztályt a kezdeti elrejtéshez -->
         <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
 
-        <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
+        <img id="avatar-img" class="avatar-image" src="" alt="Avatar" onerror="this.onerror=null; this.style.opacity='0';">
         
         <p id="story-text-display"></p>
         
@@ -363,6 +370,14 @@
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
     <script>
+        // Placeholder a konfigurációhoz.
+        window.GAME_CONFIG_INJECTED = {};
+        //$$CONFIG_PLACEHOLDER$$
+    </script>
+
+    <script>
+        // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+        
         function getDefaultConfig() {
             return {
                 APP_TITLE: "Anna és Márk",
@@ -384,19 +399,42 @@
         }
 
         (function() {
+            // A BÖNGÉSZŐ BIZTONSÁGI KORLÁTOZÁSÁNAK ELLENŐRZÉSE
+            if (window.location.protocol === 'file:') {
+                const errorOverlay = document.createElement('div');
+                errorOverlay.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(138, 43, 226, 0.95); color: white; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; font-family: sans-serif; text-align: center;";
+                errorOverlay.innerHTML = `
+                    <h1 style="font-size: 2em; margin-bottom: 20px;">⚠️ LÉNYEGES FIGYELMEZTETÉS ⚠️</h1>
+                    <p style="font-size: 1.2em; max-width: 600px; line-height: 1.5;">Ez a fájl (game.html) helyi megnyitáskor (file://) <b>NEM TUDJA BETÖLTENI</b> a külső képeket és hangokat a böngésző biztonsági korlátozásai miatt.</p>
+                    <p style="font-size: 1.5em; margin-top: 30px; font-weight: bold; color: #00ffff;">MEGOLDÁS: Kérjük, töltse fel egy webszerverre (pl. GitHub Pages) és onnan nyissa meg a játékot!</p>
+                    <button onclick="this.parentNode.remove()" style="margin-top: 40px; padding: 10px 30px; background-color: #00ffff; color: #1a1a1a; border: none; border-radius: 5px; cursor: pointer;">Értem, mégis megnyitom</button>
+                `;
+                document.body.appendChild(errorOverlay);
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+                return; // Megállítja a játék inicializálását
+            }
+
+            // A tartalom doboz alapértelmezett elrejtése
+            const contentBox = document.getElementById('content-box');
+
             try {
+                console.log("[DBG] Játék indítása...");
                 // --- BIZTONSÁGOS INDÍTÁS ---
                 let CONFIG = getDefaultConfig();
                 
-                if (window.PRELOADED_CONFIG) {
-                     try {
-                        CONFIG = { ...CONFIG, ...window.PRELOADED_CONFIG };
-                        if(window.PRELOADED_CONFIG.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...window.PRELOADED_CONFIG.AVATARS };
-                        if(window.PRELOADED_CONFIG.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...window.PRELOADED_CONFIG.GPS_COMPASS };
-                        if(window.PRELOADED_CONFIG.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...window.PRELOADED_CONFIG.MEDIA };
-                        console.log("Játék betöltve exportált konfigurációval.");
-                     } catch(e) { console.error("Export config hiba", e); }
+                // --- KONFIGURÁCIÓ BETÖLTÉSE ---
+                // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
+                if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
+                     const parsedConfig = window.GAME_CONFIG_INJECTED;
+                     CONFIG = { ...CONFIG, ...parsedConfig };
+                     // Alobjektumok mélyebb összevonása
+                     if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
+                     if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
+                     if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
+                     console.log("[DBG] Játék betöltve exportált (beágyazott) konfigurációval.");
                 } else {
+                    // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
                         const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                         if (savedConfig) { 
@@ -405,9 +443,9 @@
                             CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
                             CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
                             CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
-                            console.log("Játék betöltve LocalStorage konfigurációval.");
+                            console.log("[DBG] Játék betöltve LocalStorage konfigurációval (Preview mód).");
                         }
-                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e); } 
+                    } catch(e) { console.warn("[DBG] LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
                 }
 
                 let currentPartIndex = 0;
@@ -440,49 +478,74 @@
                     fullImageModal: document.getElementById('full-image-display'), fullImage: document.getElementById('fullImageDisplay')
                 };
 
-                // Init Stílusok
-                if(CONFIG.APP_TITLE) document.getElementById('app-title').textContent = CONFIG.APP_TITLE;
+                // Init Stílusok (Hibatűrő módosítás)
+                const appTitleEl = document.getElementById('app-title');
+                if(CONFIG.APP_TITLE && appTitleEl) appTitleEl.textContent = CONFIG.APP_TITLE;
+
                 document.documentElement.style.setProperty('--bg-color', CONFIG.BODY_BG_COLOR);
                 document.documentElement.style.setProperty('--text-color', CONFIG.BODY_TEXT_COLOR);
                 
-                els.storyImage.src = CONFIG.BACKGROUND_URL;
-                document.getElementById('story-audio-1').src = CONFIG.MEDIA.AUDIO_1_URL;
-                document.getElementById('story-audio-2').src = CONFIG.MEDIA.AUDIO_2_URL;
-                document.getElementById('distance-modal-map-button').href = GPS_COMPASS.MAP_BUTTON_URL;
-                document.getElementById('map-button').onclick = () => window.open(CONFIG.MENU_LINKS.MAP_LINK_URL, '_blank');
-                document.getElementById('password-prompt-text').textContent = CONFIG.PASSWORD_PAGE.PROMPT_TEXT || "Kód:";
+                if (els.storyImage) {
+                    els.storyImage.src = CONFIG.BACKGROUND_URL;
+                    console.log(`[DBG] Globális háttér URL beállítva: ${CONFIG.BACKGROUND_URL}`);
+                }
+                
+                const audio1 = document.getElementById('story-audio-1');
+                if (audio1) audio1.src = CONFIG.MEDIA.AUDIO_1_URL;
+                const audio2 = document.getElementById('story-audio-2');
+                if (audio2) audio2.src = CONFIG.MEDIA.AUDIO_2_URL;
+                
+                const distMapBtn = document.getElementById('distance-modal-map-button');
+                if (distMapBtn) distMapBtn.href = GPS_COMPASS.MAP_BUTTON_URL;
+                
+                const mapBtn = document.getElementById('map-button');
+                if (mapBtn) mapBtn.onclick = () => window.open(CONFIG.MENU_LINKS.MAP_LINK_URL, '_blank');
+                
+                const passPromptTextEl = document.getElementById('password-prompt-text');
+                if (passPromptTextEl) passPromptTextEl.textContent = CONFIG.PASSWORD_PAGE.PROMPT_TEXT || "Kód:";
+                // (Init Stílusok vége)
 
                 function loadProgress() {
                     try {
+                        // Exportált fájl esetén nem töltjük be a LocalStorage-ból
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
+
                         const saved = localStorage.getItem('gameProgress');
                         if (saved !== null) {
                             currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
                         }
-                    } catch(e) { console.warn("Progress load failed:", e); }
+                    } catch(e) { console.warn("[DBG] Progress load failed:", e); }
                 }
                 function saveProgress() { 
-                    try { localStorage.setItem('gameProgress', currentPartIndex); } catch(e) {} 
+                    try { 
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return;
+                        localStorage.setItem('gameProgress', currentPartIndex); 
+                    } catch(e) {} 
                 }
 
                 function stopAllAudio() {
                     ['1','2'].forEach(id => {
                         const aud = document.getElementById('story-audio-'+id);
                         const btn = document.getElementById('play-audio-button-'+id);
-                        aud.pause(); aud.currentTime = 0;
-                        btn.innerHTML = `▶️ Lejátszás (${id})`;
-                        document.getElementById('audio-container-'+id).style.display = 'none';
+                        if (aud) aud.pause(); 
+                        if (aud) aud.currentTime = 0;
+                        if (btn) btn.innerHTML = `▶️ Lejátszás (${id})`;
+                        const container = document.getElementById('audio-container-'+id);
+                        if (container) container.style.display = 'none';
                     });
                 }
                 
                 function toggleAudio(id) {
                     const aud = document.getElementById('story-audio-'+id);
                     const btn = document.getElementById('play-audio-button-'+id);
+                    if (!aud || !btn) return;
+
                     if(aud.paused) { 
                         stopAllAudio(); 
                         document.getElementById('audio-container-'+id).style.display = 'block'; 
                         aud.play(); btn.innerHTML = `⏸️ Szünet (${id})`; 
                     } else { 
-                        aud.pause(); btn.innerHTML = `▶️ Lejátszás (${id})`; 
+                        aud.pause(); btn.innerHTML = `▶️️ Lejátszás (${id})`; 
                     }
                 }
                 
@@ -492,12 +555,18 @@
                     if (!page) return;
 
                     let activeBg = CONFIG.BACKGROUND_URL;
+                    
+                    // Keresés az oldalspecifikus háttérre
                     for(let i = 0; i <= currentPartIndex; i++) {
                         if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
                             activeBg = storyPages[i].customBackgroundUrl;
                         }
                     }
-                    els.storyImage.src = activeBg;
+                    if (els.storyImage) {
+                        els.storyImage.src = activeBg;
+                        console.log(`[DBG] Jelenlegi háttér URL: ${activeBg}`);
+                    }
+
 
                     const prefix = page.content.split(' ')[0];
                     let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
@@ -522,26 +591,45 @@
                     if (!page.customAvatarUrl && AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
                         opacity = 0;
                     }
+                    
+                    // --- MÓDOSÍTOTT LOGIKA: Narrátor és Choice oldalakon rejtett avatar ---
+                    // Meghatározza, hogy az avatár láthatónak kell-e lennie (opacity > 0)
+                    let isAvatarVisible = opacity !== 0;
 
-                    els.avatarImg.src = avatarUrl;
-                    els.avatarImg.style.opacity = opacity;
-                    els.storyDisplay.innerHTML = text;
+                    // További szabályok az elrejtésre: Narrátor prefix vagy 'choice' típusú oldal
+                    if (AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') {
+                        opacity = 0;
+                        isAvatarVisible = false;
+                    }
 
-                    els.interactionCont.style.display = 'flex';
-                    els.passCont.classList.remove('visible');
-                    els.multiChoiceCont.style.display = 'none';
-                    els.msgDisplay.textContent = '';
-                    els.passInput.value = '';
+                    if (els.avatarImg) els.avatarImg.src = avatarUrl;
+                    if (els.avatarImg) els.avatarImg.style.opacity = opacity;
+                    
+                    // KRITIKUS FIX: Eltávolítja az avatárt a layout-ból, amikor rejtve van.
+                    if (els.avatarImg) els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
+
+                    // Megjelenítési beállítás: ha nincs avatár, csökkentjük a felső párnázást
+                    if (contentBox) contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
+                    // ------------------------------------------------------------------
+
+                    if (els.storyDisplay) els.storyDisplay.innerHTML = text;
+
+                    if (els.interactionCont) els.interactionCont.style.display = 'flex';
+                    if (els.passCont) els.passCont.classList.remove('visible');
+                    if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'none';
+                    if (els.msgDisplay) els.msgDisplay.textContent = '';
+                    if (els.passInput) els.passInput.value = '';
 
                     if (page.type === 'password') {
-                        els.interactionCont.style.display = 'none';
-                        els.passCont.classList.add('visible');
-                        document.getElementById('help-button').style.display = page.helpMessage ? 'inline-block' : 'none';
+                        if (els.interactionCont) els.interactionCont.style.display = 'none';
+                        if (els.passCont) els.passCont.classList.add('visible');
+                        const helpBtn = document.getElementById('help-button');
+                        if (helpBtn) helpBtn.style.display = page.helpMessage ? 'inline-block' : 'none';
                     } 
                     else if (page.type === 'choice') {
-                        els.interactionCont.style.display = 'none';
-                        els.multiChoiceCont.style.display = 'flex';
-                        els.multiChoiceCont.innerHTML = '';
+                        if (els.interactionCont) els.interactionCont.style.display = 'none';
+                        if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'flex';
+                        if (els.multiChoiceCont) els.multiChoiceCont.innerHTML = '';
                         
                         if (page.choices && page.choices.length > 0) {
                             page.choices.forEach(choice => {
@@ -553,20 +641,21 @@
                                     saveProgress();
                                     showStory();
                                 };
-                                els.multiChoiceCont.appendChild(btn);
+                                if (els.multiChoiceCont) els.multiChoiceCont.appendChild(btn);
                             });
                         }
                     }
                     else if (page.type === 'audio') {
-                        document.getElementById('audio-container-' + (page.audioId || 1)).style.display = 'block';
-                        els.nextBtn.textContent = page.nextButtonText || 'Tovább';
+                        const audioCont = document.getElementById('audio-container-' + (page.audioId || 1));
+                        if (audioCont) audioCont.style.display = 'block';
+                        if (els.nextBtn) els.nextBtn.textContent = page.nextButtonText || 'Tovább';
                     } 
                     else {
-                        els.nextBtn.textContent = 'Tovább';
+                        if (els.nextBtn) els.nextBtn.textContent = 'Tovább';
                     }
 
                     if (currentPartIndex === storyPages.length - 1 && page.type !== 'password' && page.type !== 'choice') {
-                        els.nextBtn.textContent = "Célpont Keresése";
+                        if (els.nextBtn) els.nextBtn.textContent = "Célpont Keresése";
                     }
                     
                     const isFirstPage = currentPartIndex === 0;
@@ -579,15 +668,18 @@
                                                      page.type === 'password' || 
                                                      page.type === 'audio';
                     
-                    els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
-                    els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
+                    if (els.prevBtn) els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
+                    if (els.discreetBackBtn) els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
                 }
 
                 function showStory() {
-                    els.contentBox.style.opacity = 0;
+                    console.log(`[DBG] Oldal váltása: Index ${currentPartIndex}`);
+                    // Átmeneti rejtés az oldalváltáskor
+                    if (els.contentBox) els.contentBox.classList.add('content-hidden');
                     setTimeout(() => {
                         updateUI();
-                        els.contentBox.style.opacity = 1;
+                        // Megjelenítés az oldal betöltése után
+                        if (els.contentBox) els.contentBox.classList.remove('content-hidden');
                     }, 100);
                 }
 
@@ -595,20 +687,41 @@
                     let images = [];
                     for(let i = 0; i <= currentPartIndex; i++) {
                         const p = storyPages[i];
+                        
+                        // 1. Galéria ürítése
                         if (p.galleryMode === 'clear') {
                             images = []; 
-                        } else if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
-                            if (p.galleryMode === 'add' || !p.galleryMode) {
-                                if(!images.includes(p.customGalleryUrl)) {
-                                    images.push(p.customGalleryUrl);
+                        } 
+                        
+                        // Új logikai blokk a több URL kezelésére
+                        if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
+                            // URL-ek szétválasztása (soronként vagy vesszővel), üres sorok kihagyása
+                            const urls = p.customGalleryUrl.split(/[\n,]/).map(url => url.trim()).filter(url => url.length > 0);
+
+                            urls.forEach(url => {
+                                const existingIndex = images.indexOf(url);
+
+                                // 2. Kép hozzáadása (akkumulál)
+                                if (p.galleryMode === 'add_url' || !p.galleryMode) {
+                                    if (existingIndex === -1) {
+                                        images.push(url);
+                                    }
+                                } 
+                                // 3. Kép eltávolítása
+                                else if (p.galleryMode === 'remove_url') {
+                                    if (existingIndex !== -1) {
+                                        images.splice(existingIndex, 1);
+                                    }
                                 }
-                            }
+                            });
                         }
                     }
                     return images;
                 }
 
                 function populateGallery() {
+                    if (!els.galleryContainer) return;
+
                     els.galleryContainer.innerHTML = '';
                     const images = getVisibleGalleryImages();
                     if (images.length === 0) {
@@ -621,6 +734,8 @@
                         const img = document.createElement('img');
                         img.src = url;
                         img.alt = "Galéria Kép " + (index + 1);
+                        // Hozzáadott hibafigyelő a galéria képekhez
+                        img.onerror = function() { console.error(`[DBG] Galéria kép betöltési hiba a címen: ${url}`); this.onerror=null; this.style.opacity='0.2'; };
                         thumbnailDiv.onclick = () => openFullImage(url);
                         thumbnailDiv.appendChild(img);
                         els.galleryContainer.appendChild(thumbnailDiv);
@@ -628,8 +743,10 @@
                 }
 
                 function setScaleTransform() {
-                    els.fullImage.style.transform = `scale(${currentScale})`;
-                    els.fullImage.style.cursor = currentScale > MIN_SCALE ? 'zoom-out' : 'zoom-in';
+                    if (els.fullImage) {
+                        els.fullImage.style.transform = `scale(${currentScale})`;
+                        els.fullImage.style.cursor = currentScale > MIN_SCALE ? 'zoom-out' : 'zoom-in';
+                    }
                 }
 
                 function toggleZoom() {
@@ -638,90 +755,106 @@
                 }
 
                 function openFullImage(url) {
-                    els.fullImage.src = url;
+                    if (els.fullImage) els.fullImage.src = url;
                     currentScale = MIN_SCALE;
                     setScaleTransform();
-                    els.fullImageModal.style.display = 'flex';
-                    els.galleryModal.style.display = 'none';
+                    if (els.fullImageModal) els.fullImageModal.style.display = 'flex';
+                    if (els.galleryModal) els.galleryModal.style.display = 'none';
                 }
 
                 function closeFullImage() {
-                    els.fullImageModal.style.display = 'none';
+                    if (els.fullImageModal) els.fullImageModal.style.display = 'none';
                 }
 
                 function openGallery() {
                     populateGallery();
-                    els.galleryModal.style.display = 'block';
+                    if (els.galleryModal) els.galleryModal.style.display = 'block';
                 }
 
                 function closeGallery() {
-                    els.galleryModal.style.display = 'none';
+                    if (els.galleryModal) els.galleryModal.style.display = 'none';
                     closeFullImage();
                 }
 
                 let lastTap = 0;
-                els.fullImage.addEventListener('click', (e) => {
-                    const now = new Date().getTime();
-                    const timesince = now - lastTap;
-                    if (timesince < 300 && timesince > 0) {
+                if (els.fullImage) {
+                    els.fullImage.addEventListener('click', (e) => {
+                        const now = new Date().getTime();
+                        const timesince = now - lastTap;
+                        if (timesince < 300 && timesince > 0) {
+                            e.preventDefault();
+                            toggleZoom();
+                        } 
+                        lastTap = now;
+                    });
+                    els.fullImage.addEventListener('dblclick', (e) => {
                         e.preventDefault();
                         toggleZoom();
-                    } 
-                    lastTap = now;
-                });
-                els.fullImage.addEventListener('dblclick', (e) => {
-                    e.preventDefault();
-                    toggleZoom();
-                });
+                    });
+                }
 
-                els.nextBtn.onclick = () => {
-                    if (currentPartIndex === storyPages.length - 1) {
-                        startGPS();
-                        return;
-                    }
-                    const page = storyPages[currentPartIndex];
-                    currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
-                    saveProgress();
-                    showStory();
-                };
+                if (els.nextBtn) {
+                    els.nextBtn.onclick = () => {
+                        if (currentPartIndex === storyPages.length - 1) {
+                            startGPS();
+                            return;
+                        }
+                        const page = storyPages[currentPartIndex];
+                        currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
+                        saveProgress();
+                        showStory();
+                    };
+                }
 
-                els.prevBtn.onclick = () => {
-                    const page = storyPages[currentPartIndex];
-                    currentPartIndex = page.backIndex !== undefined ? page.backIndex : Math.max(0, currentPartIndex - 1);
-                    saveProgress();
-                    showStory();
-                };
+                if (els.prevBtn) {
+                    els.prevBtn.onclick = () => {
+                        const page = storyPages[currentPartIndex];
+                        currentPartIndex = page.backIndex !== undefined ? page.backIndex : Math.max(0, currentPartIndex - 1);
+                        saveProgress();
+                        showStory();
+                    };
+                }
                 
-                els.discreetBackBtn.onclick = els.prevBtn.onclick;
-                document.getElementById('back-button-password').onclick = els.prevBtn.onclick;
+                if (els.discreetBackBtn) els.discreetBackBtn.onclick = els.prevBtn.onclick;
+                const passBackBtn = document.getElementById('back-button-password');
+                if (passBackBtn) passBackBtn.onclick = els.prevBtn.onclick;
 
-                els.checkBtn.onclick = () => {
-                    const page = storyPages[currentPartIndex];
-                    if (els.passInput.value.trim() === page.correctPassword) {
-                        els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Helyes!";
-                        els.msgDisplay.style.color = '#00ff00';
-                        setTimeout(() => {
-                            if (page.nextIndexSuccess === -1) startGPS();
-                            else {
-                                currentPartIndex = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : currentPartIndex + 1;
-                                saveProgress();
-                                showStory();
-                            }
-                        }, 1000);
-                    } else {
-                        els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.ERROR_MESSAGE || "Hibás kód!";
-                        els.msgDisplay.style.color = 'red';
-                    }
-                };
+                if (els.checkBtn) {
+                    els.checkBtn.onclick = () => {
+                        const page = storyPages[currentPartIndex];
+                        if (!els.passInput || !els.msgDisplay) return;
 
-                document.getElementById('play-audio-button-1').onclick = () => toggleAudio('1');
-                document.getElementById('play-audio-button-2').onclick = () => toggleAudio('2');
+                        if (els.passInput.value.trim() === page.correctPassword) {
+                            els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Helyes!";
+                            els.msgDisplay.style.color = '#00ff00';
+                            setTimeout(() => {
+                                if (page.nextIndexSuccess === -1) startGPS();
+                                else {
+                                    currentPartIndex = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : currentPartIndex + 1;
+                                    saveProgress();
+                                    showStory();
+                                }
+                            }, 1000);
+                        } else {
+                            els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.ERROR_MESSAGE || "Hibás kód!";
+                            els.msgDisplay.style.color = 'red';
+                        }
+                    };
+                }
+
+                const audioBtn1 = document.getElementById('play-audio-button-1');
+                if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
+                const audioBtn2 = document.getElementById('play-audio-button-2');
+                if (audio2) audio2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
-                    els.contentBox.style.display = 'none';
-                    els.distModal.style.display = 'flex';
+                    if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
+                    if (els.distModal) els.distModal.style.display = 'flex';
+                    
                     const targetLat = parseFloat(GPS_COMPASS.TARGET_LATITUDE);
                     const targetLon = parseFloat(GPS_COMPASS.TARGET_LONGITUDE);
+                    
+                    if (!els.distStatus) return;
 
                     if (!navigator.geolocation) {
                         els.distStatus.textContent = "A böngésző nem támogatja a helymeghatározást.";
@@ -738,7 +871,7 @@
                         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
                         const dist = R * c;
 
-                        els.distDisplay.textContent = Math.round(dist) + " M";
+                        if (els.distDisplay) els.distDisplay.textContent = Math.round(dist) + " M";
                         els.distStatus.textContent = `Pontosság: ${Math.round(pos.coords.accuracy)}m`;
 
                         if (dist < GPS_COMPASS.SUCCESS_RADIUS_M) {
@@ -752,51 +885,82 @@
                     }, { enableHighAccuracy: true });
                 }
 
-                document.getElementById('image-button').onclick = openGallery;
-                document.querySelector('#galleryModal .close-gallery').onclick = closeGallery;
-                document.querySelector('#full-image-display .close-gallery').onclick = closeFullImage;
+                const imageBtn = document.getElementById('image-button');
+                if (imageBtn) imageBtn.onclick = openGallery;
 
-                document.getElementById('help-button').onclick = () => {
-                    const page = storyPages[currentPartIndex];
-                    if(page.helpMessage) {
-                        currentHelpIndex = 0;
+                const closeGalleryBtn = document.querySelector('#galleryModal .close-gallery');
+                if (closeGalleryBtn) closeGalleryBtn.onclick = closeGallery;
+
+                const closeFullImageBtn = document.querySelector('#full-image-display .close-gallery');
+                if (closeFullImageBtn) closeFullImageBtn.onclick = closeFullImage;
+
+                const helpBtn = document.getElementById('help-button');
+                if (helpBtn) {
+                    helpBtn.onclick = () => {
+                        const page = storyPages[currentPartIndex];
+                        if(page.helpMessage && els.helpModal && els.helpText) {
+                            currentHelpIndex = 0;
+                            const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
+                            els.helpText.textContent = msgs[0];
+                            els.helpModal.style.display = 'flex';
+                            const helpNextBtn = document.getElementById('help-next-button');
+                            if (helpNextBtn) helpNextBtn.style.display = msgs.length > 1 ? 'inline-block' : 'none';
+                        }
+                    };
+                }
+
+                const helpCloseBtn = document.getElementById('help-close-button');
+                if (helpCloseBtn) helpCloseBtn.onclick = () => { if (els.helpModal) els.helpModal.style.display = 'none'; };
+
+                const helpNextBtn = document.getElementById('help-next-button');
+                if (helpNextBtn) {
+                    helpNextBtn.onclick = () => {
+                        const page = storyPages[currentPartIndex];
                         const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
-                        els.helpText.textContent = msgs[0];
-                        els.helpModal.style.display = 'flex';
-                        document.getElementById('help-next-button').style.display = msgs.length > 1 ? 'inline-block' : 'none';
-                    }
-                };
-                document.getElementById('help-close-button').onclick = () => els.helpModal.style.display = 'none';
-                document.getElementById('help-next-button').onclick = () => {
-                    const page = storyPages[currentPartIndex];
-                    const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
-                    currentHelpIndex++;
-                    if(currentHelpIndex < msgs.length) {
-                        els.helpText.textContent = msgs[currentHelpIndex];
-                        if(currentHelpIndex === msgs.length - 1) document.getElementById('help-next-button').style.display = 'none';
-                    }
-                };
+                        currentHelpIndex++;
+                        if(currentHelpIndex < msgs.length) {
+                            if (els.helpText) els.helpText.textContent = msgs[currentHelpIndex];
+                            if(currentHelpIndex === msgs.length - 1) {
+                                if (helpNextBtn) helpNextBtn.style.display = 'none';
+                            }
+                        }
+                    };
+                }
+
 
                 loadProgress();
-                showStory();
+                showStory(); // showStory hívása, ami meghívja az updateUI-t
                 
-                // SIKERES INDÍTÁS: Felfedjük az oldalt
+                // A tartalom doboz lassú megjelenítése (initial fade-in)
+                if (els.contentBox) els.contentBox.classList.remove('content-hidden');
+
+                // SIKERES INDÍTÁS: Felfedjük az oldalt (body tag-en keresztül)
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = 1;
 
             } catch (err) {
                 // KRITIKUS HIBAKEZELÉS: Ha bármi elszáll, kiírjuk a képernyőre
                 console.error("Critical Start Error:", err);
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = 1;
-                document.body.innerHTML = `
-                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:#111; height:100vh;">
-                        <h1 style="font-size:2em; margin-bottom:10px;">⚠️ Hiba történt a betöltéskor</h1>
-                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudott elindulni az alábbi hiba miatt:</p>
-                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:800px; overflow:auto; text-align:left;">${err.message}\n\n${err.stack || ''}</pre>
-                        <p>Kérlek, ellenőrizd az exportálást vagy a konfigurációt.</p>
-                    </div>
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = "color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;";
+                errorDiv.innerHTML = `
+                    <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
+                    <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg: <br> <b>${err.message}</b></p>
+                    <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Töltsd fel egy webszerverre (pl. GitHub Pages) és onnan nyisd meg!</p>
+                    <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
                 `;
+
+                // Csak akkor állítjuk be a hibaképernyőt, ha a body létezik
+                if (document.body) {
+                    document.body.style.backgroundColor = '#111'; // biztos fekete
+                    document.body.innerHTML = ''; // Először töröljük a tartalom dobozt (de a menüsort hagyjuk)
+                    document.body.appendChild(errorDiv);
+
+                    // Mivel itt dobódik a hiba, a body láthatóvá tétele is itt kell
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = 1;
+                }
             }
         })();
     </script>
