@@ -546,14 +546,23 @@
                     }
                     
                     // --- MÓDOSÍTOTT LOGIKA: Narrátor és Choice oldalakon rejtett avatar ---
+                    // Meghatározza, hogy az avatár láthatónak kell-e lennie (opacity > 0)
+                    let isAvatarVisible = opacity !== 0;
+
+                    // További szabályok az elrejtésre: Narrátor prefix vagy 'choice' típusú oldal
                     if (AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') {
                         opacity = 0;
+                        isAvatarVisible = false;
                     }
 
                     els.avatarImg.src = avatarUrl;
                     els.avatarImg.style.opacity = opacity;
+                    
+                    // KRITIKUS FIX: Eltávolítja az avatárt a layout-ból, amikor rejtve van.
+                    els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
+
                     // Megjelenítési beállítás: ha nincs avatár, csökkentjük a felső párnázást
-                    contentBox.style.paddingTop = (opacity === 0) ? '10px' : '40px';
+                    contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
                     // ------------------------------------------------------------------
 
                     els.storyDisplay.innerHTML = text;
@@ -627,16 +636,33 @@
                     let images = [];
                     for(let i = 0; i <= currentPartIndex; i++) {
                         const p = storyPages[i];
+                        
+                        // 1. Galéria ürítése
                         if (p.galleryMode === 'clear') {
                             images = []; 
-                        } else if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
-                            if (p.galleryMode === 'add' || !p.galleryMode) {
-                                if(!images.includes(p.customGalleryUrl)) {
-                                    images.push(p.customGalleryUrl);
-                                    // BIZTONSÁGI MÁSOLAT: ha a konfigurációban lévő oldalak nincsenek teljesen kitöltve, akkor is törlődjön.
-                                    if(p.galleryMode === 'add') images = [p.customGalleryUrl]; 
+                        } 
+                        
+                        // Új logikai blokk a több URL kezelésére
+                        if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
+                            // URL-ek szétválasztása (soronként vagy vesszővel), üres sorok kihagyása
+                            const urls = p.customGalleryUrl.split(/[\n,]/).map(url => url.trim()).filter(url => url.length > 0);
+
+                            urls.forEach(url => {
+                                const existingIndex = images.indexOf(url);
+
+                                // 2. Kép hozzáadása (akkumulál)
+                                if (p.galleryMode === 'add_url' || !p.galleryMode) {
+                                    if (existingIndex === -1) {
+                                        images.push(url);
+                                    }
+                                } 
+                                // 3. Kép eltávolítása
+                                else if (p.galleryMode === 'remove_url') {
+                                    if (existingIndex !== -1) {
+                                        images.splice(existingIndex, 1);
+                                    }
                                 }
-                            }
+                            });
                         }
                     }
                     return images;
