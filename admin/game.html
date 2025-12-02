@@ -123,24 +123,14 @@
         .modal-title { font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #00ffff; }
         #distance-modal-display { font-size: 3em; color: #00ff00; margin: 20px; font-weight: bold; }
         
-        /* GPS Térkép Gomb (Eredeti stílus) */
+        /* GPS Térkép Gomb */
         #distance-modal-map-button {
-            display: inline-block;
-            margin-top: 20px;
-            background-color: transparent;
-            border: 2px solid #00ffff;
-            color: #00ffff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 1.2em;
-            font-weight: bold;
-            text-decoration: none;
-            transition: all 0.2s;
+            display: inline-block; margin-top: 20px; background-color: transparent;
+            border: 2px solid #00ffff; color: #00ffff; padding: 10px 20px;
+            border-radius: 5px; font-size: 1.2em; font-weight: bold;
+            text-decoration: none; transition: all 0.2s;
         }
-        #distance-modal-map-button:hover {
-            background-color: #00ffff;
-            color: #1a1a1a;
-        }
+        #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
 
         /* Gallery */
         #gallery-image { max-width: 100%; max-height: 70vh; border-radius: 5px; border: 2px solid #8a2be2; display: block; margin: 0 auto; }
@@ -193,6 +183,7 @@
     <div class="fixed-menu-bar">
         <button id="map-button" class="menu-button" title="Térkép"><i class="fa-solid fa-map-location-dot"></i></button>
         <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
+        <button id="download-button" class="menu-button" title="HTML Letöltése"><i class="fa-solid fa-download"></i></button>
     </div>
     
     <!-- Súgó Modal -->
@@ -297,9 +288,7 @@
             document.documentElement.style.setProperty('--bg-color', CONFIG.BODY_BG_COLOR);
             document.documentElement.style.setProperty('--text-color', CONFIG.BODY_TEXT_COLOR);
             
-            // Kezdő háttérkép beállítása (ez később felülíródik a showStory-ban)
             els.storyImage.src = CONFIG.BACKGROUND_URL;
-            
             document.getElementById('story-audio-1').src = CONFIG.MEDIA.AUDIO_1_URL;
             document.getElementById('story-audio-2').src = CONFIG.MEDIA.AUDIO_2_URL;
             document.getElementById('distance-modal-map-button').href = GPS_COMPASS.MAP_BUTTON_URL;
@@ -345,8 +334,6 @@
                 if (!page) return;
 
                 // --- HÁTTÉRKÉP KEZELÉS ---
-                // Megkeressük a legutoljára beállított hátteret (beleértve a jelenlegi oldalt is)
-                // Ez biztosítja, hogy ha egy oldalon nincs háttér megadva, az előző maradjon.
                 let activeBg = CONFIG.BACKGROUND_URL;
                 for(let i = 0; i <= currentPartIndex; i++) {
                     if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
@@ -356,14 +343,12 @@
                 els.storyImage.src = activeBg;
 
                 // --- GALÉRIA KÉP KEZELÉS ---
-                // Megkeressük a legutoljára beállított galéria képet a mód alapján
-                currentGalleryImageUrl = ""; // Reset
+                currentGalleryImageUrl = ""; 
                 for(let i = 0; i <= currentPartIndex; i++) {
                     const p = storyPages[i];
                     if (p.galleryMode === 'clear') {
                         currentGalleryImageUrl = "";
                     } else if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
-                        // Ha van URL és nem 'clear' (tehát 'add' vagy undefined), akkor beállítjuk
                         currentGalleryImageUrl = p.customGalleryUrl;
                     }
                 }
@@ -374,15 +359,12 @@
                 let opacity = 1;
                 let text = page.content;
 
-                // Ha van egyedi avatar URL beállítva az oldalhoz, azt használjuk
                 if (page.customAvatarUrl && page.customAvatarUrl.trim() !== '') {
                     avatarUrl = page.customAvatarUrl;
-                    // Ha van prefix, vágjuk le a szövegből
                     if (AVATARS.AVATAR_MAP[prefix] || AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
                         text = text.substring(prefix.length).trim();
                     }
                 } else {
-                    // Normál logika
                     if (AVATARS.AVATAR_MAP[prefix]) { 
                         avatarUrl = AVATARS.AVATAR_MAP[prefix]; 
                         text = text.substring(prefix.length).trim(); 
@@ -392,7 +374,6 @@
                     }
                 }
 
-                // Avatar elrejtése, ha nincs custom és rejtett prefix van
                 if (!page.customAvatarUrl && AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
                     opacity = 0;
                 }
@@ -441,13 +422,10 @@
                     els.nextBtn.textContent = 'Tovább';
                 }
 
-                // UTOLSÓ OLDAL LOGIKA: Ha ez az utolsó oldal, gomb átnevezése
-                // Fontos: Jelszó és Choice oldalaknál ez nem írhatja felül a vezérlőket, ezért az if feltétel
                 if (currentPartIndex === storyPages.length - 1 && page.type !== 'password' && page.type !== 'choice') {
                      els.nextBtn.textContent = "Célpont Keresése";
                 }
                 
-                // Vissza gomb tiltása az első oldalon
                 els.prevBtn.disabled = currentPartIndex === 0;
             }
 
@@ -461,12 +439,10 @@
 
             // Gomb Események
             els.nextBtn.onclick = () => {
-                // Ha az utolsó oldalon vagyunk, a gomb a GPS-t indítja
                 if (currentPartIndex === storyPages.length - 1) {
                     startGPS();
                     return;
                 }
-
                 const page = storyPages[currentPartIndex];
                 currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
                 saveProgress();
@@ -575,6 +551,20 @@
                     if(currentHelpIndex === msgs.length - 1) document.getElementById('help-next-button').style.display = 'none';
                 }
             };
+            
+            // DOWNLOAD FUNKCIÓ
+            document.getElementById('download-button').onclick = () => {
+                const htmlContent = "<!doctype html>\n" + document.documentElement.outerHTML;
+                const blob = new Blob([htmlContent], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'game.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
 
             // Indítás
             loadProgress();
@@ -585,5 +575,3 @@
     </script>
 </body>
 </html>
-
-
