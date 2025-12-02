@@ -1,5 +1,3 @@
-
-
 <!doctype html>
 <html lang="hu">
 <head>
@@ -272,12 +270,6 @@
         #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
 
     </style>
-
-    <script>
-        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA ---
-        // Ez a konfiguráció az admin felületen mentett állapotot tükrözi.
-        window.PRELOADED_CONFIG = {"APP_TITLE":"Anna és Márk ","BACKGROUND_URL":"https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg","BODY_BG_COLOR":"#1a1a1a","BODY_TEXT_COLOR":"#e0e0e0","MENU_LINKS":{"MAP_LINK_URL":"https://www.google.com/maps/d/u/0/viewer?mid=16ShsAj1LaFgeQYGVD8R2Y_ebs50usI8&ll=47.4748758%2C19.039845799999984&z=17"},"GPS_COMPASS":{"TARGET_LATITUDE":47.47407,"TARGET_LONGITUDE":19.04001,"SUCCESS_REDIRECT_URL":"busz.html","MAP_BUTTON_URL":"https://www.google.com/maps/d/u/0/viewer?mid=1cmPNBkR0t3ozvDgY7056CZiFxf-8d-4&ll=47.47407829999998%2C19.040016799999986&z=17"},"PASSWORD_PAGE":{"PROMPT_TEXT":"Add meg a kódot:","CHECK_BUTTON_TEXT":"ELLENŐRZÉS","BACK_BUTTON_TEXT":"Vissza","ERROR_MESSAGE":"Helytelen jelszó! Próbáld újra.","SUCCESS_MESSAGE":"Kód elfogadva!"},"AVATARS":{"DEFAULT_AVATAR_URL":"https://placehold.co/70x70/1A1A1A/FFFFFF?text=?","AVATAR_MAP":{"§M":"https://treasurehuntsites.github.io/annaesmark/Img/mark.png","§A":"https://treasurehuntsites.github.io/annaesmark/Img/anna.png","§R":"https://placehold.co/70x70/1A1A1A/00FF00?text=R"},"HIDDEN_PREFIXES":["§N","§KOD","§H","§RESET"]},"MEDIA":{"AUDIO_1_URL":"https://treasurehuntsites.github.io/media/Ugynokok1.mp3","AUDIO_2_URL":"https://treasurehuntsites.github.io/media/Ugynokok2.mp3"},"storyPages":[{"type":"text","content":"1","customAvatarUrl":"https://treasurehuntsites.github.io/annaesmark/Img/mark.png","customBackgroundUrl":"","customGalleryUrl":"https://treasurehuntsites.github.io/annaesmark/Img/mark.png","galleryMode":"add"},{"type":"text","content":"§M Igen? Miről?","nextIndex":2,"customAvatarUrl":"","customBackgroundUrl":"","customGalleryUrl":"","galleryMode":"add"},{"type":"audio","content":"§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.","audioId":1,"nextIndex":3,"backIndex":1,"nextButtonText":"Tovább a történetre","customAvatarUrl":"","customBackgroundUrl":"","customGalleryUrl":"","galleryMode":"add"},{"type":"choice","content":"valassz","backIndex":2,"customAvatarUrl":"","customBackgroundUrl":"","customGalleryUrl":"https://treasurehuntsites.github.io/annaesmark/Img/mark.png","galleryMode":"add","choices":[{"text":"4","nextIndex":4},{"text":"5","nextIndex":5}]}]};
-    </script>
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
@@ -578,8 +570,17 @@
                     }
                     
                     const isFirstPage = currentPartIndex === 0;
-                    els.prevBtn.disabled = isFirstPage;
-                    els.discreetBackBtn.disabled = isFirstPage;
+                    
+                    // --- DISZKRÉT VISSZA GOMB LOGIKA FRISSÍTÉSE ---
+                    // Csak 'choice' oldalakon látható, ha nem az első oldal.
+                    // Típusok, ahol rejtve marad: 'text', 'password', 'audio'.
+                    let shouldDiscreetBackBeHidden = isFirstPage || 
+                                                     page.type === 'text' || 
+                                                     page.type === 'password' || 
+                                                     page.type === 'audio';
+                    
+                    els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
+                    els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
                 }
 
                 function showStory() {
@@ -798,4 +799,6 @@
                 `;
             }
         })();
-    
+    </script>
+</body>
+</html>
