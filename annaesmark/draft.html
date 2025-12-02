@@ -1,1 +1,660 @@
-x
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title>Anna és Márk</title>
+    
+    <!-- GPS és Ikonok (megtartva a minta alapján) -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    <!-- Fontok és Ikonok -->
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* --- Zoomolás és Görgetés Letiltása (Modal nyitáskor) */
+        html {
+            overflow-x: hidden;
+            overflow-y: auto; 
+        }
+
+        /* Amikor egy modal nyitva van, a főoldal görgetését letiltjuk */
+        body.modal-open {
+            overflow: hidden;
+            height: 100%;
+            touch-action: none;
+        }
+
+
+        /* Alapvető reszet és sötét háttér */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Play', sans-serif;
+            color: #e0e0e0; 
+            background-color: #1a1a1a; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* A görgetés engedélyezve: */
+            overflow-y: auto;
+            min-height: 100vh;
+            touch-action: auto; 
+            text-align: center;
+            padding-bottom: 60px; 
+            
+            /* FOUC (szöveg előzetes megjelenése) ellen */
+            visibility: hidden; 
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out; 
+        }
+        
+        /* Teljes szélességű KÉP (Háttér) */
+        .full-width-image-container {
+            width: 100%;
+            height: 100vh; 
+            overflow: hidden;
+            position: absolute; /* Fixed-ről absolute-ra, hogy a body-val együtt görgethető legyen */
+            top: 0;
+            left: 0;
+            z-index: 0; 
+            min-height: 100vh;
+        }
+
+        .full-width-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            object-position: center top; 
+        }
+
+        /* Tartalom doboz - FIX ALULRA ZÁRVA */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.85); 
+            padding: 40px 20px 10px 20px; 
+            margin: 0; 
+            border-radius: 10px 10px 0 0; 
+            max-width: 800px;
+            width: calc(100% - 40px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+            border: 3px solid #8a2be2;
+            box-sizing: border-box;
+            position: fixed; /* Fixen marad alul, mint UI overlay */
+            bottom: 50px; 
+            left: 50%;
+            transform: translateX(-50%); 
+            z-index: 10;
+            text-align: left;
+            min-height: 250px; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: space-between; 
+            opacity: 1; 
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Történet szövege */
+        #story-text-display {
+            font-size: 1.2em;
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap; 
+            flex-grow: 1; 
+        }
+        
+        /* Audio gombok... */
+        .audio-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .audio-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #1a1a1a;
+            background-color: #00FFFF; 
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .audio-button:hover {
+            background-color: #00DDEE;
+        }
+
+        /* --- ALSÓ INTERAKCIÓS SÁV (a történet gombjai) --- */
+        .bottom-bar {
+            padding-top: 10px;
+            border-top: 1px dashed #8a2be2;
+            min-height: 48px;
+            width: 100%;
+        }
+
+        .interaction-container {
+            display: flex;
+            justify-content: space-between; 
+            align-items: center;
+            width: 100%;
+        }
+
+        .page-button {
+            padding: 12px 20px; 
+            text-decoration: none;
+            color: #ffffff;
+            background-color: #8a2be2;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+            margin: 5px;
+        }
+        
+        .page-button#next-page-button.full-width {
+            width: 100%;
+            flex-grow: 1;
+            margin-left: 0;
+            margin-right: 0;
+        }
+        
+        .page-button:hover:not(:disabled) {
+            background-color: #7b1cd1;
+            transform: translateY(-1px);
+        }
+
+        .page-button:disabled {
+            background-color: #555555;
+            cursor: not-allowed;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+        
+        /* Több gomb konténer - ÚJ a két választáshoz */
+        .multi-choice-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Diszkrét Vissza Gomb - CSAK CHOICE ESETEKBEN */
+        .discreet-back-button {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            z-index: 30; 
+            background-color: rgba(138, 43, 226, 0.5); 
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 50%; 
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none; 
+            transition: background-color 0.2s;
+            text-transform: none;
+            margin: 0;
+            border: none;
+        }
+
+        .discreet-back-button:hover:not(:disabled) {
+            background-color: rgba(138, 43, 226, 0.8);
+            transform: none; 
+        }
+        .discreet-back-button:disabled {
+             background-color: rgba(90, 90, 90, 0.5);
+             opacity: 0.5;
+             cursor: not-allowed;
+        }
+
+
+        /* Jelszó konténer */
+        #password-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        #password-container.visible {
+            display: flex;
+        }
+        
+        #password-input {
+            padding: 12px;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            background-color: #2c2c2c;
+            color: #00ffff;
+            font-size: 1.2em;
+            text-align: center;
+            font-family: 'Play', sans-serif;
+            margin-bottom: 5px; 
+        }
+
+        /* A "Add meg a kódot" sor flexbe igazítva a kérdőjellel */
+        #password-container p {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .password-interaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        #check-password-button, #back-button-password {
+            padding: 12px 20px; 
+            font-size: 1.1em; 
+        }
+        
+        #back-button-password {
+            color: #ffffff;
+            background-color: #8a2be2; 
+        }
+        
+        #check-password-button {
+            color: #ffffff;
+            background-color: #00ffff;
+            box-shadow: 0 4px 10px rgba(0, 255, 255, 0.4); 
+            flex-grow: 1; 
+        }
+        
+        #check-password-button:hover {
+            background-color: #00ddee;
+            transform: translateY(-1px); 
+        }
+
+        #message {
+            margin-top: 10px;
+            font-weight: 700;
+            color: #ff4500;
+        }
+
+        /* Avatar kép */
+        .avatar-image {
+            position: absolute;
+            top: -50px; 
+            left: -10px; 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            z-index: 20; 
+            display: block; 
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); 
+            transition: opacity 0.3s ease-in-out; 
+        }
+        
+        /* --- FIX ALSÓ MENÜSOR --- */
+        .fixed-menu-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #1a1a1a;
+            border-top: 2px solid #8a2be2;
+            z-index: 50; 
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
+        }
+
+        .menu-button {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.3s;
+        }
+
+        .menu-button:hover {
+            color: #00ffff;
+        }
+
+        /* --- GALÉRIA MODAL STÍLUSOK --- */
+        #galleryModal {
+            display: none; 
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll; 
+            background-color: rgba(0, 0, 0, 0.95);
+        }
+        
+        #gallery-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            padding-top: 50px;
+        }
+
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; 
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .gallery-thumbnail:hover {
+            transform: scale(1.03);
+        }
+
+        .gallery-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+            display: block;
+        }
+        
+        /* Teljes képernyős modál konténer a zoomolható képnek */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: hidden; 
+        }
+        
+        .full-image-content {
+            width: 100vw; 
+            height: 100vh;
+            display: flex;
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden;
+        }
+
+        #fullImageDisplay {
+            display: block;
+            width: auto; 
+            height: auto;
+            max-width: 100%; 
+            max-height: 100%;
+            touch-action: auto; /* Panning letiltva, csak a nagyítás engedélyezett */
+            cursor: zoom-in;
+            margin: auto;
+            /* Zoomhoz hozzáadott átmenet */
+            transition: transform 0.3s ease-in-out; 
+        }
+
+        .close-gallery {
+            position: absolute;
+            top: 15px;
+            right: 33px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 110;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 1);
+        }
+        
+        .close-gallery:hover,
+        .close-gallery:focus {
+            color: #00ffff;
+        }
+        
+        /* --- SÚGÓ (HELP) MODAL STÍLUSOK (Megtartva) --- */
+        #help-modal {
+            display: none;
+            position: fixed;
+            z-index: 200; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+
+        .help-content {
+            background-color: #1a1a1a;
+            margin: 30% auto; 
+            padding: 30px;
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            text-align: center;
+        }
+
+        #help-text-display {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 25px;
+            min-height: 80px;
+        }
+
+        #help-next-button, #help-close-button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        #help-next-button {
+            background-color: #00ffff;
+            color: #1a1a1a;
+        }
+
+        #help-next-button:hover {
+            background-color: #00ddee;
+        }
+        
+        #help-close-button:hover {
+            background-color: #777777 !important;
+        }
+
+        .help-icon {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 0; 
+        }
+        
+        /* --- TÁVOLSÁG MODAL STÍLUSOK (GPS MODAL) (Megtartva) */
+        #distanceModal {
+            display: none; 
+            position: fixed;
+            z-index: 250; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(2px);
+            
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .distance-content {
+            padding: 20px;
+            max-width: 90%;
+            background-color: rgba(0, 0, 0, 0.85); 
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            border: 2px solid #00ffff;
+        }
+
+        #distance-modal-display {
+            font-size: 5em;
+            font-weight: bold;
+            color: #00ff00; 
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        #distance-status {
+            color: #aaaaaa;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            visibility: hidden; 
+            height: 0; 
+            margin-top: -20px; 
+        }
+        
+        #distance-status.visible {
+            visibility: visible;
+            height: auto;
+            margin-top: 10px;
+        }
+
+        #distance-modal-map-button {
+            background-color: transparent;
+            border: 2px solid #00ffff; 
+            color: #00ffff; 
+            padding: 15px 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            transition: all 0.2s ease-in-out;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #distance-modal-map-button:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 1);
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;"> 
+    <div class="full-width-image-container">
+        <!-- Háttérkép -->
+        <img id="story-image" src="https://treasurehuntsites.github.io/annaesmark/Img/Fulke1.jpg" alt="Titokzatos jelenet">
+    </div>
+
+    <div class="content-box" id="content-box">
+        <!-- Avatar kép -->
+        <!-- Az avatar kép forrása dinamikusan frissül a speaker alapján -->
+        <img id="avatar-img" class="avatar-image" src="https://treasurehuntsites.github.io/annaesmark/Img/mark.png" alt="Szereplő avatar">
+        
+        <!-- Diszkrét vissza nyíl gomb (csak választásnál látszik) -->
+        <button id="discreet-back-button" class="discreet-back-button page-button" disabled style="display: none;">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        
+        <p id="story-text-display"></p>
+        
+        <!-- Audio konténerek -->
+        <div id="audio-container-1" class="audio-container" style="display:none;">
+             <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
+        </div>
+        <div id="audio-container-2" class="audio-container" style="display:none;">
+             <button id="play-audio-button-2" class="audio-button">▶️ Lejátszás (2)</button>
+        </div>
+
+
+        <div class="bottom-bar">
+            <!-- Szekvenciális interakciók konténere -->
+            <div class="interaction-container" id="interaction-container">
+                <button id="prev-page-button" class="page-button" disabled>
+                    Vissza
+                </button>
+                
+                <button id="next-page-button" class="page-button">
+                    Tovább
+                </button>
+            </div>
+            
+            <!-- Kétválasztás konténer (Max 4 gomb) -->
+            <div class="multi-choice-container" id="multi-choice-container" style="display:none;">
+                <button id="choice-1-button" class="page-button" data-next-index="2">
+                    Megvizsgálod a fülke belsejét
+                </button>
+                <button id="choice-2-button" class="page-button" data-next-index="0">
+                    Hívod a kontaktot a rejtett frekvencián
+                </button>
+                <button id="choice-3-button" class="page-button" data-next-index="">
+                    Harmadik Választás
+                </button>
+                <button id="choice-4-button" class="page-button" data-next-index="" style="display: none;">
+                    Negyedik Választás
+                </button>
+            </div>
+
+
+            <div id="password-container">
+                <p>
+                    Add meg a kódot:
+                    <button id="help-button" class="help-icon" title="Segítség">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                </p>
+                <input type="text" id="password-input" maxlength="8">
+                
+                <div class="password-interaction">
+                    <button id="back-button-password" class="page-button">
+                        Vissza
+                    </button>
+                    <button id="check-password-button" class="page-button">
+                        ELLENŐRZÉS
+                    </button>
+                </div>
+                <!-- Szoba link konténer (megtartva) -->
+                <div id="roo
