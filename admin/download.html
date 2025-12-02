@@ -828,19 +828,22 @@
             }
 
             try {
-                // Konfiguráció JSON string kinyerése
-                const configString = savedConfig; 
+                // 1. Mentett konfiguráció JSON string kinyerése
+                const configString = savedConfig;
+                
+                // 2. Parsolás és robusztus újra stringelés, hogy garantáltan tiszta JSON objektumként kerüljön beillesztésre
+                const parsedConfig = JSON.parse(configString);
+                const safeConfigString = JSON.stringify(parsedConfig); 
                 
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
                 // Konfiguráció beillesztése a játék kódjába (PRELOADED_CONFIG)
-                // Ez biztosítja, hogy a letöltött fájl offline is működjön localStorage nélkül
                 const injectionScript = `
     <script>
         // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA ---
         // Ez a konfiguráció az admin felületen mentett állapotot tükrözi.
-        window.PRELOADED_CONFIG = ${configString};
+        window.PRELOADED_CONFIG = ${safeConfigString};
     <\/script>`;
                 
                 // Beillesztés a </head> elé
