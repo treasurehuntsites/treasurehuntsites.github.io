@@ -13,6 +13,9 @@
         .btn-primary:hover { background-color: #7b1cd1; }
         .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; transition: background-color 0.2s; }
         .btn-secondary:hover { background-color: #00ddee; }
+        .input-error { border-color: #ff4500; }
+        .btn-add { background-color: #007bff; color: white; transition: background-color 0.2s; }
+        .btn-add:hover { background-color: #0069d9; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
@@ -44,10 +47,33 @@
             </div>
             
         </div>
-
+        
+        <!-- AVATAR BEÁLLÍTÁSOK -->
+        <div class="card p-6 rounded-xl space-y-4">
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Avatar Képek Beállítása</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="avatarMUrl" class="block text-sm font-medium text-gray-300 mb-1">Márk (&#167;M) Avatar URL</label>
+                    <input type="url" id="avatarMUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://.../mark.png">
+                </div>
+                <div>
+                    <label for="avatarAUrl" class="block text-sm font-medium text-gray-300 mb-1">Anna (&#167;A) Avatar URL</label>
+                    <input type="url" id="avatarAUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://.../anna.png">
+                </div>
+                <div>
+                    <label for="avatarRUrl" class="block text-sm font-medium text-gray-300 mb-1">Rendőr/Egyéb (&#167;R) Avatar URL</label>
+                    <input type="url" id="avatarRUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://.../rendor.png">
+                </div>
+            </div>
+            <div>
+                <label for="avatarDefaultUrl" class="block text-sm font-medium text-gray-300 mb-1">Alapértelmezett (Narrátor) Avatar URL</label>
+                <input type="url" id="avatarDefaultUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://placehold.co/70x70/1A1A1A/FFFFFF?text=?">
+            </div>
+        </div>
+        
         <div class="card p-6 rounded-xl space-y-6">
             <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Menü és GPS Beállítások</h2>
-
+            <!-- GPS és Menü Beállítások (változatlanul) -->
             <div>
                 <label for="menuMapLink" class="block text-sm font-medium text-gray-300 mb-1">Menü Térkép Linkje (Fő Térkép)</label>
                 <input type="url" id="menuMapLink" class="input-style w-full p-3 rounded-lg focus:ring-cyan-500 focus:border-cyan-500" placeholder="https://maps.google.com/...">
@@ -74,24 +100,92 @@
                 <input type="url" id="gpsMapLink" class="input-style w-full p-3 rounded-lg focus:ring-cyan-500 focus:border-cyan-500" placeholder="https://maps.google.com/...">
             </div>
         </div>
-
+        
+        <!-- TÖRTÉNET SZERKESZTÉSE OLDALANKÉNT -->
         <div class="card p-6 rounded-xl space-y-6">
-            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Kódkérő Oldal Beállításai (Index 16)</h2>
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Történet Szöveg Szerkesztése</h2>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="storyPageIndex" class="block text-sm font-medium text-gray-300 mb-1">Oldal kiválasztása (Index)</label>
+                    <select id="storyPageIndex" class="input-style w-full p-3 rounded-lg text-base"></select>
+                    <p class="text-xs text-gray-400 mt-1">Összesen: <span id="pageCount">?</span> oldal.</p>
+                </div>
+                <div>
+                    <label for="pageType" class="block text-sm font-medium text-gray-300 mb-1">Oldal típusa</label>
+                    <select id="pageType" class="input-style w-full p-3 rounded-lg text-base">
+                        <option value="text">Szöveg / Párbeszéd</option>
+                        <option value="audio">Audio Lejátszás (Gomb)</option>
+                        <option value="password">Jelszó Kérése</option>
+                        <option value="choice" disabled>Választási Pont (Fejlesztés alatt)</option>
+                    </select>
+                </div>
+            </div>
             
-            <div>
-                <label for="passwordPromptText" class="block text-sm font-medium text-gray-300 mb-1">Kódkérő Prompt Szöveg</label>
-                <input type="text" id="passwordPromptText" class="input-style w-full p-3 rounded-lg" placeholder="Add meg a kódot:">
+            <!-- ÁLTALÁNOS TARTALOM BLOKK -->
+            <div id="textBlock">
+                <div>
+                    <label for="pageContent" class="block text-sm font-medium text-gray-300 mb-1">Oldal Szövege (Pl. §M Szia, Márk vagyok.)</label>
+                    <textarea id="pageContent" rows="5" class="input-style w-full p-3 rounded-lg" placeholder="Pl.: §A Megvizsgáljuk a helyszínt."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="nextIndex" class="block text-sm font-medium text-gray-300 mb-1">Ugrás Index (Next Index)</label>
+                        <input type="number" id="nextIndex" class="input-style w-full p-3 rounded-lg" placeholder="Következő oldal indexe (pl. 17)">
+                    </div>
+                    <div>
+                        <label for="backIndex" class="block text-sm font-medium text-gray-300 mb-1">Vissza Index (Back Index)</label>
+                        <input type="number" id="backIndex" class="input-style w-full p-3 rounded-lg" placeholder="Vissza ugrás indexe (pl. 10)">
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label for="passwordContent" class="block text-sm font-medium text-gray-300 mb-1">Oldal Szövege (pl. §KOD Kérjük add meg...)</label>
-                <textarea id="passwordContent" rows="3" class="input-style w-full p-3 rounded-lg"></textarea>
+            <!-- AUDIO SPECIFIKUS BLOKK -->
+            <div id="audioBlock" class="border border-cyan-500 p-4 rounded-lg bg-cyan-900/30 hidden space-y-4">
+                 <p class="text-sm font-bold text-cyan-300">AUDIO BEÁLLÍTÁSOK</p>
+                 <div>
+                    <label for="audioId" class="block text-sm font-medium text-gray-300 mb-1">Audio Fájl kiválasztása</label>
+                    <select id="audioId" class="input-style w-full p-3 rounded-lg text-base">
+                        <option value="1">Audio 1 (URL a Média szekcióban)</option>
+                        <option value="2">Audio 2 (URL a Média szekcióban)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="audioNextButtonText" class="block text-sm font-medium text-gray-300 mb-1">Tovább Gomb Szövege</label>
+                    <input type="text" id="audioNextButtonText" class="input-style w-full p-3 rounded-lg" placeholder="Pl.: Megvizsgálom a fülkét">
+                </div>
             </div>
 
-            <div>
-                <label for="correctPassword" class="block text-sm font-medium text-gray-300 mb-1">Helyes Kód / Jelszó</label>
-                <input type="text" id="correctPassword" class="input-style w-full p-3 rounded-lg" placeholder="1940">
+            <!-- JELSZÓ SPECIFIKUS BLOKK -->
+            <div id="passwordBlock" class="border border-red-500 p-4 rounded-lg bg-red-900/30 hidden space-y-4">
+                <p class="text-sm font-bold text-red-300">JELSZÓ KÉRÉS BEÁLLÍTÁSAI</p>
+                <div>
+                    <label for="correctPassword" class="block text-sm font-medium text-gray-300 mb-1">Helyes Kód / Jelszó</label>
+                    <input type="text" id="correctPassword" class="input-style w-full p-3 rounded-lg" placeholder="1940">
+                </div>
+                <div>
+                    <label for="nextIndexSuccess" class="block text-sm font-medium text-gray-300 mb-1">Siker Ugrás Indexe (használj -1-et a GPS-hez)</label>
+                    <input type="number" id="nextIndexSuccess" class="input-style w-full p-3 rounded-lg" placeholder="-1 (GPS) vagy Index (pl. 20)">
+                </div>
             </div>
+            
+            <!-- Média URL-ek (átkerültek a saját kártyájukba) -->
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2 mt-6">Audio Média URL-ek</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="audio1Url" class="block text-sm font-medium text-gray-300 mb-1">Audio 1 URL</label>
+                    <input type="url" id="audio1Url" class="input-style w-full p-3 rounded-lg" placeholder="https://.../Ugynokok1.mp3">
+                </div>
+                <div>
+                    <label for="audio2Url" class="block text-sm font-medium text-gray-300 mb-1">Audio 2 URL</label>
+                    <input type="url" id="audio2Url" class="input-style w-full p-3 rounded-lg" placeholder="https://.../Ugynokok2.mp3">
+                </div>
+            </div>
+
+            <button id="addPageButton" class="btn-add w-full p-4 rounded-xl text-lg font-bold uppercase mt-6">
+                <i class="fa-solid fa-plus mr-2"></i> Új oldal hozzáadása a történethez
+            </button>
+            
         </div>
         
         <div class="flex flex-col sm:flex-row justify-between gap-4 pt-4">
@@ -111,6 +205,9 @@
         (function() {
             const STORAGE_KEY = 'DYNAMIC_CONFIG';
             const MESSAGE_DISPLAY = document.getElementById('message');
+            let currentStoryPages = [];
+            let currentLoadedIndex = 0; 
+            const OBSOLETE_PASSWORD_PAGE_INDEX = 16; // Ezt az indexet még támogatjuk, de a logika már a type alapján működik
 
             // DOM elemek összegyűjtése
             const fields = {
@@ -118,17 +215,49 @@
                 backgroundUrl: document.getElementById('backgroundUrl'),
                 bgColor: document.getElementById('bgColor'),
                 textColor: document.getElementById('textColor'),
+                
+                // AVATAROK
+                avatarMUrl: document.getElementById('avatarMUrl'),
+                avatarAUrl: document.getElementById('avatarAUrl'),
+                avatarRUrl: document.getElementById('avatarRUrl'),
+                avatarDefaultUrl: document.getElementById('avatarDefaultUrl'),
+                
+                // MENÜ/GPS
                 menuMapLink: document.getElementById('menuMapLink'),
                 targetLat: document.getElementById('targetLat'),
                 targetLon: document.getElementById('targetLon'),
                 successRedirectUrl: document.getElementById('successRedirectUrl'),
                 gpsMapLink: document.getElementById('gpsMapLink'),
-                passwordPromptText: document.getElementById('passwordPromptText'),
-                passwordContent: document.getElementById('passwordContent'),
-                correctPassword: document.getElementById('correctPassword')
-            };
+                
+                // MÉDIA
+                audio1Url: document.getElementById('audio1Url'),
+                audio2Url: document.getElementById('audio2Url'),
 
-            // Alapértelmezett konfiguráció (ahhoz, hogy tudjuk, honnan induljunk)
+                // TÖRTÉNET SZERKESZTŐ VEZÉRLÉS
+                storyPageIndex: document.getElementById('storyPageIndex'),
+                pageCount: document.getElementById('pageCount'),
+                pageType: document.getElementById('pageType'),
+                addPageButton: document.getElementById('addPageButton'),
+
+                // TÖRTÉNET BLOKKOK
+                textBlock: document.getElementById('textBlock'),
+                pageContent: document.getElementById('pageContent'),
+                nextIndex: document.getElementById('nextIndex'),
+                backIndex: document.getElementById('backIndex'),
+
+                // AUDIO BLOKK
+                audioBlock: document.getElementById('audioBlock'),
+                audioId: document.getElementById('audioId'),
+                audioNextButtonText: document.getElementById('audioNextButtonText'),
+
+                // JELSZÓ BLOKK
+                passwordBlock: document.getElementById('passwordBlock'),
+                passwordPromptText: document.getElementById('passwordPromptText'),
+                correctPassword: document.getElementById('correctPassword'),
+                nextIndexSuccess: document.getElementById('nextIndexSuccess'),
+            };
+            
+            // Alapértelmezett konfiguráció (a játék szcriptje)
             const DEFAULT_CONFIG = {
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
@@ -142,33 +271,44 @@
                     MAP_BUTTON_URL: 'https://www.google.com/maps/d/u/0/viewer?mid=1cmPNBkR0t3ozvDgY7056CZiFxf-8d-4&ll=47.47407829999998%2C19.040016799999986&z=17',
                 },
                 PASSWORD_PAGE: { PROMPT_TEXT: "Add meg a kódot:" },
-                storyPages: getDefaultStoryPages(), // Vágjunk ki egy segédfüggvényt a storyPages-nek
-                // Avatarok és egyéb beállítások itt lennének, de a mentésnél csak a fő értékeket frissítjük
+                AVATARS: {
+                    DEFAULT_AVATAR_URL: "https://placehold.co/70x70/1A1A1A/FFFFFF?text=?",
+                    AVATAR_MAP: {
+                        '§M': "https://treasurehuntsites.github.io/annaesmark/Img/mark.png", 
+                        '§A': "https://treasurehuntsites.github.io/annaesmark/Img/anna.png", 
+                        '§R': "https://placehold.co/70x70/1A1A1A/00FF00?text=R", 
+                    },
+                    HIDDEN_PREFIXES: ['§N', '§KOD', '§H', '§RESET']
+                },
+                MEDIA: {
+                    AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3",
+                    AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3",
+                },
+                storyPages: getDefaultStoryPages(), // Játék szkript
             };
 
-            // Segédfüggvény a teljes storyPages tömb visszaadásához
             function getDefaultStoryPages() {
-                // Ezt a tömböt az előző válaszomból másoltam át, ez a játék teljes szkriptje
-                return [
-                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.' }, 
-                    { type: 'text', content: '§M Igen? Miről?' }, 
-                    { type: 'text', content: '§A Itt van tessék.' }, 
-                    { type: 'text', content: '§N Az épület falán egy emléktábla áll, amiről könnyen leolvasható egy négy jegyű kód.' }, 
-                    { type: 'text', content: '§A Ez túl nyilvános. Mi van, ha figyelnek minket?' }, 
-                    { type: 'text', content: '§M Nyugodj meg, a bűnszervezet valószínűleg még nem tudja, hogy itt vagyunk.' }, 
-                    { type: 'text', content: '§A Ki ez a két alak a táblán?' }, 
-                    { type: 'text', content: '§N Körner és Rosenberg hírhedten rejtélyes ügynökök voltak, akik a szövetség legsötétebb és legkiszámíthatatlanabb műveleteiben vettek részt.' }, 
-                    { type: 'text', content: '§N Az ő stílusuk a kiszámított káosz volt: nyomokat hagytak, amelyeket még a saját szövetségük ügynökei is alig értettek meg.' }, 
-                    { type: 'text', content: '§N Egyik küldetésük azonban messze túlmutatott a megszokott játékukon, és olyan következményekkel járt, amire még ők sem számítottak.' }, 
-                    { type: 'text', content: '§N Egy borús délután a szövetség rejtett irodájában Körner és Rosenberg különös üzenetet kaptak. A papírlapon csak egyetlen mondat állt:' }, 
-                    { type: 'text', content: '§N „Tudjuk, hogy elárultatok minket.”' }, 
-                    { type: 'text', content: '§N Rosenberg: „Ez valami rossz vicc?”' }, 
-                    { type: 'text', content: '§N Körner: „Nem, ez valami más. Egy teszt. Valaki próbára akar tenni minket.”' }, 
-                    { type: 'text', content: '§N A levélhez egy helyszín is tartozott: egy elhagyatott park a közelben a Feneketlen-tó szomszédságában.' }, 
+                // Ezt a tömböt az előző válaszomból másoltam át
+                 return [
+                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.' }, // 0
+                    { type: 'text', content: '§M Igen? Miről?' }, // 1 
+                    { type: 'text', content: '§A Itt van tessék.' }, // 2
+                    { type: 'text', content: '§N Az épület falán egy emléktábla áll, amiről könnyen leolvasható egy négy jegyű kód.' }, // 3
+                    { type: 'text', content: '§A Ez túl nyilvános. Mi van, ha figyelnek minket?' }, // 4
+                    { type: 'text', content: '§M Nyugodj meg, a bűnszervezet valószínűleg még nem tudja, hogy itt vagyunk.', nextIndex: 6 }, // 5
+                    { type: 'text', content: '§A Ki ez a két alak a táblán?' }, // 6
+                    { type: 'text', content: '§N Körner és Rosenberg hírhedten rejtélyes ügynökök voltak, akik a szövetség legsötétebb és legkiszámíthatatlanabb műveleteiben vettek részt.' }, // 7
+                    { type: 'text', content: '§N Az ő stílusuk a kiszámított káosz volt: nyomokat hagytak, amelyeket még a saját szövetségük ügynökei is alig értettek meg.' }, // 8
+                    { type: 'audio', content: '§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.', audioId: 1, nextIndex: 10, backIndex: 8, nextButtonText: "Tovább a következő oldalra" }, // 9
+                    { type: 'text', content: '§N Egy borús délután a szövetség rejtett irodájában Körner és Rosenberg különös üzenetet kaptak. A papírlapon csak egyetlen mondat állt:' }, // 10
+                    { type: 'text', content: '§N „Tudjuk, hogy elárultatok minket.”' }, // 11
+                    { type: 'text', content: '§N Rosenberg: „Ez valami rossz vicc?”' }, // 12
+                    { type: 'text', content: '§N Körner: „Nem, ez valami más. Egy teszt. Valaki próbára akar tenni minket.”' }, // 13
+                    { type: 'text', content: '§N A levélhez egy helyszín is tartozott: egy elhagyatott park a közelben a Feneketlen-tó szomszédságában.' }, // 14
                     { 
                         type: 'text', 
                         content: '§N Annak ellenére, hogy a szövetség nem adott hivatalos megbízást, a két ügynök úgy döntött, utánajár a rejtélynek, és a mai napon Anna és Márk is így tett.'
-                    }, 
+                    }, // 15
                     { 
                         type: 'password', 
                         content: '§KOD Kérjük add meg a táblán látható kódot.', 
@@ -176,53 +316,217 @@
                         nextIndexSuccess: -1, 
                         backIndex: 15, 
                         helpMessage: ['Keresd a táblán', '1940'] 
-                    }, 
+                    }, // 16
                 ];
+            }
+
+            // --- SEGÉDFÜGGVÉNYEK ---
+
+            // Oldal kiválasztó (dropdown) feltöltése
+            function populatePageIndexSelector(count, selectIndex = 0) {
+                fields.storyPageIndex.innerHTML = '';
+                fields.pageCount.textContent = count;
+                for (let i = 0; i < count; i++) {
+                    const page = currentStoryPages[i];
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `Oldal ${i} (${page.type})`;
+                    fields.storyPageIndex.appendChild(option);
+                }
+                fields.storyPageIndex.value = selectIndex;
+            }
+
+            // UI blokkok láthatóságának beállítása a kiválasztott oldaltípus alapján
+            function toggleContentBlocks(pageType) {
+                // Minden blokk elrejtése
+                fields.textBlock.classList.add('hidden');
+                fields.audioBlock.classList.add('hidden');
+                fields.passwordBlock.classList.add('hidden');
+                
+                // Jelszó prompt szöveg doboz elrejtése a password blokkba
+                fields.passwordPromptText.closest('div').classList.add('hidden'); 
+
+                if (pageType === 'text') {
+                    fields.textBlock.classList.remove('hidden');
+                } else if (pageType === 'audio') {
+                    fields.textBlock.classList.remove('hidden');
+                    fields.audioBlock.classList.remove('hidden');
+                } else if (pageType === 'password') {
+                    fields.textBlock.classList.remove('hidden');
+                    fields.passwordBlock.classList.remove('hidden');
+                    // Csak a jelszó oldalnál van a passwordPromptText látható
+                    fields.passwordPromptText.closest('div').classList.remove('hidden');
+                }
+            }
+
+            // Egy kiválasztott oldal tartalmának betöltése a megfelelő mezőkbe
+            function loadStoryPage(index) {
+                // Mentjük az előző oldalt, mielőtt betöltjük az újat
+                saveCurrentStoryPageContent();
+                
+                currentLoadedIndex = parseInt(index);
+                const page = currentStoryPages[currentLoadedIndex];
+                
+                if (!page) {
+                    toggleContentBlocks('text');
+                    fields.pageContent.value = 'Hiba: Ez az index nem létezik.';
+                    return;
+                }
+                
+                fields.pageType.value = page.type;
+                toggleContentBlocks(page.type);
+
+                // Közös mezők betöltése
+                fields.pageContent.value = page.content || '';
+                fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
+                fields.backIndex.value = page.backIndex !== undefined ? page.backIndex : '';
+
+                if (page.type === 'audio') {
+                    fields.audioId.value = page.audioId || 1;
+                    fields.audioNextButtonText.value = page.nextButtonText || '';
+                } 
+                
+                if (page.type === 'password') {
+                    fields.correctPassword.value = page.correctPassword || '';
+                    fields.nextIndexSuccess.value = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : '';
+                }
+                
+                // Jelszó prompt betöltése (ez globális, de itt jelenik meg)
+                const savedConfig = localStorage.getItem(STORAGE_KEY);
+                const config = savedConfig ? JSON.parse(savedData) : DEFAULT_CONFIG;
+                fields.passwordPromptText.value = config.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
+            }
+
+            // Az éppen szerkesztett oldal tartalmának elmentése a memóriában lévő storyPages tömbbe
+            function saveCurrentStoryPageContent() {
+                const index = currentLoadedIndex;
+                if (isNaN(index) || !currentStoryPages[index]) return;
+                
+                const page = currentStoryPages[index];
+                const pageType = fields.pageType.value;
+                
+                // Frissítjük a típust
+                page.type = pageType;
+                
+                // Közös mezők mentése (text, audio, password)
+                page.content = fields.pageContent.value;
+                page.nextIndex = fields.nextIndex.value !== '' ? parseInt(fields.nextIndex.value) : undefined;
+                page.backIndex = fields.backIndex.value !== '' ? parseInt(fields.backIndex.value) : undefined;
+                
+                if (pageType === 'audio') {
+                    page.audioId = parseInt(fields.audioId.value);
+                    page.nextButtonText = fields.audioNextButtonText.value || undefined;
+                } else {
+                    delete page.audioId;
+                    delete page.nextButtonText;
+                }
+
+                if (pageType === 'password') {
+                    page.correctPassword = fields.correctPassword.value;
+                    page.nextIndexSuccess = fields.nextIndexSuccess.value !== '' ? parseInt(fields.nextIndexSuccess.value) : undefined;
+
+                    // Frissítjük a súgót a kódkérő oldalon
+                    if (page.helpMessage && page.helpMessage.length > 1) {
+                        page.helpMessage[1] = page.correctPassword;
+                    }
+                } else {
+                    delete page.correctPassword;
+                    delete page.nextIndexSuccess;
+                }
+                
+                // Frissítjük a StoryPages dropdown-t is
+                populatePageIndexSelector(currentStoryPages.length, index);
+            }
+            
+            // Új oldal hozzáadása
+            function addNewPage() {
+                // Mentjük a jelenlegi oldal tartalmát, mielőtt váltunk
+                saveCurrentStoryPageContent();
+                
+                const newIndex = currentStoryPages.length;
+                const newPage = {
+                    type: 'text',
+                    content: `§N Új oldal hozzáadva (${newIndex}). Ez a szöveg szerkesztendő.`,
+                    nextIndex: newIndex + 1
+                };
+                
+                currentStoryPages.push(newPage);
+                
+                // Újra betöltjük a select mezőt az új oldallal a végén
+                populatePageIndexSelector(currentStoryPages.length, newIndex);
+                
+                // Betöltjük az új oldalt szerkesztésre
+                loadStoryPage(newIndex);
+                
+                // Kimentjük a változást
+                saveSettings(false); 
+
+                MESSAGE_DISPLAY.textContent = `Új oldal hozzáadva: Index ${newIndex}. Ne feledd elmenteni a Beállításokat a játék indítása előtt!`;
+                MESSAGE_DISPLAY.style.color = '#00FFFF';
+                setTimeout(() => MESSAGE_DISPLAY.textContent = '', 5000);
             }
 
             // 1. Adatok betöltése a DOM-ba
             function loadSettings() {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let currentConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
-
-                // Az alap adatok feltöltése (a CONFIG struktúrájához igazítva)
+                
+                // Történet oldalak betöltése globális változóba (mély klónozás)
+                currentStoryPages = JSON.parse(JSON.stringify(currentConfig.storyPages || DEFAULT_CONFIG.storyPages));
+                
+                // Általános adatok feltöltése
                 fields.appTitle.value = currentConfig.APP_TITLE || DEFAULT_CONFIG.APP_TITLE;
                 fields.backgroundUrl.value = currentConfig.BACKGROUND_URL || DEFAULT_CONFIG.BACKGROUND_URL;
                 fields.bgColor.value = currentConfig.BODY_BG_COLOR || DEFAULT_CONFIG.BODY_BG_COLOR;
                 fields.textColor.value = currentConfig.BODY_TEXT_COLOR || DEFAULT_CONFIG.BODY_TEXT_COLOR;
                 
+                // AVATAROK
+                fields.avatarMUrl.value = currentConfig.AVATARS.AVATAR_MAP['§M'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§M'];
+                fields.avatarAUrl.value = currentConfig.AVATARS.AVATAR_MAP['§A'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§A'];
+                fields.avatarRUrl.value = currentConfig.AVATARS.AVATAR_MAP['§R'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§R'];
+                fields.avatarDefaultUrl.value = currentConfig.AVATARS.DEFAULT_AVATAR_URL || DEFAULT_CONFIG.AVATARS.DEFAULT_AVATAR_URL;
+                
+                // MENÜ/GPS
                 fields.menuMapLink.value = currentConfig.MENU_LINKS.MAP_LINK_URL || DEFAULT_CONFIG.MENU_LINKS.MAP_LINK_URL;
-
                 fields.targetLat.value = currentConfig.GPS_COMPASS.TARGET_LATITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
                 fields.targetLon.value = currentConfig.GPS_COMPASS.TARGET_LONGITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 fields.successRedirectUrl.value = currentConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL || DEFAULT_CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL;
                 fields.gpsMapLink.value = currentConfig.GPS_COMPASS.MAP_BUTTON_URL || DEFAULT_CONFIG.GPS_COMPASS.MAP_BUTTON_URL;
                 
-                // Kódkérő oldal specifikus adatai (Index 16 - feltételezzük, hogy ez a kódkérő oldal)
-                const passwordPage = currentConfig.storyPages.find(p => p.type === 'password' && p.content.startsWith('§KOD')) || DEFAULT_CONFIG.storyPages[16];
-
+                // MÉDIA
+                fields.audio1Url.value = currentConfig.MEDIA.AUDIO_1_URL || DEFAULT_CONFIG.MEDIA.AUDIO_1_URL;
+                fields.audio2Url.value = currentConfig.MEDIA.AUDIO_2_URL || DEFAULT_CONFIG.MEDIA.AUDIO_2_URL;
+                
+                // Jelszó prompt és Oldal (Index 0) betöltése
                 fields.passwordPromptText.value = currentConfig.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
-                fields.passwordContent.value = passwordPage.content;
-                fields.correctPassword.value = passwordPage.correctPassword;
+                
+                populatePageIndexSelector(currentStoryPages.length, 0);
+                loadStoryPage(0);
             }
 
+
             // 2. Adatok kimentése a localStorage-ba
-            function saveSettings() {
-                // Először betöltjük a teljes aktuális CONFIG-ot (beleértve a nem szerkesztett adatokat is)
+            function saveSettings(showSuccess = true) {
+                // 1. Megmentjük a jelenleg szerkesztett oldal tartalmát az aktuális storyPages tömbbe
+                saveCurrentStoryPageContent();
+
+                // 2. Először betöltjük a teljes aktuális CONFIG-ot a localStorage-ból
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
 
-                // A storyPages a legbonyolultabb, ezért másoljuk az alapértelmezettet, ha még nem létezik
-                if (!newConfig.storyPages || newConfig.storyPages.length === 0) {
-                    newConfig.storyPages = getDefaultStoryPages();
-                }
-
-                // Felülírjuk az egyszerű értékeket
+                // 3. Felülírjuk az egyszerű értékeket
                 newConfig.APP_TITLE = fields.appTitle.value;
                 newConfig.BACKGROUND_URL = fields.backgroundUrl.value;
                 newConfig.BODY_BG_COLOR = fields.bgColor.value;
                 newConfig.BODY_TEXT_COLOR = fields.textColor.value;
                 
+                // AVATAROK
+                newConfig.AVATARS.DEFAULT_AVATAR_URL = fields.avatarDefaultUrl.value;
+                newConfig.AVATARS.AVATAR_MAP['§M'] = fields.avatarMUrl.value;
+                newConfig.AVATARS.AVATAR_MAP['§A'] = fields.avatarAUrl.value;
+                newConfig.AVATARS.AVATAR_MAP['§R'] = fields.avatarRUrl.value;
+                
+                // MENÜ/GPS
                 newConfig.MENU_LINKS.MAP_LINK_URL = fields.menuMapLink.value;
 
                 newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || newConfig.GPS_COMPASS.TARGET_LATITUDE;
@@ -230,34 +534,42 @@
                 newConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL = fields.successRedirectUrl.value;
                 newConfig.GPS_COMPASS.MAP_BUTTON_URL = fields.gpsMapLink.value;
                 
+                // PASSWORD PAGE
                 newConfig.PASSWORD_PAGE.PROMPT_TEXT = fields.passwordPromptText.value;
 
-                // Kódkérő oldal frissítése (Index 16 feltételezésével)
-                const passwordPageIndex = newConfig.storyPages.findIndex(p => p.type === 'password' && p.content.startsWith('§KOD'));
-                const targetIndex = passwordPageIndex !== -1 ? passwordPageIndex : 16; 
-                
-                if (newConfig.storyPages[targetIndex]) {
-                    newConfig.storyPages[targetIndex].content = fields.passwordContent.value;
-                    newConfig.storyPages[targetIndex].correctPassword = fields.correctPassword.value;
-                    // Frissítjük a súgót is
-                    if (newConfig.storyPages[targetIndex].helpMessage && newConfig.storyPages[targetIndex].helpMessage.length > 1) {
-                        newConfig.storyPages[targetIndex].helpMessage[1] = fields.correctPassword.value;
-                    }
-                } else {
-                    console.error("Hiba: A kódkérő oldal nem található a storyPages-ben.");
-                }
+                // MÉDIA
+                newConfig.MEDIA.AUDIO_1_URL = fields.audio1Url.value;
+                newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
+
+                // TÖRTÉNET SZKIPT frissítése
+                newConfig.storyPages = currentStoryPages;
 
                 // Mentés
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
 
-                MESSAGE_DISPLAY.textContent = 'Beállítások sikeresen elmentve! Frissítsd a Játék oldalt!';
-                MESSAGE_DISPLAY.style.color = '#00FF00';
-                setTimeout(() => MESSAGE_DISPLAY.textContent = '', 4000);
+                if (showSuccess) {
+                    MESSAGE_DISPLAY.textContent = 'Beállítások sikeresen elmentve! Frissítsd a Játék oldalt!';
+                    MESSAGE_DISPLAY.style.color = '#00FF00';
+                    setTimeout(() => MESSAGE_DISPLAY.textContent = '', 4000);
+                }
             }
 
+
             // Indítás
-            document.addEventListener('DOMContentLoaded', loadSettings);
-            document.getElementById('saveButton').addEventListener('click', saveSettings);
+            document.addEventListener('DOMContentLoaded', () => {
+                loadSettings();
+                
+                // Eseménykezelők
+                fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
+                fields.pageType.addEventListener('change', (e) => {
+                    // Menti az előző állapotot a memóriában, majd frissíti a UI-t
+                    saveCurrentStoryPageContent();
+                    toggleContentBlocks(e.target.value);
+                });
+                
+                fields.addPageButton.addEventListener('click', addNewPage);
+                document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
+            });
         })();
     </script>
 </body>
