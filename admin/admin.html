@@ -167,21 +167,22 @@
                     </div>
                 </div>
                 
-                <!-- ÚJ GALÉRIA MEZŐK -->
+                <!-- ÚJ GALÉRIA MEZŐK (Több URL-t engedélyező textarea) -->
                 <div class="mb-4 bg-gray-700/30 p-4 rounded-lg border border-pink-500/30">
-                    <label class="block text-sm font-medium text-pink-400 mb-2">Galéria Kezelése (Kép gomb)</label>
+                    <label class="block text-sm font-medium text-pink-400 mb-2">Galéria Kezelése</label>
                     <div class="flex gap-2">
                         <div class="w-2/3">
-                             <input type="url" id="customGalleryUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://... (Kép URL)">
+                             <textarea id="customGalleryUrl" rows="3" class="input-style w-full p-3 rounded-lg" placeholder="https://... (URL-ek, soronként egy)"></textarea>
                         </div>
                         <div class="w-1/3">
                             <select id="galleryMode" class="input-style w-full p-3 rounded-lg font-bold">
-                                <option value="add">Új kép beállítása</option>
+                                <option value="add_url">Kép hozzáadása (akkumulál)</option>
+                                <option value="remove_url">Kép eltávolítása</option>
                                 <option value="clear">Galéria ürítése</option>
                             </select>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Ha "Új kép"-et választasz és megadsz URL-t, a galéria frissül. Ha "Ürítés"-t, akkor a galéria üres lesz (eltűnik a kép).</p>
+                    <p class="text-xs text-gray-400 mt-1">Add meg a kép URL(ek)et, soronként egyet. A hozzáadás/eltávolítás a listában szereplő összes URL-re vonatkozik.</p>
                 </div>
 
                 <div>
@@ -302,8 +303,8 @@
                 pageContent: document.getElementById('pageContent'), 
                 customAvatarUrl: document.getElementById('customAvatarUrl'),
                 customBackgroundUrl: document.getElementById('customBackgroundUrl'),
-                customGalleryUrl: document.getElementById('customGalleryUrl'),
-                galleryMode: document.getElementById('galleryMode'), // ÚJ ELEM
+                customGalleryUrl: document.getElementById('customGalleryUrl'), // Most textarea
+                galleryMode: document.getElementById('galleryMode'), 
                 nextIndex: document.getElementById('nextIndex'), backIndex: document.getElementById('backIndex'),
                 audioBlock: document.getElementById('audioBlock'), audioId: document.getElementById('audioId'), audioNextButtonText: document.getElementById('audioNextButtonText'),
                 passwordBlock: document.getElementById('passwordBlock'), passwordPromptText: document.getElementById('passwordPromptText'), correctPassword: document.getElementById('correctPassword'), nextIndexSuccess: document.getElementById('nextIndexSuccess'),
@@ -344,6 +345,8 @@
                 let avatarUrl = fields.avatarDefaultUrl.value;
                 let cleanText = content;
 
+                let isAvatarVisible = true;
+
                 if (customAvatar && customAvatar.trim() !== '') {
                     avatarUrl = customAvatar;
                     if (['§M', '§A', '§R', '§N'].includes(prefix)) {
@@ -353,8 +356,12 @@
                     if(prefix === '§M') { avatarUrl = fields.avatarMUrl.value; cleanText = content.substring(3); }
                     else if(prefix === '§A') { avatarUrl = fields.avatarAUrl.value; cleanText = content.substring(3); }
                     else if(prefix === '§R') { avatarUrl = fields.avatarRUrl.value; cleanText = content.substring(3); }
+                    else if(['§N', '§KOD', '§H', '§RESET'].includes(prefix)) { isAvatarVisible = false; cleanText = content.substring(prefix.length).trim(); }
                 }
-                
+
+                if (type === 'choice') { isAvatarVisible = false; }
+
+
                 let buttonsHtml = '';
                 if(type === 'choice') {
                     const rows = fields.choicesContainer.querySelectorAll('.choice-row');
@@ -388,8 +395,8 @@
                 fields.previewContainer.innerHTML = `
                     <div class="game-preview-box" style="${bgStyle}">
                         <div class="absolute top-0 right-0 bg-purple-600 text-xs px-2 py-1 rounded-bl">ELŐNÉZET</div>
-                        <div class="flex items-start">
-                            <img src="${avatarUrl}" class="preview-avatar" onerror="this.src='https://placehold.co/60?text=?'">
+                        <div class="flex items-start" style="padding-top: ${isAvatarVisible ? '30px' : '0'};">
+                            <img src="${avatarUrl}" class="preview-avatar" style="display: ${isAvatarVisible ? 'block' : 'none'};" onerror="this.src='https://placehold.co/60?text=?'">
                             <div class="flex-1">
                                 <p class="text-lg leading-relaxed whitespace-pre-wrap">${cleanText}</p>
                             </div>
@@ -517,7 +524,8 @@
                 fields.customAvatarUrl.value = page.customAvatarUrl || '';
                 fields.customBackgroundUrl.value = page.customBackgroundUrl || '';
                 fields.customGalleryUrl.value = page.customGalleryUrl || ''; 
-                fields.galleryMode.value = page.galleryMode || 'add'; // BETÖLTÉS
+                fields.galleryMode.value = page.galleryMode || 'add_url'; // BETÖLTÉS: Alapértelmezett beállítás az új 'add_url'
+                
 
                 fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
                 fields.backIndex.value = page.backIndex !== undefined ? page.backIndex : '';
