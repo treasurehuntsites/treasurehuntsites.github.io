@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Anna és Márk</title>
+    
+    <!-- GPS és Ikonok -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* CSS Változók a dinamikus színekhez */
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+        }
+
+        html { overflow-x: hidden; overflow-y: auto; }
+        
+        /* Amikor egy modal nyitva van, a főoldal görgetését letiltjuk */
+        body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Play', sans-serif;
+            color: var(--text-color); 
+            background-color: var(--bg-color);
+            display: flex; flex-direction: column; align-items: center;
+            overflow-y: auto; min-height: 100vh; touch-action: auto; 
+            text-align: center; padding-bottom: 60px; 
+        }
+        
+        /* Háttérkép */
+        .full-width-image-container {
+            width: 100%; height: 100vh; overflow: hidden; position: absolute;
+            top: 0; left: 0; z-index: 0; min-height: 100vh; background-color: #111111;
+        }
+        .full-width-image-container img {
+            width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;
+        }
+
+        /* Fix Tartalom Doboz */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.85); 
+            padding: 40px 20px 10px 20px; 
+            margin: 0; 
+            border-radius: 10px 10px 0 0; 
+            max-width: 800px;
+            width: calc(100% - 40px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7);
+            border: 3px solid #8a2be2;
+            box-sizing: border-box;
+            position: fixed; bottom: 50px; left: 50%;
+            transform: translateX(-50%); 
+            z-index: 10;
+            text-align: left;
+            min-height: 250px; 
+            display: flex; flex-direction: column; justify-content: space-between; 
+            opacity: 1; transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Diszkrét Vissza Gomb */
+        .discreet-back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: color 0.3s, transform 0.2s;
+            z-index: 25;
+            padding: 5px;
+        }
+        .discreet-back-button:hover {
+            color: #00ffff;
+            transform: scale(1.1);
+        }
+        .discreet-back-button:disabled {
+            display: none;
+        }
+
+        #story-text-display {
+            font-size: 1.2em; font-weight: 700; line-height: 1.6;
+            margin-bottom: 20px; white-space: pre-wrap; flex-grow: 1; 
+        }
+        
+        /* Audio gombok */
+        .audio-container { text-align: center; margin-bottom: 15px; }
+        .audio-button {
+            padding: 12px 20px; text-decoration: none; color: #1a1a1a;
+            background-color: #00FFFF; border: none; border-radius: 5px;
+            font-size: 1.1em; font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+        }
+
+        /* Navigáció */
+        .bottom-bar { padding-top: 10px; border-top: 1px dashed #8a2be2; min-height: 48px; width: 100%; }
+        .interaction-container { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .page-button {
+            padding: 12px 20px; color: #ffffff; background-color: #8a2be2; border: none; border-radius: 5px;
+            font-size: 1.1em; font-weight: 700; cursor: pointer; text-transform: uppercase; margin: 5px;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
+        }
+        .page-button:disabled { background-color: #555555; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
+        
+        /* Választás Gombok (Choice) */
+        .multi-choice-container {
+            display: flex; 
+            flex-direction: column;
+            gap: 10px; 
+            width: 100%;
+        }
+        .choice-button {
+            background-color: #00FFFF; 
+            color: #1a1a1a; 
+            padding: 12px 15px;
+            border-radius: 5px; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            border: none;
+            width: 100%;
+            cursor: pointer; 
+            text-transform: uppercase;
+            box-shadow: 0 2px 5px rgba(0, 255, 255, 0.3);
+            transition: background-color 0.2s;
+        }
+        .choice-button:hover {
+            background-color: #00ddee;
+        }
+        
+        .avatar-image {
+            position: absolute; top: -50px; left: -10px; width: 70px; height: 70px;
+            border-radius: 50%; object-fit: cover; z-index: 20; display: block;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); transition: opacity 0.3s ease-in-out; 
+        }
+        
+        .fixed-menu-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+            background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
+            display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
+        }
+        .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; padding: 5px 10px; }
+        .menu-button:hover { color: #00ffff; }
+        
+        /* Jelszó */
+        #password-container { display: none; flex-direction: column; gap: 15px; width: 100%; text-align: center; }
+        #password-container.visible { display: flex; }
+        #password-input { padding: 12px; border: 2px solid #8a2be2; border-radius: 5px; background-color: #2c2c2c; color: #00ffff; font-size: 1.2em; text-align: center; font-family: 'Play', sans-serif; }
+        .password-interaction { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; }
+        #check-password-button { flex-grow: 1; background-color: #00ffff; color: #1a1a1a; }
+        
+        /* --- GALÉRIA MODAL --- */
+        #galleryModal {
+            display: none; 
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll; 
+            background-color: rgba(0, 0, 0, 0.95);
+        }
+        
+        #gallery-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            padding-top: 50px;
+        }
+
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; 
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .gallery-thumbnail:hover { transform: scale(1.03); }
+
+        .gallery-thumbnail img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        
+        /* Nagyított kép */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: hidden; 
+        }
+        
+        .full-image-content {
+            width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden;
+        }
+
+        #fullImageDisplay {
+            display: block;
+            width: auto; height: auto;
+            max-width: 100%; max-height: 100%;
+            touch-action: auto; 
+            cursor: zoom-in;
+            margin: auto;
+            transition: transform 0.3s ease-in-out; 
+        }
+
+        .close-gallery {
+            position: absolute;
+            top: 15px; right: 33px;
+            color: #f1f1f1;
+            font-size: 40px; font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 110;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 1);
+        }
+        .close-gallery:hover { color: #00ffff; }
+
+        /* --- SÚGÓ MODAL --- */
+        #help-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .modal-content { 
+            background: #1a1a1a; padding: 25px; border: 2px solid #00ffff; border-radius: 10px; 
+            text-align: center; max-width: 90%; color: #e0e0e0; position: relative;
+        }
+        .modal-title { font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #00ffff; }
+        
+        /* --- GPS MODAL --- */
+        #distanceModal {
+            display: none; position: fixed; z-index: 250; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(2px);
+            flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .distance-content {
+            padding: 20px; max-width: 90%; background-color: rgba(0, 0, 0, 0.85); 
+            border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); border: 2px solid #00ffff;
+        }
+        #distance-modal-display { font-size: 3em; color: #00ff00; margin: 20px; font-weight: bold; }
+        
+        /* GPS Térkép Gomb */
+        #distance-modal-map-button {
+            display: inline-block; margin-top: 20px; background-color: transparent;
+            border: 2px solid #00ffff; color: #00ffff; padding: 10px 20px;
+            border-radius: 5px; font-size: 1.2em; font-weight: bold;
+            text-decoration: none; transition: all 0.2s;
+        }
+        #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
+
+    </style>
+</head>
+<body oncontextmenu="return false;"> 
+    <div class="full-width-image-container">
+        <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
+    </div>
+
+    <div class="content-box" id="content-box" style="display: none;"> <!-- Hozzáadva: display: none; -->
+        <!-- Diszkrét Vissza Gomb -->
+        <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
+        <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
+        
+        <p id="story-text-display"></p>
+        
+        <!-- Audio -->
+        <div id="audio-container-1" class="audio-container" style="display:none;">
+             <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
+        </div>
+        <div id="audio-container-2" class="audio-container" style="display:none;">
+             <button id="play-audio-button-2" class="audio-button">▶️ Lejátszás (2)</button>
+        </div>
+
+        <div class="bottom-bar">
+            <!-- Normál Navigáció -->
+            <div class="interaction-container" id="interaction-container">
+                <button id="prev-page-button" class="page-button" disabled>Vissza</button>
+                <button id="next-page-button" class="page-button">Tovább</button>
+            </div>
+            
+            <!-- Választás Gombok -->
+            <div class="multi-choice-container" id="multi-choice-container" style="display:none;"></div>
+
+            <!-- Jelszó -->
+            <div id="password-container">
+                <p>
+                    <span id="password-prompt-text">Add meg a kódot:</span>
+                    <button id="help-button" style="background:none;border:none;color:#00ffff;font-size:1.5em;margin-left:5px;"><i class="fa-solid fa-circle-question"></i></button>
+                </p>
+                <input type="text" id="password-input" maxlength="12">
+                <div class="password-interaction">
+                    <button id="back-button-password" class="page-button">Vissza</button>
+                    <button id="check-password-button" class="page-button">ELLENŐRZÉS</button>
+                </div>
+                <p id="message" style="margin-top:10px;font-weight:bold;"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="fixed-menu-bar">
+        <button id="map-button" class="menu-button" title="Térkép"><i class="fa-solid fa-map-location-dot"></i></button>
+        <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
+    </div>
+    
+    <!-- Modálok -->
+    <div id="galleryModal">
+      <span class="close-gallery">×</span>
+      <div id="gallery-container">
+      </div>
+    </div>
+    
+    <div id="full-image-display">
+        <div class="full-image-content">
+            <img id="fullImageDisplay" src="" alt="Nagyított kép" />
+        </div>
+        <span class="close-gallery" style="z-index: 120;">×</span>
+    </div>
+    
+    <div id="help-modal">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color:#00ffff;">Segítség</h2>
+            <p id="help-text-display" class="mb-6"></p>
+            <div class="flex gap-2 justify-center" style="margin-top:20px;">
+                <button id="help-close-button" class="page-button">Bezárás</button>
+                <button id="help-next-button" class="page-button">Tovább</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="distanceModal">
+        <div class="distance-content">
+            <h1 id="gps-title" class="modal-title">CÉLPONT KERESÉSE</h1>
+            <div id="distance-modal-display">-- M</div>
+            <p id="distance-status">Helyzetmeghatározás...</p>
+            <a href="#" target="_blank" id="distance-modal-map-button">🗺️ Térkép</a>
+        </div>
+    </div>
+
+    <audio id="story-audio-1" src="" preload="auto"></audio>
+    <audio id="story-audio-2" src="" preload="auto"></audio>
+
+    <!--
+        EZ A HELY JELÖLI A KONFIGURÁCIÓ INJEKTÁLÁSÁT.
+        A download.html a !!!GAME_CONFIG_INJECTED!!! stringet cseréli ki a valós JSON objektumra.
+    -->
+    <script id="config-injection">
+        // Placeholder a konfigurációhoz.
+        window.GAME_CONFIG_INJECTED = {};
+    </script>
+
+    <script>
+        // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+        
+        function getDefaultConfig() {
+            return {
+                APP_TITLE: "Anna és Márk",
+                BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg", 
+                BODY_BG_COLOR: "#1a1a1a", BODY_TEXT_COLOR: "#e0e0e0", 
+                AVATARS: {
+                    DEFAULT_AVATAR_URL: "https://placehold.co/70x70/1A1A1A/FFFFFF?text=?",
+                    AVATAR_MAP: { '§M': "https://treasurehuntsites.github.io/annaesmark/Img/mark.png", '§A': "https://treasurehuntsites.github.io/annaesmark/Img/anna.png", '§R': "https://placehold.co/70x70/1A1A1A/00FF00?text=R" },
+                    HIDDEN_PREFIXES: ['§N', '§KOD', '§H', '§RESET'] 
+                },
+                MENU_LINKS: { MAP_LINK_URL: 'https://maps.google.com' },
+                PASSWORD_PAGE: { PROMPT_TEXT: "Kód:", CHECK_BUTTON_TEXT: "Ellenőrzés", BACK_BUTTON_TEXT: "Vissza" },
+                GPS_COMPASS: { TARGET_LATITUDE: 47.47407, TARGET_LONGITUDE: 19.04001, SUCCESS_RADIUS_M: 25, SUCCESS_REDIRECT_URL: "busz.html", MAP_BUTTON_URL: 'https://maps.google.com' },
+                MEDIA: { AUDIO_1_URL: "", AUDIO_2_URL: "" },
+                storyPages: [
+                    { type: 'text', content: '§A Szia! Üdvözöllek a játékban.', nextIndex: 1 }, 
+                ]
+            };
+        }
+
+        (function() {
+            // A tartalom doboz alapértelmezett elrejtése
+            const contentBox = document.getElementById('content-box');
+            contentBox.style.display = 'none';
+
+            try {
+                // --- BIZTONSÁGOS INDÍTÁS ---
+                let CONFIG = getDefaultConfig();
+                
+                // --- KONFIGURÁCIÓ BETÖLTÉSE ---
+                // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
+                if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
+                     const parsedConfig = window.GAME_CONFIG_INJECTED;
+                     CONFIG = { ...CONFIG, ...parsedConfig };
+                     // Alobjektumok mélyebb összevonása
+                     if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
+                     if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
+                     if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
+                     console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
+                } else {
+                    // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
+                    try {
+                        const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
+                        if (savedConfig) { 
+                            const parsed = JSON.parse(savedConfig);
+                            CONFIG = { ...CONFIG, ...parsed };
+                            CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
+                            CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
+                            CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
+                            console.log("Játék betöltve LocalStorage konfigurációval.");
+                        }
+                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
+                }
+
+                let currentPartIndex = 0;
+                let watchId = null;
+                let currentHelpIndex = 0;
+                let currentScale = 1.0; 
+                const MAX_SCALE = 2.5; 
+                const MIN_SCALE = 1.0;
+
+                const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
+
+                // Ellenőrzés: Van-e egyáltalán oldal?
+                if (!storyPages || storyPages.length === 0) {
+                    throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban!");
+                }
+
+                // DOM Elemek
+                const els = {
+                    storyDisplay: document.getElementById('story-text-display'), storyImage: document.getElementById('story-image'),
+                    avatarImg: document.getElementById('avatar-img'), contentBox: document.getElementById('content-box'),
+                    nextBtn: document.getElementById('next-page-button'), prevBtn: document.getElementById('prev-page-button'),
+                    discreetBackBtn: document.getElementById('discreet-back-button'),
+                    interactionCont: document.getElementById('interaction-container'), passCont: document.getElementById('password-container'),
+                    multiChoiceCont: document.getElementById('multi-choice-container'),
+                    passInput: document.getElementById('password-input'), checkBtn: document.getElementById('check-password-button'),
+                    msgDisplay: document.getElementById('message'), distModal: document.getElementById('distanceModal'),
+                    distDisplay: document.getElementById('distance-modal-display'), distStatus: document.getElementById('distance-status'),
+                    helpModal: document.getElementById('help-modal'), helpText: document.getElementById('help-text-display'),
+                    galleryModal: document.getElementById('galleryModal'), galleryContainer: document.getElementById('gallery-container'),
+                    fullImageModal: document.getElementById('full-image-display'), fullImage: document.getElementById('fullImageDisplay')
+                };
+
+                // Init Stílusok
+                if(CONFIG.APP_TITLE) document.getElementById('app-title').textContent = CONFIG.APP_TITLE;
+                document.documentElement.style.setProperty('--bg-color', CONFIG.BODY_BG_COLOR);
+                document.documentElement.style.setProperty('--text-color', CONFIG.BODY_TEXT_COLOR);
+                
+                els.storyImage.src = CONFIG.BACKGROUND_URL;
+                document.getElementById('story-audio-1').src = CONFIG.MEDIA.AUDIO_1_URL;
+                document.getElementById('story-audio-2').src = CONFIG.MEDIA.AUDIO_2_URL;
+                document.getElementById('distance-modal-map-button').href = GPS_COMPASS.MAP_BUTTON_URL;
+                document.getElementById('map-button').onclick = () => window.open(CONFIG.MENU_LINKS.MAP_LINK_URL, '_blank');
+                document.getElementById('password-prompt-text').textContent = CONFIG.PASSWORD_PAGE.PROMPT_TEXT || "Kód:";
+
+                function loadProgress() {
+                    try {
+                        // Exportált fájl esetén nem töltjük be a LocalStorage-ból
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
+
+                        const saved = localStorage.getItem('gameProgress');
+                        if (saved !== null) {
+                            currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
+                        }
+                    } catch(e) { console.warn("Progress load failed:", e); }
+                }
+                function saveProgress() { 
+                    try { 
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return;
+                        localStorage.setItem('gameProgress', currentPartIndex); 
+                    } catch(e) {} 
+                }
+
+                function stopAllAudio() {
+                    ['1','2'].forEach(id => {
+                        const aud = document.getElementById('story-audio-'+id);
+                        const btn = document.getElementById('play-audio-button-'+id);
+                        aud.pause(); aud.currentTime = 0;
+                        btn.innerHTML = `▶️ Lejátszás (${id})`;
+                        document.getElementById('audio-container-'+id).style.display = 'none';
+                    });
+                }
+                
+                function toggleAudio(id) {
+                    const aud = document.getElementById('story-audio-'+id);
+                    const btn = document.getElementById('play-audio-button-'+id);
+                    if(aud.paused) { 
+                        stopAllAudio(); 
+                        document.getElementById('audio-container-'+id).style.display = 'block'; 
+                        aud.play(); btn.innerHTML = `⏸️ Szünet (${id})`; 
+                    } else { 
+                        aud.pause(); btn.innerHTML = `▶️ Lejátszás (${id})`; 
+                    }
+                }
+                
+                function updateUI() {
+                    stopAllAudio();
+                    const page = storyPages[currentPartIndex];
+                    if (!page) return;
+
+                    let activeBg = CONFIG.BACKGROUND_URL;
+                    for(let i = 0; i <= currentPartIndex; i++) {
+                        if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
+                            activeBg = storyPages[i].customBackgroundUrl;
+                        }
+                    }
+                    els.storyImage.src = activeBg;
+
+                    const prefix = page.content.split(' ')[0];
+                    let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
+                    let opacity = 1;
+                    let text = page.content;
+
+                    if (page.customAvatarUrl && page.customAvatarUrl.trim() !== '') {
+                        avatarUrl = page.customAvatarUrl;
+                        if (AVATARS.AVATAR_MAP[prefix] || AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
+                            text = text.substring(prefix.length).trim();
+                        }
+                    } else {
+                        if (AVATARS.AVATAR_MAP[prefix]) { 
+                            avatarUrl = AVATARS.AVATAR_MAP[prefix]; 
+                            text = text.substring(prefix.length).trim(); 
+                        } else if (AVATARS.HIDDEN_PREFIXES.includes(prefix)) { 
+                            opacity = 0; 
+                            text = text.substring(prefix.length).trim();
+                        }
+                    }
+
+                    if (!page.customAvatarUrl && AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
+                        opacity = 0;
+                    }
+                    
+                    // --- MÓDOSÍTOTT LOGIKA: Narrátor és Choice oldalakon rejtett avatar ---
+                    // Meghatározza, hogy az avatár láthatónak kell-e lennie (opacity > 0)
+                    let isAvatarVisible = opacity !== 0;
+
+                    // További szabályok az elrejtésre: Narrátor prefix vagy 'choice' típusú oldal
+                    if (AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') {
+                        opacity = 0;
+                        isAvatarVisible = false;
+                    }
+
+                    els.avatarImg.src = avatarUrl;
+                    els.avatarImg.style.opacity = opacity;
+                    
+                    // KRITIKUS FIX: Eltávolítja az avatárt a layout-ból, amikor rejtve van.
+                    els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
+
+                    // Megjelenítési beállítás: ha nincs avatár, csökkentjük a felső párnázást
+                    contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
+                    // ------------------------------------------------------------------
+
+                    els.storyDisplay.innerHTML = text;
+
+                    els.interactionCont.style.display = 'flex';
+                    els.passCont.classList.remove('visible');
+                    els.multiChoiceCont.style.display = 'none';
+                    els.msgDisplay.textContent = '';
+                    els.passInput.value = '';
+
+                    if (page.type === 'password') {
+                        els.interactionCont.style.display = 'none';
+                        els.passCont.classList.add('visible');
+                        document.getElementById('help-button').style.display = page.helpMessage ? 'inline-block' : 'none';
+                    } 
+                    else if (page.type === 'choice') {
+                        els.interactionCont.style.display = 'none';
+                        els.multiChoiceCont.style.display = 'flex';
+                        els.multiChoiceCont.innerHTML = '';
+                        
+                        if (page.choices && page.choices.length > 0) {
+                            page.choices.forEach(choice => {
+                                const btn = document.createElement('button');
+                                btn.className = 'choice-button';
+                                btn.textContent = choice.text;
+                                btn.onclick = () => {
+                                    currentPartIndex = choice.nextIndex !== undefined ? choice.nextIndex : currentPartIndex + 1;
+                                    saveProgress();
+                                    showStory();
+                                };
+                                els.multiChoiceCont.appendChild(btn);
+                            });
+                        }
+                    }
+                    else if (page.type === 'audio') {
+                        document.getElementById('audio-container-' + (page.audioId || 1)).style.display = 'block';
+                        els.nextBtn.textContent = page.nextButtonText || 'Tovább';
+                    } 
+                    else {
+                        els.nextBtn.textContent = 'Tovább';
+                    }
+
+                    if (currentPartIndex === storyPages.length - 1 && page.type !== 'password' && page.type !== 'choice') {
+                        els.nextBtn.textContent = "Célpont Keresése";
+                    }
+                    
+                    const isFirstPage = currentPartIndex === 0;
+                    
+                    // --- DISZKRÉT VISSZA GOMB LOGIKA FRISSÍTÉSE ---
+                    // Csak 'choice' oldalakon látható, ha nem az első oldal.
+                    // Típusok, ahol rejtve marad: 'text', 'password', 'audio'.
+                    let shouldDiscreetBackBeHidden = isFirstPage || 
+                                                     page.type === 'text' || 
+                                                     page.type === 'password' || 
+                                                     page.type === 'audio';
+                    
+                    els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
+                    els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
+                    contentBox.style.display = 'flex'; // Végre látható a tartalom
+                }
+
+                function showStory() {
+                    els.contentBox.style.opacity = 0;
+                    setTimeout(() => {
+                        updateUI();
+                        els.contentBox.style.opacity = 1;
+                    }, 100);
+                }
+
+                function getVisibleGalleryImages() {
+                    let images = [];
+                    for(let i = 0; i <= currentPartIndex; i++) {
+                        const p = storyPages[i];
+                        
+                        // 1. Galéria ürítése
+                        if (p.galleryMode === 'clear') {
+                            images = []; 
+                        } 
+                        
+                        // Új logikai blokk a több URL kezelésére
+                        if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
+                            // URL-ek szétválasztása (soronként vagy vesszővel), üres sorok kihagyása
+                            const urls = p.customGalleryUrl.split(/[\n,]/).map(url => url.trim()).filter(url => url.length > 0);
+
+                            urls.forEach(url => {
+                                const existingIndex = images.indexOf(url);
+
+                                // 2. Kép hozzáadása (akkumulál)
+                                if (p.galleryMode === 'add_url' || !p.galleryMode) {
+                                    if (existingIndex === -1) {
+                                        images.push(url);
+                                    }
+                                } 
+                                // 3. Kép eltávolítása
+                                else if (p.galleryMode === 'remove_url') {
+                                    if (existingIndex !== -1) {
+                                        images.splice(existingIndex, 1);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    return images;
+                }
+
+                function populateGallery() {
+                    els.galleryContainer.innerHTML = '';
+                    const images = getVisibleGalleryImages();
+                    if (images.length === 0) {
+                        els.galleryContainer.innerHTML = '<p style="grid-column: 1/-1; color:gray;">Jelenleg nincs aktív kép.</p>';
+                        return;
+                    }
+                    images.forEach((url, index) => {
+                        const thumbnailDiv = document.createElement('div');
+                        thumbnailDiv.className = 'gallery-thumbnail';
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = "Galéria Kép " + (index + 1);
+                        thumbnailDiv.onclick = () => openFullImage(url);
+                        thumbnailDiv.appendChild(img);
+                        els.galleryContainer.appendChild(thumbnailDiv);
+                    });
+                }
+
+                function setScaleTransform() {
+                    els.fullImage.style.transform = `scale(${currentScale})`;
+                    els.fullImage.style.cursor = currentScale > MIN_SCALE ? 'zoom-out' : 'zoom-in';
+                }
+
+                function toggleZoom() {
+                    currentScale = (currentScale > MIN_SCALE) ? MIN_SCALE : MAX_SCALE;
+                    setScaleTransform();
+                }
+
+                function openFullImage(url) {
+                    els.fullImage.src = url;
+                    currentScale = MIN_SCALE;
+                    setScaleTransform();
+                    els.fullImageModal.style.display = 'flex';
+                    els.galleryModal.style.display = 'none';
+                }
+
+                function closeFullImage() {
+                    els.fullImageModal.style.display = 'none';
+                }
+
+                function openGallery() {
+                    populateGallery();
+                    els.galleryModal.style.display = 'block';
+                }
+
+                function closeGallery() {
+                    els.galleryModal.style.display = 'none';
+                    closeFullImage();
+                }
+
+                let lastTap = 0;
+                els.fullImage.addEventListener('click', (e) => {
+                    const now = new Date().getTime();
+                    const timesince = now - lastTap;
+                    if (timesince < 300 && timesince > 0) {
+                        e.preventDefault();
+                        toggleZoom();
+                    } 
+                    lastTap = now;
+                });
+                els.fullImage.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    toggleZoom();
+                });
+
+                els.nextBtn.onclick = () => {
+                    if (currentPartIndex === storyPages.length - 1) {
+                        startGPS();
+                        return;
+                    }
+                    const page = storyPages[currentPartIndex];
+                    currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
+                    saveProgress();
+                    showStory();
+                };
+
+                els.prevBtn.onclick = () => {
+                    const page = storyPages[currentPartIndex];
+                    currentPartIndex = page.backIndex !== undefined ? page.backIndex : Math.max(0, currentPartIndex - 1);
+                    saveProgress();
+                    showStory();
+                };
+                
+                els.discreetBackBtn.onclick = els.prevBtn.onclick;
+                document.getElementById('back-button-password').onclick = els.prevBtn.onclick;
+
+                els.checkBtn.onclick = () => {
+                    const page = storyPages[currentPartIndex];
+                    if (els.passInput.value.trim() === page.correctPassword) {
+                        els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Helyes!";
+                        els.msgDisplay.style.color = '#00ff00';
+                        setTimeout(() => {
+                            if (page.nextIndexSuccess === -1) startGPS();
+                            else {
+                                currentPartIndex = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : currentPartIndex + 1;
+                                saveProgress();
+                                showStory();
+                            }
+                        }, 1000);
+                    } else {
+                        els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.ERROR_MESSAGE || "Hibás kód!";
+                        els.msgDisplay.style.color = 'red';
+                    }
+                };
+
+                document.getElementById('play-audio-button-1').onclick = () => toggleAudio('1');
+                document.getElementById('play-audio-button-2').onclick = () => toggleAudio('2');
+
+                function startGPS() {
+                    contentBox.style.display = 'none';
+                    els.distModal.style.display = 'flex';
+                    const targetLat = parseFloat(GPS_COMPASS.TARGET_LATITUDE);
+                    const targetLon = parseFloat(GPS_COMPASS.TARGET_LONGITUDE);
+
+                    if (!navigator.geolocation) {
+                        els.distStatus.textContent = "A böngésző nem támogatja a helymeghatározást.";
+                        return;
+                    }
+
+                    navigator.geolocation.watchPosition(pos => {
+                        const lat = pos.coords.latitude;
+                        const lon = pos.coords.longitude;
+                        const R = 6371e3;
+                        const dLat = (targetLat - lat) * Math.PI/180;
+                        const dLon = (targetLon - lon) * Math.PI/180;
+                        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat*Math.PI/180) * Math.cos(targetLat*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        const dist = R * c;
+
+                        els.distDisplay.textContent = Math.round(dist) + " M";
+                        els.distStatus.textContent = `Pontosság: ${Math.round(pos.coords.accuracy)}m`;
+
+                        if (dist < GPS_COMPASS.SUCCESS_RADIUS_M) {
+                            els.distStatus.textContent = "MEGÉRKEZTÉL!";
+                            els.distStatus.style.color = "#00ff00";
+                            setTimeout(() => window.location.href = GPS_COMPASS.SUCCESS_REDIRECT_URL, 3000);
+                        }
+                    }, err => {
+                        els.distStatus.textContent = "GPS Hiba: " + err.message;
+                        els.distStatus.style.color = "red";
+                    }, { enableHighAccuracy: true });
+                }
+
+                document.getElementById('image-button').onclick = openGallery;
+                document.querySelector('#galleryModal .close-gallery').onclick = closeGallery;
+                document.querySelector('#full-image-display .close-gallery').onclick = closeFullImage;
+
+                document.getElementById('help-button').onclick = () => {
+                    const page = storyPages[currentPartIndex];
+                    if(page.helpMessage) {
+                        currentHelpIndex = 0;
+                        const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
+                        els.helpText.textContent = msgs[0];
+                        els.helpModal.style.display = 'flex';
+                        document.getElementById('help-next-button').style.display = msgs.length > 1 ? 'inline-block' : 'none';
+                    }
+                };
+                document.getElementById('help-close-button').onclick = () => els.helpModal.style.display = 'none';
+                document.getElementById('help-next-button').onclick = () => {
+                    const page = storyPages[currentPartIndex];
+                    const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
+                    currentHelpIndex++;
+                    if(currentHelpIndex < msgs.length) {
+                        els.helpText.textContent = msgs[currentHelpIndex];
+                        if(currentHelpIndex === msgs.length - 1) document.getElementById('help-next-button').style.display = 'none';
+                    }
+                };
+
+                loadProgress();
+                showStory();
+                
+                // SIKERES INDÍTÁS: Felfedjük az oldalt
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+
+            } catch (err) {
+                // KRITIKUS HIBAKEZELÉS: Ha bármi elszáll, kiírjuk a képernyőre
+                console.error("Critical Start Error:", err);
+                document.body.style.backgroundColor = '#111'; // biztos fekete
+                document.body.innerHTML = `
+                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;">
+                        <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
+                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg: <br> <b>${err.message}</b></p>
+                        <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Töltsd fel egy webszerverre (pl. GitHub Pages) és onnan nyisd meg!</p>
+                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
+                    </div>
+                `;
+            }
+        })();
+    </script>
+</body>
+</html>
