@@ -58,6 +58,7 @@
             left: 0;
             z-index: 0; 
             min-height: 100vh;
+            background-color: #111111; /* Hozzáadva: Sötét háttér tartalék, ha a kép nem tölt be */
         }
 
         .full-width-image-container img {
@@ -586,7 +587,7 @@
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
         <!-- Háttérkép -->
-        <img id="story-image" src="https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg" alt="Titokzatos jelenet">
+        <img id="story-image" src="https://treasurehuntsites.github.io/annaesmark/Img/Fulke1.jpg" alt="Titokzatos jelenet" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
 
     <div class="content-box" id="content-box">
@@ -721,7 +722,7 @@
     </div>
     <!-- END Távolság Modal -->
 
-    <!-- Audio elemek -->
+    <!-- Audio elemek - FRISSÍTVE AZ ÖN URL-EIVEL -->
     <audio id="story-audio-1" src="https://treasurehuntsites.github.io/media/Ugynokok1.mp3" preload="auto"></audio>
     <audio id="story-audio-2" src="https://treasurehuntsites.github.io/media/Ugynokok2.mp3" preload="auto"></audio>
 
@@ -738,17 +739,16 @@
             const POLICE_AVATAR_URL = "https://placehold.co/70x70/1A1A1A/00FF00?text=R";
             
             // Háttérképek
-            const PHONE_BOOTH_URL = "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg"; // FRISSÍTVE KR.JPG-RE
+            const PHONE_BOOTH_URL = "https://treasurehuntsites.github.io/annaesmark/Img/Fulke1.jpg"; 
             
             // Galéria Képek 
             const ALL_GALLERY_ITEMS = [
-                // FRISSÍTVE KR.JPG-RE A GALÉRIÁBAN IS
-                { id: 'helyszin', url: PHONE_BOOTH_URL, title: "Körner és Rosenberg emléktáblája", unlocked: true }, 
+                { id: 'helyszin', url: PHONE_BOOTH_URL, title: "Telefonfülke", unlocked: true }, 
             ];
 
             // TÖRTÉNETRÉSZEK
             const storyPages = [
-                // JELENET 1: Telefonfülke Bevezetés (Index 0 - 15)
+                // JELENET 1: Telefonfülke Bevezetés (Index 0 - 10)
                 { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // 0
                 { type: 'text', content: '§M Igen? Miről?', speaker: 'Mark', image: PHONE_BOOTH_URL }, // 1 
                 { type: 'text', content: '§A Itt van tessék.', speaker: 'Anna', image: PHONE_BOOTH_URL }, // 2
@@ -769,18 +769,18 @@
                     content: '§N Annak ellenére, hogy a szövetség nem adott hivatalos megbízást, a két ügynök úgy döntött, utánajár a rejtélynek, és a mai napon Anna és Márk is így tett.', 
                     speaker: 'Narrator', 
                     image: PHONE_BOOTH_URL, 
-                    nextIndex: 21 // Ugrás a kódkérő oldalra
+                    nextIndex: 16 // Ugrás a kódkérő oldalra
                 }, // 15
                 
-                // JELENET 4: Kód Kérés (Index 21) - Ezt megtartjuk
+                // JELENET 4: Kód Kérés (Index 16) - Ez a valós kódkérő oldal
                 { 
                     type: 'password', 
                     content: '§KOD', 
-                    correctPassword: '1940', // FRISSÍTVE: 5132-ről 1940-re
-                    nextIndexSuccess: -1, 
-                    backIndex: 15, // Vissza az utolsó történet oldalra (most index 15)
+                    correctPassword: '1940', 
+                    nextIndexSuccess: -1, // -1 Jelzi a speciális GPS akciót a checkButton logikában, ha currentPartIndex = 16
+                    backIndex: 15, 
                     helpMessage: ['Keresd a táblán', '1940'] 
-                }, 
+                }, // 16
             ];
 
             // ------------------------------------
@@ -853,7 +853,11 @@
             function loadProgress() {
                 const savedIndex = localStorage.getItem('gameProgress');
                 if (savedIndex !== null) {
-                    currentPartIndex = Math.min(parseInt(savedIndex), storyPages.length - 1); // Max az utolsó oldalig (21)
+                    let index = parseInt(savedIndex);
+                    // JAVÍTVA: Biztosítjuk, hogy az index soha ne legyen negatív, megelőzve a -1 hibát.
+                    index = Math.max(0, index); 
+                    // Maximum index ellenőrzése
+                    currentPartIndex = Math.min(index, storyPages.length - 1);
                 } else {
                     currentPartIndex = 0;
                 }
@@ -1265,13 +1269,20 @@
             
             function updateAvatar(pageIndex) {
                 const currentPage = storyPages[pageIndex];
+                
+                // JAVÍTVA: Robusztus ellenőrzés a currentPage és currentPage.content-re a hibatűrés érdekében.
+                if (!currentPage || !currentPage.content) {
+                    avatarImg.style.opacity = 0; // Elrejti az avatart, ha az oldal hiányos
+                    return; 
+                }
+
                 const speaker = currentPage ? currentPage.speaker : 'Narrator';
                 
                 let avatarUrl = MARK_AVATAR_URL; // Alapértelmezett Márk
                 let opacity = 1;
                 
                 // §X jelölések kezelése a tartalom *első* eleme alapján
-                const contentPrefix = currentPage.content ? currentPage.content.split(' ')[0] : '';
+                const contentPrefix = currentPage.content.split(' ')[0]; 
                 
                 if (contentPrefix === '§M') {
                     avatarUrl = MARK_AVATAR_URL;
@@ -1299,9 +1310,6 @@
 
                 setTimeout(() => {
                     stopAllAudio(); 
-                    // AUDIO GOMBOK ITT TŰNNEK EL
-                    // audioContainer1.style.display = 'none';
-                    // audioContainer2.style.display = 'none';
                     storyDisplay.innerHTML = ''; 
                     
                     passwordContainer.classList.remove('visible'); 
@@ -1309,24 +1317,31 @@
                     if (currentPartIndex < storyPages.length) {
                         const currentPage = storyPages[currentPartIndex];
                         
+                        // Hiba: Hiányzó oldalobjektum az indexen: -1 - EZT A loadProgress() már kezeli
+                        if (!currentPage) {
+                            console.error("Kritikus hiba: Hiányzó oldalobjektum az indexen:", currentPartIndex, ". Visszaállítás az utolsó oldalra.");
+                            // Mivel a loadProgress korrigálja, itt csak logolunk, és visszaugrunk a biztonságos oldalra
+                            currentPartIndex = 0; 
+                            saveProgress();
+                            showStoryPart(); 
+                            return; 
+                        }
+
                         // Kép feloldási logikája
-                        if (currentPage.unlockImage) {
+                        if (currentPage.unlockImage) { 
                             unlockImage(currentPage.unlockImage);
                         }
                         
                         updateAvatar(currentPartIndex); 
                         
-                        let displayContent = currentPage.content;
+                        let displayContent = currentPage.content || '§N Hiba: Hiányzó történeti tartalom.';
                         
                         // §X jelölés eltávolítása a szövegből (ha van)
                         if (displayContent.startsWith('§M') || displayContent.startsWith('§A') || displayContent.startsWith('§R') || displayContent.startsWith('§N') || displayContent.startsWith('§KOD') || displayContent.startsWith('§H') || displayContent.startsWith('§RESET')) {
-                            // Csak a szövegdoboz tartalmát kell kiüríteni (a jelölés után)
                             displayContent = displayContent.split(' ').slice(1).join(' ');
                         }
                         
                         storyDisplay.innerHTML = displayContent;
-                        
-                        // KÉP BEÁLLÍTÁSA A GLOBÁLIS KONSTANS 
                         storyImage.src = PHONE_BOOTH_URL; 
                         
                         // AUDIO BUTTON MEGJELENÍTÉSE
@@ -1339,11 +1354,10 @@
                         }
                         
                     } else {
-                        // A felhasználó kérésére, ha a játék túlmegy a storyPages határain (pl. Index 22), 
-                        // visszairányítjuk a jelszókérő oldalra (Index 21) a "Köszönjük" üzenet helyett.
-                        currentPartIndex = storyPages.length - 1; // Visszaállítjuk az utolsó oldalra (21)
+                        // Történet túllépés: Visszaállítás az utolsó interaktív oldalra (jelszókérő)
+                        currentPartIndex = storyPages.length - 1; 
                         saveProgress();
-                        showStoryPart(); // Újra megjelenítjük a jelszókérő oldalt
+                        showStoryPart(); 
                         return;
                     }
 
@@ -1354,14 +1368,13 @@
             
             // --- ESEMÉNYKEZELŐK ---
             
-            // Modal bezárás a böngésző visszanyíllal 
+            // Modal bezárás a böngésző visszanyíllal (JAVÍTVA: SecurityError elkerülésére)
             window.addEventListener('popstate', function(event) {
+                // A 'popstate' esemény már megváltoztatta az URL-t. Csak a UI állapotot frissítjük.
                 if (fullImageDisplayModal.style.display === 'flex') {
-                    closeFullImage();
-                    history.pushState(null, null, '#gallery'); 
+                    closeFullImage(); 
                 } else if (galleryModal.style.display === 'block') {
                     closeGallery();
-                    history.pushState(null, null, window.location.pathname + window.location.search);
                 }
             });
 
@@ -1372,18 +1385,11 @@
             nextButton.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
                 
-                if (currentPage && currentPage.customAction === 'open_distance_modal') {
-                    stopAllAudio();
-                    showDistanceModal(); 
-                    return;
-                }
-
                 // Külső URL KEZELÉSE 
-                if (currentPage.nextButtonExternalUrl) {
+                if (currentPage && currentPage.nextButtonExternalUrl) {
                     window.location.href = currentPage.nextButtonExternalUrl; // Átirányítás
                     return;
                 }
-
                 
                 const forcedNextIndex = nextButton.dataset.forcedNextIndex;
                 if (forcedNextIndex !== undefined && forcedNextIndex !== '') {
@@ -1400,7 +1406,7 @@
                 const currentPage = storyPages[currentPartIndex];
                 
                 // Ha van backIndex definiálva, azt használja
-                if (currentPage.backIndex !== undefined) {
+                if (currentPage && currentPage.backIndex !== undefined) {
                     currentPartIndex = currentPage.backIndex;
                 } 
                 else if (currentPartIndex > 0) {
@@ -1413,7 +1419,7 @@
 
             backButtonPassword.addEventListener('click', () => {
                 const currentPage = storyPages[currentPartIndex];
-                if (currentPage.type === 'password' && currentPage.backIndex !== undefined) {
+                if (currentPage && currentPage.type === 'password' && currentPage.backIndex !== undefined) {
                     currentPartIndex = currentPage.backIndex;
                     saveProgress();
                     showStoryPart();
@@ -1440,14 +1446,19 @@
                     messageDisplay.style.color = '#00FF00';
                     
                     setTimeout(() => {
-                        // KÓD ELLENŐRZÉS: Ha a jelszó oldalról (index 21) jöttünk, indítsuk el a GPS modalt
-                        if (currentPartIndex === 21) { 
-                            showDistanceModal();
-                        } else {
+                        // KÓD ELLENŐRZÉS: Ha a jelszó oldal (Index 16) ÉS a nextIndexSuccess -1 (speciális jelzés a GPS-re)
+                        if (currentPartIndex === 16 && currentPage.nextIndexSuccess === -1) { 
+                            showDistanceModal(); // GPS MODAL ELINDÍTÁSA!
+                        } else if (currentPage.nextIndexSuccess !== undefined) {
                             // Egyébként folytassuk a normál történetfolyamot
                             currentPartIndex = currentPage.nextIndexSuccess; 
                             saveProgress();
                             showStoryPart(); 
+                        } else {
+                            // Alapértelmezett, ha nincs nextIndexSuccess: egyszerűen tovább
+                            currentPartIndex++;
+                            saveProgress();
+                            showStoryPart();
                         }
                     }, 1000);
                     
@@ -1534,9 +1545,9 @@
 
 
             function initializeApp() {
-                // A felesleges localStorage.clear() sort eltávolítottam,
-                // hogy ne törölje a játékállást minden frissítéskor.
-
+                // Mivel a történetoldalak változtak, ki kell takarítanunk a régi progress-t.
+                localStorage.clear();
+                
                 loadProgress(); 
                 showStoryPart();
                 
