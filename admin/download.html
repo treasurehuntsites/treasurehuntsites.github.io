@@ -49,7 +49,6 @@
             display: flex; flex-direction: column; align-items: center;
             overflow-y: auto; min-height: 100vh; touch-action: auto; 
             text-align: center; padding-bottom: 60px; 
-            /* A stílus a JS töltés alatt is látni engedi a hátteret/alap elemeket */
         }
         
         /* Háttérkép */
@@ -382,10 +381,18 @@
     <audio id="story-audio-1" src="" preload="auto"></audio>
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
-    <script>
-        // Ez a placeholder lesz kicserélve a mentett JSON konfigurációval
-        const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+    <!--
+        EZ A HELY JELÖLI A KONFIGURÁCIÓ INJEKTÁLÁSÁT.
+        A download.html a !!!GAME_CONFIG_INJECTED!!! stringet cseréli ki a valós JSON objektumra.
+    -->
+    <script id="config-injection">
+        // Placeholder a konfigurációhoz.
+        window.GAME_CONFIG_INJECTED = {};
+    </script>
 
+    <script>
+        // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+        
         function getDefaultConfig() {
             return {
                 APP_TITLE: "Anna és Márk",
@@ -416,17 +423,15 @@
                 let CONFIG = getDefaultConfig();
                 
                 // --- KONFIGURÁCIÓ BETÖLTÉSE ---
-                // 1. Exportált (beágyazott) konfiguráció ellenőrzése
-                if (INJECTED_CONFIG_JSON.length > 50) {
-                     try {
-                        const parsedConfig = JSON.parse(INJECTED_CONFIG_JSON);
-                        CONFIG = { ...CONFIG, ...parsedConfig };
-                        // Alobjektumok mélyebb összevonása
-                        if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
-                        if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
-                        if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
-                        console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
-                     } catch(e) { throw new Error("A beágyazott konfiguráció JSON-hibát tartalmaz. Részletek: " + e.message); }
+                // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
+                if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
+                     const parsedConfig = window.GAME_CONFIG_INJECTED;
+                     CONFIG = { ...CONFIG, ...parsedConfig };
+                     // Alobjektumok mélyebb összevonása
+                     if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
+                     if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
+                     if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
+                     console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
                 } else {
                     // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
@@ -486,8 +491,8 @@
 
                 function loadProgress() {
                     try {
-                        // Ha exportált fájl, ne próbálja meg a LocalStorage-t (a PRELOADED_CONFIG a beágyazott config)
-                        if (INJECTED_CONFIG_JSON.length > 50) return; 
+                        // Exportált fájl esetén nem töltjük be a LocalStorage-ból
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
 
                         const saved = localStorage.getItem('gameProgress');
                         if (saved !== null) {
@@ -497,8 +502,7 @@
                 }
                 function saveProgress() { 
                     try { 
-                        // Ha exportált fájl, ne próbáljon meg LocalStorage-t használni
-                        if (INJECTED_CONFIG_JSON.length > 50) return;
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return;
                         localStorage.setItem('gameProgress', currentPartIndex); 
                     } catch(e) {} 
                 }
@@ -620,7 +624,7 @@
                     
                     els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
                     els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
-                    els.contentBox.style.display = 'flex'; // Végre látható a tartalom
+                    contentBox.style.display = 'flex'; // Végre látható a tartalom
                 }
 
                 function showStory() {
@@ -641,6 +645,8 @@
                             if (p.galleryMode === 'add' || !p.galleryMode) {
                                 if(!images.includes(p.customGalleryUrl)) {
                                     images.push(p.customGalleryUrl);
+                                    // BIZTONSÁGI MÁSOLAT: ha a konfigurációban lévő oldalak nincsenek teljesen kitöltve, akkor is törlődjön.
+                                    if(p.galleryMode === 'add') images = [p.customGalleryUrl]; 
                                 }
                             }
                         }
@@ -831,9 +837,9 @@
                 document.body.innerHTML = `
                     <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;">
                         <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
-                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg a böngésző biztonsági beállítása ('file://' protokoll korlátozás).</p>
-                        <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">Megoldás: Töltsd fel egy webszerverre (pl. GitHub Pages, Netlify) és onnan nyisd meg!</p>
-                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff;">Hiba: ${err.message}\n${err.stack || ''}</pre>
+                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg: <br> <b>${err.message}</b></p>
+                        <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Töltsd fel egy webszerverre (pl. GitHub Pages) és onnan nyisd meg!</p>
+                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
                     </div>
                 `;
             }
@@ -865,11 +871,18 @@
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
-                // Konfiguráció injektálása közvetlenül a JS változóba
-                // EZ A LEGMEGBÍZHATÓBB MÓDSZER: lecseréli a placeholder stringet a valós JSON stringre
+                // Konfiguráció injektálása közvetlenül a JS objektumba az injection script-ben
+                const injectionScriptCode = `
+    <script id="config-injection">
+        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
+        window.GAME_CONFIG_INJECTED = ${safeConfigString};
+    <\/script>
+    `;
+
+                // Kicseréljük az üres placeholder scriptet a valós konfigurációval
                 gameHtml = gameHtml.replace(
-                    "'!!!INJECTED_CONFIG_JSON_HERE!!!'", 
-                    safeConfigString
+                    /<script id="config-injection">[\s\S]*?<\/script>/,
+                    injectionScriptCode
                 );
 
                 // Letöltés indítása
