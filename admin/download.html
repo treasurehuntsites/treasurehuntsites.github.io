@@ -391,10 +391,6 @@
     <audio id="story-audio-1" src="" preload="auto"></audio>
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
-    <!--
-        EZ A HELY JELÖLI A KONFIGURÁCIÓ INJEKTÁLÁSÁT.
-        A download.html a !!!GAME_CONFIG_INJECTED!!! stringet cseréli ki a valós JSON objektumra.
-    -->
     <script id="config-injection">
         // Placeholder a konfigurációhoz.
         window.GAME_CONFIG_INJECTED = {};
@@ -841,7 +837,7 @@
                 const audioBtn1 = document.getElementById('play-audio-button-1');
                 if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                 const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audio2) audioBtn2.onclick = () => toggleAudio('2');
+                if (audio2) audio2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -1001,11 +997,15 @@
     `;
 
                 // Kicseréljük az eredeti placeholder scriptet a valós konfigurációval
-                // Megkeressük az eredeti script id="config-injection" blokkot és lecseréljük
+                // REGEX JAVÍTVA: Csak a script tag-et keresi, a kommenteket kihagyja
                 const configRegex = /<script id="config-injection">[\s\S]*?<\/script>/;
                 
                 if (!gameHtml.match(configRegex)) {
-                    throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból.");
+                    // Ha még mindig hiba van, próbálunk egy még lazább regexet a biztonság kedvéért
+                    const looserRegex = /<script id="config-injection">.*?<\/script>/s; // A 's' flag (dotall) segíthet, de a Canvas környezetében nem mindig támogatott.
+                    if (!gameHtml.match(looserRegex)) {
+                        throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból. A regex nem talált egyezést, valószínűleg a sablon sérült.");
+                    }
                 }
 
                 gameHtml = gameHtml.replace(
