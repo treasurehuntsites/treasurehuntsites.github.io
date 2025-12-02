@@ -1,4 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Játék Exportálása - Megbízható</title>
+    <style>
+        body { background-color: #1a1a1a; color: #00ffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .loader { border: 5px solid #333; border-top: 5px solid #8a2be2; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        button { padding: 15px 30px; font-size: 1.2em; background-color: #8a2be2; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
+        button:hover { background-color: #7b1cd1; }
+        #error-message { color: red; max-width: 80%; margin: 20px auto; padding: 15px; border: 1px solid red; background-color: #330000; border-radius: 5px; }
+        
+        /* ÚJ: Manuális gomb kiemelése */
+        .manual-download-btn {
+            background-color: #00ffff !important; 
+            color: #1a1a1a !important; 
+            font-size: 1.5em;
+            padding: 20px 40px;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="status-container">
+        <div class="loader"></div>
+        <h1>Játék összeállítása...</h1>
+        <p>A mentett konfiguráció beillesztése és letöltés indítása.</p>
+    </div>
+    <div id="error-message" style="display:none;"></div>
+    
+    <button id="manual-check-button" style="display:none; margin-top: 30px;" class="btn-primary">Manuális LocalStorage ellenőrzés</button>
+    <pre id="ls-output" style="display: none; text-align: left; max-width: 80%; overflow-x: auto; background-color: #333; padding: 15px; border-radius: 5px; margin-top: 10px; color: #f0f0f0; border: 1px solid #00ffff;"></pre>
+    <script id="game-template" type="text/template">
+        <!doctype html>
 <html lang="hu">
 <head>
     <meta charset="utf-8">
@@ -944,6 +978,125 @@
                 }
             }
         })();
+    </script>
+</body>
+</html>
+
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusContainer = document.getElementById('status-container');
+            const errorMessageContainer = document.getElementById('error-message');
+            const manualCheckButton = document.getElementById('manual-check-button');
+            const lsOutput = document.getElementById('ls-output');
+            const STORAGE_KEY = 'DYNAMIC_CONFIG';
+            let savedConfig = localStorage.getItem(STORAGE_KEY);
+            let blobUrl = null; 
+            
+            function displayError(message) {
+                const loader = document.querySelector('.loader');
+                if (loader) loader.style.display = 'none';
+                errorMessageContainer.style.display = 'block';
+                errorMessageContainer.innerHTML = '<h1>❌ Exportálási Hiba ❌</h1><p>' + message + '</p>';
+                statusContainer.innerHTML = '<h1>Hiba történt.</h1><p>Nézze meg a részleteket alább.</p>';
+                manualCheckButton.style.display = 'block'; // Hibánál is látható a diagnosztika
+                lsOutput.style.display = 'block';
+            }
+
+            if (!savedConfig) {
+                // A legutóbbi hiba (DYNAMIC_CONFIG hiánya) kezelése
+                displayError("Nincs mentett konfiguráció a böngészőben. Kérlek, **menj vissza az Admin oldalra, és kattints a MENTÉS gombra**, majd próbáld újra az Exportálást.");
+                checkLocalStorage(); // Diagnosztika futtatása
+                return;
+            }
+
+            try {
+                // 1. Konfiguráció betöltése és biztonsági ellenőrzések (GPS, stb.)
+                let parsedConfig = JSON.parse(savedConfig);
+
+                if (!parsedConfig.GPS_COMPASS) { parsedConfig.GPS_COMPASS = {}; }
+                if (parsedConfig.GPS_COMPASS.SUCCESS_RADIUS_M === undefined) { parsedConfig.GPS_COMPASS.SUCCESS_RADIUS_M = 25; }
+
+                const safeConfigString = JSON.stringify(parsedConfig); 
+                
+                // 2. Sablon betöltése és Konfiguráció injektálása
+                let gameHtml = document.getElementById('game-template').textContent;
+                gameHtml = gameHtml.replace(/\r/g, ''); 
+                
+                const injectionCode = `
+        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
+        window.GAME_CONFIG_INJECTED = ${safeConfigString};
+    `;
+                
+                const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$';
+
+                if (gameHtml.includes(INJECTION_TAG)) {
+                    gameHtml = gameHtml.replace(INJECTION_TAG, injectionCode);
+                } else {
+                    throw new Error(`A jelölő ('${INJECTION_TAG}') hiányzik a game.html sablonból.`);
+                }
+
+                // 3. Blob létrehozása és URL generálása
+                const blob = new Blob([gameHtml], {type: 'text/html'});
+                blobUrl = URL.createObjectURL(blob);
+                
+                // 4. Státusz frissítése és manuális letöltési gomb megjelenítése
+                
+                const loader = document.querySelector('.loader');
+                if (loader) loader.style.display = 'none';
+
+                statusContainer.innerHTML = `
+                    <h1>✅ Kész!</h1>
+                    <p>A játék összeállítása befejeződött. Kérlek, kattints a lenti gombra a mentés indításához!</p>
+                    
+                    <a href="${blobUrl}" download="game.html" style="text-decoration: none; display: block;">
+                        <button class="manual-download-btn">
+                            ⬇️ KATTINTÁS A LETÖLTÉSHEZ (game.html)
+                        </button>
+                    </a>
+                    
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: Ezt a fájlt fel kell tölteni a GitHub Pagesre vagy más webszerverre a képek és hangok helyes betöltéséhez!</p>
+                    <button onclick="window.close()" style="margin-top: 20px;">Bezárás</button>
+                `;
+
+            } catch (e) {
+                console.error("Export Error:", e);
+                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
+            }
+            
+            // Diagnosztika funkció
+            function checkLocalStorage() {
+                lsOutput.textContent = 'Összes LocalStorage kulcs és érték (első 100 karakter):\n\n';
+                try {
+                    let found = false;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        const displayValue = value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'NULL/EMPTY';
+                        lsOutput.textContent += `${key}: ${displayValue}\n`;
+                        if (key === STORAGE_KEY) found = true;
+                    }
+                    if (found) {
+                        lsOutput.textContent += `\nSIKER: A '${STORAGE_KEY}' kulcs megtalálható a LocalStorage-ban!`;
+                    } else {
+                         lsOutput.textContent += `\nHIBA: A '${STORAGE_KEY}' kulcs NEM található a LocalStorage-ban!`;
+                    }
+                } catch(e) {
+                    lsOutput.textContent = `HIBA a LocalStorage olvasása közben (valószínűleg biztonsági korlátozás): ${e.message}`;
+                }
+            }
+
+            manualCheckButton.onclick = checkLocalStorage;
+            
+        });
+        
+        // Biztosítja, hogy az ideiglenes Blob URL fel legyen szabadítva, amikor az ablak bezárul
+        window.addEventListener('beforeunload', () => {
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
+            }
+        });
     </script>
 </body>
 </html>
