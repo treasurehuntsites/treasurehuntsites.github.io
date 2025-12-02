@@ -384,6 +384,9 @@
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
     <script>
+        // Ez a placeholder lesz kicserélve a mentett JSON konfigurációval
+        const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+
         function getDefaultConfig() {
             return {
                 APP_TITLE: "Anna és Márk",
@@ -409,15 +412,20 @@
                 // --- BIZTONSÁGOS INDÍTÁS ---
                 let CONFIG = getDefaultConfig();
                 
-                if (window.PRELOADED_CONFIG) {
+                // --- KONFIGURÁCIÓ BETÖLTÉSE ---
+                // 1. Exportált (beágyazott) konfiguráció ellenőrzése
+                if (INJECTED_CONFIG_JSON.length > 50) {
                      try {
-                        CONFIG = { ...CONFIG, ...window.PRELOADED_CONFIG };
-                        if(window.PRELOADED_CONFIG.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...window.PRELOADED_CONFIG.AVATARS };
-                        if(window.PRELOADED_CONFIG.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...window.PRELOADED_CONFIG.GPS_COMPASS };
-                        if(window.PRELOADED_CONFIG.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...window.PRELOADED_CONFIG.MEDIA };
-                        console.log("Játék betöltve exportált konfigurációval.");
-                     } catch(e) { console.error("Export config hiba", e); }
+                        const parsedConfig = JSON.parse(INJECTED_CONFIG_JSON);
+                        CONFIG = { ...CONFIG, ...parsedConfig };
+                        // Alobjektumok mélyebb összevonása
+                        if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
+                        if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
+                        if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
+                        console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
+                     } catch(e) { console.error("Export config hiba a beágyazás után:", e); }
                 } else {
+                    // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
                         const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                         if (savedConfig) { 
@@ -848,18 +856,11 @@
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
-                // Konfiguráció beillesztése a játék kódjába (PRELOADED_CONFIG)
-                // PRELOADED_CONFIG használata elkerüli a LocalStorage problémákat file:// protokoll alatt
-                const injectionScript = `
-    <script>
-        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA ---
-        // Ez a konfiguráció az admin felületen mentett állapotot tükrözi.
-        // ${new Date().toISOString()}
-        window.PRELOADED_CONFIG = ${safeConfigString};
-    <\/script>`;
-                
-                // Beillesztés a </head> elé
-                gameHtml = gameHtml.replace('</head>', `${injectionScript}\n</head>`);
+                // Konfiguráció injektálása közvetlenül a JS változóba
+                gameHtml = gameHtml.replace(
+                    "'!!!INJECTED_CONFIG_JSON_HERE!!!'", 
+                    safeConfigString
+                );
 
                 // Letöltés indítása
                 const blob = new Blob([gameHtml], {type: 'text/html'});
