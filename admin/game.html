@@ -60,6 +60,28 @@
             opacity: 1; transition: opacity 0.5s ease-in-out;
         }
 
+        /* Diszkrét Vissza Gomb */
+        .discreet-back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: color 0.3s, transform 0.2s;
+            z-index: 25;
+            padding: 5px;
+        }
+        .discreet-back-button:hover {
+            color: #00ffff;
+            transform: scale(1.1);
+        }
+        .discreet-back-button:disabled {
+            display: none;
+        }
+
         #story-text-display {
             font-size: 1.2em; font-weight: 700; line-height: 1.6;
             margin-bottom: 20px; white-space: pre-wrap; flex-grow: 1; 
@@ -85,14 +107,29 @@
         }
         .page-button:disabled { background-color: #555555; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
         
-        /* Választás Gombok (Choice) */
+        /* Választás Gombok (Choice) - MÓDOSÍTVA: FÜGGŐLEGES ELRENDEZÉS */
         .multi-choice-container {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%;
+            display: flex; 
+            flex-direction: column; /* Egymás alá rendezés */
+            gap: 10px; 
+            width: 100%;
         }
         .choice-button {
-            background-color: #00FFFF; color: #1a1a1a; padding: 10px 15px;
-            border-radius: 5px; font-weight: bold; font-size: 1rem; border: none;
-            flex: 1 1 40%; max-width: 100%; cursor: pointer; text-transform: uppercase;
+            background-color: #00FFFF; 
+            color: #1a1a1a; 
+            padding: 12px 15px;
+            border-radius: 5px; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            border: none;
+            width: 100%; /* Teljes szélesség */
+            cursor: pointer; 
+            text-transform: uppercase;
+            box-shadow: 0 2px 5px rgba(0, 255, 255, 0.3);
+            transition: background-color 0.2s;
+        }
+        .choice-button:hover {
+            background-color: #00ddee;
         }
         
         .avatar-image {
@@ -239,6 +276,11 @@
     </div>
 
     <div class="content-box" id="content-box">
+        <!-- Diszkrét Vissza Gomb -->
+        <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+
         <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
         
         <p id="story-text-display"></p>
@@ -394,6 +436,7 @@
                 storyDisplay: document.getElementById('story-text-display'), storyImage: document.getElementById('story-image'),
                 avatarImg: document.getElementById('avatar-img'), contentBox: document.getElementById('content-box'),
                 nextBtn: document.getElementById('next-page-button'), prevBtn: document.getElementById('prev-page-button'),
+                discreetBackBtn: document.getElementById('discreet-back-button'), // ÚJ GOMB
                 interactionCont: document.getElementById('interaction-container'), passCont: document.getElementById('password-container'),
                 multiChoiceCont: document.getElementById('multi-choice-container'),
                 passInput: document.getElementById('password-input'), checkBtn: document.getElementById('check-password-button'),
@@ -536,7 +579,10 @@
                      els.nextBtn.textContent = "Célpont Keresése";
                 }
                 
-                els.prevBtn.disabled = currentPartIndex === 0;
+                // Vissza gombok frissítése (mindkettőre hat)
+                const isFirstPage = currentPartIndex === 0;
+                els.prevBtn.disabled = isFirstPage;
+                els.discreetBackBtn.disabled = isFirstPage;
             }
 
             function showStory() {
@@ -656,6 +702,9 @@
                 showStory();
             };
             
+            // Diszkrét vissza gomb eseménye (ugyanaz mint a normál vissza)
+            els.discreetBackBtn.onclick = els.prevBtn.onclick;
+
             document.getElementById('back-button-password').onclick = els.prevBtn.onclick;
 
             els.checkBtn.onclick = () => {
