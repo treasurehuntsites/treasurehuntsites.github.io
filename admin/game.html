@@ -28,8 +28,6 @@
             display: flex; flex-direction: column; align-items: center;
             overflow-y: auto; min-height: 100vh; touch-action: auto; 
             text-align: center; padding-bottom: 60px; 
-            /* Kezdetben rejtett, de a JS hibakezelés felfedi */
-            visibility: hidden; opacity: 0; transition: opacity 0.5s ease-in-out; 
         }
         
         /* Háttérkép */
@@ -276,7 +274,7 @@
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
 
-    <div class="content-box" id="content-box">
+    <div class="content-box" id="content-box" style="display: none;"> <!-- Hozzáadva: display: none; -->
         <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
@@ -362,7 +360,18 @@
     <audio id="story-audio-1" src="" preload="auto"></audio>
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
+    <!--
+        EZ A HELY JELÖLI A KONFIGURÁCIÓ INJEKTÁLÁSÁT.
+        A download.html a !!!GAME_CONFIG_INJECTED!!! stringet cseréli ki a valós JSON objektumra.
+    -->
+    <script id="config-injection">
+        // Placeholder a konfigurációhoz.
+        window.GAME_CONFIG_INJECTED = {};
+    </script>
+
     <script>
+        // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
+        
         function getDefaultConfig() {
             return {
                 APP_TITLE: "Anna és Márk",
@@ -384,19 +393,26 @@
         }
 
         (function() {
+            // A tartalom doboz alapértelmezett elrejtése
+            const contentBox = document.getElementById('content-box');
+            contentBox.style.display = 'none';
+
             try {
                 // --- BIZTONSÁGOS INDÍTÁS ---
                 let CONFIG = getDefaultConfig();
                 
-                if (window.PRELOADED_CONFIG) {
-                     try {
-                        CONFIG = { ...CONFIG, ...window.PRELOADED_CONFIG };
-                        if(window.PRELOADED_CONFIG.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...window.PRELOADED_CONFIG.AVATARS };
-                        if(window.PRELOADED_CONFIG.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...window.PRELOADED_CONFIG.GPS_COMPASS };
-                        if(window.PRELOADED_CONFIG.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...window.PRELOADED_CONFIG.MEDIA };
-                        console.log("Játék betöltve exportált konfigurációval.");
-                     } catch(e) { console.error("Export config hiba", e); }
+                // --- KONFIGURÁCIÓ BETÖLTÉSE ---
+                // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
+                if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
+                     const parsedConfig = window.GAME_CONFIG_INJECTED;
+                     CONFIG = { ...CONFIG, ...parsedConfig };
+                     // Alobjektumok mélyebb összevonása
+                     if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
+                     if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
+                     if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
+                     console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
                 } else {
+                    // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
                     try {
                         const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                         if (savedConfig) { 
@@ -407,7 +423,7 @@
                             CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
                             console.log("Játék betöltve LocalStorage konfigurációval.");
                         }
-                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e); } 
+                    } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
                 }
 
                 let currentPartIndex = 0;
@@ -454,6 +470,9 @@
 
                 function loadProgress() {
                     try {
+                        // Exportált fájl esetén nem töltjük be a LocalStorage-ból
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
+
                         const saved = localStorage.getItem('gameProgress');
                         if (saved !== null) {
                             currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
@@ -461,7 +480,10 @@
                     } catch(e) { console.warn("Progress load failed:", e); }
                 }
                 function saveProgress() { 
-                    try { localStorage.setItem('gameProgress', currentPartIndex); } catch(e) {} 
+                    try { 
+                        if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return;
+                        localStorage.setItem('gameProgress', currentPartIndex); 
+                    } catch(e) {} 
                 }
 
                 function stopAllAudio() {
@@ -522,9 +544,18 @@
                     if (!page.customAvatarUrl && AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
                         opacity = 0;
                     }
+                    
+                    // --- MÓDOSÍTOTT LOGIKA: Narrátor és Choice oldalakon rejtett avatar ---
+                    if (AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') {
+                        opacity = 0;
+                    }
 
                     els.avatarImg.src = avatarUrl;
                     els.avatarImg.style.opacity = opacity;
+                    // Megjelenítési beállítás: ha nincs avatár, csökkentjük a felső párnázást
+                    contentBox.style.paddingTop = (opacity === 0) ? '10px' : '40px';
+                    // ------------------------------------------------------------------
+
                     els.storyDisplay.innerHTML = text;
 
                     els.interactionCont.style.display = 'flex';
@@ -581,6 +612,7 @@
                     
                     els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
                     els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
+                    contentBox.style.display = 'flex'; // Végre látható a tartalom
                 }
 
                 function showStory() {
@@ -601,6 +633,8 @@
                             if (p.galleryMode === 'add' || !p.galleryMode) {
                                 if(!images.includes(p.customGalleryUrl)) {
                                     images.push(p.customGalleryUrl);
+                                    // BIZTONSÁGI MÁSOLAT: ha a konfigurációban lévő oldalak nincsenek teljesen kitöltve, akkor is törlődjön.
+                                    if(p.galleryMode === 'add') images = [p.customGalleryUrl]; 
                                 }
                             }
                         }
@@ -718,7 +752,7 @@
                 document.getElementById('play-audio-button-2').onclick = () => toggleAudio('2');
 
                 function startGPS() {
-                    els.contentBox.style.display = 'none';
+                    contentBox.style.display = 'none';
                     els.distModal.style.display = 'flex';
                     const targetLat = parseFloat(GPS_COMPASS.TARGET_LATITUDE);
                     const targetLon = parseFloat(GPS_COMPASS.TARGET_LONGITUDE);
@@ -787,14 +821,13 @@
             } catch (err) {
                 // KRITIKUS HIBAKEZELÉS: Ha bármi elszáll, kiírjuk a képernyőre
                 console.error("Critical Start Error:", err);
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = 1;
+                document.body.style.backgroundColor = '#111'; // biztos fekete
                 document.body.innerHTML = `
-                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:#111; height:100vh;">
-                        <h1 style="font-size:2em; margin-bottom:10px;">⚠️ Hiba történt a betöltéskor</h1>
-                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudott elindulni az alábbi hiba miatt:</p>
-                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:800px; overflow:auto; text-align:left;">${err.message}\n\n${err.stack || ''}</pre>
-                        <p>Kérlek, ellenőrizd az exportálást vagy a konfigurációt.</p>
+                    <div style="color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;">
+                        <h1 style="font-size:2em; margin-bottom:10px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
+                        <p style="font-size:1.2em; color:#ddd;">A játék nem tudta betölteni a beállításokat. Ennek oka valószínűleg: <br> <b>${err.message}</b></p>
+                        <p style="font-size:1.2em; color:#00ffff; font-weight: bold; margin-top: 10px;">MEGOLDÁS: Töltsd fel egy webszerverre (pl. GitHub Pages) és onnan nyisd meg!</p>
+                        <pre style="background:#333; padding:15px; border-radius:5px; margin:20px auto; max-width:100%; overflow:auto; text-align:left; color:#fff; font-size: 0.8em;">Stack: ${err.stack || 'Nincs stack trace.'}</pre>
                     </div>
                 `;
             }
