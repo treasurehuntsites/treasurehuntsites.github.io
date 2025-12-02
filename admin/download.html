@@ -391,9 +391,10 @@
     <audio id="story-audio-1" src="" preload="auto"></audio>
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
-    <script id="config-injection">
+    <script>
         // Placeholder a konfigurációhoz.
         window.GAME_CONFIG_INJECTED = {};
+        //___INJECT_CONFIG_HERE___
     </script>
 
     <script>
@@ -837,7 +838,7 @@
                 const audioBtn1 = document.getElementById('play-audio-button-1');
                 if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                 const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audio2) audio2.onclick = () => toggleAudio('2');
+                if (audio2) audioBtn2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -965,6 +966,7 @@
             const statusContainer = document.getElementById('status-container');
             const errorMessageContainer = document.getElementById('error-message');
             const STORAGE_KEY = 'DYNAMIC_CONFIG';
+            const INJECTION_TAG = '//___INJECT_CONFIG_HERE___'; // Új, egyszerű jelölő
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
             function displayError(message) {
@@ -985,32 +987,22 @@
                 const parsedConfig = JSON.parse(savedConfig);
                 const safeConfigString = JSON.stringify(parsedConfig); 
                 
-                // Játék sablon betöltése
+                // Játék sablon betöltése és normalizálás
                 let gameHtml = document.getElementById('game-template').textContent;
+                gameHtml = gameHtml.replace(/\r/g, ''); // Normalizáció a sorvégek miatt
                 
-                // >>>>> NORMALIZÁCIÓ HOZZÁADVA: Megbízhatóbbá tesszük a regex keresést
-                gameHtml = gameHtml.replace(/\r/g, ''); 
-                
-                // Konfiguráció injektálása közvetlenül a JS objektumba az injection script-ben
-                const injectionScriptCode = `
-    <script id="config-injection">
+                // Konfiguráció injektálása közvetlenül a JS objektumba
+                const injectionCode = `
         // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
         window.GAME_CONFIG_INJECTED = ${safeConfigString};
-    <\/script>
     `;
-
-                // Kicseréljük az eredeti placeholder scriptet a valós konfigurációval
-                // REGEX JAVÍTVA: Csak a script tag-et keresi
-                const configRegex = /<script id="config-injection">[\s\S]*?<\/script>/;
                 
-                if (!gameHtml.match(configRegex)) {
-                    throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból. A sablon struktúrája sérült.");
+                // Kicseréljük az egyszerű jelölőt a valós konfigurációval
+                if (gameHtml.includes(INJECTION_TAG)) {
+                    gameHtml = gameHtml.replace(INJECTION_TAG, injectionCode);
+                } else {
+                    throw new Error(`A jelölő ('${INJECTION_TAG}') hiányzik a game.html sablonból. Kérem, ellenőrizze a download.html tartalmát.`);
                 }
-
-                gameHtml = gameHtml.replace(
-                    configRegex,
-                    injectionScriptCode
-                );
 
                 // Letöltés indítása
                 const blob = new Blob([gameHtml], {type: 'text/html'});
@@ -1032,7 +1024,7 @@
 
             } catch (e) {
                 console.error("Export Error:", e);
-                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok (különösen az URL-ek és indexek) érvényesek-e!`);
+                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
             }
         });
     </script>
