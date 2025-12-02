@@ -988,6 +988,9 @@
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
+                // >>>>> NORMALIZÁCIÓ HOZZÁADVA: Megbízhatóbbá tesszük a regex keresést
+                gameHtml = gameHtml.replace(/\r/g, ''); 
+                
                 // Konfiguráció injektálása közvetlenül a JS objektumba az injection script-ben
                 const injectionScriptCode = `
     <script id="config-injection">
@@ -997,15 +1000,11 @@
     `;
 
                 // Kicseréljük az eredeti placeholder scriptet a valós konfigurációval
-                // REGEX JAVÍTVA: Csak a script tag-et keresi, a kommenteket kihagyja
+                // REGEX JAVÍTVA: Csak a script tag-et keresi
                 const configRegex = /<script id="config-injection">[\s\S]*?<\/script>/;
                 
                 if (!gameHtml.match(configRegex)) {
-                    // Ha még mindig hiba van, próbálunk egy még lazább regexet a biztonság kedvéért
-                    const looserRegex = /<script id="config-injection">.*?<\/script>/s; // A 's' flag (dotall) segíthet, de a Canvas környezetében nem mindig támogatott.
-                    if (!gameHtml.match(looserRegex)) {
-                        throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból. A regex nem talált egyezést, valószínűleg a sablon sérült.");
-                    }
+                    throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból. A sablon struktúrája sérült.");
                 }
 
                 gameHtml = gameHtml.replace(
