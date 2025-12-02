@@ -2,21 +2,23 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Játék Exportálása...</title>
+    <title>Játék Exportálása - Megbízható</title>
     <style>
         body { background-color: #1a1a1a; color: #00ffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; }
         .loader { border: 5px solid #333; border-top: 5px solid #8a2be2; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         button { padding: 15px 30px; font-size: 1.2em; background-color: #8a2be2; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; }
         button:hover { background-color: #7b1cd1; }
+        #error-message { color: red; max-width: 80%; margin: 20px auto; padding: 15px; border: 1px solid red; background-color: #330000; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div id="status-container">
         <div class="loader"></div>
         <h1>Játék összeállítása...</h1>
-        <p>A konfiguráció beillesztése folyamatban.</p>
+        <p>A mentett konfiguráció beillesztése és letöltés indítása.</p>
     </div>
+    <div id="error-message" style="display:none;"></div>
 
     <script id="game-template" type="text/template">
 <!doctype html>
@@ -298,7 +300,7 @@
 
     </style>
 </head>
-<body> 
+<body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
@@ -839,7 +841,7 @@
                 const audioBtn1 = document.getElementById('play-audio-button-1');
                 if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                 const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audio2) audio2.onclick = () => toggleAudio('2');
+                if (audio2) audioBtn2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -965,21 +967,26 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const statusContainer = document.getElementById('status-container');
+            const errorMessageContainer = document.getElementById('error-message');
             const STORAGE_KEY = 'DYNAMIC_CONFIG';
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
+            function displayError(message) {
+                const loader = document.querySelector('.loader');
+                if (loader) loader.style.display = 'none';
+                errorMessageContainer.style.display = 'block';
+                errorMessageContainer.innerHTML = '<h1>❌ Exportálási Hiba ❌</h1><p>' + message + '</p>';
+                statusContainer.innerHTML = '<h1>Hiba történt.</h1><p>Nézze meg a részleteket alább.</p>';
+            }
+
             if (!savedConfig) {
-                statusContainer.innerHTML = '<h1 style="color:red">Hiba: Nincs mentett konfiguráció!</h1><p>Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.</p>';
+                displayError("Nincs mentett konfiguráció a böngészőben. Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.");
                 return;
             }
 
             try {
-                // 1. Mentett konfiguráció JSON string kinyerése
-                const configString = savedConfig;
-                
-                // 2. Parsolás és robusztus újra stringelés
-                const parsedConfig = JSON.parse(configString);
-                // JSON.stringify() másodlagos futtatása is biztonságosabb, ha valamiért nem objektumként tárolódott.
+                // Konfiguráció betöltése és biztonságos stringgé alakítása
+                const parsedConfig = JSON.parse(savedConfig);
                 const safeConfigString = JSON.stringify(parsedConfig); 
                 
                 // Játék sablon betöltése
@@ -993,17 +1000,18 @@
     <\/script>
     `;
 
-                // Kicseréljük az üres placeholder scriptet a valós konfigurációval
+                // Kicseréljük az eredeti placeholder scriptet a valós konfigurációval
                 // Megkeressük az eredeti script id="config-injection" blokkot és lecseréljük
+                const configRegex = /<script id="config-injection">[\s\S]*?<\/script>/;
+                
+                if (!gameHtml.match(configRegex)) {
+                    throw new Error("A 'config-injection' script blokk hiányzik a game.html sablonból.");
+                }
+
                 gameHtml = gameHtml.replace(
-                    /<script id="config-injection">[\s\S]*?<\/script>/,
+                    configRegex,
                     injectionScriptCode
                 );
-
-                // Ellenőrizzük, hogy a csere sikeres volt-e. Ha nem, valami hibádzik a sablonban.
-                if (gameHtml.includes('window.GAME_CONFIG_INJECTED = {};')) {
-                    throw new Error("A konfiguráció beillesztése a sablonba sikertelen.");
-                }
 
                 // Letöltés indítása
                 const blob = new Blob([gameHtml], {type: 'text/html'});
@@ -1020,12 +1028,12 @@
                 setTimeout(() => {
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                    statusContainer.innerHTML = '<h1>Kész!</h1><p>A játék letöltése elindult. Ne felejtsd el frissíteni a böngésző gyorsítótárát, ha a játékot egy helyi fájlból nyitod meg!</p><button onclick="window.close()">Bezárás</button>';
+                    statusContainer.innerHTML = '<h1>Kész!</h1><p>A játék letöltése elindult. Ne felejtsd el feltölteni a `game.html` fájlt a szerverre!</p><button onclick="window.close()" class="btn-primary">Bezárás</button>';
                 }, 1000);
 
             } catch (e) {
-                console.error(e);
-                statusContainer.innerHTML = '<h1 style="color:red">Exportálási hiba történt!</h1><p>' + e.message + '</p><p>Kérlek, ellenőrizd, hogy a mentett adatok érvényesek-e, vagy próbáld meg újra elmenteni a beállításokat az Admin oldalon.</p>';
+                console.error("Export Error:", e);
+                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok (különösen az URL-ek és indexek) érvényesek-e!`);
             }
         });
     </script>
