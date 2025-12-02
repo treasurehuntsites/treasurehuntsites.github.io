@@ -17,6 +17,8 @@
         }
 
         html { overflow-x: hidden; overflow-y: auto; }
+        
+        /* Amikor egy modal nyitva van, a főoldal görgetését letiltjuk */
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
@@ -70,6 +72,7 @@
             background-color: #00FFFF; border: none; border-radius: 5px;
             font-size: 1.1em; font-weight: 700; cursor: pointer;
             display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
         }
 
         /* Navigáció */
@@ -78,7 +81,9 @@
         .page-button {
             padding: 12px 20px; color: #ffffff; background-color: #8a2be2; border: none; border-radius: 5px;
             font-size: 1.1em; font-weight: 700; cursor: pointer; text-transform: uppercase; margin: 5px;
+            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
         }
+        .page-button:disabled { background-color: #555555; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
         
         /* Választás Gombok (Choice) */
         .multi-choice-container {
@@ -100,8 +105,10 @@
             position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
             background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
             display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
         }
         .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; padding: 5px 10px; }
+        .menu-button:hover { color: #00ffff; }
         
         /* Jelszó */
         #password-container { display: none; flex-direction: column; gap: 15px; width: 100%; text-align: center; }
@@ -110,17 +117,109 @@
         .password-interaction { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; }
         #check-password-button { flex-grow: 1; background-color: #00ffff; color: #1a1a1a; }
         
-        /* Modalok */
-        #distanceModal, #help-modal, #galleryModal { 
+        /* --- GALÉRIA MODAL STÍLUSOK (EREDETI) --- */
+        #galleryModal {
+            display: none; 
+            position: fixed;
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll; 
+            background-color: rgba(0, 0, 0, 0.95);
+        }
+        
+        #gallery-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px;
+            padding: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            padding-top: 50px;
+        }
+
+        .gallery-thumbnail {
+            width: 100%;
+            height: 150px; 
+            overflow: hidden;
+            border: 2px solid #8a2be2;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .gallery-thumbnail:hover { transform: scale(1.03); }
+
+        .gallery-thumbnail img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        
+        /* Teljes képernyős modál konténer a zoomolható képnek */
+        #full-image-display {
+            display: none;
+            position: fixed;
+            z-index: 101;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.98);
+            overflow: hidden; 
+        }
+        
+        .full-image-content {
+            width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden;
+        }
+
+        #fullImageDisplay {
+            display: block;
+            width: auto; height: auto;
+            max-width: 100%; max-height: 100%;
+            touch-action: auto; /* Panning letiltva, csak a nagyítás engedélyezett */
+            cursor: zoom-in;
+            margin: auto;
+            transition: transform 0.3s ease-in-out; 
+        }
+
+        .close-gallery {
+            position: absolute;
+            top: 15px; right: 33px;
+            color: #f1f1f1;
+            font-size: 40px; font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 110;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 1);
+        }
+        .close-gallery:hover { color: #00ffff; }
+
+        /* --- SÚGÓ MODAL --- */
+        #help-modal { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; flex-direction: column;
+            background-color: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; flex-direction: column;
         }
         .modal-content { 
             background: #1a1a1a; padding: 25px; border: 2px solid #00ffff; border-radius: 10px; 
-            text-align: center; max-width: 90%; color: #e0e0e0;
-            max-height: 90%; overflow-y: auto; position: relative;
+            text-align: center; max-width: 90%; color: #e0e0e0; position: relative;
         }
         .modal-title { font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #00ffff; }
+        
+        /* --- GPS MODAL --- */
+        #distanceModal {
+            display: none; position: fixed; z-index: 250; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(2px);
+            flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .distance-content {
+            padding: 20px; max-width: 90%; background-color: rgba(0, 0, 0, 0.85); 
+            border-radius: 10px; box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); border: 2px solid #00ffff;
+        }
         #distance-modal-display { font-size: 3em; color: #00ff00; margin: 20px; font-weight: bold; }
         
         /* GPS Térkép Gomb */
@@ -132,8 +231,6 @@
         }
         #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
 
-        /* Gallery */
-        #gallery-image { max-width: 100%; max-height: 70vh; border-radius: 5px; border: 2px solid #8a2be2; display: block; margin: 0 auto; }
     </style>
 </head>
 <body oncontextmenu="return false;"> 
@@ -186,6 +283,20 @@
         <button id="download-button" class="menu-button" title="HTML Letöltése"><i class="fa-solid fa-download"></i></button>
     </div>
     
+    <!-- Galéria Modálok (EREDETI FORMAT) -->
+    <div id="galleryModal">
+      <span class="close-gallery">×</span>
+      <div id="gallery-container">
+      </div>
+    </div>
+    
+    <div id="full-image-display">
+        <div class="full-image-content">
+            <img id="fullImageDisplay" src="" alt="Nagyított kép" />
+        </div>
+        <span class="close-gallery" style="z-index: 120;">×</span>
+    </div>
+    
     <!-- Súgó Modal -->
     <div id="help-modal">
         <div class="modal-content">
@@ -197,22 +308,10 @@
             </div>
         </div>
     </div>
-    
-    <!-- Galéria Modal -->
-    <div id="galleryModal">
-        <div class="modal-content" style="width: 90%; max-width: 600px;">
-            <h2 class="modal-title" style="color: #ff69b4;">Megszerzett Kép</h2>
-            <img id="gallery-image" src="" alt="Galéria Kép">
-            <p id="gallery-status" style="margin-top:10px; color: gray;">Jelenleg nincs aktív kép.</p>
-            <div style="margin-top:20px;">
-                 <button id="gallery-close-button" class="page-button">Bezárás</button>
-            </div>
-        </div>
-    </div>
 
     <!-- GPS Modal -->
     <div id="distanceModal">
-        <div class="modal-content">
+        <div class="distance-content">
             <h1 id="gps-title" class="modal-title">CÉLPONT KERESÉSE</h1>
             <div id="distance-modal-display">-- M</div>
             <p id="distance-status">Helyzetmeghatározás...</p>
@@ -253,7 +352,11 @@
             let currentPartIndex = 0;
             let watchId = null;
             let currentHelpIndex = 0;
-            let currentGalleryImageUrl = ""; 
+            
+            // Zoom változók
+            let currentScale = 1.0; 
+            const MAX_SCALE = 2.5; 
+            const MIN_SCALE = 1.0;
 
             // Betöltés localStorage-ból
             const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
@@ -261,7 +364,6 @@
                 try { 
                     const parsed = JSON.parse(savedConfig);
                     CONFIG = { ...CONFIG, ...parsed };
-                    // Mélyebb merge objektumokra
                     CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
                     CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
                     CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
@@ -280,7 +382,8 @@
                 msgDisplay: document.getElementById('message'), distModal: document.getElementById('distanceModal'),
                 distDisplay: document.getElementById('distance-modal-display'), distStatus: document.getElementById('distance-status'),
                 helpModal: document.getElementById('help-modal'), helpText: document.getElementById('help-text-display'),
-                galleryModal: document.getElementById('galleryModal'), galleryImg: document.getElementById('gallery-image'), galleryStatus: document.getElementById('gallery-status')
+                galleryModal: document.getElementById('galleryModal'), galleryContainer: document.getElementById('gallery-container'),
+                fullImageModal: document.getElementById('full-image-display'), fullImage: document.getElementById('fullImageDisplay')
             };
 
             // Init Stílusok és Adatok
@@ -342,17 +445,6 @@
                 }
                 els.storyImage.src = activeBg;
 
-                // --- GALÉRIA KÉP KEZELÉS ---
-                currentGalleryImageUrl = ""; 
-                for(let i = 0; i <= currentPartIndex; i++) {
-                    const p = storyPages[i];
-                    if (p.galleryMode === 'clear') {
-                        currentGalleryImageUrl = "";
-                    } else if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
-                        currentGalleryImageUrl = p.customGalleryUrl;
-                    }
-                }
-
                 // --- AVATAR ÉS SZÖVEG ---
                 const prefix = page.content.split(' ')[0];
                 let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
@@ -396,9 +488,9 @@
                     document.getElementById('help-button').style.display = page.helpMessage ? 'inline-block' : 'none';
                 } 
                 else if (page.type === 'choice') {
-                    els.interactionCont.style.display = 'none'; // Normál gombok elrejtése
+                    els.interactionCont.style.display = 'none';
                     els.multiChoiceCont.style.display = 'flex';
-                    els.multiChoiceCont.innerHTML = ''; // Törlés
+                    els.multiChoiceCont.innerHTML = '';
                     
                     if (page.choices && page.choices.length > 0) {
                         page.choices.forEach(choice => {
@@ -436,6 +528,96 @@
                     els.contentBox.style.opacity = 1;
                 }, 100);
             }
+
+            // --- GALÉRIA FUNKCIÓK ---
+            function getVisibleGalleryImages() {
+                let images = [];
+                for(let i = 0; i <= currentPartIndex; i++) {
+                    const p = storyPages[i];
+                    if (p.galleryMode === 'clear') {
+                        images = []; // Ürítés
+                    } else if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
+                        if (p.galleryMode === 'add' || !p.galleryMode) {
+                            if(!images.includes(p.customGalleryUrl)) {
+                                images.push(p.customGalleryUrl);
+                            }
+                        }
+                    }
+                }
+                return images;
+            }
+
+            function populateGallery() {
+                els.galleryContainer.innerHTML = '';
+                const images = getVisibleGalleryImages();
+
+                if (images.length === 0) {
+                    els.galleryContainer.innerHTML = '<p style="grid-column: 1/-1; color:gray;">Jelenleg nincs aktív kép.</p>';
+                    return;
+                }
+
+                images.forEach((url, index) => {
+                    const thumbnailDiv = document.createElement('div');
+                    thumbnailDiv.className = 'gallery-thumbnail';
+                    
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = "Galéria Kép " + (index + 1);
+                    
+                    thumbnailDiv.onclick = () => openFullImage(url);
+                    thumbnailDiv.appendChild(img);
+                    
+                    els.galleryContainer.appendChild(thumbnailDiv);
+                });
+            }
+
+            function setScaleTransform() {
+                els.fullImage.style.transform = `scale(${currentScale})`;
+                els.fullImage.style.cursor = currentScale > MIN_SCALE ? 'zoom-out' : 'zoom-in';
+            }
+
+            function toggleZoom() {
+                currentScale = (currentScale > MIN_SCALE) ? MIN_SCALE : MAX_SCALE;
+                setScaleTransform();
+            }
+
+            function openFullImage(url) {
+                els.fullImage.src = url;
+                currentScale = MIN_SCALE;
+                setScaleTransform();
+                els.fullImageModal.style.display = 'flex';
+                els.galleryModal.style.display = 'none';
+            }
+
+            function closeFullImage() {
+                els.fullImageModal.style.display = 'none';
+            }
+
+            function openGallery() {
+                populateGallery();
+                els.galleryModal.style.display = 'block';
+            }
+
+            function closeGallery() {
+                els.galleryModal.style.display = 'none';
+                closeFullImage();
+            }
+
+            // Dupla kattintás/koppintás zoom
+            let lastTap = 0;
+            els.fullImage.addEventListener('click', (e) => {
+                const now = new Date().getTime();
+                const timesince = now - lastTap;
+                if (timesince < 300 && timesince > 0) {
+                    e.preventDefault();
+                    toggleZoom();
+                } 
+                lastTap = now;
+            });
+            els.fullImage.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                toggleZoom();
+            });
 
             // Gomb Események
             els.nextBtn.onclick = () => {
@@ -514,21 +696,10 @@
                 }, { enableHighAccuracy: true });
             }
 
-            // Galéria Logika
-            document.getElementById('image-button').onclick = () => {
-                if (currentGalleryImageUrl && currentGalleryImageUrl !== "") {
-                    els.galleryImg.src = currentGalleryImageUrl;
-                    els.galleryImg.style.display = 'block';
-                    els.galleryStatus.style.display = 'none';
-                } else {
-                    els.galleryImg.style.display = 'none';
-                    els.galleryStatus.style.display = 'block';
-                }
-                els.galleryModal.style.display = 'flex';
-            };
-            document.getElementById('gallery-close-button').onclick = () => {
-                els.galleryModal.style.display = 'none';
-            };
+            // Galéria és Letöltés Gombok
+            document.getElementById('image-button').onclick = openGallery;
+            document.querySelector('#galleryModal .close-gallery').onclick = closeGallery;
+            document.querySelector('#full-image-display .close-gallery').onclick = closeFullImage;
 
             // Súgó
             document.getElementById('help-button').onclick = () => {
