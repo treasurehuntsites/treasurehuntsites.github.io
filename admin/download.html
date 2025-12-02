@@ -591,8 +591,17 @@
                     }
                     
                     const isFirstPage = currentPartIndex === 0;
-                    els.prevBtn.disabled = isFirstPage;
-                    els.discreetBackBtn.disabled = isFirstPage;
+                    
+                    // --- DISZKRÉT VISSZA GOMB LOGIKA FRISSÍTÉSE ---
+                    // Csak 'choice' oldalakon látható, ha nem az első oldal.
+                    // Típusok, ahol rejtve marad: 'text', 'password', 'audio'.
+                    let shouldDiscreetBackBeHidden = isFirstPage || 
+                                                     page.type === 'text' || 
+                                                     page.type === 'password' || 
+                                                     page.type === 'audio';
+                    
+                    els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
+                    els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
                 }
 
                 function showStory() {
@@ -833,16 +842,19 @@
                 
                 // 2. Parsolás és robusztus újra stringelés, hogy garantáltan tiszta JSON objektumként kerüljön beillesztésre
                 const parsedConfig = JSON.parse(configString);
+                // JSON.stringify(JSON.parse(...)) biztosítja, hogy a konfigurációs objektum tiszta JS objektumként kerüljön beillesztésre
                 const safeConfigString = JSON.stringify(parsedConfig); 
                 
                 // Játék sablon betöltése
                 let gameHtml = document.getElementById('game-template').textContent;
                 
                 // Konfiguráció beillesztése a játék kódjába (PRELOADED_CONFIG)
+                // PRELOADED_CONFIG használata elkerüli a LocalStorage problémákat file:// protokoll alatt
                 const injectionScript = `
     <script>
         // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA ---
         // Ez a konfiguráció az admin felületen mentett állapotot tükrözi.
+        // ${new Date().toISOString()}
         window.PRELOADED_CONFIG = ${safeConfigString};
     <\/script>`;
                 
