@@ -280,7 +280,7 @@
     <div class="fixed-menu-bar">
         <button id="map-button" class="menu-button" title="Térkép"><i class="fa-solid fa-map-location-dot"></i></button>
         <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
-        <button id="download-button" class="menu-button" title="HTML Letöltése"><i class="fa-solid fa-download"></i></button>
+        <!-- A letöltés gomb eltávolítva a kérésnek megfelelően -->
     </div>
     
     <!-- Galéria Modálok (EREDETI FORMAT) -->
@@ -349,6 +349,35 @@
 
         (function() {
             let CONFIG = getDefaultConfig();
+            
+            // --- KONFIGURÁCIÓ BETÖLTÉSE (Exportált verzió támogatása) ---
+            // 1. Ha van előre beégetett config (Exportálásból), azt használjuk.
+            // 2. Ha nincs, megnézzük a LocalStorage-t (Fejlesztés).
+            // 3. Ha az sincs, marad az alapértelmezett.
+            
+            if (window.PRELOADED_CONFIG) {
+                 try {
+                    // Mélyebb merge a biztonság kedvéért, de a PRELOADED felülír mindent
+                    CONFIG = { ...CONFIG, ...window.PRELOADED_CONFIG };
+                    if(window.PRELOADED_CONFIG.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...window.PRELOADED_CONFIG.AVATARS };
+                    if(window.PRELOADED_CONFIG.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...window.PRELOADED_CONFIG.GPS_COMPASS };
+                    if(window.PRELOADED_CONFIG.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...window.PRELOADED_CONFIG.MEDIA };
+                    console.log("Játék betöltve exportált konfigurációval.");
+                 } catch(e) { console.error("Export config hiba", e); }
+            } else {
+                const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
+                if (savedConfig) { 
+                    try { 
+                        const parsed = JSON.parse(savedConfig);
+                        CONFIG = { ...CONFIG, ...parsed };
+                        CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
+                        CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
+                        CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
+                        console.log("Játék betöltve LocalStorage konfigurációval.");
+                    } catch(e) { console.error("Config hiba", e); } 
+                }
+            }
+
             let currentPartIndex = 0;
             let watchId = null;
             let currentHelpIndex = 0;
@@ -358,17 +387,6 @@
             const MAX_SCALE = 2.5; 
             const MIN_SCALE = 1.0;
 
-            // Betöltés localStorage-ból
-            const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
-            if (savedConfig) { 
-                try { 
-                    const parsed = JSON.parse(savedConfig);
-                    CONFIG = { ...CONFIG, ...parsed };
-                    CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
-                    CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
-                    CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
-                } catch(e) { console.error("Config hiba", e); } 
-            }
             const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
 
             // DOM Elemek
@@ -696,7 +714,7 @@
                 }, { enableHighAccuracy: true });
             }
 
-            // Galéria és Letöltés Gombok
+            // Galéria Gombok
             document.getElementById('image-button').onclick = openGallery;
             document.querySelector('#galleryModal .close-gallery').onclick = closeGallery;
             document.querySelector('#full-image-display .close-gallery').onclick = closeFullImage;
@@ -721,20 +739,6 @@
                     els.helpText.textContent = msgs[currentHelpIndex];
                     if(currentHelpIndex === msgs.length - 1) document.getElementById('help-next-button').style.display = 'none';
                 }
-            };
-            
-            // DOWNLOAD FUNKCIÓ
-            document.getElementById('download-button').onclick = () => {
-                const htmlContent = "<!doctype html>\n" + document.documentElement.outerHTML;
-                const blob = new Blob([htmlContent], {type: 'text/html'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'game.html';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
             };
 
             // Indítás
