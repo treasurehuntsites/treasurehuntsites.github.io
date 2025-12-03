@@ -489,30 +489,44 @@
             function initializeGame() {
                 try {
                     let CONFIG = getDefaultConfig();
+                    let currentPartIndex = 0; // Initialize to 0, will be overwritten by config
                     
                     // --- KONFIGURÁCIÓ BETÖLTÉSE ---
                     if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
                         const parsedConfig = window.GAME_CONFIG_INJECTED;
                         CONFIG = { ...CONFIG, ...parsedConfig };
-                        if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
-                        if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
-                        if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
-                        console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
+                        // FONTOS: Az alábbi merge-ök hibát okozhatnak, ha a parsedConfig nem teljes, a CONFIG merge helyett manuális overwrite.
+                        if(parsedConfig.AVATARS) CONFIG.AVATARS = parsedConfig.AVATARS;
+                        if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = parsedConfig.GPS_COMPASS;
+                        if(parsedConfig.MEDIA) CONFIG.MEDIA = parsedConfig.MEDIA;
+
+                        // FIX: Kezdő index beállítása az injektált állapotból
+                        if (parsedConfig.currentState && parsedConfig.currentState.storyIndex !== undefined) {
+                            currentPartIndex = parsedConfig.currentState.storyIndex;
+                            console.log("Starting from injected story index:", currentPartIndex);
+                        }
                     } else {
+                        // Ha nincs beágyazott konfiguráció, próbáljuk meg a LocalStorage-t (Admin felületen)
                         try {
                             const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                             if (savedConfig) { 
                                 const parsed = JSON.parse(savedConfig);
                                 CONFIG = { ...CONFIG, ...parsed };
-                                CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsed.AVATARS };
-                                CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
-                                CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
+                                CONFIG.AVATARS = parsed.AVATARS;
+                                CONFIG.GPS_COMPASS = parsed.GPS_COMPASS;
+                                CONFIG.MEDIA = parsed.MEDIA;
                                 console.log("Játék betöltve LocalStorage konfigurációval.");
                             }
-                        } catch(e) { console.warn("LocalStorage config hiba:", e.message); } 
+                            const savedProgress = localStorage.getItem('gameProgress');
+                            if (savedProgress !== null) {
+                                currentPartIndex = Math.min(parseInt(savedProgress), CONFIG.storyPages.length - 1);
+                            }
+                        } catch(e) { console.warn("LocalStorage config/progress hiba:", e.message); } 
                     }
-
-                    let currentPartIndex = 0;
+                    
+                    // Törölve a loadProgress/saveProgress logikája, mert zavaró az exportált fájlban
+                    // A progressz a GAME_CONFIG_INJECTED-be van sütve.
+                    
                     let currentHelpIndex = 0;
                     let currentScale = 1.0; 
                     const MAX_SCALE = 2.5; 
@@ -548,13 +562,12 @@
                     document.documentElement.style.setProperty('--bg-color', CONFIG.BODY_BG_COLOR);
                     document.documentElement.style.setProperty('--text-color', CONFIG.BODY_TEXT_COLOR);
                     
-                    // ÚJ LOGIKA: Kontrasztos doboz háttér beállítása
+                    // Kontrasztos doboz háttér beállítása
                     const textR = parseInt(CONFIG.BODY_TEXT_COLOR.substring(1, 3), 16);
                     const textG = parseInt(CONFIG.BODY_TEXT_COLOR.substring(3, 5), 16);
                     const textB = parseInt(CONFIG.BODY_TEXT_COLOR.substring(5, 7), 16);
                     const isTextLight = (textR * 0.299 + textG * 0.587 + textB * 0.114) > 150; 
 
-                    // Ha a szöveg világos (sötét téma), a doboz háttér legyen sötét áttetsző (0,0,0, 0.85).
                     const contentBoxBg = isTextLight ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
                     const contentBoxBorder = isTextLight ? '#00ffff' : '#8a2be2'; 
                     const menuBarBg = isTextLight ? '#1a1a1a' : '#f7f7f7';
@@ -576,29 +589,17 @@
                     const distMapBtn = document.getElementById('distance-modal-map-button');
                     if (distMapBtn) distMapBtn.href = GPS_COMPASS.MAP_BUTTON_URL;
                     
+                    // ESEMÉNYKEZELŐK
                     const mapBtn = document.getElementById('map-button');
-                    if (mapBtn) mapBtn.onclick = () => window.open(CONFIG.MENU_LINKS.MAP_LINK_URL, '_blank');
+                    if (mapBtn) mapBtn.onclick = () => { console.log("Map button clicked. Opening map in new window."); window.open(CONFIG.MENU_LINKS.MAP_LINK_URL, '_blank'); };
                     
+                    const imageBtn = document.getElementById('image-button');
+                    if (imageBtn) imageBtn.onclick = () => { console.log("Image button clicked. Opening gallery."); openGallery(); };
+
+
                     const passPromptTextEl = document.getElementById('password-prompt-text');
                     if (passPromptTextEl) passPromptTextEl.textContent = CONFIG.PASSWORD_PAGE.PROMPT_TEXT || "Kód:";
                     // (Init Stílusok vége)
-
-                    function loadProgress() {
-                        try {
-                            if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
-
-                            const saved = localStorage.getItem('gameProgress');
-                            if (saved !== null) {
-                                currentPartIndex = Math.min(parseInt(saved), storyPages.length - 1);
-                            }
-                        } catch(e) { console.warn("Progress load failed:", e); }
-                    }
-                    function saveProgress() { 
-                        try { 
-                            if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return;
-                            localStorage.setItem('gameProgress', currentPartIndex); 
-                        } catch(e) {} 
-                    }
 
                     function stopAllAudio() {
                         ['1','2'].forEach(id => {
@@ -703,7 +704,7 @@
                                     btn.textContent = choice.text;
                                     btn.onclick = () => {
                                         currentPartIndex = choice.nextIndex !== undefined ? choice.nextIndex : currentPartIndex + 1;
-                                        saveProgress();
+                                        // Save progress is removed for the exported file
                                         showStory();
                                     };
                                     if (els.multiChoiceCont) els.multiChoiceCont.appendChild(btn);
@@ -856,7 +857,7 @@
                             }
                             const page = storyPages[currentPartIndex];
                             currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
-                            saveProgress();
+                            // saveProgress is removed
                             showStory();
                         };
                     }
@@ -865,7 +866,7 @@
                         els.prevBtn.onclick = () => {
                             const page = storyPages[currentPartIndex];
                             currentPartIndex = page.backIndex !== undefined ? page.backIndex : Math.max(0, currentPartIndex - 1);
-                            saveProgress();
+                            // saveProgress is removed
                             showStory();
                         };
                     }
@@ -886,7 +887,7 @@
                                     if (page.nextIndexSuccess === -1) startGPS();
                                     else {
                                         currentPartIndex = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : currentPartIndex + 1;
-                                        saveProgress();
+                                        // saveProgress is removed
                                         showStory();
                                     }
                                 }, 1000);
@@ -940,49 +941,7 @@
                         }, { enableHighAccuracy: true });
                     }
 
-                    const imageBtn = document.getElementById('image-button');
-                    if (imageBtn) imageBtn.onclick = openGallery;
-
-                    const closeGalleryBtn = document.querySelector('#galleryModal .close-gallery');
-                    if (closeGalleryBtn) closeGalleryBtn.onclick = closeGallery;
-
-                    const closeFullImageBtn = document.querySelector('#full-image-display .close-gallery');
-                    if (closeFullImageBtn) closeFullImageBtn.onclick = closeFullImage;
-
-                    const helpBtn = document.getElementById('help-button');
-                    if (helpBtn) {
-                        helpBtn.onclick = () => {
-                            const page = storyPages[currentPartIndex];
-                            if(page.helpMessage && els.helpModal && els.helpText) {
-                                currentHelpIndex = 0;
-                                const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
-                                els.helpText.textContent = msgs[0];
-                                els.helpModal.style.display = 'flex';
-                                const helpNextBtn = document.getElementById('help-next-button');
-                                if (helpNextBtn) helpNextBtn.style.display = msgs.length > 1 ? 'inline-block' : 'none';
-                            }
-                        };
-                    }
-
-                    const helpCloseBtn = document.getElementById('help-close-button');
-                    if (helpCloseBtn) helpCloseBtn.onclick = () => { if (els.helpModal) els.helpModal.style.display = 'none'; };
-
-                    const helpNextBtn = document.getElementById('help-next-button');
-                    if (helpNextBtn) {
-                        helpNextBtn.onclick = () => {
-                            const page = storyPages[currentPartIndex];
-                            const msgs = Array.isArray(page.helpMessage) ? page.helpMessage : [page.helpMessage];
-                            currentHelpIndex++;
-                            if(currentHelpIndex < msgs.length) {
-                                if (els.helpText) els.helpText.textContent = msgs[currentHelpIndex];
-                                if(currentHelpIndex === msgs.length - 1) {
-                                    if (helpNextBtn) helpNextBtn.style.display = 'none';
-                                }
-                            }
-                        };
-                    }
-
-                    loadProgress();
+                    // Törölve a loadProgress/saveProgress hívások
                     updateUI();
                     
                     // SIKERES BEFEJEZÉS
