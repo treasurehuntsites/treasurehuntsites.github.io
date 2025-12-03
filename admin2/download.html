@@ -2,27 +2,31 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Játék Exportálása - Megbízható</title>
+    <title>Játék Exportálás - Kérem várjon</title>
     <style>
-        body { background-color: #1a1a1a; color: #00ffff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        body { 
+            background-color: #1a1a1a; 
+            color: #00ffff; 
+            font-family: sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            text-align: center; 
+            margin: 0;
+            padding: 20px;
+        }
         .loader { border: 5px solid #333; border-top: 5px solid #8a2be2; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #error-message { color: red; max-width: 80%; margin: 20px auto; padding: 15px; border: 1px solid red; background-color: #330000; border-radius: 5px; }
-        
-        /* Manuális gomb kiemelése */
-        .manual-download-btn {
-            background-color: #00ffff !important; 
-            color: #1a1a1a !important; 
-            font-size: 1.5em;
-            padding: 20px 40px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.6);
-            margin-top: 30px;
-            font-weight: bold;
+        #message-box { 
+            background-color: #2c2c2c; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            max-width: 400px;
+            width: 100%;
         }
-        .manual-download-btn:hover { background-color: #00ddee; }
         .btn-primary { 
             background-color: #8a2be2; 
             color: white; 
@@ -34,12 +38,13 @@
     </style>
 </head>
 <body>
-    <div id="status-container">
-        <div class="loader"></div>
-        <h1>Játék összeállítása...</h1>
-        <p>A mentett konfiguráció beillesztése és Blob URL generálása.</p>
+    <div id="message-box">
+        <div id="status-content">
+            <div class="loader"></div>
+            <h1>Játék összeállítása...</h1>
+            <p>Kérem várjon, amíg a fájl generálódik. A letöltés azonnal elindul.</p>
+        </div>
     </div>
-    <div id="error-message" style="display:none;"></div>
 
     <script id="game-template" type="text/template">
 <!doctype html>
@@ -859,7 +864,7 @@
                 const audioBtn1 = document.getElementById('play-audio-button-1');
                 if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                 const audioBtn2 = document.getElementById('play-audio-button-2');
-                if (audio2) audioBtn2.onclick = () => toggleAudio('2');
+                if (audio2) audio2.onclick = () => toggleAudio('2');
 
                 function startGPS() {
                     if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -984,28 +989,28 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const statusContainer = document.getElementById('status-container');
-            const errorMessageContainer = document.getElementById('error-message');
+            const statusContent = document.getElementById('status-content');
+            const messageBox = document.getElementById('message-box');
             const STORAGE_KEY = 'DYNAMIC_CONFIG';
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
-            let blobUrl = null; // A Blob URL tárolására
-
+            
             function displayError(message) {
-                const loader = document.querySelector('.loader');
-                if (loader) loader.style.display = 'none';
-                errorMessageContainer.style.display = 'block';
-                errorMessageContainer.innerHTML = '<h1>❌ Exportálási Hiba ❌</h1><p>' + message + '</p>';
-                statusContainer.innerHTML = '<h1>Hiba történt.</h1><p>Nézze meg a részleteket alább.</p>';
+                statusContent.innerHTML = `
+                    <h1 style="color: red;">❌ Hiba történt ❌</h1>
+                    <p>${message}</p>
+                    <button onclick="window.close()" class="btn-primary">Bezárás</button>
+                `;
+                messageBox.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.5)';
             }
 
             if (!savedConfig) {
-                displayError("Nincs mentett konfiguráció a böngészőben. Kérlek, előbb mentsd el a beállításokat az Admin felületen, majd próbáld újra az Exportálást.");
+                displayError("Nincs mentett konfiguráció. Kérjük, előbb mentse el a beállításokat az Admin felületen.");
                 return;
             }
 
             try {
-                // 1. Konfiguráció betöltése
+                // 1. Konfiguráció betöltése és biztonságos stringgé alakítása
                 const parsedConfig = JSON.parse(savedConfig);
                 const safeConfigString = JSON.stringify(parsedConfig); 
                 
@@ -1024,39 +1029,35 @@
                     throw new Error(`A jelölő ('${INJECTION_TAG}') hiányzik a game.html sablonból.`);
                 }
 
-                // 3. Blob létrehozása és URL generálása
+                // 3. Blob létrehozása
                 const blob = new Blob([gameHtml], {type: 'text/html'});
-                blobUrl = URL.createObjectURL(blob);
+                const blobUrl = URL.createObjectURL(blob);
                 
-                // 4. Státusz frissítése és manuális letöltési gomb megjelenítése
-                const loader = document.querySelector('.loader');
-                if (loader) loader.style.display = 'none';
+                // 4. Elem létrehozása a letöltés indításához
+                const downloadLink = document.createElement('a');
+                downloadLink.href = blobUrl;
+                downloadLink.download = 'game.html'; 
+                
+                // 5. Automatikus letöltés indítása (ez az, amit a böngészők blokkolhatnak)
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
 
-                statusContainer.innerHTML = `
-                    <h1>✅ Kész!</h1>
-                    <p>A játék összeállítása befejeződött. Kérlek, kattints a lenti gombra a mentés indításához!</p>
-                    
-                    <a href="${blobUrl}" download="game.html" style="text-decoration: none; display: block;">
-                        <button class="manual-download-btn">
-                            ⬇️ KATTINTÁS A LETÖLTÉSHEZ (game.html)
-                        </button>
-                    </a>
-                    
-                    <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: Ezt a fájlt fel kell tölteni a GitHub Pagesre vagy más webszerverre a képek és hangok helyes betöltéséhez!</p>
+                // 6. Státusz frissítése és manuális link megadása fallbackként
+                statusContent.innerHTML = `
+                    <h1>✅ Letöltés Elindult!</h1>
+                    <p>A "game.html" fájl letöltése megkezdődött. Ha a letöltés nem indult el automatikusan (ez gyakran előfordul), <a href="${blobUrl}" download="game.html" style="color: #00ffff; font-weight: bold; text-decoration: underline;">kattints ide a manuális letöltéshez</a>.</p>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: Ezt a fájlt fel kell tölteni egy webszerverre a képek és hangok helyes betöltéséhez!</p>
                     <button onclick="window.close()" class="btn-primary">Bezárás</button>
                 `;
+                
+                // 7. Felszabadítás
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 10000); 
 
             } catch (e) {
                 console.error("Export Error:", e);
-                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérlek, ellenőrizd az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
+                displayError(`Hiba a fájl összeállításakor: ${e.message}. Kérjük, ellenőrizze az Admin oldalon, hogy a mentett adatok érvényesek-e!`);
             }
-            
-            // Felszabadítás (cleanup)
-            window.addEventListener('beforeunload', () => {
-                if (blobUrl) {
-                    URL.revokeObjectURL(blobUrl);
-                }
-            });
         });
     </script>
 </body>
