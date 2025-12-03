@@ -67,11 +67,12 @@
 
     <style>
         /* CSS Változók a dinamikus színekhez */
+        /* ALAPÉRTELMEZETT SÖTÉT TÉMA BEÁLLÍTÁSA A BIZTONSÁG KEDVÉÉRT */
         :root {
-            --bg-color: #f7f7f7; /* Alapértelmezett Világos Háttér */
-            --text-color: #333333; /* Alapértelmezett Sötét Szöveg */
-            --content-box-bg: rgba(255, 255, 255, 0.95); /* Kontrasztos doboz háttér (JS állítja be) */
-            --content-box-border-color: #8a2be2; /* Doboz szegély (JS állítja be) */
+            --bg-color: #1a1a1a; /* Sötét Háttér (Alapértelmezett) */
+            --text-color: #e0e0e0; /* Világos Szöveg (Alapértelmezett) */
+            --content-box-bg: rgba(0, 0, 0, 0.85); /* Sötét áttetsző doboz háttér */
+            --content-box-border-color: #00ffff; /* Kék szegély (Kontraszt) */
             --menu-bar-bg: #1a1a1a; /* Menü sáv alap háttér */
             --menu-bar-text: #ffffff; /* Menü sáv alap szöveg */
         }
@@ -82,8 +83,7 @@
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
-            /* KEZDETI REJTÉS (Ezt a fenti inline CSS felülírja a biztonság kedvéért) */
-            visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
+            /* Már nincs visibility: hidden; a fő body-n */
             margin: 0; padding: 0; font-family: 'Play', sans-serif;
             color: var(--text-color); 
             background-color: var(--bg-color);
@@ -119,12 +119,16 @@
             min-height: 250px; 
             display: flex; flex-direction: column; justify-content: space-between; 
             opacity: 1; 
-            transition: opacity 0.5s ease-in-out; /* Hozzáadva */
+            transition: opacity 0.5s ease-in-out; 
+            
+            /* ÚJ: Alapból látható, hogy a JS hiba ne rejtse el. */
+            opacity: 1;
         }
         
         /* Külön rejtett osztály a kezdeti betöltési animáció idejére */
         .content-hidden {
-             opacity: 0; 
+             /* Csak a fade-in átmenetnél használjuk */
+             opacity: 0 !important; 
         }
 
         /* Diszkrét Vissza Gomb */
@@ -165,7 +169,7 @@
         }
 
         /* Navigáció */
-        .bottom-bar { padding-top: 10px; border-top: 1px dashed #8a2be2; min-height: 48px; width: 100%; }
+        .bottom-bar { padding-top: 10px; border-top: 1px dashed var(--content-box-border-color); min-height: 48px; width: 100%; }
         .interaction-container { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .page-button {
             padding: 12px 20px; color: #ffffff; background-color: #8a2be2; border: none; border-radius: 5px;
@@ -344,7 +348,7 @@
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
 
-    <div class="content-box content-hidden" id="content-box"> <!-- Hozzáadva a content-hidden osztályt a kezdeti elrejtéshez -->
+    <div class="content-box" id="content-box"> <!-- TÖRÖLVE: content-hidden osztály a robusztusabb megjelenés érdekében -->
         <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
@@ -463,14 +467,14 @@
         (function() {
             // A tartalom doboz alapértelmezett elrejtése
             const contentBox = document.getElementById('content-box');
+            // ÚJ: Eltávolítjuk a kezdeti rejtést, ha a DOM készen van (bár a CSS már kikerülte ezt)
+            if (contentBox) contentBox.classList.remove('content-hidden'); 
 
             function initializeGame() {
                 try {
-                    // --- BIZTONSÁGOS INDÍTÁS ---
                     let CONFIG = getDefaultConfig();
                     
                     // --- KONFIGURÁCIÓ BETÖLTÉSE ---
-                    // Itt már a window.GAME_CONFIG_INJECTED tartalmazza a beágyazott adatokat, ha a beillesztés sikeres volt.
                     if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
                         const parsedConfig = window.GAME_CONFIG_INJECTED;
                         CONFIG = { ...CONFIG, ...parsedConfig };
@@ -479,7 +483,6 @@
                         if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
                         console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
                     } else {
-                        // Ha a beillesztés valamiért nem sikerült, megpróbáljuk a LocalStorage-ból (ez csak az Admin Preview-ban működik)
                         try {
                             const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                             if (savedConfig) { 
@@ -490,7 +493,7 @@
                                 CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
                                 console.log("Játék betöltve LocalStorage konfigurációval.");
                             }
-                        } catch(e) { console.warn("LocalStorage config hiba (lehet hogy tiltva van):", e.message); } 
+                        } catch(e) { console.warn("LocalStorage config hiba:", e.message); } 
                     }
 
                     let currentPartIndex = 0;
@@ -502,7 +505,7 @@
                     const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
 
                     if (!storyPages || storyPages.length === 0) {
-                        throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban! Lehet, hogy a mentett adatok hibásak.");
+                        throw new Error("Nincsenek történet oldalak a konfigurációban! Lehet, hogy a mentett adatok hibásak.");
                     }
 
                     // DOM Elemek
@@ -533,9 +536,9 @@
                     const textR = parseInt(CONFIG.BODY_TEXT_COLOR.substring(1, 3), 16);
                     const textG = parseInt(CONFIG.BODY_TEXT_COLOR.substring(3, 5), 16);
                     const textB = parseInt(CONFIG.BODY_TEXT_COLOR.substring(5, 7), 16);
-                    
                     const isTextLight = (textR * 0.299 + textG * 0.587 + textB * 0.114) > 150; 
 
+                    // Ha a szöveg világos (sötét téma), a doboz háttér legyen sötét áttetsző (0,0,0, 0.85).
                     const contentBoxBg = isTextLight ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
                     const contentBoxBorder = isTextLight ? '#00ffff' : '#8a2be2'; 
                     const menuBarBg = isTextLight ? '#1a1a1a' : '#f7f7f7';
@@ -566,7 +569,6 @@
 
                     function loadProgress() {
                         try {
-                            // Exportált fájl esetén nem töltjük be a LocalStorage-ból
                             if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) return; 
 
                             const saved = localStorage.getItem('gameProgress');
@@ -645,11 +647,8 @@
                             opacity = 0;
                         }
                         
-                        // --- MÓDOSÍTOTT LOGIKA: Narrátor és Choice oldalakon rejtett avatar ---
-                        // Meghatározza, hogy az avatár láthatónak kell-e lennie (opacity > 0)
                         let isAvatarVisible = opacity !== 0;
 
-                        // További szabályok az elrejtésre: Narrátor prefix vagy 'choice' típusú oldal
                         if (AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') {
                             opacity = 0;
                             isAvatarVisible = false;
@@ -658,12 +657,9 @@
                         if (els.avatarImg) els.avatarImg.src = avatarUrl;
                         if (els.avatarImg) els.avatarImg.style.opacity = opacity;
                         
-                        // KRITIKUS FIX: Eltávolítja az avatárt a layout-ból, amikor rejtve van.
                         if (els.avatarImg) els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
 
-                        // Megjelenítési beállítás: ha nincs avatár, csökkentjük a felső párnázást
                         if (contentBox) contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
-                        // ------------------------------------------------------------------
 
                         if (els.storyDisplay) els.storyDisplay.innerHTML = text;
 
@@ -713,23 +709,23 @@
                         
                         const isFirstPage = currentPartIndex === 0;
                         
-                        // --- DISZKRÉT VISSZA GOMB LOGIKA FRISSÍTÉSE ---
                         let shouldDiscreetBackBeHidden = isFirstPage || 
                                                          page.type === 'text' || 
                                                          page.type === 'password' || 
                                                          page.type === 'audio';
                         
-                        if (els.prevBtn) els.prevBtn.disabled = isFirstPage; // A fő Vissza gomb marad az alsó sávban
-                        if (els.discreetBackBtn) els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; // A diszkrét gomb vezérlése
+                        if (els.prevBtn) els.prevBtn.disabled = isFirstPage; 
+                        if (els.discreetBackBtn) els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; 
                     }
 
                     function showStory() {
                         // Átmeneti rejtés az oldalváltáskor
-                        if (els.contentBox) els.contentBox.classList.add('content-hidden');
+                        // Mivel a .content-box már alapból látható, ideiglenesen elrejtjük
+                        if (contentBox) contentBox.classList.add('content-hidden');
                         setTimeout(() => {
                             updateUI();
                             // Megjelenítés az oldal betöltése után
-                            if (els.contentBox) els.contentBox.classList.remove('content-hidden');
+                            if (contentBox) contentBox.classList.remove('content-hidden');
                         }, 100);
                     }
 
@@ -738,26 +734,21 @@
                         for(let i = 0; i <= currentPartIndex; i++) {
                             const p = storyPages[i];
                             
-                            // 1. Galéria ürítése
                             if (p.galleryMode === 'clear') {
                                 images = []; 
                             } 
                             
-                            // Új logikai blokk a több URL kezelésére
                             if (p.customGalleryUrl && p.customGalleryUrl.trim() !== '') {
-                                // URL-ek szétválasztása (soronként vagy vesszővel), üres sorok kihagyása
                                 const urls = p.customGalleryUrl.split(/[\n,]/).map(url => url.trim()).filter(url => url.length > 0);
 
                                 urls.forEach(url => {
                                     const existingIndex = images.indexOf(url);
 
-                                    // 2. Kép hozzáadása (akkumulál)
                                     if (p.galleryMode === 'add_url' || !p.galleryMode) {
                                         if (existingIndex === -1) {
                                             images.push(url);
                                         }
                                     } 
-                                    // 3. Kép eltávolítása
                                     else if (p.galleryMode === 'remove_url') {
                                         if (existingIndex !== -1) {
                                             images.splice(existingIndex, 1);
@@ -873,7 +864,7 @@
                             if (!els.passInput || !els.msgDisplay) return;
 
                             if (els.passInput.value.trim() === page.correctPassword) {
-                                els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Helyes!";
+                                els.msgDisplay.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Kód elfogadva!";
                                 els.msgDisplay.style.color = '#00ff00';
                                 setTimeout(() => {
                                     if (page.nextIndexSuccess === -1) startGPS();
@@ -893,10 +884,10 @@
                     const audioBtn1 = document.getElementById('play-audio-button-1');
                     if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                     const audioBtn2 = document.getElementById('play-audio-button-2');
-                    if (audio2) audio2.onclick = () => toggleAudio('2');
+                    if (audio2) audioBtn2.onclick = () => toggleAudio('2');
 
                     function startGPS() {
-                        if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
+                        if (contentBox) contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
                         if (els.distModal) els.distModal.style.display = 'flex';
                         
                         const targetLat = parseFloat(GPS_COMPASS.TARGET_LATITUDE);
@@ -978,28 +969,25 @@
                     loadProgress();
                     updateUI();
                     
-                    // A tartalom doboz lassú megjelenítése (initial fade-in)
-                    if (els.contentBox) els.contentBox.classList.remove('content-hidden');
+                    // Nincs szükség lassú fade-in-re itt, mivel a content-box már látható
+                    // if (contentBox) contentBox.classList.remove('content-hidden');
 
                 } catch (err) {
-                    // KRITIKUS HIBAKEZELÉS: Ha a fő logika elszáll, kiírjuk a body-ra.
                     console.error("Critical Start Error (Game Init):", err);
                     
                     const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = "color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px; position: relative; z-index: 100;";
+                    errorDiv.style.cssText = "color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;";
                     errorDiv.innerHTML = `
                         <h1 style="font-size:1.5em; margin-bottom:10px;">❌ KRITIKUS HIBA ❌</h1>
                         <p style="font-size:1.0em; color:#ddd;">A játék motor nem tudta betölteni a történetet. </p>
                         <p style="font-size:1.0em; color:#00ffff; font-weight: bold; margin-top: 10px;">HIBA OKA: ${err.message}</p>
-                        <p style="font-size: 0.9em; margin-top: 15px;">MEGOLDÁS: Ellenőrizze a forráskódot (game.html), vagy próbálja meg újra exportálni az Admin oldalon a beállítások mentése után.</p>
+                        <p style="font-size: 0.9em; margin-top: 15px;">MEGOLDÁS: Kérjük, töltse fel egy webszerverre (pl. GitHub Pages) a fájlokat, mivel a helyi megnyitás (file:///) blokkolja a képeket és hangokat!</p>
                     `;
 
-                    // Mivel a body már látható (CSS trükk miatt), csak hozzáadjuk a hibaüzenetet
                     document.body.appendChild(errorDiv);
                 }
             }
 
-            // A JavaScript fő belépési pontja:
             document.addEventListener('DOMContentLoaded', initializeGame);
 
         })();
