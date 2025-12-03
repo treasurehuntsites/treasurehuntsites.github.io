@@ -770,12 +770,17 @@
         }
 
         function showStory(els, storyPages, AVATARS, GAME_CONFIG) {
+            // A korábbi aszinkron hívás eltávolítva a nagyobb robusztusság érdekében
             if (els.contentBox) els.contentBox.classList.add('content-hidden');
+            
+            // Szinkron hívás a frissítéshez
+            updateUI(els, storyPages, AVATARS, GAME_CONFIG);
+            
+            // Késleltetett eltávolítás, hogy az áttűnés lefutva
             setTimeout(() => {
-                // Hívás a teljes config objektummal
-                updateUI(els, storyPages, AVATARS, GAME_CONFIG);
                 if (els.contentBox) els.contentBox.classList.remove('content-hidden');
-            }, 100);
+            }, 50); // Nagyon rövid késleltetés a minimális áttűnéshez, de szinte szinkron futás
+
         }
 
         
@@ -929,9 +934,13 @@
                         if(parsedConfig.PASSWORD_PAGE) GAME_CONFIG.PASSWORD_PAGE = parsedConfig.PASSWORD_PAGE;
                         if(parsedConfig.MENU_LINKS) GAME_CONFIG.MENU_LINKS = parsedConfig.MENU_LINKS;
                         if(parsedConfig.storyPages) GAME_CONFIG.storyPages = parsedConfig.storyPages;
-                        
-                        // A JÁTÉK MINDIG AZ INDEX 0-RÓL INDUL AZ EXPORTÁLÁSKOR.
-                        currentPartIndex = 0; 
+
+                        // KRITIKUS: currentPartIndex beállítása a mentett állapotból, ha létezik
+                        if (parsedConfig.currentState && parsedConfig.currentState.storyIndex !== undefined) {
+                            currentPartIndex = parsedConfig.currentState.storyIndex;
+                        } else {
+                            currentPartIndex = 0; 
+                        }
                         
                     } else {
                         // LocalStorage fallback (főleg Admin Preview esetén)
@@ -946,6 +955,13 @@
                                 if(parsed.PASSWORD_PAGE) GAME_CONFIG.PASSWORD_PAGE = parsed.PASSWORD_PAGE;
                                 if(parsed.MENU_LINKS) GAME_CONFIG.MENU_LINKS = parsed.MENU_LINKS;
                                 if(parsed.storyPages) GAME_CONFIG.storyPages = parsed.storyPages;
+                                
+                                // Állapot visszaállítása LocalStorage-ból
+                                if (parsed.currentState && parsed.currentState.storyIndex !== undefined) {
+                                    currentPartIndex = parsed.currentState.storyIndex;
+                                } else {
+                                    currentPartIndex = 0;
+                                }
                             }
                         } catch(e) { console.warn("LocalStorage hiba:", e.message); } 
                     }
