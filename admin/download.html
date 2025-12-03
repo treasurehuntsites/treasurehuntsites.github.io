@@ -35,6 +35,12 @@
             margin-top: 20px; 
             cursor: pointer;
         }
+        /* Stílus a letöltési hivatkozáshoz */
+        #manual-download-link {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -466,7 +472,7 @@
 
     <script>
         // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
-        const REVISION_COUNT = 12; // Verziószám
+        const REVISION_COUNT = 13; // Verziószám
         
         function getDefaultConfig() {
             return {
@@ -1118,8 +1124,8 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
-            // Fájl Revízió: 12
-            const FILE_REVISION_COUNT = 12;
+            // Fájl Revízió: 13
+            const FILE_REVISION_COUNT = 13;
 
             function displayError(message) {
                 statusContent.innerHTML = `
@@ -1170,11 +1176,18 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
                 
                 // 5. Automatikus letöltés indítása (try/catch blokkban)
                 try {
+                    // Hozzáadunk egy nagyon rövid késleltetést az automatikus letöltéshez.
+                    // Ez néha segít az iframe biztonsági korlátain felülkerekedni.
+                    setTimeout(() => {
+                        downloadLink.click();
+                    }, 50); 
+
                     document.body.appendChild(downloadLink);
-                    downloadLink.click(); // Automatikus letöltési kísérlet
+                    // A letöltés beindítása itt történik a timeoutban, de az downloadStarted-ot mégis true-ra állítjuk itt.
+                    // downloadLink.click(); // Automatikus letöltési kísérlet
                     document.body.removeChild(downloadLink);
                     downloadStarted = true;
-                    console.log("Automatic download attempt initiated.");
+                    console.log("Automatic download attempt initiated with 50ms delay.");
 
                 } catch (clickError) {
                     console.error("Automatic click failed, relying on manual link:", clickError);
@@ -1186,7 +1199,7 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
                 statusContent.innerHTML = `
                     <h1>${downloadStarted ? '✅ Letöltés Elindult!' : '⚠️ Kézi Letöltés Szükséges!'} [V. ${FILE_REVISION_COUNT}]</h1>
                     <p>${downloadStarted ? 'A "game.html" fájl letöltése megkezdődött.' : 'Az automatikus letöltés nem indult el. Kérjük, használja az alábbi gombot:'}</p>
-                    <a href="${blobUrl}" download="game.html" class="btn-primary" style="text-decoration: none; margin-top: 20px;">
+                    <a id="manual-download-link" href="${blobUrl}" download="game.html" class="btn-primary" style="text-decoration: none; margin-top: 20px;">
                         ${downloadStarted ? 'Manuális Letöltés' : 'Kézi Letöltés Indítása'}
                     </a>
                     <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: A külső képek és hangok megfelelő betöltéséhez a fájlt fel kell tölteni egy webszerverre!</p>
