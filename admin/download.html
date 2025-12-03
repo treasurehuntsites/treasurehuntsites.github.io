@@ -465,6 +465,9 @@
     </script>
 
     <script>
+        // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
+        const REVISION_COUNT = 5; // Verziószám
+
         // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
         
         function getDefaultConfig() {
@@ -738,8 +741,8 @@
                 // ContentBox frissítése a frissen lekérdezett elemmel
                 contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
                 
-                // VÉGRE: Szöveg beállítása
-                storyDisplay.innerHTML = text;
+                // VÉGRE: Szöveg beállítása + VERZIÓSZÁM
+                storyDisplay.innerHTML = `[V. ${REVISION_COUNT}] ${text}`;
 
 
                 // Interakciós felület frissítése (Jelszó, Choice, Tovább)
@@ -791,12 +794,12 @@
                 
                 // A hiba kiírása a frissen lekérdezett storyDisplay-t használva
                 if (storyDisplay) {
-                    storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
+                    storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">[V. ${REVISION_COUNT}] ❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
                 } else {
                     const fallbackDebug = document.getElementById('debug-area');
                     if (fallbackDebug) {
                         fallbackDebug.style.display = 'block';
-                        fallbackDebug.innerHTML = `NAGY HIBA: DOM elérhetetlen. ${innerError.message}`;
+                        fallbackDebug.innerHTML = `[V. ${REVISION_COUNT}] NAGY HIBA: DOM elérhetetlen. ${innerError.message}`;
                     }
                 }
             }
@@ -1078,7 +1081,7 @@
                          debugArea.style.display = 'block';
                          debugArea.style.background = '#ffc0cb'; 
                          debugArea.innerHTML = `
-                             <h1 style="font-size:1.1em; margin-bottom:5px;">❌ KRITIKUS HIBA (Kódfuttatás) ❌</h1>
+                             <h1 style="font-size:1.1em; margin-bottom:5px;">[V. ${REVISION_COUNT}] ❌ KRITIKUS HIBA (Kódfuttatás) ❌</h1>
                              <p style="font-size:0.9em; margin: 0;">A játék motor nem indult el. A probléma valószínűleg a külső források betöltésével van. Lásd a böngésző konzolját (F12).</p>
                              <p style="font-size:0.9em; font-weight: normal; margin-top: 10px;"><b>HIBA:</b> ${err.message}</p>
                          `;
@@ -1102,6 +1105,9 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
+            // Fájl Revízió: 5
+            const FILE_REVISION_COUNT = 5;
+
             function displayError(message) {
                 statusContent.innerHTML = `
                     <h1 style="color: red;">❌ Hiba történt ❌</h1>
@@ -1153,7 +1159,7 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
 
                 // 6. Státusz frissítése és manuális link megadása fallbackként
                 statusContent.innerHTML = `
-                    <h1>✅ Letöltés Elindult!</h1>
+                    <h1>✅ Letöltés Elindult! (V. ${FILE_REVISION_COUNT})</h1>
                     <p>A "game.html" fájl letöltése megkezdődött. Ha a letöltés nem indult el automatikusan, <a href="${blobUrl}" download="game.html" style="color: #00ffff; font-weight: bold; text-decoration: underline;">kattints ide a manuális letöltéshez</a>.</p>
                     <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: A külső képek és hangok megfelelő betöltéséhez a fájlt fel kell tölteni egy webszerverre!</p>
                     <button onclick="window.close()" class="btn-primary">Bezárás</button>
