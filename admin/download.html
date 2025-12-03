@@ -381,7 +381,7 @@
 
         <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
         
-        <p id="story-text-display"></p> <!-- Kezdő szöveg: Üres, a JS tölti be azonnal -->
+        <p id="story-text-display">Betöltés...</p> <!-- FIGYELEM: A JS-nek felül kell írnia! -->
         
         <!-- Audio -->
         <div id="audio-container-1" class="audio-container" style="display:none;">
@@ -649,94 +649,100 @@
 
 
         function updateUI(els, storyPages, AVATARS, GAME_CONFIG) {
-            stopAllAudio();
-            const page = storyPages[currentPartIndex];
-            
-            // KRITIKUS BIZTOSÍTÉK: Ha bármelyik elem hiányzik, ne fusson tovább a függvény
-            if (!page || !els.storyDisplay || !els.contentBox) { 
-                console.error("KRITIKUS HIBA: A történet oldal vagy egy fő DOM elem hiányzik.");
-                if (els.storyDisplay) els.storyDisplay.innerHTML = "❌ HIBA: Hiányzó tartalom (Konzol log)";
-                return; 
-            }
-            
-            // Képek frissítése (Háttér)
-            let activeBg = GAME_CONFIG.BACKGROUND_URL;
-            for(let i = 0; i <= currentPartIndex; i++) {
-                if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
-                    activeBg = storyPages[i].customBackgroundUrl;
-                }
-            }
-            if (els.storyImage) els.storyImage.src = activeBg;
-
-            // Avatar és szöveg frissítése
-            let text = page.content;
-            const prefix = text.split(' ')[0];
-            let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
-            let isAvatarVisible = true;
-            
-             if (AVATARS.AVATAR_MAP[prefix]) { 
-                avatarUrl = AVATARS.AVATAR_MAP[prefix]; 
-                text = text.substring(prefix.length).trim(); 
-            } else if (AVATARS.HIDDEN_PREFIXES.includes(prefix)) { 
-                isAvatarVisible = false; 
-                text = text.substring(prefix.length).trim();
-            } else {
-                 isAvatarVisible = (els.avatarImg && els.avatarImg.src !== AVATARS.DEFAULT_AVATAR_URL);
-            }
-            
-            if (page.type === 'choice' || AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
-                isAvatarVisible = false;
-            }
-
-            if (els.avatarImg) els.avatarImg.src = avatarUrl;
-            if (els.avatarImg) els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
-            if (els.contentBox) els.contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
-            
-            // VÉGRE: Szöveg beállítása (ez kellene hogy felülírja a "Betöltés..." szöveget)
-            els.storyDisplay.innerHTML = text;
-
-
-            // Interakciós felület frissítése (Jelszó, Choice, Tovább)
-            if (els.interactionCont) els.interactionCont.style.display = 'flex';
-            if (els.passCont) els.passCont.classList.remove('visible');
-            if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'none';
-
-            if (page.type === 'password') {
-                if (els.interactionCont) els.interactionCont.style.display = 'none';
-                if (els.passCont) els.passCont.classList.add('visible');
-                const helpBtn = document.getElementById('help-button');
-                if (helpBtn) helpBtn.style.display = page.helpMessage ? 'inline-block' : 'none';
-            } 
-            else if (page.type === 'choice') {
-                if (els.interactionCont) els.interactionCont.style.display = 'none';
-                if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'flex';
-                if (els.multiChoiceCont) els.multiChoiceCont.innerHTML = '';
+            try {
+                stopAllAudio();
+                const page = storyPages[currentPartIndex];
                 
-                if (page.choices && page.choices.length > 0) {
-                    page.choices.forEach(choice => {
-                        const btn = document.createElement('button');
-                        btn.className = 'choice-button';
-                        btn.textContent = choice.text;
-                        btn.onclick = () => {
-                            currentPartIndex = choice.nextIndex !== undefined ? choice.nextIndex : currentPartIndex + 1;
-                            showStory(els, storyPages, AVATARS, GAME_CONFIG);
-                        };
-                        if (els.multiChoiceCont) els.multiChoiceCont.appendChild(btn);
-                    });
+                // KRITIKUS BIZTOSÍTÉK: Ha bármelyik elem hiányzik, ne fusson tovább a függvény
+                if (!page || !els.storyDisplay || !els.contentBox) { 
+                    throw new Error("Hiányzó történet oldal vagy fő DOM elem.");
+                }
+                
+                // Képek frissítése (Háttér)
+                let activeBg = GAME_CONFIG.BACKGROUND_URL;
+                for(let i = 0; i <= currentPartIndex; i++) {
+                    if (storyPages[i] && storyPages[i].customBackgroundUrl && storyPages[i].customBackgroundUrl.trim() !== '') {
+                        activeBg = storyPages[i].customBackgroundUrl;
+                    }
+                }
+                if (els.storyImage) els.storyImage.src = activeBg;
+
+                // Avatar és szöveg frissítése
+                let text = page.content;
+                const prefix = text.split(' ')[0];
+                let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
+                let isAvatarVisible = true;
+                
+                 if (AVATARS.AVATAR_MAP[prefix]) { 
+                    avatarUrl = AVATARS.AVATAR_MAP[prefix]; 
+                    text = text.substring(prefix.length).trim(); 
+                } else if (AVATARS.HIDDEN_PREFIXES.includes(prefix)) { 
+                    isAvatarVisible = false; 
+                    text = text.substring(prefix.length).trim();
+                } else {
+                     isAvatarVisible = (els.avatarImg && els.avatarImg.src !== AVATAR.DEFAULT_AVATAR_URL); // Tovább védekezve a konfiguráció hiányzó elemei ellen
+                }
+                
+                if (page.type === 'choice' || AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
+                    isAvatarVisible = false;
+                }
+
+                if (els.avatarImg) els.avatarImg.src = avatarUrl;
+                if (els.avatarImg) els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
+                if (els.contentBox) els.contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
+                
+                // VÉGRE: Szöveg beállítása
+                els.storyDisplay.innerHTML = text;
+
+
+                // Interakciós felület frissítése (Jelszó, Choice, Tovább)
+                if (els.interactionCont) els.interactionCont.style.display = 'flex';
+                if (els.passCont) els.passCont.classList.remove('visible');
+                if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'none';
+
+                if (page.type === 'password') {
+                    if (els.interactionCont) els.interactionCont.style.display = 'none';
+                    if (els.passCont) els.passCont.classList.add('visible');
+                    const helpBtn = document.getElementById('help-button');
+                    if (helpBtn) helpBtn.style.display = page.helpMessage ? 'inline-block' : 'none';
+                } 
+                else if (page.type === 'choice') {
+                    if (els.interactionCont) els.interactionCont.style.display = 'none';
+                    if (els.multiChoiceCont) els.multiChoiceCont.style.display = 'flex';
+                    if (els.multiChoiceCont) els.multiChoiceCont.innerHTML = '';
+                    
+                    if (page.choices && page.choices.length > 0) {
+                        page.choices.forEach(choice => {
+                            const btn = document.createElement('button');
+                            btn.className = 'choice-button';
+                            btn.textContent = choice.text;
+                            btn.onclick = () => {
+                                currentPartIndex = choice.nextIndex !== undefined ? choice.nextIndex : currentPartIndex + 1;
+                                showStory(els, storyPages, AVATARS, GAME_CONFIG);
+                            };
+                            if (els.multiChoiceCont) els.multiChoiceCont.appendChild(btn);
+                        });
+                    }
+                }
+                
+                // Navigációs gombok állapotának frissítése
+                if (currentPartIndex === storyPages.length - 1 && page.type !== 'password' && page.type !== 'choice') {
+                    if (els.nextBtn) els.nextBtn.textContent = "Célpont Keresése";
+                } else {
+                     if (els.nextBtn) els.nextBtn.textContent = 'Tovább';
+                }
+                
+                const isFirstPage = currentPartIndex === 0;
+                let shouldDiscreetBackBeHidden = isFirstPage || page.type === 'password';
+                if (els.prevBtn) els.prevBtn.disabled = isFirstPage; 
+                if (els.discreetBackBtn) els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; 
+            } catch (innerError) {
+                // KRITIKUS BELSŐ HIBA KIÍRÁSA A SZÖVEGDOBOZBA
+                console.error("Inner UpdateUI Error:", innerError.message);
+                if (els.storyDisplay) {
+                    els.storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
                 }
             }
-            
-            // Navigációs gombok állapotának frissítése
-            if (currentPartIndex === storyPages.length - 1 && page.type !== 'password' && page.type !== 'choice') {
-                if (els.nextBtn) els.nextBtn.textContent = "Célpont Keresése";
-            } else {
-                 if (els.nextBtn) els.nextBtn.textContent = 'Tovább';
-            }
-            
-            const isFirstPage = currentPartIndex === 0;
-            let shouldDiscreetBackBeHidden = isFirstPage || page.type === 'password';
-            if (els.prevBtn) els.prevBtn.disabled = isFirstPage; 
-            if (els.discreetBackBtn) els.discreetBackBtn.disabled = shouldDiscreetBackBeHidden; 
         }
 
         function showStory(els, storyPages, AVATARS, GAME_CONFIG) {
@@ -1040,7 +1046,7 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
                 downloadLink.href = blobUrl;
                 downloadLink.download = 'game.html'; 
                 
-                // 5. Automatikus letöltés indítása (ezt kérted vissza, de a böngésző továbbra is blokkolhatja)
+                // 5. Automatikus letöltés indítása
                 document.body.appendChild(downloadLink);
                 downloadLink.click(); // Automatikus letöltési kísérlet
                 document.body.removeChild(downloadLink);
@@ -1064,4 +1070,3 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
     </script>
 </body>
 </html>
-
