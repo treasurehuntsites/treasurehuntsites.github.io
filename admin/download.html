@@ -650,7 +650,17 @@
 
         function updateUI(els, storyPages, AVATARS, GAME_CONFIG) {
             let page = null;
+            
+            // KRITIKUS JAVÍTÁS: A fő elemek újra lekérése a megbízhatóság érdekében (ez volt az előző lépés)
+            const storyDisplay = document.getElementById('story-text-display');
+            const contentBox = document.getElementById('content-box');
+
             try {
+                // KRITIKUS ELLENŐRZÉS a frissen lekérdezett elemekre
+                if (!storyDisplay || !contentBox) { 
+                    throw new Error("Kritikus Hiba: A fő DOM elemek nem érhetők el a frissítéshez.");
+                }
+
                 // KRITIKUS BIZTOSÍTÉK VISSZAFELE: Ellenőrizd a story indexet
                 if (currentPartIndex >= storyPages.length || currentPartIndex < 0) {
                      throw new Error(`Érvénytelen oldalindex: ${currentPartIndex}. A történet hossza: ${storyPages.length}.`);
@@ -662,9 +672,6 @@
                 // Kiegészítő ellenőrzés: ha az index jó, de az elem maga null/undefined
                 if (!page) { 
                     throw new Error(`Oldalkonfiguráció hiányzik (null/undefined) a(z) ${currentPartIndex}. indexen.`);
-                }
-                if (!els.storyDisplay || !els.contentBox) { 
-                    throw new Error("Hiányzó fő DOM elem (storyDisplay vagy contentBox).");
                 }
                 
                 // Képek frissítése (Háttér)
@@ -704,10 +711,12 @@
 
                 if (els.avatarImg) els.avatarImg.src = avatarUrl;
                 if (els.avatarImg) els.avatarImg.style.display = isAvatarVisible ? 'block' : 'none';
-                if (els.contentBox) els.contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
+                
+                // ContentBox frissítése a frissen lekérdezett elemmel
+                contentBox.style.paddingTop = isAvatarVisible ? '40px' : '10px';
                 
                 // VÉGRE: Szöveg beállítása
-                els.storyDisplay.innerHTML = text;
+                storyDisplay.innerHTML = text;
 
 
                 // Interakciós felület frissítése (Jelszó, Choice, Tovább)
@@ -756,9 +765,9 @@
                 // KRITIKUS BELSŐ HIBA KIÍRÁSA A SZÖVEGDOBOZBA
                 console.error("Inner UpdateUI Error:", innerError.message);
                 
-                // Írja ki az új, konkrét hibaüzenetet
-                if (els && els.storyDisplay) {
-                    els.storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
+                // Írja ki az új, konkrét hibaüzenetet, a frissen lekérdezett storyDisplay-t használva
+                if (storyDisplay) {
+                    storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
                 } else {
                     const fallbackDebug = document.getElementById('debug-area');
                     if (fallbackDebug) {
@@ -770,15 +779,16 @@
         }
 
         function showStory(els, storyPages, AVATARS, GAME_CONFIG) {
-            // A korábbi aszinkron hívás eltávolítva a nagyobb robusztusság érdekében
-            if (els.contentBox) els.contentBox.classList.add('content-hidden');
+            // ELVESZTETT Hivatkozás ellenőrzése
+            const contentBox = document.getElementById('content-box');
+            if (contentBox) contentBox.classList.add('content-hidden');
             
             // Szinkron hívás a frissítéshez
             updateUI(els, storyPages, AVATARS, GAME_CONFIG);
             
             // Késleltetett eltávolítás, hogy az áttűnés lefutva
             setTimeout(() => {
-                if (els.contentBox) els.contentBox.classList.remove('content-hidden');
+                if (contentBox) contentBox.classList.remove('content-hidden');
             }, 50); // Nagyon rövid késleltetés a minimális áttűnéshez, de szinte szinkron futás
 
         }
@@ -894,10 +904,19 @@
             const contentBox = document.getElementById('content-box');
             const debugArea = document.getElementById('debug-area'); 
 
-            if (contentBox) contentBox.classList.remove('content-hidden'); 
+            // ALAP ELLENŐRZÉS: HA MÁR AZ INICIALIZÁLÁS ELŐTT HIÁNYZIK A FŐ DOBOZ (contentBox)
+            if (!contentBox) {
+                 if (debugArea) {
+                     debugArea.style.display = 'block';
+                     debugArea.innerHTML = `NAGY HIBA: A fő tartalom konténer (#content-box) hiányzik a DOM-ból. Nem indítható.`;
+                 }
+                 console.error("Critical DOM Error: content-box element missing.");
+                 return; // Megállítja a futást, ha a legfontosabb elem hiányzik
+            }
+            contentBox.classList.remove('content-hidden'); 
 
             function initializeGame() {
-                // DOM Elemek gyűjtése itt, hogy a try blokkban használhassuk
+                // DOM Elemek gyűjtése itt
                 const els = {
                     storyDisplay: document.getElementById('story-text-display'), storyImage: document.getElementById('story-image'),
                     avatarImg: document.getElementById('avatar-img'), contentBox: document.getElementById('content-box'),
@@ -917,6 +936,11 @@
                     audioBtn1: document.getElementById('play-audio-button-1'),
                     audioBtn2: document.getElementById('play-audio-button-2')
                 };
+                
+                // KRITIKUS ELLENŐRZÉS: ha a gyűjtés sikertelen volt, azonnal hiba
+                if (!els.storyDisplay) {
+                     throw new Error("Initialization Error: story-text-display element missing.");
+                }
 
                 try {
                     
