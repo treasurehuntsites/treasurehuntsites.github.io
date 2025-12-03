@@ -466,9 +466,9 @@
 
     <script>
         // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
-        const REVISION_COUNT = 9; // Verziószám
-        const INITIALIZATION_MAX_RETRIES = 5;
-        const INITIALIZATION_RETRY_DELAY = 50; // ms
+        const REVISION_COUNT = 10; // Verziószám
+        const INITIALIZATION_MAX_RETRIES = 50; // Polling max próbálkozás
+        const INITIALIZATION_RETRY_DELAY = 10; // Polling időköz (ms)
 
         // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
         
@@ -955,8 +955,6 @@
             }
             contentBox.classList.remove('content-hidden'); 
 
-            let initializationAttempts = 0;
-
             function initializeGame() {
                 // DOM Elemek gyűjtése itt
                 const els = {
@@ -1105,8 +1103,46 @@
                 }
             }
             
-            // A LEGGONDOSEBB INDÍTÁS: window.onload eseményhez kötve
-            window.onload = initializeGame;
+            // --- POLLING LOGIKA (Agresszív inicializálás) ---
+            let checkInterval;
+            let attempts = 0;
+            
+            function startPolling() {
+                checkInterval = setInterval(() => {
+                    attempts++;
+                    const criticalElement = document.getElementById('story-text-display');
+                    
+                    if (criticalElement) {
+                        clearInterval(checkInterval);
+                        try {
+                            // Ellenőrizzük, hogy a contentBox is elérhető-e (csak a biztonság kedvéért)
+                            if (!document.getElementById('content-box')) {
+                                throw new Error("Content box DOM elem hiányzik a polling sikeressége után.");
+                            }
+                            initializeGame();
+                        } catch(err) {
+                            // Hiba megjelenítése
+                            criticalElement.innerHTML = `<p style="color: red; font-weight: bold;">[V. ${REVISION_COUNT}] ❌ KRITIKUS HIBA (Init Fail) ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${err.message}</p>`;
+                            console.error("Initialization failed after polling:", err.message);
+                        }
+                    } else if (attempts >= INITIALIZATION_MAX_RETRIES) {
+                        clearInterval(checkInterval);
+                        // Végleges hiba, ha a kritikus elem sosem jelenik meg
+                        const debugArea = document.getElementById('debug-area');
+                         if (debugArea) {
+                             debugArea.style.display = 'block';
+                             debugArea.innerHTML = `
+                             <h1 style="font-size:1.1em; margin-bottom:5px;">[V. ${REVISION_COUNT}] ❌ POLLING HIBA ❌</h1>
+                             <p style="font-size:0.9em; margin: 0;">A fő DOM elem (#story-text-display) nem elérhető ${INITIALIZATION_MAX_RETRIES} próbálkozás után.</p>
+                             `;
+                         }
+                         console.error(`Fatal Polling Error: Critical DOM element not found after ${INITIALIZATION_MAX_RETRIES} attempts.`);
+                    }
+                }, INITIALIZATION_RETRY_DELAY); // Check every 10ms
+            }
+
+            // Azonnal indítjuk a pollingot, miután a szkript beolvasásra került
+            startPolling();
 
         })();
     </script>
@@ -1122,8 +1158,8 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
-            // Fájl Revízió: 9
-            const FILE_REVISION_COUNT = 9;
+            // Fájl Revízió: 10
+            const FILE_REVISION_COUNT = 10;
 
             function displayError(message) {
                 statusContent.innerHTML = `
