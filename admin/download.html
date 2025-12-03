@@ -466,7 +466,7 @@
 
     <script>
         // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
-        const REVISION_COUNT = 8; // Verziószám
+        const REVISION_COUNT = 9; // Verziószám
         const INITIALIZATION_MAX_RETRIES = 5;
         const INITIALIZATION_RETRY_DELAY = 50; // ms
 
@@ -957,25 +957,18 @@
 
             let initializationAttempts = 0;
 
-            function attemptInitializeGame() {
-                initializationAttempts++;
-
+            function initializeGame() {
                 // DOM Elemek gyűjtése itt
                 const els = {
                     storyDisplay: document.getElementById('story-text-display'), contentBox: document.getElementById('content-box'),
                     // A többi elem itt is bekerül, de a kritikusak itt vannak
                 };
-                
-                // KRITIKUS ELLENŐRZÉS: ha a fő elemek hiányoznak, és nem értük el a maximális próbálkozást, várjunk és próbáljuk újra.
+
+                // KRITIKUS ELLENŐRZÉS: ha a fő elemek hiányoznak, megpróbálunk hibát dobni.
                 if (!els.storyDisplay || !els.contentBox) {
-                    if (initializationAttempts < INITIALIZATION_MAX_RETRIES) {
-                        // Késleltetés a DOM rendereléshez
-                        setTimeout(attemptInitializeGame, INITIALIZATION_RETRY_DELAY);
-                        return;
-                    }
-                     // Max próbálkozás elérve, dobjuk a hibát
-                     throw new Error(`Initialization Error: story-text-display or content-box element missing after ${INITIALIZATION_MAX_RETRIES} attempts.`);
+                    throw new Error(`Initialization Error: story-text-display or content-box element missing on load.`);
                 }
+
 
                 // Ha sikeresen elérte a kritikus elemeket, gyűjtsük be a többit is
                 els.storyImage = document.getElementById('story-image');
@@ -1111,8 +1104,9 @@
                     }
                 }
             }
-
-            document.addEventListener('DOMContentLoaded', attemptInitializeGame);
+            
+            // A LEGGONDOSEBB INDÍTÁS: window.onload eseményhez kötve
+            window.onload = initializeGame;
 
         })();
     </script>
@@ -1128,8 +1122,8 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
-            // Fájl Revízió: 8
-            const FILE_REVISION_COUNT = 8;
+            // Fájl Revízió: 9
+            const FILE_REVISION_COUNT = 9;
 
             function displayError(message) {
                 statusContent.innerHTML = `
