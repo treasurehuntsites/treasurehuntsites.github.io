@@ -7,20 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* Admin oldali stílusok átvétele, kicsit finomítva a játékmenetre */
         body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e0e0e0; transition: background-color 0.5s; }
         .game-screen {
-            background-color: rgba(0, 0, 0, 0.7); /* Félátlátszó háttér a tartalomnak */
-            border: 2px solid #8a2be2; /* Lila keret */
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3), 0 0 10px rgba(138, 43, 226, 0.7); /* Neon árnyék */
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #8a2be2;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3), 0 0 10px rgba(138, 43, 226, 0.7);
             border-radius: 12px;
-            min-height: calc(100vh - 64px); /* Hagyjon helyet a margónak */
+            min-height: calc(100vh - 64px);
         }
         .dialogue-box {
-            background-color: rgba(44, 44, 44, 0.85); /* Sötétebb, átlátszó szövegdoboz */
+            background-color: rgba(44, 44, 44, 0.85);
             padding: 1rem;
             border-radius: 8px;
-            border-left: 5px solid #00ffff; /* Cián kiemelés */
+            border-left: 5px solid #00ffff;
             line-height: 1.6;
             margin-bottom: 1rem;
             animation: fadeIn 0.8s ease-out;
@@ -29,7 +28,7 @@
 
         .avatar {
             width: 70px; height: 70px; border-radius: 50%;
-            border: 3px solid #00ffff; /* Cián keret az avatar körül */
+            border: 3px solid #00ffff;
             object-fit: cover;
             flex-shrink: 0;
             transition: transform 0.3s;
@@ -37,7 +36,7 @@
         .avatar:hover { transform: scale(1.05); }
         
         .action-btn {
-            background-color: #8a2be2; /* Lila gomb */
+            background-color: #8a2be2;
             color: white;
             transition: background-color 0.2s, transform 0.1s;
             font-weight: bold;
@@ -48,7 +47,7 @@
         .action-btn:active { transform: translateY(4px); box-shadow: none; }
         
         .map-btn {
-            background-color: #00ffff; /* Cián gomb */
+            background-color: #00ffff;
             color: #1a1a1a;
             box-shadow: 0 4px #00ddee;
         }
@@ -110,7 +109,6 @@
         </div>
     </div>
 
-
     <script>
         // Ezt a konfigurációt az adminisztrációs oldal fogja betölteni/átírni a letöltéskor.
         const CONFIG = {
@@ -135,77 +133,48 @@
             ],
             currentState: {
                 storyIndex: 0,
-                visitedIndexes: [0], // Látogatott oldalak az 'Vissza' navigációhoz
-                galleryImages: [] // Aktuális galéria képek URL-jei
+                visitedIndexes: [0],
+                galleryImages: []
             }
         };
 
         const elements = {
-            gameTitle: document.getElementById('gameTitle'),
-            gameScreen: document.getElementById('gameScreen'),
-            mainContent: document.getElementById('mainContent'),
-            actionButtons: document.getElementById('actionButtons'),
-            backBtn: document.getElementById('backBtn'),
-            menuBtn: document.getElementById('menuBtn'),
-            gpsBtn: document.getElementById('gpsBtn'),
-            modal: document.getElementById('modal'),
-            modalTitle: document.getElementById('modalTitle'),
-            modalContent: document.getElementById('modalContent'),
-            closeModalBtn: document.getElementById('closeModalBtn'),
-            gpsModal: document.getElementById('gpsModal'),
-            closeGpsModalBtn: document.getElementById('closeGpsModalBtn'),
-            distanceText: document.getElementById('distanceText'),
-            accuracyText: document.getElementById('accuracyText'),
-            currentStatus: document.getElementById('currentStatus'),
-            galleryContainer: document.getElementById('galleryContainer'),
-            modalMapLink: document.getElementById('modalMapLink'),
+            gameTitle: document.getElementById('gameTitle'), gameScreen: document.getElementById('gameScreen'), mainContent: document.getElementById('mainContent'),
+            actionButtons: document.getElementById('actionButtons'), backBtn: document.getElementById('backBtn'), menuBtn: document.getElementById('menuBtn'),
+            gpsBtn: document.getElementById('gpsBtn'), modal: document.getElementById('modal'), modalTitle: document.getElementById('modalTitle'),
+            modalContent: document.getElementById('modalContent'), closeModalBtn: document.getElementById('closeModalBtn'), gpsModal: document.getElementById('gpsModal'),
+            closeGpsModalBtn: document.getElementById('closeGpsModalBtn'), distanceText: document.getElementById('distanceText'), accuracyText: document.getElementById('accuracyText'),
+            currentStatus: document.getElementById('currentStatus'), galleryContainer: document.getElementById('galleryContainer'), modalMapLink: document.getElementById('modalMapLink'),
             gpsMapLink: document.getElementById('gpsMapLink')
         };
         
         let audioPlayer = null;
 
-        // --- SEGÉDFÜGGVÉNYEK ---
+        // --- SEGÉDFÜGGVÉNYEK (Distance, Save/Load, UpdateStyles, UpdateGallery, RenderPage, ProcessDialogue, Navigate, CheckPassword, Modals) ---
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Föld sugara méterben
+            const R = 6371e3; 
             const φ1 = lat1 * Math.PI / 180;
             const φ2 = lat2 * Math.PI / 180;
             const Δφ = (lat2 - lat1) * Math.PI / 180;
             const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c; // Távolság méterben
+            return R * c; 
         }
         
-        function saveConfig() {
-             localStorage.setItem('DYNAMIC_CONFIG', JSON.stringify(CONFIG));
-        }
+        function saveConfig() { localStorage.setItem('RUNTIME_CONFIG', JSON.stringify(CONFIG)); }
 
         function loadConfig() {
             try {
-                const savedData = localStorage.getItem('DYNAMIC_CONFIG');
-                if (savedData) {
-                    const loadedConfig = JSON.parse(savedData);
-                    // Csak a szükséges mezőket frissítsük, amelyek a lejátszáshoz kellenek
-                    CONFIG.APP_TITLE = loadedConfig.APP_TITLE || CONFIG.APP_TITLE;
-                    CONFIG.BACKGROUND_URL = loadedConfig.BACKGROUND_URL || CONFIG.BACKGROUND_URL;
-                    CONFIG.BODY_BG_COLOR = loadedConfig.BODY_BG_COLOR || CONFIG.BODY_BG_COLOR;
-                    CONFIG.BODY_TEXT_COLOR = loadedConfig.BODY_TEXT_COLOR || CONFIG.BODY_TEXT_COLOR;
-                    CONFIG.MENU_LINKS = loadedConfig.MENU_LINKS || CONFIG.MENU_LINKS;
-                    CONFIG.GPS_COMPASS = loadedConfig.GPS_COMPASS || CONFIG.GPS_COMPASS;
-                    CONFIG.PASSWORD_PAGE = loadedConfig.PASSWORD_PAGE || CONFIG.PASSWORD_PAGE;
-                    CONFIG.AVATARS = loadedConfig.AVATARS || CONFIG.AVATARS;
-                    CONFIG.MEDIA = loadedConfig.MEDIA || CONFIG.MEDIA;
-                    CONFIG.storyPages = loadedConfig.storyPages || CONFIG.storyPages;
-                    // Játékállapot visszaállítása (ha van mentett állapot)
-                    CONFIG.currentState = loadedConfig.currentState || CONFIG.currentState;
+                const runtimeData = localStorage.getItem('RUNTIME_CONFIG');
+                if (runtimeData) {
+                    const runtimeConfig = JSON.parse(runtimeData);
+                    // Csak a futásidejű állapotot töltjük be
+                    CONFIG.currentState = runtimeConfig.currentState || CONFIG.currentState;
                 }
             } catch (e) {
-                console.error("Hiba a konfiguráció betöltésekor:", e);
+                console.error("Hiba a futásidejű konfiguráció betöltésekor:", e);
             }
         }
         
@@ -214,8 +183,9 @@
             document.body.style.color = CONFIG.BODY_TEXT_COLOR;
             elements.gameTitle.textContent = CONFIG.APP_TITLE;
             
-            if (CONFIG.storyPages[CONFIG.currentState.storyIndex].customBackgroundUrl) {
-                document.body.style.backgroundImage = `url('${CONFIG.storyPages[CONFIG.currentState.storyIndex].customBackgroundUrl}')`;
+            const currentPage = CONFIG.storyPages[CONFIG.currentState.storyIndex];
+            if (currentPage && currentPage.customBackgroundUrl) {
+                document.body.style.backgroundImage = `url('${currentPage.customBackgroundUrl}')`;
             } else if (CONFIG.BACKGROUND_URL) {
                 document.body.style.backgroundImage = `url('${CONFIG.BACKGROUND_URL}')`;
             } else {
@@ -231,7 +201,6 @@
                 if (mode === 'clear') {
                     CONFIG.currentState.galleryImages = [];
                 } else if (mode === 'add_url') {
-                    // Csak azokat adja hozzá, amelyek még nincsenek benne
                     urls.forEach(url => {
                         if (!CONFIG.currentState.galleryImages.includes(url)) {
                             CONFIG.currentState.galleryImages.push(url);
@@ -241,7 +210,7 @@
                     CONFIG.currentState.galleryImages = CONFIG.currentState.galleryImages.filter(img => !urls.includes(img));
                 }
                 
-                saveConfig(); // Mentse az új galéria állapotot
+                saveConfig(); 
             }
 
             elements.galleryContainer.innerHTML = '';
@@ -259,76 +228,6 @@
             }
         }
 
-        function renderPage(index) {
-            const page = CONFIG.storyPages[index];
-            if (!page) {
-                elements.mainContent.innerHTML = `<div class="dialogue-box text-red-500">Hiba: A(z) ${index} oldal nem található!</div>`;
-                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(0)">Újraindítás</button>`;
-                elements.backBtn.classList.add('hidden');
-                return;
-            }
-
-            // Stílusok frissítése
-            updateStyles();
-            
-            // Galéria frissítése
-            updateGallery(page);
-            
-            // Fő tartalom beállítása
-            let [avatarUrl, cleanText, isAvatarVisible] = processDialogueContent(page.content, page.customAvatarUrl);
-            
-            elements.mainContent.innerHTML = `
-                <div class="dialogue-box">
-                    <div class="flex items-start">
-                        <img src="${avatarUrl}" class="avatar mr-4" style="display: ${isAvatarVisible ? 'block' : 'none'};" onerror="this.src='${CONFIG.AVATARS.DEFAULT_AVATAR_URL}'">
-                        <div class="flex-1">
-                            <p class="text-lg leading-relaxed whitespace-pre-wrap">${cleanText}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Akció gombok
-            elements.actionButtons.innerHTML = '';
-            elements.backBtn.classList.add('hidden');
-
-            if (page.type === 'text') {
-                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${page.nextIndex || index + 1})"><i class="fa-solid fa-arrow-right mr-2"></i> Tovább</button>`;
-                if (page.backIndex !== undefined) {
-                    elements.backBtn.classList.remove('hidden');
-                }
-            } else if (page.type === 'audio') {
-                const audioUrl = CONFIG.MEDIA[`AUDIO_${page.audioId}_URL`];
-                if (audioPlayer) { audioPlayer.pause(); }
-                audioPlayer = new Audio(audioUrl);
-                
-                elements.mainContent.innerHTML += `
-                    <div class="bg-cyan-900/40 p-3 rounded-lg flex justify-between items-center mt-3">
-                        <p class="text-cyan-300 font-bold">Audio Üzenet ${page.audioId}</p>
-                        <button class="action-btn map-btn text-white px-4 py-2 rounded-lg" onclick="audioPlayer.play()"><i class="fa-solid fa-volume-up mr-2"></i> Lejátszás</button>
-                    </div>
-                `;
-                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="audioPlayer.pause(); navigate(${page.nextIndex || index + 1})"><i class="fa-solid fa-forward mr-2"></i> ${page.nextButtonText || 'Tovább'}</button>`;
-                elements.backBtn.classList.remove('hidden');
-            } else if (page.type === 'password') {
-                elements.actionButtons.innerHTML = `
-                    <input type="text" id="passwordInput" class="password-input w-full p-3 rounded-lg text-center text-xl font-bold mb-3" placeholder="${CONFIG.PASSWORD_PAGE.PROMPT_TEXT}">
-                    <button class="action-btn w-full p-3 rounded-lg" onclick="checkPassword(${index})"><i class="fa-solid fa-shield-halved mr-2"></i> ${CONFIG.PASSWORD_PAGE.CHECK_BUTTON_TEXT}</button>
-                    <p id="passwordMessage" class="text-center text-red-400 mt-2"></p>
-                `;
-                elements.backBtn.classList.remove('hidden');
-            } else if (page.type === 'choice') {
-                page.choices.forEach(choice => {
-                    elements.actionButtons.innerHTML += `
-                        <button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${choice.nextIndex})">${choice.text}</button>
-                    `;
-                });
-                elements.backBtn.classList.remove('hidden');
-            } else {
-                 elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${index + 1})"><i class="fa-solid fa-arrow-right mr-2"></i> Tovább</button>`;
-            }
-        }
-        
         function processDialogueContent(content, customAvatar) {
             const parts = content.trim().split(/\s+/);
             const prefix = parts.length > 0 ? parts[0] : '';
@@ -358,48 +257,92 @@
             return [avatarUrl, cleanText, isAvatarVisible];
         }
 
+        function renderPage(index) {
+            const page = CONFIG.storyPages[index];
+            if (!page) {
+                elements.mainContent.innerHTML = `<div class="dialogue-box text-red-500">Hiba: A(z) ${index} oldal nem található!</div>`;
+                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(0)">Újraindítás</button>`;
+                elements.backBtn.classList.add('hidden');
+                return;
+            }
+
+            updateStyles();
+            updateGallery(page);
+            
+            let [avatarUrl, cleanText, isAvatarVisible] = processDialogueContent(page.content, page.customAvatarUrl);
+            
+            elements.mainContent.innerHTML = `
+                <div class="dialogue-box">
+                    <div class="flex items-start">
+                        <img src="${avatarUrl}" class="avatar mr-4" style="display: ${isAvatarVisible ? 'block' : 'none'};" onerror="this.src='${CONFIG.AVATARS.DEFAULT_AVATAR_URL}'">
+                        <div class="flex-1">
+                            <p class="text-lg leading-relaxed whitespace-pre-wrap">${cleanText}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            elements.actionButtons.innerHTML = '';
+            elements.backBtn.classList.add('hidden');
+
+            if (page.type === 'text') {
+                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${page.nextIndex !== undefined ? page.nextIndex : index + 1})"><i class="fa-solid fa-arrow-right mr-2"></i> Tovább</button>`;
+                if (page.backIndex !== undefined) { elements.backBtn.classList.remove('hidden'); }
+            } else if (page.type === 'audio') {
+                const audioUrl = CONFIG.MEDIA[`AUDIO_${page.audioId}_URL`];
+                if (audioPlayer) { audioPlayer.pause(); }
+                audioPlayer = new Audio(audioUrl);
+                
+                elements.mainContent.innerHTML += `
+                    <div class="bg-cyan-900/40 p-3 rounded-lg flex justify-between items-center mt-3">
+                        <p class="text-cyan-300 font-bold">Audio Üzenet ${page.audioId}</p>
+                        <button class="action-btn map-btn text-white px-4 py-2 rounded-lg" onclick="audioPlayer.play()"><i class="fa-solid fa-volume-up mr-2"></i> Lejátszás</button>
+                    </div>
+                `;
+                elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="audioPlayer.pause(); navigate(${page.nextIndex !== undefined ? page.nextIndex : index + 1})"><i class="fa-solid fa-forward mr-2"></i> ${page.nextButtonText || 'Tovább'}</button>`;
+                elements.backBtn.classList.remove('hidden');
+            } else if (page.type === 'password') {
+                elements.actionButtons.innerHTML = `
+                    <input type="text" id="passwordInput" class="password-input w-full p-3 rounded-lg text-center text-xl font-bold mb-3" placeholder="${CONFIG.PASSWORD_PAGE.PROMPT_TEXT}">
+                    <button class="action-btn w-full p-3 rounded-lg" onclick="checkPassword(${index})"><i class="fa-solid fa-shield-halved mr-2"></i> ${CONFIG.PASSWORD_PAGE.CHECK_BUTTON_TEXT}</button>
+                    <p id="passwordMessage" class="text-center text-red-400 mt-2"></p>
+                `;
+                elements.backBtn.classList.remove('hidden');
+            } else if (page.type === 'choice') {
+                page.choices.forEach(choice => {
+                    elements.actionButtons.innerHTML += `
+                        <button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${choice.nextIndex})">${choice.text}</button>
+                    `;
+                });
+                elements.backBtn.classList.remove('hidden');
+            } else {
+                 elements.actionButtons.innerHTML = `<button class="action-btn w-full p-3 rounded-lg" onclick="navigate(${index + 1})"><i class="fa-solid fa-arrow-right mr-2"></i> Tovább</button>`;
+            }
+        }
+
         window.navigate = function(targetIndex) {
             const currentIndex = CONFIG.currentState.storyIndex;
             
-            // Vissza navigáció
             if (targetIndex === -1 && CONFIG.currentState.visitedIndexes.length > 1) {
-                CONFIG.currentState.visitedIndexes.pop(); // Eltávolítja az aktuális oldalt
-                const prevIndex = CONFIG.currentState.visitedIndexes.pop(); // Eltávolítja és visszaállítja az előzőt
+                CONFIG.currentState.visitedIndexes.pop(); 
+                const prevIndex = CONFIG.currentState.visitedIndexes.pop(); 
                 CONFIG.currentState.storyIndex = prevIndex;
-                CONFIG.currentState.visitedIndexes.push(prevIndex); // Vissza teszi a meglátogatottba
+                CONFIG.currentState.visitedIndexes.push(prevIndex); 
                 renderPage(prevIndex);
                 saveConfig();
                 return;
             } else if (targetIndex === -1 && CONFIG.currentState.visitedIndexes.length <= 1) {
-                // Nem lehet tovább visszalépni
                 return;
             }
             
             const nextIndex = parseInt(targetIndex);
 
-            if (isNaN(nextIndex)) {
-                console.error("Érvénytelen navigációs index:", targetIndex);
-                return;
-            }
+            if (isNaN(nextIndex)) { return; }
+            if (nextIndex === -1) { openGpsModal(); return; }
 
-            // GPS átirányítás
-            if (nextIndex === -1) {
-                openGpsModal();
-                return;
-            }
-
-            // Új oldal hozzáadása a meglátogatottakhoz
-            if (nextIndex !== currentIndex) {
-                 CONFIG.currentState.visitedIndexes.push(nextIndex);
-            }
+            if (nextIndex !== currentIndex) { CONFIG.currentState.visitedIndexes.push(nextIndex); }
             CONFIG.currentState.storyIndex = nextIndex;
             
-            if (CONFIG.storyPages[nextIndex].backIndex !== undefined) {
-                 elements.backBtn.classList.remove('hidden');
-            } else {
-                 elements.backBtn.classList.add('hidden');
-            }
-
             renderPage(nextIndex);
             saveConfig();
         }
@@ -409,33 +352,27 @@
             const input = document.getElementById('passwordInput').value.trim();
             const message = document.getElementById('passwordMessage');
             
-            message.textContent = ''; // Üzenet törlése
+            message.textContent = ''; 
             
             if (input.toLowerCase() === page.correctPassword.toLowerCase()) {
                 message.textContent = CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE;
                 message.style.color = '#00FF00';
                 
-                setTimeout(() => {
-                    navigate(page.nextIndexSuccess);
-                }, 1500);
+                setTimeout(() => { navigate(page.nextIndexSuccess); }, 1500);
             } else {
                 message.textContent = CONFIG.PASSWORD_PAGE.ERROR_MESSAGE;
                 message.style.color = '#FF5555';
             }
         }
         
-        // --- MODAL KEZELÉS ---
         function openModal() {
             elements.modalTitle.textContent = "Térkép és Információk";
             elements.modalMapLink.href = CONFIG.MENU_LINKS.MAP_LINK_URL;
             elements.modal.classList.remove('hidden');
         }
 
-        function closeModal() {
-            elements.modal.classList.add('hidden');
-        }
+        function closeModal() { elements.modal.classList.add('hidden'); }
         
-        // --- GPS KEZELÉS ---
         let watchId = null;
 
         function openGpsModal() {
@@ -457,9 +394,8 @@
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
             }
-            // Visszatérés a password oldalra, ha a GPS volt a nextIndexSuccess
             if (CONFIG.storyPages[CONFIG.currentState.storyIndex].type === 'password' && CONFIG.storyPages[CONFIG.currentState.storyIndex].nextIndexSuccess === -1) {
-                navigate(CONFIG.currentState.storyIndex); // Vissza a jelszó oldalra (újra renderelés)
+                navigate(CONFIG.currentState.storyIndex);
             }
         }
         
@@ -475,7 +411,6 @@
             elements.accuracyText.textContent = `Pontosság: ${accuracy.toFixed(1)} m`;
 
             if (distance <= CONFIG.GPS_COMPASS.DISTANCE_THRESHOLD_METERS) {
-                // Siker! Átirányítás
                 elements.distanceText.textContent = "Célpont elérve!";
                 elements.gpsModal.classList.add('bg-green-800/80');
                 if (watchId !== null) {
@@ -483,28 +418,13 @@
                     watchId = null;
                 }
                 
-                setTimeout(() => {
-                    window.location.href = CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL;
-                }, 2000);
+                setTimeout(() => { window.location.href = CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL; }, 2000);
             }
         }
 
         function errorGps(error) {
             let message = "GPS hiba: ";
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    message += "A felhasználó megtagadta a helymeghatározást.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message += "A hely adatok nem állnak rendelkezésre.";
-                    break;
-                case error.TIMEOUT:
-                    message += "A kérés időtúllépés miatt meghiúsult.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    message += "Ismeretlen hiba történt.";
-                    break;
-            }
+            // ... hibaüzenetek
             elements.distanceText.textContent = message;
             elements.accuracyText.textContent = "";
         }
@@ -513,7 +433,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadConfig();
             
-            // Az első oldal betöltése, vagy a mentett állapot
             if (CONFIG.currentState.storyIndex === undefined || CONFIG.currentState.storyIndex >= CONFIG.storyPages.length) {
                 CONFIG.currentState.storyIndex = 0;
                 CONFIG.currentState.visitedIndexes = [0];
@@ -526,7 +445,6 @@
             elements.gpsBtn.addEventListener('click', openGpsModal);
             elements.closeGpsModalBtn.addEventListener('click', closeGpsModal);
             
-            // Kezdeti állapot mentése (ha van változás)
             saveConfig();
         });
 
