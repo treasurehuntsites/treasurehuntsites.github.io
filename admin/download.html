@@ -67,7 +67,6 @@
 
     <style>
         /* CSS Változók a dinamikus színekhez */
-        /* FIGYELEM: Ezek alapértelmezett (fallback) színek. A tényleges színeket a JS frissíti az Admin beállítások alapján. */
         :root {
             --bg-color: #f7f7f7; /* Alapértelmezett Világos Háttér */
             --text-color: #333333; /* Alapértelmezett Sötét Szöveg */
@@ -432,8 +431,7 @@
     <audio id="story-audio-2" src="" preload="auto"></audio>
 
     <script>
-        // Placeholder a konfigurációhoz.
-        window.GAME_CONFIG_INJECTED = {};
+        // Ez a blokk tartalmazza a beágyazott JSON konfigurációt.
         //$$CONFIG_PLACEHOLDER$$
     </script>
 
@@ -472,6 +470,7 @@
                     let CONFIG = getDefaultConfig();
                     
                     // --- KONFIGURÁCIÓ BETÖLTÉSE ---
+                    // Itt már a window.GAME_CONFIG_INJECTED tartalmazza a beágyazott adatokat, ha a beillesztés sikeres volt.
                     if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
                         const parsedConfig = window.GAME_CONFIG_INJECTED;
                         CONFIG = { ...CONFIG, ...parsedConfig };
@@ -480,7 +479,7 @@
                         if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
                         console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
                     } else {
-                        // Lokalizált mentés csak ha LocalStorage-ból tölt be (Admin oldali Preview)
+                        // Ha a beillesztés valamiért nem sikerült, megpróbáljuk a LocalStorage-ból (ez csak az Admin Preview-ban működik)
                         try {
                             const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                             if (savedConfig) { 
@@ -503,7 +502,7 @@
                     const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
 
                     if (!storyPages || storyPages.length === 0) {
-                        throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban!");
+                        throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban! Lehet, hogy a mentett adatok hibásak.");
                     }
 
                     // DOM Elemek
@@ -537,8 +536,6 @@
                     
                     const isTextLight = (textR * 0.299 + textG * 0.587 + textB * 0.114) > 150; 
 
-                    // Ha a szöveg világos (sötét téma), a doboz háttér legyen sötét áttetsző (0,0,0, 0.85).
-                    // Ha a szöveg sötét (világos téma), a doboz háttér legyen világos áttetsző (255, 255, 255, 0.95).
                     const contentBoxBg = isTextLight ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
                     const contentBoxBorder = isTextLight ? '#00ffff' : '#8a2be2'; 
                     const menuBarBg = isTextLight ? '#1a1a1a' : '#f7f7f7';
@@ -717,8 +714,6 @@
                         const isFirstPage = currentPartIndex === 0;
                         
                         // --- DISZKRÉT VISSZA GOMB LOGIKA FRISSÍTÉSE ---
-                        // Csak 'choice' oldalakon látható, ha nem az első oldal.
-                        // Típusok, ahol rejtve marad: 'text', 'password', 'audio'.
                         let shouldDiscreetBackBeHidden = isFirstPage || 
                                                          page.type === 'text' || 
                                                          page.type === 'password' || 
@@ -1044,10 +1039,11 @@
                 let gameHtml = document.getElementById('game-template').textContent;
                 gameHtml = gameHtml.replace(/\r/g, ''); 
                 
+                // MÓDOSÍTOTT INJEKTÁLÁS: A window.GAME_CONFIG_INJECTED definícióját a PLACEHOLDER helyére tesszük.
                 const injectionCode = `
-        // --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
-        window.GAME_CONFIG_INJECTED = ${safeConfigString};
-    `;
+// --- JÁTÉK KONFIGURÁCIÓ INJEKTÁLVA: ${new Date().toISOString()} ---
+window.GAME_CONFIG_INJECTED = ${safeConfigString};
+`;
                 
                 if (gameHtml.includes(INJECTION_TAG)) {
                     gameHtml = gameHtml.replace(INJECTION_TAG, injectionCode);
