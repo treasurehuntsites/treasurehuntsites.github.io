@@ -127,7 +127,7 @@
         
         /* Külön rejtett osztály a kezdeti betöltési animáció idejére */
         .content-hidden {
-             /* Csak a fade-in átmenetnél használjuk */
+             /* A legutóbbi hiba miatt ezt az osztályt nem használjuk JS-ben, de itt hagyjuk */
              opacity: 0 !important; 
         }
 
@@ -466,7 +466,7 @@
 
     <script>
         // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
-        const REVISION_COUNT = 5; // Verziószám
+        const REVISION_COUNT = 7; // Verziószám
 
         // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
         
@@ -807,17 +807,17 @@
         
         // showStory átírása
         function showStory(els, storyPages, AVATARS, GAME_CONFIG) {
-            // ELVESZTETT Hivatkozás ellenőrzése
+            // ELVESZTETT Hivatkozás ellenőrzése és FADE-OUT TÖRÉSE
             const contentBox = document.getElementById('content-box');
-            if (contentBox) contentBox.classList.add('content-hidden');
-            
+            // if (contentBox) contentBox.classList.add('content-hidden'); // Törölve a potenciális időzítési hiba miatt
+
             // Szinkron hívás a frissítéshez - az els objektumot mostantól NEM adjuk át
             updateUI(storyPages, AVATARS, GAME_CONFIG);
             
-            // Késleltetett eltávolítás, hogy az áttűnés lefutva
-            setTimeout(() => {
-                if (contentBox) contentBox.classList.remove('content-hidden');
-            }, 50); 
+            // Késleltetett eltávolítás: Ha a CSS-átmenet nem működik, ez is kikapcsolható
+            // setTimeout(() => {
+            //     if (contentBox) contentBox.classList.remove('content-hidden');
+            // }, 50); 
         }
 
         
@@ -874,6 +874,7 @@
             if (els.nextBtn) {
                 els.nextBtn.onclick = () => {
                     const { storyPages } = GAME_CONFIG;
+                    // Újra lekérdezés a gombkezelőn belül is, ha az els hivatkozás elveszne
                     const els_for_gps = {
                         distModal: document.getElementById('distanceModal'),
                         distDisplay: document.getElementById('distance-modal-display'), 
@@ -907,11 +908,14 @@
                 els.checkBtn.onclick = () => {
                     const { storyPages } = GAME_CONFIG;
                     const page = storyPages[currentPartIndex];
-                    if (!els.passInput || !els.msgDisplay) return;
+                    // Újra lekérdezés a gombkezelőn belül is, ha az els hivatkozás elveszne
+                    const passInput = document.getElementById('password-input');
+                    const msgDisplay = document.getElementById('message');
+                    if (!passInput || !msgDisplay) return;
 
-                    if (els.passInput.value.trim() === page.correctPassword) {
-                        els.msgDisplay.textContent = GAME_CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Kód elfogadva!";
-                        els.msgDisplay.style.color = '#00ff00';
+                    if (passInput.value.trim() === page.correctPassword) {
+                        msgDisplay.textContent = GAME_CONFIG.PASSWORD_PAGE.SUCCESS_MESSAGE || "Kód elfogadva!";
+                        msgDisplay.style.color = '#00ff00';
                         setTimeout(() => {
                             // Célpont kereséshez a GPS elemek újbóli lekérdezése szükséges itt is
                             const els_for_gps = {
@@ -926,8 +930,8 @@
                             }
                         }, 1000);
                     } else {
-                        els.msgDisplay.textContent = GAME_CONFIG.PASSWORD_PAGE.ERROR_MESSAGE || "Hibás kód!";
-                        els.msgDisplay.style.color = 'red';
+                        msgDisplay.textContent = GAME_CONFIG.PASSWORD_PAGE.ERROR_MESSAGE || "Hibás kód!";
+                        msgDisplay.style.color = 'red';
                     }
                 };
             }
@@ -1105,8 +1109,8 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
-            // Fájl Revízió: 5
-            const FILE_REVISION_COUNT = 5;
+            // Fájl Revízió: 7
+            const FILE_REVISION_COUNT = 7;
 
             function displayError(message) {
                 statusContent.innerHTML = `
@@ -1159,7 +1163,7 @@ window.GAME_CONFIG_INJECTED = ${safeConfigString};
 
                 // 6. Státusz frissítése és manuális link megadása fallbackként
                 statusContent.innerHTML = `
-                    <h1>✅ Letöltés Elindult! (V. ${FILE_REVISION_COUNT})</h1>
+                    <h1>✅ Letöltés Elindult! [V. ${FILE_REVISION_COUNT}]</h1>
                     <p>A "game.html" fájl letöltése megkezdődött. Ha a letöltés nem indult el automatikusan, <a href="${blobUrl}" download="game.html" style="color: #00ffff; font-weight: bold; text-decoration: underline;">kattints ide a manuális letöltéshez</a>.</p>
                     <p style="margin-top: 15px; font-size: 0.9em; color: #aaa;">Figyelem: A külső képek és hangok megfelelő betöltéséhez a fájlt fel kell tölteni egy webszerverre!</p>
                     <button onclick="window.close()" class="btn-primary">Bezárás</button>
