@@ -259,7 +259,7 @@
             height: 150px; 
             overflow: hidden;
             border: 2px solid #8a2be2;
-            border-radius: 5px;
+            border-radius: 5ész;
             cursor: pointer;
             box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
             transition: transform 0.2s;
@@ -649,13 +649,22 @@
 
 
         function updateUI(els, storyPages, AVATARS, GAME_CONFIG) {
+            let page = null;
             try {
-                stopAllAudio();
-                const page = storyPages[currentPartIndex];
+                // KRITIKUS BIZTOSÍTÉK VISSZAFELE: Ellenőrizd a story indexet
+                if (currentPartIndex >= storyPages.length || currentPartIndex < 0) {
+                     throw new Error(`Érvénytelen oldalindex: ${currentPartIndex}. A történet hossza: ${storyPages.length}.`);
+                }
                 
-                // KRITIKUS BIZTOSÍTÉK: Ha bármelyik elem hiányzik, ne fusson tovább a függvény
-                if (!page || !els.storyDisplay || !els.contentBox) { 
-                    throw new Error("Hiányzó történet oldal vagy fő DOM elem.");
+                stopAllAudio();
+                page = storyPages[currentPartIndex];
+                
+                // Kiegészítő ellenőrzés: ha az index jó, de az elem maga null/undefined
+                if (!page) { 
+                    throw new Error(`Oldalkonfiguráció hiányzik (null/undefined) a(z) ${currentPartIndex}. indexen.`);
+                }
+                if (!els.storyDisplay || !els.contentBox) { 
+                    throw new Error("Hiányzó fő DOM elem (storyDisplay vagy contentBox).");
                 }
                 
                 // Képek frissítése (Háttér)
@@ -669,6 +678,12 @@
 
                 // Avatar és szöveg frissítése
                 let text = page.content;
+
+                // ÚJ ELLENŐRZÉS: Ha a tartalom üres, vagy nincs definiálva, ez is hibát okozhat a split-nél.
+                if (text === undefined || text === null || text.trim() === '') {
+                    text = '§N Nincs tartalom ehhez az oldalhoz.';
+                }
+                
                 const prefix = text.split(' ')[0];
                 let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
                 let isAvatarVisible = true;
@@ -680,7 +695,7 @@
                     isAvatarVisible = false; 
                     text = text.substring(prefix.length).trim();
                 } else {
-                     isAvatarVisible = (els.avatarImg && els.avatarImg.src !== AVATAR.DEFAULT_AVATAR_URL); // Tovább védekezve a konfiguráció hiányzó elemei ellen
+                     isAvatarVisible = (els.avatarImg && els.avatarImg.src !== AVATARS.DEFAULT_AVATAR_URL); 
                 }
                 
                 if (page.type === 'choice' || AVATARS.HIDDEN_PREFIXES.includes(prefix)) {
@@ -704,7 +719,8 @@
                     if (els.interactionCont) els.interactionCont.style.display = 'none';
                     if (els.passCont) els.passCont.classList.add('visible');
                     const helpBtn = document.getElementById('help-button');
-                    if (helpBtn) helpBtn.style.display = page.helpMessage ? 'inline-block' : 'none';
+                    // Page.helpMessage ellenőrzése, mielőtt hozzáférünk
+                    if (helpBtn) helpBtn.style.display = page.helpMessage && page.helpMessage.trim() !== '' ? 'inline-block' : 'none';
                 } 
                 else if (page.type === 'choice') {
                     if (els.interactionCont) els.interactionCont.style.display = 'none';
@@ -739,8 +755,16 @@
             } catch (innerError) {
                 // KRITIKUS BELSŐ HIBA KIÍRÁSA A SZÖVEGDOBOZBA
                 console.error("Inner UpdateUI Error:", innerError.message);
-                if (els.storyDisplay) {
+                
+                // Írja ki az új, konkrét hibaüzenetet
+                if (els && els.storyDisplay) {
                     els.storyDisplay.innerHTML = `<p style="color: red; font-weight: bold;">❌ KRITIKUS HIBA A TARTALOM FRISSÍTÉSÉBEN ❌</p><p style="font-size: 0.9em; color: white;">Hibaüzenet: ${innerError.message}</p><p style="font-size: 0.8em; color: gray;">Kérjük, küldje el a hibaüzenetet a javításhoz!</p>`;
+                } else {
+                    const fallbackDebug = document.getElementById('debug-area');
+                    if (fallbackDebug) {
+                        fallbackDebug.style.display = 'block';
+                        fallbackDebug.innerHTML = `NAGY HIBA: DOM elérhetetlen. ${innerError.message}`;
+                    }
                 }
             }
         }
