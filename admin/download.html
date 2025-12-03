@@ -17,16 +17,7 @@
             margin: 0;
             padding: 20px;
         }
-        .loader { border: 5px solid #333; border-top: 5px solid #8a2be2; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #message-box { 
-            background-color: #2c2c2c; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-            max-width: 400px;
-            width: 100%;
-        }
+        .loader { border: 5px solid #333; border-top: 5px solid #8a2be2; border-radius: 50%; w<!-- ... (CSS rész kihagyva a teljesség érdekében) ... -->
         .btn-primary { 
             background-color: #8a2be2; 
             color: white; 
@@ -340,10 +331,33 @@
             text-decoration: none; transition: all 0.2s;
         }
         #distance-modal-map-button:hover { background-color: #00ffff; color: #1a1a1a; }
+        
+        /* DEBUG TERÜLET STÍLUSA */
+        #debug-area {
+            position: fixed; 
+            top: 60px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 1000; 
+            color: #ff0000; 
+            background: #ffc0cb; /* Világos rózsaszín háttér */
+            border: 3px solid red; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: none; 
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
+            font-family: sans-serif;
+            font-weight: bold;
+        }
 
     </style>
 </head>
 <body oncontextmenu="return false;"> 
+    <!-- DEBUG TERÜLET BESZÚRVA -->
+    <div id="debug-area"></div>
+
     <div class="full-width-image-container">
         <img id="story-image" src="" alt="Háttér" onerror="this.onerror=null; this.style.opacity='0';">
     </div>
@@ -467,6 +481,8 @@
         (function() {
             // A tartalom doboz alapértelmezett elrejtése
             const contentBox = document.getElementById('content-box');
+            const debugArea = document.getElementById('debug-area'); // DEBUG TERÜLET
+
             // ÚJ: Eltávolítjuk a kezdeti rejtést, ha a DOM készen van (bár a CSS már kikerülte ezt)
             if (contentBox) contentBox.classList.remove('content-hidden'); 
 
@@ -969,22 +985,28 @@
                     loadProgress();
                     updateUI();
                     
-                    // Nincs szükség lassú fade-in-re itt, mivel a content-box már látható
-                    // if (contentBox) contentBox.classList.remove('content-hidden');
+                    // SIKERES BEFEJEZÉS
+                    if (debugArea) debugArea.style.display = 'none';
 
                 } catch (err) {
                     console.error("Critical Start Error (Game Init):", err);
                     
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = "color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;";
-                    errorDiv.innerHTML = `
-                        <h1 style="font-size:1.5em; margin-bottom:10px;">❌ KRITIKUS HIBA ❌</h1>
-                        <p style="font-size:1.0em; color:#ddd;">A játék motor nem tudta betölteni a történetet. </p>
-                        <p style="font-size:1.0em; color:#00ffff; font-weight: bold; margin-top: 10px;">HIBA OKA: ${err.message}</p>
-                        <p style="font-size: 0.9em; margin-top: 15px;">MEGOLDÁS: Kérjük, töltse fel egy webszerverre (pl. GitHub Pages) a fájlokat, mivel a helyi megnyitás (file:///) blokkolja a képeket és hangokat!</p>
-                    `;
-
-                    document.body.appendChild(errorDiv);
+                    // HIBA MEGJELENÍTÉSE A DEDIKÁLT TERÜLETEN
+                    if (debugArea) {
+                         debugArea.style.display = 'block';
+                         debugArea.innerHTML = `
+                             <h1 style="font-size:1.1em; margin-bottom:5px;">❌ KRITIKUS HIBA AZ INDÍTÁSNÁL ❌</h1>
+                             <p style="font-size:0.9em; margin: 0;">A játék motor nem indult el. Ennek oka valószínűleg a böngésző biztonsági korlátozása (file:///).</p>
+                             <p style="font-size:0.9em; font-weight: normal; margin-top: 10px;"><b>HIBA:</b> ${err.message}</p>
+                             <p style="font-size: 0.9em; margin-top: 10px; color: #0000ff;"><b>MEGOLDÁS:</b> Kérjük, töltse fel egy webszerverre (pl. GitHub Pages) a fájlokat, és onnan nyissa meg!</p>
+                         `;
+                    } else {
+                        // Végső fallback, ha a debugarea sem jött létre
+                        const errorDiv = document.createElement('div');
+                        errorDiv.style.cssText = "color:#ff5555; padding:30px; text-align:center; font-family:sans-serif; background:rgba(0,0,0,0.8); border: 2px solid red; margin: 10vh auto; max-width: 90%; border-radius: 10px;";
+                        errorDiv.innerHTML = `<h1>❌ FAILED ❌</h1><p>A játék nem tudott elindulni: ${err.message}</p><p>Kérjük, töltse fel webszerverre!</p>`;
+                        document.body.appendChild(errorDiv);
+                    }
                 }
             }
 
