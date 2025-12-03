@@ -466,7 +466,9 @@
 
     <script>
         // --- KRITIKUS JÁTÉK JAVÍTÁS VERZIÓ ---
-        const REVISION_COUNT = 7; // Verziószám
+        const REVISION_COUNT = 8; // Verziószám
+        const INITIALIZATION_MAX_RETRIES = 5;
+        const INITIALIZATION_RETRY_DELAY = 50; // ms
 
         // Ez a placeholder volt: const INJECTED_CONFIG_JSON = '!!!INJECTED_CONFIG_JSON_HERE!!!';
         
@@ -813,11 +815,6 @@
 
             // Szinkron hívás a frissítéshez - az els objektumot mostantól NEM adjuk át
             updateUI(storyPages, AVATARS, GAME_CONFIG);
-            
-            // Késleltetett eltávolítás: Ha a CSS-átmenet nem működik, ez is kikapcsolható
-            // setTimeout(() => {
-            //     if (contentBox) contentBox.classList.remove('content-hidden');
-            // }, 50); 
         }
 
         
@@ -958,32 +955,54 @@
             }
             contentBox.classList.remove('content-hidden'); 
 
-            function initializeGame() {
+            let initializationAttempts = 0;
+
+            function attemptInitializeGame() {
+                initializationAttempts++;
+
                 // DOM Elemek gyűjtése itt
                 const els = {
-                    storyDisplay: document.getElementById('story-text-display'), storyImage: document.getElementById('story-image'),
-                    avatarImg: document.getElementById('avatar-img'), contentBox: document.getElementById('content-box'),
-                    nextBtn: document.getElementById('next-page-button'), prevBtn: document.getElementById('prev-page-button'),
-                    discreetBackBtn: document.getElementById('discreet-back-button'),
-                    interactionCont: document.getElementById('interaction-container'), passCont: document.getElementById('password-container'),
-                    multiChoiceCont: document.getElementById('multi-choice-container'),
-                    passInput: document.getElementById('password-input'), checkBtn: document.getElementById('check-password-button'),
-                    msgDisplay: document.getElementById('message'), distModal: document.getElementById('distanceModal'),
-                    distDisplay: document.getElementById('distance-modal-display'), distStatus: document.getElementById('distance-status'),
-                    helpModal: document.getElementById('help-modal'), helpText: document.getElementById('help-text-display'),
-                    galleryModal: document.getElementById('galleryModal'), galleryContainer: document.getElementById('gallery-container'),
-                    fullImageModal: document.getElementById('full-image-display'), fullImage: document.getElementById('fullImageDisplay'),
-                    mapBtn: document.getElementById('map-button'),
-                    imageBtn: document.getElementById('image-button'),
-                    // ÚJ ELEMEK AZ AUDIO GOMBOKHOZ
-                    audioBtn1: document.getElementById('play-audio-button-1'),
-                    audioBtn2: document.getElementById('play-audio-button-2')
+                    storyDisplay: document.getElementById('story-text-display'), contentBox: document.getElementById('content-box'),
+                    // A többi elem itt is bekerül, de a kritikusak itt vannak
                 };
                 
-                // KRITIKUS ELLENŐRZÉS: ha a gyűjtés sikertelen volt, azonnal hiba
-                if (!els.storyDisplay) {
-                     throw new Error("Initialization Error: story-text-display element missing.");
+                // KRITIKUS ELLENŐRZÉS: ha a fő elemek hiányoznak, és nem értük el a maximális próbálkozást, várjunk és próbáljuk újra.
+                if (!els.storyDisplay || !els.contentBox) {
+                    if (initializationAttempts < INITIALIZATION_MAX_RETRIES) {
+                        // Késleltetés a DOM rendereléshez
+                        setTimeout(attemptInitializeGame, INITIALIZATION_RETRY_DELAY);
+                        return;
+                    }
+                     // Max próbálkozás elérve, dobjuk a hibát
+                     throw new Error(`Initialization Error: story-text-display or content-box element missing after ${INITIALIZATION_MAX_RETRIES} attempts.`);
                 }
+
+                // Ha sikeresen elérte a kritikus elemeket, gyűjtsük be a többit is
+                els.storyImage = document.getElementById('story-image');
+                els.avatarImg = document.getElementById('avatar-img');
+                els.nextBtn = document.getElementById('next-page-button');
+                els.prevBtn = document.getElementById('prev-page-button');
+                els.discreetBackBtn = document.getElementById('discreet-back-button');
+                els.interactionCont = document.getElementById('interaction-container');
+                els.passCont = document.getElementById('password-container');
+                els.multiChoiceCont = document.getElementById('multi-choice-container');
+                els.passInput = document.getElementById('password-input');
+                els.checkBtn = document.getElementById('check-password-button');
+                els.msgDisplay = document.getElementById('message');
+                els.distModal = document.getElementById('distanceModal');
+                els.distDisplay = document.getElementById('distance-modal-display');
+                els.distStatus = document.getElementById('distance-status');
+                els.helpModal = document.getElementById('help-modal');
+                els.helpText = document.getElementById('help-text-display');
+                els.galleryModal = document.getElementById('galleryModal');
+                els.galleryContainer = document.getElementById('gallery-container');
+                els.fullImageModal = document.getElementById('full-image-display');
+                els.fullImage = document.getElementById('fullImageDisplay');
+                els.mapBtn = document.getElementById('map-button');
+                els.imageBtn = document.getElementById('image-button');
+                els.audioBtn1 = document.getElementById('play-audio-button-1');
+                els.audioBtn2 = document.getElementById('play-audio-button-2');
+
 
                 try {
                     
@@ -1093,7 +1112,7 @@
                 }
             }
 
-            document.addEventListener('DOMContentLoaded', initializeGame);
+            document.addEventListener('DOMContentLoaded', attemptInitializeGame);
 
         })();
     </script>
@@ -1109,8 +1128,8 @@
             const INJECTION_TAG = '$$CONFIG_PLACEHOLDER$$'; 
             const savedConfig = localStorage.getItem(STORAGE_KEY);
             
-            // Fájl Revízió: 7
-            const FILE_REVISION_COUNT = 7;
+            // Fájl Revízió: 8
+            const FILE_REVISION_COUNT = 8;
 
             function displayError(message) {
                 statusContent.innerHTML = `
