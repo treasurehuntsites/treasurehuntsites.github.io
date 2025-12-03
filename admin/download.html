@@ -58,6 +58,13 @@
     <meta http-equiv="Permissions-Policy" content="geolocation=*">
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- KRITIKUS CSS: ALAPÉRTELMEZETT LÁTHATÓSÁG ÉS SZÍNEK BIZTOSÍTÁSA (JS HIBÁK ESETÉRE) -->
+    <style id="critical-styles">
+        /* Kifejezetten a "visibility: hidden;" felülírása */
+        body { visibility: visible !important; opacity: 1 !important; }
+    </style>
+
     <style>
         /* CSS Változók a dinamikus színekhez */
         /* FIGYELEM: Ezek alapértelmezett (fallback) színek. A tényleges színeket a JS frissíti az Admin beállítások alapján. */
@@ -76,7 +83,7 @@
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
-            /* KEZDETI REJTÉS: A JS-nek kell felfednie. */
+            /* KEZDETI REJTÉS (Ezt a fenti inline CSS felülírja a biztonság kedvéért) */
             visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
             margin: 0; padding: 0; font-family: 'Play', sans-serif;
             color: var(--text-color); 
@@ -454,20 +461,10 @@
             };
         }
 
+        // --- FŐ JÁTÉK LOGIKA ---
         (function() {
             // A tartalom doboz alapértelmezett elrejtése
             const contentBox = document.getElementById('content-box');
-
-            // --- KRITIKUS: A FŐ BODY LÁTHATÓSÁGÁNAK BEÁLLÍTÁSA (mindenképpen fusson) ---
-            // Ezt azonnal futtatjuk, amint a DOM betöltődik.
-            function revealBody() {
-                if (document.body) {
-                    document.body.style.visibility = 'visible';
-                    document.body.style.opacity = 1;
-                    // Megpróbáljuk elindítani a fő logikát utána
-                    initializeGame();
-                }
-            }
 
             function initializeGame() {
                 try {
@@ -475,17 +472,15 @@
                     let CONFIG = getDefaultConfig();
                     
                     // --- KONFIGURÁCIÓ BETÖLTÉSE ---
-                    // 1. Exportált (beágyazott) konfiguráció ellenőrzése (window.GAME_CONFIG_INJECTED használatával)
                     if (window.GAME_CONFIG_INJECTED && Object.keys(window.GAME_CONFIG_INJECTED).length > 0) {
                         const parsedConfig = window.GAME_CONFIG_INJECTED;
                         CONFIG = { ...CONFIG, ...parsedConfig };
-                        // Alobjektumok mélyebb összevonása
                         if(parsedConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...parsedConfig.AVATARS };
                         if(parsedConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsedConfig.GPS_COMPASS };
                         if(parsedConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsedConfig.MEDIA };
                         console.log("Játék betöltve exportált (beágyazott) konfigurációval.");
                     } else {
-                        // 2. Helyi (Canvas/LocalStorage) konfiguráció betöltése (ha nem exportált, hanem csak Preview)
+                        // Lokalizált mentés csak ha LocalStorage-ból tölt be (Admin oldali Preview)
                         try {
                             const savedConfig = localStorage.getItem('DYNAMIC_CONFIG');
                             if (savedConfig) { 
@@ -500,7 +495,6 @@
                     }
 
                     let currentPartIndex = 0;
-                    let watchId = null;
                     let currentHelpIndex = 0;
                     let currentScale = 1.0; 
                     const MAX_SCALE = 2.5; 
@@ -508,9 +502,7 @@
 
                     const { storyPages, AVATARS, GPS_COMPASS } = CONFIG;
 
-                    // Ellenőrzés: Van-e egyáltalán oldal?
                     if (!storyPages || storyPages.length === 0) {
-                        // Ha a body már látható, de a tartalom nem töltődött be, kiírjuk a hibát.
                         throw new Error("Nincsenek történet oldalak (storyPages) a konfigurációban!");
                     }
 
@@ -906,7 +898,7 @@
                     const audioBtn1 = document.getElementById('play-audio-button-1');
                     if (audioBtn1) audioBtn1.onclick = () => toggleAudio('1');
                     const audioBtn2 = document.getElementById('play-audio-button-2');
-                    if (audio2) audioBtn2.onclick = () => toggleAudio('2');
+                    if (audio2) audio2.onclick = () => toggleAudio('2');
 
                     function startGPS() {
                         if (els.contentBox) els.contentBox.classList.add('content-hidden'); // Áttűnés a tartalom dobozról
@@ -1007,16 +999,13 @@
                         <p style="font-size: 0.9em; margin-top: 15px;">MEGOLDÁS: Ellenőrizze a forráskódot (game.html), vagy próbálja meg újra exportálni az Admin oldalon a beállítások mentése után.</p>
                     `;
 
-                    // Mivel a body már látható, csak hozzáadjuk a hibaüzenetet
+                    // Mivel a body már látható (CSS trükk miatt), csak hozzáadjuk a hibaüzenetet
                     document.body.appendChild(errorDiv);
                 }
             }
 
-            // Késleltetjük a felfedést, hogy legyen ideje a DOM-nak betöltődni, de ez fut le mindenképp.
-            document.addEventListener('DOMContentLoaded', () => {
-                // A legfontosabb: felfedjük a body-t, mielőtt a tartalom betöltése elindulna.
-                revealBody(); 
-            });
+            // A JavaScript fő belépési pontja:
+            document.addEventListener('DOMContentLoaded', initializeGame);
 
         })();
     </script>
