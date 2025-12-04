@@ -410,7 +410,8 @@
                         if(parsed.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...parsed.GPS_COMPASS };
                         if(parsed.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...parsed.MEDIA };
                         console.log("Játék betöltve LocalStorage konfigurációval (Preview mód).");
-                        console.log("BACKGROUND_URL:", CONFIG.BACKGROUND_URL);
+                        // FONTOS DEBUG NAPLÓZÁS: Mi az alapértelmezett háttérkép URL?
+                        console.log("Preview Log: Alapértelmezett Háttér URL (CONFIG.BACKGROUND_URL):", CONFIG.BACKGROUND_URL);
                     } else {
                         throw new Error("Local Storage-ban nem található konfiguráció. Kérjük, mentse az Admin oldalon!");
                     }
@@ -532,7 +533,21 @@
                                 activeBg = storyPages[i].customBackgroundUrl;
                             }
                         }
-                        if (els.storyImage) els.storyImage.src = activeBg;
+                        
+                        // FONTOS DEBUG NAPLÓZÁS: Mi az aktuális háttérkép URL?
+                        console.log("Preview Log: Aktuális Háttér URL (Index " + currentPartIndex + "):", activeBg);
+
+
+                        if (els.storyImage) {
+                            // EXTRA ELLENŐRZÉS: Csak akkor állítsuk be a src-t, ha van érvényes útvonal.
+                            if (activeBg && activeBg.trim() !== '') {
+                                els.storyImage.src = activeBg;
+                                console.log("Preview Log: Háttérkép src beállítva:", activeBg);
+                            } else {
+                                els.storyImage.src = ''; // Üres src, ha nincs beállítva
+                                console.log("Preview Log: Háttérkép src ÜRES maradt (nincs beállítva).");
+                            }
+                        }
 
                         const prefix = page.content.split(' ')[0];
                         let avatarUrl = AVATARS.DEFAULT_AVATAR_URL;
