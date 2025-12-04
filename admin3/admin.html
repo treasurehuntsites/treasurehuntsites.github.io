@@ -1,0 +1,34 @@
+// ... (A fenti JavaScript kódnak a vége felé)
+
+            // Exportálás gomb logika
+            document.getElementById('downloadPageButton').addEventListener('click', () => {
+                // 1. Mentés kényszerítése az export előtt
+                saveSettings(false); 
+                
+                // 2. A teljes konfiguráció lekérése a LocalStorage-ból
+                const finalConfigJson = localStorage.getItem(STORAGE_KEY);
+                if (!finalConfigJson) {
+                    MESSAGE_DISPLAY.textContent = 'HIBA: Nincs konfiguráció a mentéshez!';
+                    MESSAGE_DISPLAY.style.color = 'red';
+                    return;
+                }
+                
+                // 3. Fájl generálása és letöltése
+                const blob = new Blob([finalConfigJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'game_config.json'; // A játék oldala ezt a fájlt fogja keresni
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                MESSAGE_DISPLAY.textContent = 'game_config.json sikeresen letöltve! Töltsd fel a GitHub mappába.';
+                MESSAGE_DISPLAY.style.color = '#00FFFF';
+                setTimeout(() => MESSAGE_DISPLAY.textContent = '', 8000);
+            });
+        });
+    })();
+</script>
