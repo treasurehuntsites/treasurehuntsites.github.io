@@ -346,8 +346,8 @@
                 choiceBlock: document.getElementById('choiceBlock'), choicesContainer: document.getElementById('choicesContainer'), addChoiceBtn: document.getElementById('addChoiceBtn'),
                 previewContainer: document.getElementById('previewContainer'),
                 resetButton: document.getElementById('resetButton'),
-                loadConfigButton: document.getElementById('loadConfigButton'), // ÚJ IMPORT GOMB
-                fileInput: document.getElementById('fileInput') // REJTETT FÁJL INPUT
+                loadConfigButton: document.getElementById('loadConfigButton'), 
+                fileInput: document.getElementById('fileInput')
             };
 
             // Alapértelmezett konfiguráció
@@ -371,7 +371,31 @@
                 ],
                 MEDIA: { AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3", AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3" },
             };
+            
+            // --- AUTOSAVE LOGIKA ---
+            
+            // Handler function for all field changes: saves data and updates preview
+            function autoSaveAndPreviewHandler(event) {
+                // Meggyőződünk róla, hogy a módosítás a megfelelő input mezőből jött
+                if (event && event.target.tagName === 'INPUT' && event.target.type === 'file') return;
+                
+                // 1. Mentjük az aktuális oldal adatait az array-be
+                saveCurrentStoryPageContent(); 
+                
+                // 2. Mentjük a teljes configot a LocalStorage-ba (automatikusan, sikerüzenet nélkül)
+                saveSettings(false); 
+                
+                // 3. Frissítjük az előnézetet
+                updatePreview();
+            }
 
+            // Function to add auto-save and preview update listener
+            function addAutoSaveListener(element, eventType = 'input') {
+                if (element) {
+                    element.addEventListener(eventType, autoSaveAndPreviewHandler);
+                }
+            }
+            
             // --- PREVIEW LOGIKA ---
             function updatePreview() {
                 const content = fields.pageContent.value || '';
@@ -498,11 +522,13 @@
                 row.querySelector('.btn-delete-choice').addEventListener('click', () => {
                     row.remove();
                     updateAddChoiceBtnState();
-                    updatePreview();
+                    autoSaveAndPreviewHandler(); // AutoSave and Preview for deletion
                 });
 
-                row.querySelector('.choice-text').addEventListener('input', updatePreview);
-                row.querySelector('.choice-index').addEventListener('input', updatePreview);
+                // Cserélve autoSaveAndPreviewHandler-re
+                row.querySelector('.choice-text').addEventListener('input', autoSaveAndPreviewHandler);
+                row.querySelector('.choice-index').addEventListener('input', autoSaveAndPreviewHandler);
+                
                 fields.choicesContainer.appendChild(row);
                 updateAddChoiceBtnState();
                 updatePreview();
@@ -597,6 +623,7 @@
                     if (page.choices && Array.isArray(page.choices)) {
                         page.choices.forEach(c => renderChoiceRow(c.text, c.nextIndex));
                     } else {
+                        // Alapértelmezett, üres gomb az új Choice oldalhoz
                         renderChoiceRow();
                     }
                 }
@@ -758,8 +785,9 @@
                         
                         // Alkalmazza az importált konfigurációt az űrlapra
                         applyConfigToForm(importedConfig);
+                        saveSettings(true); // Mentés LocalStorage-ba az import után
 
-                        MESSAGE_DISPLAY.textContent = `Konfiguráció sikeresen importálva "${file.name}" fájlból. Kérjük, nyomja meg a MENTÉS gombot a LocalStorage frissítéséhez!`;
+                        MESSAGE_DISPLAY.textContent = `Konfiguráció sikeresen importálva "${file.name}" fájlból. Az adatok beolvasva és elmentve a LocalStorage-ba.`;
                         MESSAGE_DISPLAY.style.color = '#00FF00';
                     } catch (error) {
                         MESSAGE_DISPLAY.textContent = `Importálási HIBA: ${error.message}`;
@@ -774,8 +802,10 @@
 
 
             function saveSettings(showSuccess = true) {
-                // Először elmentjük az aktuálisan szerkesztett oldalt (akkor is, ha nem volt explicit mentés gomb nyomás)
-                saveCurrentStoryPageContent();
+                // Először elmentjük az aktuálisan szerkesztett oldalt (ha showSuccess=true)
+                if (showSuccess) {
+                    saveCurrentStoryPageContent();
+                }
 
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
@@ -800,6 +830,8 @@
                 newConfig.PASSWORD_PAGE.PROMPT_TEXT = fields.passwordPromptText.value;
                 newConfig.MEDIA.AUDIO_1_URL = fields.audio1Url.value;
                 newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
+                
+                // Mivel az autosave-et bevezettük, a storyPages-t már korábban frissítette a saveCurrentStoryPageContent
                 newConfig.storyPages = currentStoryPages;
 
                 try {
@@ -836,7 +868,33 @@
                     MESSAGE_DISPLAY.style.color = '#FF5555';
                 }
             }
+            
+            // --- LISTENERS SETUP ---
+            function setupAutoSaveListeners() {
+                // Kezeli az összes globális és oldal-specifikus mezőt (input/textarea)
+                const inputFields = [
+                    fields.appTitle, fields.backgroundUrl, fields.bgColor, fields.textColor,
+                    fields.avatarMUrl, fields.avatarAUrl, fields.avatarRUrl, fields.avatarDefaultUrl,
+                    fields.menuMapLink, fields.targetLat, fields.targetLon, fields.successRedirectUrl, fields.gpsMapLink,
+                    fields.audio1Url, fields.audio2Url, fields.passwordPromptText,
+                    
+                    fields.pageContent, fields.customAvatarUrl, fields.customBackgroundUrl, fields.customGalleryUrl,
+                    fields.nextIndex, fields.backIndex, fields.audioNextButtonText,
+                    fields.correctPassword, fields.nextIndexSuccess, fields.passwordHelpMessage
+                ];
 
+                inputFields.forEach(field => addAutoSaveListener(field, 'input'));
+
+                // Kezeli a select (legördülő) mezőket (change event)
+                const selectFields = [
+                    fields.galleryMode, fields.audioId
+                ];
+                selectFields.forEach(field => addAutoSaveListener(field, 'change'));
+                
+                // Speciális Listenerek frissítése
+                fields.pageType.addEventListener('change', autoSaveAndPreviewHandler);
+            }
+            // --- LISTENERS SETUP VÉGE ---
 
             // --- KÖZVETLEN PREVIEW INDÍTÁS LOGIKÁJA ---
             // Cél: Menteni a beállításokat, és új lapon megnyitni a preview.html oldalt.
@@ -861,30 +919,23 @@
 
 
             document.addEventListener('DOMContentLoaded', () => {
-                loadSettingsFromStorage(); // Helyes funkció hívása
+                // A betöltés után beállítjuk az autosave listenereket
+                setupAutoSaveListeners();
+                
+                loadSettingsFromStorage(); 
                 
                 // ELSŐ VÁLTOZTATÁS: Egy kattintásra váltás engedélyezése.
                 fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
                 
-                fields.pageType.addEventListener('change', (e) => {
-                    saveCurrentStoryPageContent();
-                    toggleContentBlocks(e.target.value);
-                    updatePreview(); 
-                });
-                fields.pageContent.addEventListener('input', updatePreview); 
-                fields.customAvatarUrl.addEventListener('input', updatePreview); 
-                fields.customBackgroundUrl.addEventListener('input', updatePreview); 
-                fields.customGalleryUrl.addEventListener('input', updatePreview); 
-                fields.backgroundUrl.addEventListener('input', updatePreview); // Globális háttér változás
-                fields.audioNextButtonText.addEventListener('input', updatePreview); 
-                fields.passwordHelpMessage.addEventListener('input', updatePreview); // ÚJ: Help message preview frissítés
+                // A pageType change listener már az autoSaveAndPreviewHandler hívja.
+                // fields.pageType.addEventListener('change', autoSaveAndPreviewHandler);
 
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
                 
                 // GOMBOK WIRING
                 fields.resetButton.addEventListener('click', resetSettings);
-                fields.loadConfigButton.addEventListener('click', importConfig); // ÚJ: Import gomb
+                fields.loadConfigButton.addEventListener('click', importConfig); 
                 
                 // EXPORTÁLÁS GOMB LOGIKA: JSON fájl letöltése
                 document.getElementById('downloadPageButton').addEventListener('click', () => {
