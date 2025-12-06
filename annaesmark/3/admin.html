@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.1 (Reset)</title>
+    <title>Játék Konfiguráció V3.2 (Reset)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -58,7 +58,7 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.1 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.2 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
         <!-- ÁLTALÁNOS BEÁLLÍTÁSOK -->
         <div class="card p-6 rounded-xl space-y-6">
@@ -353,8 +353,8 @@
 
             // Alapértelmezett konfiguráció
             const DEFAULT_CONFIG = {
-                CONFIG_VERSION: '1.0', // ÚJ: Verziószám
-                LAST_EDITED_INDEX: 0, // ÚJ: Utolsó szerkesztett index
+                CONFIG_VERSION: '3.2', // ÚJ VERZIÓSZÁM
+                LAST_EDITED_INDEX: 0, 
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
                 BODY_BG_COLOR: "#1a1a1a", BODY_TEXT_COLOR: "#e0e0e0",
@@ -805,7 +805,8 @@
                         
                         // Alkalmazza az importált konfigurációt az űrlapra
                         applyConfigToForm(importedConfig);
-                        saveSettings(true); // Mentés LocalStorage-ba az import után
+                        // JAVÍTÁS: Automatikus mentés, hogy az adatok megmaradjanak
+                        saveSettings(false); 
 
                         MESSAGE_DISPLAY.textContent = `Konfiguráció sikeresen importálva "${file.name}" fájlból. Az adatok beolvasva és elmentve a LocalStorage-ba.`;
                         MESSAGE_DISPLAY.style.color = '#00FF00';
@@ -822,14 +823,10 @@
 
 
             function saveSettings(showSuccess = true) {
-                // Mentjük az aktuálisan szerkesztett oldal tartalmát az array-be, ha nem autosave-ből jön (showSuccess=false)
-                if (showSuccess) {
+                // JAVÍTVA: Mindig mentjük az aktuálisan látható oldal adatait az array-be, ha van oldalunk
+                if (currentStoryPages.length > 0) {
                     saveCurrentStoryPageContent();
-                } else if (!isInitialLoad) {
-                    // Automatikus mentés esetén is elmentjük az aktuális oldal tartalmát, kivéve az első betöltésnél
-                    saveCurrentStoryPageContent();
-                }
-
+                } 
 
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
@@ -851,7 +848,7 @@
                 newConfig.MENU_LINKS.MAP_LINK_URL = fields.menuMapLink.value;
                 // Biztonságos float konverzió
                 newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
-                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
+                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LON.value;
                 newConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL = fields.successRedirectUrl.value;
                 newConfig.GPS_COMPASS.MAP_BUTTON_URL = fields.gpsMapLink.value;
                 
