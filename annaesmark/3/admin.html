@@ -381,10 +381,12 @@
                 if (event && event.target.tagName === 'INPUT' && event.target.type === 'file') return;
                 
                 // 1. Mentjük az aktuális oldal adatait az array-be
-                saveCurrentStoryPageContent(); 
-                
+                // Ezt a hívást eltávolítjuk innen, mert a loadStoryPage(index) vagy a
+                // DOMContentLoaded-ban beállított listenerek (storyPageIndex, pageType change)
+                // már kezelik a mentést az oldalváltás előtt. Ez az autosave a globális mezőket menti.
+
                 // 2. Mentjük a teljes configot a LocalStorage-ba (automatikusan, sikerüzenet nélkül)
-                saveSettings(false); 
+                // saveSettings(false); // Ezt a globális mező változásokra hagyjuk meg.
                 
                 // 3. Frissítjük az előnézetet
                 updatePreview();
@@ -908,7 +910,7 @@
                 selectFields.forEach(field => addAutoSaveListener(field, 'change'));
                 
                 // Speciális Listenerek frissítése
-                fields.pageType.addEventListener('change', autoSaveAndPreviewHandler);
+                // fields.pageType.addEventListener('change', autoSaveAndPreviewHandler); // Ezt a sort kivettem!
             }
             // --- LISTENERS SETUP VÉGE ---
 
@@ -943,8 +945,20 @@
                 // ELSŐ VÁLTOZTATÁS: Egy kattintásra váltás engedélyezése.
                 fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
                 
-                // A pageType change listener már az autoSaveAndPreviewHandler hívja.
-                // fields.pageType.addEventListener('change', autoSaveAndPreviewHandler);
+                // VISSZAÁLLÍTVA: Így biztosan frissül a felület és mentődik az oldal, amikor oldaltípust váltunk.
+                fields.pageType.addEventListener('change', (e) => {
+                    // 1. Mentjük az aktuális oldal adatait, mielőtt átváltjuk a felületet (így a régi mezők értékei elmentődnek)
+                    saveCurrentStoryPageContent();
+                    
+                    // 2. Frissítjük a látható blokkokat (pl. Text/Password/Choice)
+                    toggleContentBlocks(e.target.value);
+
+                    // 3. Mentjük a teljes configot (most már az új típussal a storyPages-ben)
+                    saveSettings(false); 
+                    
+                    // 4. Frissítjük az előnézetet
+                    updatePreview();
+                });
 
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
