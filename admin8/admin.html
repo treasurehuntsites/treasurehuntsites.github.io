@@ -58,7 +58,7 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.1</h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.1 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
         <!-- ÁLTALÁNOS BEÁLLÍTÁSOK -->
         <div class="card p-6 rounded-xl space-y-6">
@@ -324,7 +324,7 @@
             const goToGameButton = document.getElementById('goToGameButton');
             let currentStoryPages = [];
             let currentLoadedIndex = 0; 
-            let isInitialLoad = true; // ÚJ: Flag a kezdeti betöltés jelzésére
+            let isInitialLoad = true; // Flag a kezdeti betöltés jelzésére
 
             // DOM elemek
             const fields = {
@@ -353,6 +353,8 @@
 
             // Alapértelmezett konfiguráció
             const DEFAULT_CONFIG = {
+                CONFIG_VERSION: '1.0', // ÚJ: Verziószám
+                LAST_EDITED_INDEX: 0, // ÚJ: Utolsó szerkesztett index
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
                 BODY_BG_COLOR: "#1a1a1a", BODY_TEXT_COLOR: "#e0e0e0",
@@ -380,15 +382,11 @@
                 // Meggyőződünk róla, hogy a módosítás a megfelelő input mezőből jött
                 if (event && event.target.tagName === 'INPUT' && event.target.type === 'file') return;
                 
-                // 1. Mentjük az aktuális oldal adatait az array-be
-                // Ezt a hívást eltávolítjuk innen, mert a loadStoryPage(index) vagy a
-                // DOMContentLoaded-ban beállított listenerek (storyPageIndex, pageType change)
-                // már kezelik a mentést az oldalváltás előtt. Ez az autosave a globális mezőket menti.
-
-                // 2. Mentjük a teljes configot a LocalStorage-ba (automatikusan, sikerüzenet nélkül)
-                // saveSettings(false); // Ezt a globális mező változásokra hagyjuk meg.
+                // Mivel az oldal-specifikus mentést a loadStoryPage/pageType change kezeli,
+                // itt csak a globális adatok mentését hívjuk meg minden input esemény után.
+                saveSettings(false); 
                 
-                // 3. Frissítjük az előnézetet
+                // Frissítjük az előnézetet
                 updatePreview();
             }
 
@@ -582,7 +580,7 @@
             function loadStoryPage(index) {
                 const targetIndex = parseInt(index);
                 
-                // ÚJ ELLENŐRZÉS: Csak akkor mentjük az előző oldalt, ha nem a kezdeti betöltéskor vagyunk az Index 0-n.
+                // Csak akkor mentjük az előző oldalt, ha nem a kezdeti betöltéskor vagyunk az Index 0-n.
                 const isFirstCallToPageZero = isInitialLoad && targetIndex === 0;
 
                 if (!isFirstCallToPageZero) {
@@ -733,6 +731,9 @@
                 // Biztosítja, hogy a storyPages friss példányok legyenek
                 currentStoryPages = JSON.parse(JSON.stringify(currentConfig.storyPages || DEFAULT_CONFIG.storyPages));
                 
+                // ÚJ: Verzió kijelzése
+                document.getElementById('configVersion').textContent = `(V${currentConfig.CONFIG_VERSION || DEFAULT_CONFIG.CONFIG_VERSION})`;
+
                 // Globális mezők
                 fields.appTitle.value = currentConfig.APP_TITLE || DEFAULT_CONFIG.APP_TITLE;
                 fields.backgroundUrl.value = currentConfig.BACKGROUND_URL || DEFAULT_CONFIG.BACKGROUND_URL;
@@ -760,8 +761,9 @@
                 fields.passwordPromptText.value = currentConfig.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
 
                 // Történet oldalak inicializálása
-                populatePageIndexSelector(currentStoryPages.length, 0);
-                loadStoryPage(0);
+                const initialIndex = currentConfig.LAST_EDITED_INDEX || 0;
+                populatePageIndexSelector(currentStoryPages.length, initialIndex);
+                loadStoryPage(initialIndex);
             }
 
             // Cserélve loadSettings-re
@@ -820,14 +822,22 @@
 
 
             function saveSettings(showSuccess = true) {
-                // Először elmentjük az aktuálisan szerkesztett oldalt (ha showSuccess=true)
+                // Mentjük az aktuálisan szerkesztett oldal tartalmát az array-be, ha nem autosave-ből jön (showSuccess=false)
                 if (showSuccess) {
                     saveCurrentStoryPageContent();
+                } else if (!isInitialLoad) {
+                    // Automatikus mentés esetén is elmentjük az aktuális oldal tartalmát, kivéve az első betöltésnél
+                    saveCurrentStoryPageContent();
                 }
+
 
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
                 
+                // ÚJ: Frissítjük a verziót és az utolsó indexet
+                newConfig.CONFIG_VERSION = DEFAULT_CONFIG.CONFIG_VERSION; 
+                newConfig.LAST_EDITED_INDEX = currentLoadedIndex;
+
                 newConfig.APP_TITLE = fields.appTitle.value;
                 newConfig.BACKGROUND_URL = fields.backgroundUrl.value;
                 newConfig.BODY_BG_COLOR = fields.bgColor.value;
@@ -849,7 +859,7 @@
                 newConfig.MEDIA.AUDIO_1_URL = fields.audio1Url.value;
                 newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
                 
-                // Mivel az autosave-et bevezettük, a storyPages-t már korábban frissítette a saveCurrentStoryPageContent
+                // A storyPages már frissítve lett a saveCurrentStoryPageContent hívásával
                 newConfig.storyPages = currentStoryPages;
 
                 try {
@@ -908,9 +918,6 @@
                     fields.galleryMode, fields.audioId
                 ];
                 selectFields.forEach(field => addAutoSaveListener(field, 'change'));
-                
-                // Speciális Listenerek frissítése
-                // fields.pageType.addEventListener('change', autoSaveAndPreviewHandler); // Ezt a sort kivettem!
             }
             // --- LISTENERS SETUP VÉGE ---
 
