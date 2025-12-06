@@ -44,6 +44,16 @@
             border-radius: 4px; font-weight: bold; text-transform: uppercase;
             font-size: 0.8rem; margin: 2px;
         }
+
+        /* 5 gombos elrendezés segítése kis képernyőn */
+        @media (min-width: 640px) {
+            .btn-group-5 > * {
+                width: calc(20% - 0.5rem); /* 20% mínusz a gap egy része */
+            }
+            .btn-group-5 {
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
@@ -279,22 +289,29 @@
             
         </div>
         
-        <div class="flex flex-col sm:flex-row justify-between gap-4 pt-4">
-            <button id="saveButton" class="btn-primary w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase">
+        <!-- GOMBOK: Mentés, Törlés, Preview, Import, Export -->
+        <div class="flex flex-col sm:flex-row justify-between gap-4 pt-4 btn-group-5">
+            <button id="saveButton" class="btn-primary w-full sm:w-1/5 p-4 rounded-xl text-lg font-bold uppercase">
                 <i class="fa-solid fa-floppy-disk mr-2"></i> Mentés
             </button>
-            <button id="resetButton" class="btn-reset w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase">
+            <button id="resetButton" class="btn-reset w-full sm:w-1/5 p-4 rounded-xl text-lg font-bold uppercase">
                 <i class="fa-solid fa-arrows-rotate mr-2"></i> Összes Törlése
             </button>
-            <!-- A JÁTÉK MEGNYITÁSA most már a preview.html oldalt nyitja meg, LocalStorage-ból olvasva -->
-            <a id="goToGameButton" href="preview.html" target="game_preview_window" class="btn-secondary w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center">
+            <a id="goToGameButton" href="preview.html" target="game_preview_window" class="btn-secondary w-full sm:w-1/5 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center">
                 <i class="fa-solid fa-eye mr-2"></i> Preview
             </a>
-            <!-- EXPORTÁLÁS GOMB: JSON fájl letöltése (Telepítéshez) -->
-            <button id="downloadPageButton" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
+            <!-- IMPORT GOMB -->
+            <button id="loadConfigButton" class="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-1/5 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-upload mr-2"></i> Import
+            </button>
+            <!-- EXPORT GOMB -->
+            <button id="downloadPageButton" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/5 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
                 <i class="fa-solid fa-download mr-2"></i> Export
             </button>
         </div>
+        
+        <!-- HIDDEN FILE INPUT az Importáláshoz -->
+        <input type="file" id="fileInput" accept="application/json" class="hidden">
 
         <p id="message" class="text-center mt-4 text-xl font-bold"></p>
     </div>
@@ -328,7 +345,9 @@
                 passwordHelpMessage: document.getElementById('passwordHelpMessage'), // ÚJ MEZŐ
                 choiceBlock: document.getElementById('choiceBlock'), choicesContainer: document.getElementById('choicesContainer'), addChoiceBtn: document.getElementById('addChoiceBtn'),
                 previewContainer: document.getElementById('previewContainer'),
-                resetButton: document.getElementById('resetButton') // ÚJ GOMB REFERENCIA
+                resetButton: document.getElementById('resetButton'),
+                loadConfigButton: document.getElementById('loadConfigButton'), // ÚJ IMPORT GOMB
+                fileInput: document.getElementById('fileInput') // REJTETT FÁJL INPUT
             };
 
             // Alapértelmezett konfiguráció
@@ -344,13 +363,13 @@
                     AVATAR_MAP: { '§M': "https://treasurehuntsites.github.io/annaesmark/Img/mark.png", '§A': "https://treasurehuntsites.github.io/annaesmark/Img/anna.png", '§R': "https://placehold.co/70x70/1A1A1A/00FF00?text=R" },
                     HIDDEN_PREFIXES: ['§N', '§KOD', '§H', '§RESET']
                 },
-                MEDIA: { AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3", AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3" },
                 storyPages: [
-                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.', nextIndex: 1, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
-                    { type: 'text', content: '§M Igen? Miről?', nextIndex: 2, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
-                    { type: 'audio', content: '§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.', audioId: 1, nextIndex: 3, backIndex: 1, nextButtonText: "Tovább a történetre", customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'text', content: '§A Márk, azt hiszem megfeletkeztünk valamiről.', customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'text', content: '§M Igen? Miről?', customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
+                    { type: 'audio', content: '§N Körner és Rosenberg üzenete: Kérjük, hallgasd meg az első audio üzenetet.', audioId: 1, backIndex: 1, nextButtonText: "Tovább a történetre", customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
                     { type: 'password', content: '§KOD Kérjük add meg a kódot.', correctPassword: '1940', nextIndexSuccess: -1, backIndex: 2, helpMessage: ['Keresd a megoldást a helyszínen.', '1940'], customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" }, 
                 ],
+                MEDIA: { AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3", AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3" },
             };
 
             // --- PREVIEW LOGIKA ---
@@ -551,6 +570,7 @@
                 fields.galleryMode.value = page.galleryMode || 'add_url'; 
                 
 
+                // A nextIndex és backIndex beállítása: ha undefined, akkor ' ', különben az érték
                 fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
                 fields.backIndex.value = page.backIndex !== undefined ? page.backIndex : '';
 
@@ -598,6 +618,7 @@
                 page.customGalleryUrl = fields.customGalleryUrl.value; 
                 page.galleryMode = fields.galleryMode.value; 
 
+                // Módosított mentés: ha a mező üres, undefined-ként menti.
                 page.nextIndex = fields.nextIndex.value !== '' ? parseInt(fields.nextIndex.value) : undefined;
                 page.backIndex = fields.backIndex.value !== '' ? parseInt(fields.backIndex.value) : undefined;
                 
@@ -652,7 +673,7 @@
                 const newPage = {
                     type: 'text',
                     content: `§N Új oldal hozzáadva (${newIndex}).`,
-                    nextIndex: newIndex + 1,
+                    // nextIndex: undefined (alapértelmezett, nincs explicit beállítás) <-- MÓDOSÍTÁS
                     customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url"
                 };
                 
@@ -666,36 +687,91 @@
                 setTimeout(() => MESSAGE_DISPLAY.textContent = '', 3000);
             }
 
-            function loadSettings() {
-                const savedData = localStorage.getItem(STORAGE_KEY);
-                let currentConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
-                
+            // ÚJ: Funkció az importált vagy tárolt beállítások űrlapra való alkalmazásához
+            function applyConfigToForm(currentConfig) {
+                // Biztosítja, hogy a storyPages friss példányok legyenek
                 currentStoryPages = JSON.parse(JSON.stringify(currentConfig.storyPages || DEFAULT_CONFIG.storyPages));
                 
+                // Globális mezők
                 fields.appTitle.value = currentConfig.APP_TITLE || DEFAULT_CONFIG.APP_TITLE;
                 fields.backgroundUrl.value = currentConfig.BACKGROUND_URL || DEFAULT_CONFIG.BACKGROUND_URL;
                 fields.bgColor.value = currentConfig.BODY_BG_COLOR || DEFAULT_CONFIG.BODY_BG_COLOR;
                 fields.textColor.value = currentConfig.BODY_TEXT_COLOR || DEFAULT_CONFIG.BODY_TEXT_COLOR;
                 
+                // Avatarok
                 fields.avatarMUrl.value = currentConfig.AVATARS.AVATAR_MAP['§M'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§M'];
                 fields.avatarAUrl.value = currentConfig.AVATARS.AVATAR_MAP['§A'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§A'];
                 fields.avatarRUrl.value = currentConfig.AVATARS.AVATAR_MAP['§R'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§R'];
                 fields.avatarDefaultUrl.value = currentConfig.AVATARS.DEFAULT_AVATAR_URL || DEFAULT_CONFIG.AVATARS.DEFAULT_AVATAR_URL;
                 
+                // GPS/Menü
                 fields.menuMapLink.value = currentConfig.MENU_LINKS.MAP_LINK_URL || DEFAULT_CONFIG.MENU_LINKS.MAP_LINK_URL;
                 fields.targetLat.value = currentConfig.GPS_COMPASS.TARGET_LATITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
                 fields.targetLon.value = currentConfig.GPS_COMPASS.TARGET_LONGITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 fields.successRedirectUrl.value = currentConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL || DEFAULT_CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL;
                 fields.gpsMapLink.value = currentConfig.GPS_COMPASS.MAP_BUTTON_URL || DEFAULT_CONFIG.GPS_COMPASS.MAP_BUTTON_URL;
-                
+
+                // Média
                 fields.audio1Url.value = currentConfig.MEDIA.AUDIO_1_URL || DEFAULT_CONFIG.MEDIA.AUDIO_1_URL;
                 fields.audio2Url.value = currentConfig.MEDIA.AUDIO_2_URL || DEFAULT_CONFIG.MEDIA.AUDIO_2_URL;
-                
+
+                // Jelszó Globális
                 fields.passwordPromptText.value = currentConfig.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
-                
+
+                // Történet oldalak inicializálása
                 populatePageIndexSelector(currentStoryPages.length, 0);
                 loadStoryPage(0);
             }
+
+            // Cserélve loadSettings-re
+            function loadSettingsFromStorage() {
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                let currentConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
+                applyConfigToForm(currentConfig);
+            }
+
+            // ÚJ: Importálás logika
+            function importConfig() {
+                
+                // A tényleges importálás a fileInput.onchange eseményben történik
+                fields.fileInput.click();
+            }
+            
+            // ÚJ: Fájlválasztás eseménykezelő
+            fields.fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    MESSAGE_DISPLAY.textContent = 'Importálás megszakítva.';
+                    MESSAGE_DISPLAY.style.color = 'yellow';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedConfig = JSON.parse(e.target.result);
+
+                        // Alapvető érvényesítés
+                        if (!importedConfig.storyPages || !Array.isArray(importedConfig.storyPages)) {
+                            throw new Error("A fájl nem érvényes konfigurációs formátumú.");
+                        }
+                        
+                        // Alkalmazza az importált konfigurációt az űrlapra
+                        applyConfigToForm(importedConfig);
+
+                        MESSAGE_DISPLAY.textContent = `Konfiguráció sikeresen importálva "${file.name}" fájlból. Kérjük, nyomja meg a MENTÉS gombot a LocalStorage frissítéséhez!`;
+                        MESSAGE_DISPLAY.style.color = '#00FF00';
+                    } catch (error) {
+                        MESSAGE_DISPLAY.textContent = `Importálási HIBA: ${error.message}`;
+                        MESSAGE_DISPLAY.style.color = '#FF5555';
+                        console.error("Import Error:", error);
+                    }
+                    // A fájl input értékének visszaállítása, hogy ugyanazt a fájlt újra lehessen választani
+                    fields.fileInput.value = ''; 
+                };
+                reader.readAsText(file);
+            });
+
 
             function saveSettings(showSuccess = true) {
                 // Először elmentjük az aktuálisan szerkesztett oldalt (akkor is, ha nem volt explicit mentés gomb nyomás)
@@ -750,7 +826,7 @@
                 
                 try {
                     localStorage.removeItem(STORAGE_KEY);
-                    loadSettings();
+                    loadSettingsFromStorage();
                     MESSAGE_DISPLAY.textContent = 'Minden beállítás sikeresen törölve és alapértelmezettre visszaállítva!';
                     MESSAGE_DISPLAY.style.color = '#FF5733';
                     setTimeout(() => MESSAGE_DISPLAY.textContent = '', 5000);
@@ -793,11 +869,9 @@
 
 
             document.addEventListener('DOMContentLoaded', () => {
-                loadSettings();
+                loadSettingsFromStorage(); // Helyes funkció hívása
                 
                 // ELSŐ VÁLTOZTATÁS: Egy kattintásra váltás engedélyezése.
-                // A 'change' esemény *mindig* akkor fut le, ha a legördülő menü értéke megváltozik.
-                // Ha a felhasználó kétszer kattint (először kinyitja, másodszor kiválasztja az új értéket), akkor a 'change' a második kattintás után fut le.
                 fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
                 
                 fields.pageType.addEventListener('change', (e) => {
@@ -816,8 +890,9 @@
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
                 
-                // MÁSODIK VÁLTOZTATÁS: Reset gomb hozzáadása
+                // GOMBOK WIRING
                 fields.resetButton.addEventListener('click', resetSettings);
+                fields.loadConfigButton.addEventListener('click', importConfig); // ÚJ: Import gomb
                 
                 // EXPORTÁLÁS GOMB LOGIKA: JSON fájl letöltése
                 document.getElementById('downloadPageButton').addEventListener('click', () => {
