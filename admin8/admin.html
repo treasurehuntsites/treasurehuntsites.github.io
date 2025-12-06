@@ -324,6 +324,7 @@
             const goToGameButton = document.getElementById('goToGameButton');
             let currentStoryPages = [];
             let currentLoadedIndex = 0; 
+            let isInitialLoad = true; // ÚJ: Flag a kezdeti betöltés jelzésére
 
             // DOM elemek
             const fields = {
@@ -577,10 +578,17 @@
 
             // --- Main Loader ---
             function loadStoryPage(index) {
-                // Mentjük a KILÉPŐ (régi) oldalt, mielőtt betöltjük az ÚJAT
-                saveCurrentStoryPageContent(); 
+                const targetIndex = parseInt(index);
                 
-                currentLoadedIndex = parseInt(index);
+                // ÚJ ELLENŐRZÉS: Csak akkor mentjük az előző oldalt, ha nem a kezdeti betöltéskor vagyunk az Index 0-n.
+                const isFirstCallToPageZero = isInitialLoad && targetIndex === 0;
+
+                if (!isFirstCallToPageZero) {
+                    // Mentjük a KILÉPŐ (régi) oldalt, mielőtt betöltjük az ÚJAT
+                    saveCurrentStoryPageContent(); 
+                }
+                
+                currentLoadedIndex = targetIndex;
                 
                 const page = currentStoryPages[currentLoadedIndex];
                 
@@ -626,6 +634,10 @@
                         // Alapértelmezett, üres gomb az új Choice oldalhoz
                         renderChoiceRow();
                     }
+                }
+                
+                if (isInitialLoad) {
+                    isInitialLoad = false;
                 }
                 
                 updatePreview(); 
@@ -754,6 +766,10 @@
             function loadSettingsFromStorage() {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let currentConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
+                
+                // Reset flag before starting load process
+                isInitialLoad = true;
+                
                 applyConfigToForm(currentConfig);
             }
 
