@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.1 (Részletes)</title>
+    <title>Játék Konfiguráció V3.1 (Reset)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -18,6 +18,8 @@
         .btn-add:hover { background-color: #0069d9; }
         .btn-danger { background-color: #dc3545; color: white; transition: background-color 0.2s; }
         .btn-danger:hover { background-color: #c82333; }
+        .btn-reset { background-color: #ff5733; color: white; transition: background-color 0.2s; }
+        .btn-reset:hover { background-color: #c70039; }
         .hidden { display: none; }
         
         /* Preview specifikus stílusok */
@@ -137,6 +139,7 @@
                 <div class="space-y-1">
                     <label for="storyPageIndex" class="block text-sm font-medium text-gray-300 mb-1">Oldal kiválasztása (Index)</label>
                     <div class="flex gap-2">
+                        <!-- Az eseménykezelő a JS-ben biztosítja az egykattintásos váltást. -->
                         <select id="storyPageIndex" class="input-style w-full p-3 rounded-lg text-base flex-grow"></select>
                         <button id="deletePageButton" class="btn-danger p-3 rounded-lg w-12 flex items-center justify-center" title="Aktuális oldal törlése">
                             <i class="fa-solid fa-trash"></i>
@@ -277,16 +280,19 @@
         </div>
         
         <div class="flex flex-col sm:flex-row justify-between gap-4 pt-4">
-            <button id="saveButton" class="btn-primary w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase">
-                <i class="fa-solid fa-floppy-disk mr-2"></i> Beállítások Mentése
+            <button id="saveButton" class="btn-primary w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase">
+                <i class="fa-solid fa-floppy-disk mr-2"></i> Mentés
+            </button>
+            <button id="resetButton" class="btn-reset w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase">
+                <i class="fa-solid fa-arrows-rotate mr-2"></i> Összes Törlése
             </button>
             <!-- A JÁTÉK MEGNYITÁSA most már a preview.html oldalt nyitja meg, LocalStorage-ból olvasva -->
-            <a id="goToGameButton" href="preview.html" target="game_preview_window" class="btn-secondary w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center">
-                <i class="fa-solid fa-eye mr-2"></i> Játék Megnyitása (Preview)
+            <a id="goToGameButton" href="preview.html" target="game_preview_window" class="btn-secondary w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center">
+                <i class="fa-solid fa-eye mr-2"></i> Preview
             </a>
             <!-- EXPORTÁLÁS GOMB: JSON fájl letöltése (Telepítéshez) -->
-            <button id="downloadPageButton" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/3 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
-                <i class="fa-solid fa-download mr-2"></i> Exportálás (game_config.json)
+            <button id="downloadPageButton" class="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-1/4 p-4 rounded-xl text-lg font-bold uppercase text-center flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-download mr-2"></i> Export
             </button>
         </div>
 
@@ -321,7 +327,8 @@
                 passwordBlock: document.getElementById('passwordBlock'), passwordPromptText: document.getElementById('passwordPromptText'), correctPassword: document.getElementById('correctPassword'), nextIndexSuccess: document.getElementById('nextIndexSuccess'),
                 passwordHelpMessage: document.getElementById('passwordHelpMessage'), // ÚJ MEZŐ
                 choiceBlock: document.getElementById('choiceBlock'), choicesContainer: document.getElementById('choicesContainer'), addChoiceBtn: document.getElementById('addChoiceBtn'),
-                previewContainer: document.getElementById('previewContainer')
+                previewContainer: document.getElementById('previewContainer'),
+                resetButton: document.getElementById('resetButton') // ÚJ GOMB REFERENCIA
             };
 
             // Alapértelmezett konfiguráció
@@ -511,7 +518,7 @@
                 currentStoryPages.splice(index, 1);
                 
                 if (currentStoryPages.length === 0) {
-                    currentStoryPages.push({ type: 'text', content: 'Új oldal', nextIndex: 1, customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url" });
+                    currentStoryPages.push(JSON.parse(JSON.stringify(DEFAULT_CONFIG.storyPages[0])));
                 }
 
                 const newIndex = Math.max(0, index - 1);
@@ -525,9 +532,11 @@
 
             // --- Main Loader ---
             function loadStoryPage(index) {
-                saveCurrentStoryPageContent();
+                // Mentjük a KILÉPŐ (régi) oldalt, mielőtt betöltjük az ÚJAT
+                saveCurrentStoryPageContent(); 
                 
                 currentLoadedIndex = parseInt(index);
+                
                 const page = currentStoryPages[currentLoadedIndex];
                 
                 if (!page) { toggleContentBlocks('text'); fields.pageContent.value = 'Hiba: Ez az index nem létezik.'; return; }
@@ -539,7 +548,7 @@
                 fields.customAvatarUrl.value = page.customAvatarUrl || '';
                 fields.customBackgroundUrl.value = page.customBackgroundUrl || '';
                 fields.customGalleryUrl.value = page.customGalleryUrl || ''; 
-                fields.galleryMode.value = page.galleryMode || 'add_url'; // BETÖLTÉS: Alapértelmezett beállítás az új 'add_url'
+                fields.galleryMode.value = page.galleryMode || 'add_url'; 
                 
 
                 fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
@@ -587,7 +596,7 @@
                 page.customAvatarUrl = fields.customAvatarUrl.value;
                 page.customBackgroundUrl = fields.customBackgroundUrl.value;
                 page.customGalleryUrl = fields.customGalleryUrl.value; 
-                page.galleryMode = fields.galleryMode.value; // MENTÉS
+                page.galleryMode = fields.galleryMode.value; 
 
                 page.nextIndex = fields.nextIndex.value !== '' ? parseInt(fields.nextIndex.value) : undefined;
                 page.backIndex = fields.backIndex.value !== '' ? parseInt(fields.backIndex.value) : undefined;
@@ -629,7 +638,11 @@
                     delete page.choices;
                 }
                 
-                populatePageIndexSelector(currentStoryPages.length, index);
+                // FRISSÍTÉS JAVÍTÁSA: Csak a legördülő menü elem szövegét frissítjük a mentett oldaltípussal.
+                const currentOption = fields.storyPageIndex.options[index];
+                if (currentOption) {
+                    currentOption.textContent = `Oldal ${index} (${pageType})`;
+                }
             }
             
             function addNewPage() {
@@ -730,6 +743,25 @@
                 }
             }
             
+            function resetSettings() {
+                if (!confirm("BIZTOSAN TÖRÖLNI SZERETNÉD AZ ÖSSZES ELMENTETT KONFIGURÁCIÓT? Ez visszaállítja az alapértelmezett állapotot!")) {
+                    return;
+                }
+                
+                try {
+                    localStorage.removeItem(STORAGE_KEY);
+                    loadSettings();
+                    MESSAGE_DISPLAY.textContent = 'Minden beállítás sikeresen törölve és alapértelmezettre visszaállítva!';
+                    MESSAGE_DISPLAY.style.color = '#FF5733';
+                    setTimeout(() => MESSAGE_DISPLAY.textContent = '', 5000);
+                } catch (e) {
+                    console.error("Hiba a LocalStorage törlése közben:", e);
+                    MESSAGE_DISPLAY.textContent = `HIBA: Nem sikerült törölni a beállításokat.`;
+                    MESSAGE_DISPLAY.style.color = '#FF5555';
+                }
+            }
+
+
             // --- KÖZVETLEN PREVIEW INDÍTÁS LOGIKÁJA ---
             // Cél: Menteni a beállításokat, és frissíteni a preview.html oldalt.
             goToGameButton.addEventListener('click', (event) => {
@@ -762,7 +794,12 @@
 
             document.addEventListener('DOMContentLoaded', () => {
                 loadSettings();
+                
+                // ELSŐ VÁLTOZTATÁS: Egy kattintásra váltás engedélyezése.
+                // A 'change' esemény *mindig* akkor fut le, ha a legördülő menü értéke megváltozik.
+                // Ha a felhasználó kétszer kattint (először kinyitja, másodszor kiválasztja az új értéket), akkor a 'change' a második kattintás után fut le.
                 fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
+                
                 fields.pageType.addEventListener('change', (e) => {
                     saveCurrentStoryPageContent();
                     toggleContentBlocks(e.target.value);
@@ -778,6 +815,9 @@
 
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
+                
+                // MÁSODIK VÁLTOZTATÁS: Reset gomb hozzáadása
+                fields.resetButton.addEventListener('click', resetSettings);
                 
                 // EXPORTÁLÁS GOMB LOGIKA: JSON fájl letöltése
                 document.getElementById('downloadPageButton').addEventListener('click', () => {
