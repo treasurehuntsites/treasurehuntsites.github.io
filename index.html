@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Átirányítás a Google Térképre</title>
-    <!-- 
-        Ez a meta refresh tag egy biztonsági háló (fallback).
-        A 3 másodperces késleltetés ad időt a JavaScriptnek, hogy megpróbálja
-        megnyitni a natív alkalmazást. Ha az nem sikerül, a böngésző 3 másodperc után 
-        a webes változatra irányít át.
-    -->
-    <meta http-equiv="refresh" content="3; url=https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac">
     
     <style>
         /* Minimalista stílus, ha az átirányítás nem azonnali, vagy a böngésző blokkolja */
@@ -62,21 +55,36 @@
 <body>
     <div class="container">
         <h1>Átirányítás az alkalmazásba...</h1>
-        <p>A weboldal megpróbálja megnyitni a Google Térkép alkalmazást az eszközén. Ha az nem sikerül, vagy az alkalmazás nincs telepítve, 3 másodperc múlva automatikusan átirányít a webes verzióra.</p>
+        <p>A weboldal megpróbálja megnyitni a Google Térkép alkalmazást az eszközén. Ha az nem sikerül, az alkalmazás hiánya vagy blokkolás miatt, rövid késleltetés után a webes verzióra irányítunk.</p>
         <p>Ha az átirányítás nem indul el automatikusan, kattintson az alábbi linkre:</p>
         <a href="https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac">Tovább a Google Térképre (App/Web)</a>
     </div>
 
     <!-- 
-        Ez a JavaScript részlet azonnal elindítja a Universal Link-et, ami a 
-        legjobb eséllyel nyitja meg a natív Google Térkép alkalmazást (Androidon és iOS-en).
-        Ha a deep link sikertelen, a fenti meta refresh gondoskodik a webes fallback-ről 3 másodperc után.
+        EZ A JS RÉSZLET PRÓBÁLJA MEGHÍVNI A NATÍV ALKALMAZÁST.
+        1. A 'comgooglemaps://' séma közvetlenül próbálja indítani az appot.
+        2. A rövid timeout (250ms) a 'Fallback' mechanizmus a webes verzióra.
+        A meta refresh eltávolítva a JavaScript által vezérelt fallback érdekében.
     -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // A Universal Link használata, ami a mobil operációs rendszerekben
-            // a Google Maps alkalmazásba irányít, ha az telepítve van.
-            window.location.replace("https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac");
+            const universalLink = "https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac";
+            
+            // 1. Kísérlet: Próbálja megnyitni a natív Google Maps alkalmazást a custom URI séma használatával.
+            // Egy keresési lekérdezést használunk, ami megbízhatóan működik.
+            // Mivel az eredeti goo.gl link egy ELTE helyre mutat, a keresést adjuk meg.
+            const customSchemeUrl = "comgooglemaps://?q=Eötvös+Loránd+Tudományegyetem+Savaria+University+Centre";
+            
+            // Átállítja a címet az alkalmazássémára (ez indítja el az alkalmazást, ha létezik)
+            window.location.href = customSchemeUrl;
+
+            // 2. Visszaesés (Fallback): Ha az alkalmazás 250 ms-en belül nem indult el,
+            // átirányít a webes linkre.
+            setTimeout(function() {
+                // Ha még mindig ezen az oldalon vagyunk, az azt jelenti, hogy 
+                // az 'comgooglemaps://' séma nem indította el az appot (vagy nincs app).
+                window.location.replace(universalLink);
+            }, 250); // 250 milliszekundum elegendő idő az alkalmazás indításához.
         });
     </script>
 </body>
