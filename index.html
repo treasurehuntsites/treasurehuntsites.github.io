@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Átirányítás a Google Térképre</title>
-    <!--
-        A kulcsfontosságú sor: A meta refresh tag azonnal (0 másodperc)
-        átirányítja a felhasználót a megadott URL-re.
+    <!-- 
+        Ez a meta refresh tag egy biztonsági háló (fallback).
+        A 3 másodperces késleltetés ad időt a JavaScriptnek, hogy megpróbálja
+        megnyitni a natív alkalmazást. Ha az nem sikerül, a böngésző 3 másodperc után 
+        a webes változatra irányít át.
     -->
-    <meta http-equiv="refresh" content="0; url=https://www.google.com/maps/d/u/0/viewer?mid=1RPu5lG2mAeR_TLl_D6Ya4ajbleLgikI&ll=47.453898687406785%2C19.01940665000001&z=13">
+    <meta http-equiv="refresh" content="3; url=https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac">
     
     <style>
         /* Minimalista stílus, ha az átirányítás nem azonnali, vagy a böngésző blokkolja */
@@ -59,21 +61,23 @@
 </head>
 <body>
     <div class="container">
-        <h1>Átirányítás folyamatban...</h1>
+        <h1>Átirányítás az alkalmazásba...</h1>
+        <p>A weboldal megpróbálja megnyitni a Google Térkép alkalmazást az eszközén. Ha az nem sikerül, vagy az alkalmazás nincs telepítve, 3 másodperc múlva automatikusan átirányít a webes verzióra.</p>
         <p>Ha az átirányítás nem indul el automatikusan, kattintson az alábbi linkre:</p>
-        <a href="https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac">Tovább a Google Térképre</a>
+        <a href="https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac">Tovább a Google Térképre (App/Web)</a>
     </div>
 
     <!-- 
-        Ez a JavaScript részlet biztosítja a visszamenőleges kompatibilitást és 
-        egy extra átirányítási mechanizmust, ha a meta tag valamiért nem működne.
+        Ez a JavaScript részlet azonnal elindítja a Universal Link-et, ami a 
+        legjobb eséllyel nyitja meg a natív Google Térkép alkalmazást (Androidon és iOS-en).
+        Ha a deep link sikertelen, a fenti meta refresh gondoskodik a webes fallback-ről 3 másodperc után.
     -->
     <script>
-        // Kisebb késleltetés hozzáadása, hogy a felhasználó lássa a lapot, 
-        // mielőtt a böngésző átirányítaná (de a meta refresh a leggyorsabb)
-        // setTimeout(function() {
-        //     window.location.replace("https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac");
-        // }, 1000); // 1 másodperc késleltetés
+        document.addEventListener('DOMContentLoaded', function() {
+            // A Universal Link használata, ami a mobil operációs rendszerekben
+            // a Google Maps alkalmazásba irányít, ha az telepítve van.
+            window.location.replace("https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac");
+        });
     </script>
 </body>
 </html>
