@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.2 (Reset)</title>
+    <title>Játék Konfiguráció V3.4 (Dinamikus Sorrend)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -31,7 +31,7 @@
             margin-top: 20px;
             position: relative;
             color: #e0e0e0;
-            font-family: 'Play', sans-serif; /* Játék fontja */
+            font-family: 'Play', sans-serif;
             background-size: cover;
             background-position: center;
         }
@@ -45,10 +45,47 @@
             font-size: 0.8rem; margin: 2px;
         }
 
+        /* Drag and Drop list stílusok */
+        #pageListContainer {
+            cursor: default;
+        }
+        .page-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            background-color: #3f3f46;
+            cursor: grab;
+            transition: background-color 0.1s, opacity 0.1s, transform 0.1s;
+            border: 1px solid transparent;
+            font-size: 0.9rem;
+        }
+        .page-item.selected {
+            background-color: #8a2be2;
+            font-weight: bold;
+            border: 1px solid #00ffff;
+        }
+        .page-item:hover:not(.selected) {
+            background-color: #4a4a50;
+        }
+        .page-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #00ffff;
+            transform: scale(1.02);
+            background-color: #2c2c2c;
+        }
+        /* Célpont kiemelése */
+        .page-item.drag-over {
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+
         /* 5 gombos elrendezés segítése kis képernyőn */
         @media (min-width: 640px) {
             .btn-group-5 > * {
-                width: calc(20% - 0.5rem); /* 20% mínusz a gap egy része */
+                width: calc(20% - 0.5rem);
             }
             .btn-group-5 {
                 justify-content: space-between;
@@ -58,7 +95,7 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.2 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.4 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
         <!-- ÁLTALÁNOS BEÁLLÍTÁSOK -->
         <div class="card p-6 rounded-xl space-y-6">
@@ -144,19 +181,28 @@
         <div class="card p-6 rounded-xl space-y-6">
             <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Történet Szöveg Szerkesztése</h2>
 
-            <!-- MÓDOSÍTOTT ELRENDEZÉS: Teljes szélességű Index Select és alatta Page Type Select -->
+            <!-- MÓDOSÍTOTT ELRENDEZÉS: Dinamikus, húzható lista -->
             <div class="space-y-4">
                 <div class="space-y-1">
-                    <label for="storyPageIndex" class="block text-sm font-medium text-gray-300 mb-1">Oldal kiválasztása (Index)</label>
-                    <div class="flex gap-2">
-                        <!-- Az eseménykezelő a JS-ben biztosítja az egykattintásos váltást. -->
-                        <select id="storyPageIndex" class="input-style w-full p-3 rounded-lg text-base flex-grow"></select>
-                        <button id="deletePageButton" class="btn-danger p-3 rounded-lg w-12 flex items-center justify-center" title="Aktuális oldal törlése">
-                            <i class="fa-solid fa-trash"></i>
+                    <label for="pageListContainer" class="block text-sm font-medium text-gray-300 mb-1">Oldal kiválasztása (Index)</label>
+                    
+                    <!-- NEW DRAGGABLE LIST CONTAINER -->
+                    <div id="pageListContainer" class="input-style w-full p-3 rounded-lg text-base h-40 overflow-y-auto space-y-1 border border-purple-500/50">
+                        <!-- LIST ITEMS WILL BE GENERATED HERE -->
+                        <div class="text-sm text-gray-400 text-center py-4">Oldalak betöltése...</div>
+                    </div>
+
+                    <div class="flex gap-2 mt-2">
+                        <button id="insertPageBeforeButton" class="btn-add w-1/2 p-2 rounded-lg text-sm font-bold uppercase" title="Új oldal beszúrása a kiválasztott oldal elé">
+                            <i class="fa-solid fa-plus mr-1"></i> Beszúrás elé
+                        </button>
+                        <button id="deletePageButton" class="btn-danger w-1/2 p-2 rounded-lg text-sm font-bold uppercase" title="Aktuális oldal törlése">
+                            <i class="fa-solid fa-trash mr-1"></i> Aktuális Törlése
                         </button>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Összesen: <span id="pageCount">?</span> oldal.</p>
+                    <p class="text-xs text-gray-400 mt-1">Összesen: <span id="pageCount">?</span> oldal. Húzd az elemeket a sorrend változtatásához.</p>
                 </div>
+                
                 <div>
                     <label for="pageType" class="block text-sm font-medium text-gray-300 mb-1">Oldal típusa</label>
                     <select id="pageType" class="input-style w-full p-3 rounded-lg text-base">
@@ -280,8 +326,9 @@
                 </div>
             </div>
 
+            <!-- ÚJ OLDAL HOZZÁADÁSA (MINDIG A VÉGÉRE) -->
             <button id="addPageButton" class="btn-add w-full p-4 rounded-xl text-lg font-bold uppercase mt-6">
-                <i class="fa-solid fa-plus mr-2"></i> Új oldal hozzáadása a történethez
+                <i class="fa-solid fa-plus mr-2"></i> Új oldal hozzáadása a történet végére
             </button>
             
             <!-- ELŐNÉZET (PREVIEW) KONTÉNER -->
@@ -325,15 +372,18 @@
             let currentStoryPages = [];
             let currentLoadedIndex = 0; 
             let isInitialLoad = true; // Flag a kezdeti betöltés jelzésére
+            let draggedItem = null; // A húzott elem tárolása
 
-            // DOM elemek
+            // DOM elemek (frissítve a dinamikus listára)
             const fields = {
                 appTitle: document.getElementById('appTitle'), backgroundUrl: document.getElementById('backgroundUrl'), bgColor: document.getElementById('bgColor'), textColor: document.getElementById('textColor'),
                 avatarMUrl: document.getElementById('avatarMUrl'), avatarAUrl: document.getElementById('avatarAUrl'), avatarRUrl: document.getElementById('avatarRUrl'), avatarDefaultUrl: document.getElementById('avatarDefaultUrl'),
                 menuMapLink: document.getElementById('menuMapLink'), targetLat: document.getElementById('targetLat'), targetLon: document.getElementById('targetLon'), successRedirectUrl: document.getElementById('successRedirectUrl'), gpsMapLink: document.getElementById('gpsMapLink'),
                 audio1Url: document.getElementById('audio1Url'), audio2Url: document.getElementById('audio2Url'),
-                storyPageIndex: document.getElementById('storyPageIndex'), pageCount: document.getElementById('pageCount'), pageType: document.getElementById('pageType'), addPageButton: document.getElementById('addPageButton'),
+                pageListContainer: document.getElementById('pageListContainer'), // ÚJ: a select helyett div
+                pageCount: document.getElementById('pageCount'), pageType: document.getElementById('pageType'), addPageButton: document.getElementById('addPageButton'),
                 deletePageButton: document.getElementById('deletePageButton'),
+                insertPageBeforeButton: document.getElementById('insertPageBeforeButton'), // ÚJ GOMB
                 textBlock: document.getElementById('textBlock'), 
                 pageContent: document.getElementById('pageContent'), 
                 customAvatarUrl: document.getElementById('customAvatarUrl'),
@@ -353,7 +403,7 @@
 
             // Alapértelmezett konfiguráció
             const DEFAULT_CONFIG = {
-                CONFIG_VERSION: '3.2', // ÚJ VERZIÓSZÁM
+                CONFIG_VERSION: '3.4', // ÚJ VERZIÓSZÁM
                 LAST_EDITED_INDEX: 0, 
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
@@ -375,22 +425,115 @@
                 MEDIA: { AUDIO_1_URL: "https://treasurehuntsites.github.io/media/Ugynokok1.mp3", AUDIO_2_URL: "https://treasurehuntsites.github.io/media/Ugynokok2.mp3" },
             };
             
+            // --- DRAG & DROP LOGIKA ---
+            
+            function handleDragStart(e) {
+                // Csak a page-item elemet húzhatjuk
+                if (!e.target.classList.contains('page-item')) return;
+                
+                draggedItem = e.target;
+                e.dataTransfer.effectAllowed = 'move';
+                // Átmeneti tárolás, bár a logika a DOM sorrenden alapul
+                e.dataTransfer.setData('text/html', draggedItem.dataset.index); 
+                
+                setTimeout(() => draggedItem.classList.add('dragging'), 0);
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = 'move';
+                
+                const target = e.target.closest('.page-item');
+                if (target && target !== draggedItem) {
+                    // Megmutatjuk, hova szúrnánk be
+                    const rect = target.getBoundingClientRect();
+                    const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                    
+                    const referenceNode = next ? target.nextSibling : target;
+                    
+                    // Áthelyezzük a húzott elemet vizuálisan a listában (ez csak vizuális)
+                    if (!referenceNode || (next && referenceNode.dataset.index !== draggedItem.dataset.index)) {
+                        fields.pageListContainer.insertBefore(draggedItem, referenceNode);
+                    } else if (!next && referenceNode.dataset.index !== draggedItem.dataset.index) {
+                        fields.pageListContainer.insertBefore(draggedItem, referenceNode);
+                    }
+                }
+            }
+            
+            function handleDrop(e) {
+                e.preventDefault();
+                
+                // Mivel a handleDragOver már vizuálisan átrendezte, most már csak az adatokon kell módosítani
+                
+                if (!draggedItem) return;
+
+                // 1. Mentés előtt mentjük az aktuális oldal tartalmát
+                saveCurrentStoryPageContent();
+                
+                const oldIndex = parseInt(draggedItem.dataset.originalIndex);
+                
+                // 2. Az új sorrend lekérése a DOM-ból
+                const pageItems = Array.from(fields.pageListContainer.querySelectorAll('.page-item'));
+                const newStoryPages = [];
+                let newLoadedIndex = -1;
+
+                pageItems.forEach(item => {
+                    const originalArrayId = parseInt(item.dataset.originalIndex);
+                    const pageData = currentStoryPages[originalArrayId];
+                    newStoryPages.push(pageData);
+                });
+
+                // 3. Frissítjük a belső tömböt
+                currentStoryPages = newStoryPages;
+
+                // Megkeressük az újonnan betöltött indexet
+                const newlyDraggedIndex = currentStoryPages.findIndex(page => page === currentStoryPages[oldIndex]); 
+
+                // 4. Frissítjük a teljes listát (hogy az új indexek megjelenjenek) és betöltjük a mozgott oldalt.
+                populatePageList(currentLoadedIndex);
+                loadStoryPage(currentLoadedIndex);
+                saveSettings(true); 
+            }
+
+            function handleDragEnd(e) {
+                if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null;
+                }
+                // Frissítjük a listát, hogy a vizuális DOM visszatérjen az eredeti indexeléshez
+                // Ha sikeres volt a drop, a drop logika hívja a populatePageList-et.
+                // Ha sikertelen (pl. külső drop), akkor visszaállunk.
+                // Mivel a drop logika hívja a saveSettings-et (ami hívja a populatePageList-et), 
+                // ide csak az osztály eltávolítását hagyjuk.
+                
+                // Bármely kiemelés eltávolítása:
+                Array.from(fields.pageListContainer.children).forEach(item => {
+                    item.classList.remove('dragging', 'drag-over', 'opacity-50');
+                });
+            }
+
+            function handleDragEnter(e) {
+                e.preventDefault();
+                if (e.target.classList.contains('page-item') && e.target !== draggedItem) {
+                    e.target.classList.add('drag-over');
+                }
+            }
+
+            function handleDragLeave(e) {
+                if (e.target.classList.contains('page-item')) {
+                    e.target.classList.remove('drag-over');
+                }
+            }
+            
             // --- AUTOSAVE LOGIKA ---
             
-            // Handler function for all field changes: saves data and updates preview
             function autoSaveAndPreviewHandler(event) {
-                // Meggyőződünk róla, hogy a módosítás a megfelelő input mezőből jött
                 if (event && event.target.tagName === 'INPUT' && event.target.type === 'file') return;
                 
-                // Mivel az oldal-specifikus mentést a loadStoryPage/pageType change kezeli,
-                // itt csak a globális adatok mentését hívjuk meg minden input esemény után.
                 saveSettings(false); 
-                
-                // Frissítjük az előnézetet
                 updatePreview();
             }
 
-            // Function to add auto-save and preview update listener
             function addAutoSaveListener(element, eventType = 'input') {
                 if (element) {
                     element.addEventListener(eventType, autoSaveAndPreviewHandler);
@@ -399,6 +542,7 @@
             
             // --- PREVIEW LOGIKA ---
             function updatePreview() {
+                // [Nincs változás a preview logikában, megegyezik a V3.3-al]
                 const content = fields.pageContent.value || '';
                 const type = fields.pageType.value;
                 const customAvatar = fields.customAvatarUrl.value;
@@ -451,7 +595,6 @@
                     buttonsHtml = `<div class="flex justify-between w-full"><button class="preview-btn opacity-50">Vissza</button><button class="preview-btn">Tovább</button></div>`;
                 }
 
-                // Háttér beállítása a preview boxhoz
                 let bgStyle = '';
                 if (customBg && customBg.trim() !== '') {
                     bgStyle = `background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${customBg}');`;
@@ -478,18 +621,59 @@
 
             // --- SEGÉDFÜGGVÉNYEK ---
 
-            function populatePageIndexSelector(count, selectIndex = 0) {
-                fields.storyPageIndex.innerHTML = '';
-                fields.pageCount.textContent = count;
-                for (let i = 0; i < count; i++) {
-                    const page = currentStoryPages[i];
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `Oldal ${i} (${page.type})`;
-                    fields.storyPageIndex.appendChild(option);
+            // ÚJ: populatePageList - Generálja a dinamikus, húzható oldallistát
+            function populatePageList(selectIndex = 0) {
+                fields.pageListContainer.innerHTML = '';
+                fields.pageCount.textContent = currentStoryPages.length;
+                
+                currentLoadedIndex = selectIndex; // Frissítjük az aktuálisan kiválasztott indexet
+
+                currentStoryPages.forEach((page, i) => {
+                    const pageItem = document.createElement('div');
+                    pageItem.className = 'page-item';
+                    pageItem.draggable = true;
+                    // A data-index az aktuális sorrend, a data-originalIndex az oldal tömb indexe (a sorrend változhat)
+                    pageItem.dataset.index = i; 
+                    pageItem.dataset.originalIndex = i; // Ezzel hivatkozunk vissza a tömb elemére a D&D előtt
+
+                    if (i === currentLoadedIndex) {
+                        pageItem.classList.add('selected');
+                    }
+
+                    pageItem.innerHTML = `
+                        <span>
+                            <span class="font-mono text-cyan-400">${i}</span>
+                            <span class="text-gray-300 ml-2">(${page.type})</span>
+                        </span>
+                    `;
+                    
+                    // Eseménykezelők a kiválasztáshoz
+                    pageItem.addEventListener('click', () => {
+                        // Mentés, majd az oldal betöltése
+                        loadStoryPage(i);
+                        
+                        // Vizuális frissítés
+                        Array.from(fields.pageListContainer.children).forEach(item => item.classList.remove('selected'));
+                        pageItem.classList.add('selected');
+                    });
+                    
+                    // Drag & Drop eventek hozzáadása a page-item-hez
+                    pageItem.addEventListener('dragstart', handleDragStart);
+                    pageItem.addEventListener('dragenter', handleDragEnter);
+                    pageItem.addEventListener('dragleave', handleDragLeave);
+                    
+                    fields.pageListContainer.appendChild(pageItem);
+                });
+                
+                // Csak egyszer rakjuk rá a drop/dragover listenereket a konténerre
+                if (!fields.pageListContainer.__listenersAdded) {
+                    fields.pageListContainer.addEventListener('dragover', handleDragOver);
+                    fields.pageListContainer.addEventListener('drop', handleDrop);
+                    fields.pageListContainer.addEventListener('dragend', handleDragEnd);
+                    fields.pageListContainer.__listenersAdded = true;
                 }
-                fields.storyPageIndex.value = selectIndex;
             }
+
 
             function toggleContentBlocks(pageType) {
                 fields.textBlock.classList.add('hidden');
@@ -554,8 +738,8 @@
 
             // --- TÖRLÉS LOGIKA ---
             function deleteCurrentPage() {
-                const index = parseInt(fields.storyPageIndex.value);
-                if (isNaN(index)) return;
+                const index = currentLoadedIndex;
+                if (isNaN(index) || index < 0) return;
 
                 if (!confirm(`Biztosan törölni szeretnéd a(z) ${index}. oldalt? A hivatkozások (Next Index) elcsúszhatnak!`)) {
                     return;
@@ -568,23 +752,44 @@
                 }
 
                 const newIndex = Math.max(0, index - 1);
-                populatePageIndexSelector(currentStoryPages.length, newIndex);
+                populatePageList(newIndex);
                 loadStoryPage(newIndex);
                 saveSettings(true);
             }
 
             fields.deletePageButton.addEventListener('click', deleteCurrentPage);
+            
+            // ÚJ: Oldal beszúrása az aktuális index elé
+            fields.insertPageBeforeButton.addEventListener('click', () => {
+                const index = currentLoadedIndex;
+                saveCurrentStoryPageContent();
+                
+                const newPage = {
+                    type: 'text',
+                    content: `§N Új, beszúrt oldal (${index}).`,
+                    customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url"
+                };
+                
+                // Beszúrás az index elé
+                currentStoryPages.splice(index, 0, newPage);
+                
+                const newIndex = index;
+                populatePageList(newIndex);
+                loadStoryPage(newIndex);
+                saveSettings(false); 
+
+                MESSAGE_DISPLAY.textContent = `Új oldal beszúrva a(z) ${newIndex}. indexre.`;
+                MESSAGE_DISPLAY.style.color = '#00FFFF';
+                setTimeout(() => MESSAGE_DISPLAY.textContent = '', 3000);
+            });
 
 
             // --- Main Loader ---
             function loadStoryPage(index) {
                 const targetIndex = parseInt(index);
                 
-                // Csak akkor mentjük az előző oldalt, ha nem a kezdeti betöltéskor vagyunk az Index 0-n.
-                const isFirstCallToPageZero = isInitialLoad && targetIndex === 0;
-
-                if (!isFirstCallToPageZero) {
-                    // Mentjük a KILÉPŐ (régi) oldalt, mielőtt betöltjük az ÚJAT
+                // JAVÍTVA: Mentjük a KILÉPŐ (régi) oldalt BÁRMELY oldalváltás előtt, kivéve az INITIAL LOAD-ot.
+                if (!isInitialLoad) {
                     saveCurrentStoryPageContent(); 
                 }
                 
@@ -603,6 +808,14 @@
                 fields.customGalleryUrl.value = page.customGalleryUrl || ''; 
                 fields.galleryMode.value = page.galleryMode || 'add_url'; 
                 
+                // Vizuális frissítés a listán, hogy a kiválasztott elem ki legyen emelve
+                Array.from(fields.pageListContainer.children).forEach(item => {
+                    if (parseInt(item.dataset.index) === targetIndex) {
+                         item.classList.add('selected');
+                    } else {
+                         item.classList.remove('selected');
+                    }
+                });
 
                 // A nextIndex és backIndex beállítása: ha undefined, akkor ' ', különben az érték
                 fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
@@ -631,7 +844,6 @@
                     if (page.choices && Array.isArray(page.choices)) {
                         page.choices.forEach(c => renderChoiceRow(c.text, c.nextIndex));
                     } else {
-                        // Alapértelmezett, üres gomb az új Choice oldalhoz
                         renderChoiceRow();
                     }
                 }
@@ -698,11 +910,7 @@
                     delete page.choices;
                 }
                 
-                // FRISSÍTÉS JAVÍTÁSA: Csak a legördülő menü elem szövegét frissítjük a mentett oldaltípussal.
-                const currentOption = fields.storyPageIndex.options[index];
-                if (currentOption) {
-                    currentOption.textContent = `Oldal ${index} (${pageType})`;
-                }
+                // Nincs szükség listaelem szövegének frissítésére itt, azt a populatePageList végzi
             }
             
             function addNewPage() {
@@ -711,17 +919,16 @@
                 const newIndex = currentStoryPages.length;
                 const newPage = {
                     type: 'text',
-                    content: `§N Új oldal hozzáadva (${newIndex}).`,
-                    // nextIndex: undefined (alapértelmezett, nincs explicit beállítás)
+                    content: `§N Új oldal hozzáadva (${newIndex}) a végére.`,
                     customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url"
                 };
                 
                 currentStoryPages.push(newPage);
-                populatePageIndexSelector(currentStoryPages.length, newIndex);
+                populatePageList(newIndex);
                 loadStoryPage(newIndex);
                 saveSettings(false); 
 
-                MESSAGE_DISPLAY.textContent = `Új oldal hozzáadva: ${newIndex}`;
+                MESSAGE_DISPLAY.textContent = `Új oldal hozzáadva a történet végére: ${newIndex}`;
                 MESSAGE_DISPLAY.style.color = '#00FFFF';
                 setTimeout(() => MESSAGE_DISPLAY.textContent = '', 3000);
             }
@@ -762,7 +969,7 @@
 
                 // Történet oldalak inicializálása
                 const initialIndex = currentConfig.LAST_EDITED_INDEX || 0;
-                populatePageIndexSelector(currentStoryPages.length, initialIndex);
+                populatePageList(initialIndex);
                 loadStoryPage(initialIndex);
             }
 
@@ -848,7 +1055,7 @@
                 newConfig.MENU_LINKS.MAP_LINK_URL = fields.menuMapLink.value;
                 // Biztonságos float konverzió
                 newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
-                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LON.value;
+                newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 newConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL = fields.successRedirectUrl.value;
                 newConfig.GPS_COMPASS.MAP_BUTTON_URL = fields.gpsMapLink.value;
                 
@@ -945,9 +1152,6 @@
                 setupAutoSaveListeners();
                 
                 loadSettingsFromStorage(); 
-                
-                // ELSŐ VÁLTOZTATÁS: Egy kattintásra váltás engedélyezése.
-                fields.storyPageIndex.addEventListener('change', (e) => loadStoryPage(parseInt(e.target.value)));
                 
                 // VISSZAÁLLÍTVA: Így biztosan frissül a felület és mentődik az oldal, amikor oldaltípust váltunk.
                 fields.pageType.addEventListener('change', (e) => {
