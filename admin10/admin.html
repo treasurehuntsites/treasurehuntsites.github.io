@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.4 (Dinamikus Sorrend)</title>
+    <title>Játék Konfiguráció V3.6 (Gomb Elrendezés)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -95,7 +95,7 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.4 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.6 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
         <!-- ÁLTALÁNOS BEÁLLÍTÁSOK -->
         <div class="card p-6 rounded-xl space-y-6">
@@ -181,8 +181,9 @@
         <div class="card p-6 rounded-xl space-y-6">
             <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Történet Szöveg Szerkesztése</h2>
 
-            <!-- MÓDOSÍTOTT ELRENDEZÉS: Dinamikus, húzható lista -->
+            <!-- FŐ BEÁLLÍTÁSOK BLOKK: Dinamikus lista, Fő Szöveg és Index Ugrások -->
             <div class="space-y-4">
+                <!-- 1. Oldal kiválasztása (Index) - Dinamikus lista -->
                 <div class="space-y-1">
                     <label for="pageListContainer" class="block text-sm font-medium text-gray-300 mb-1">Oldal kiválasztása (Index)</label>
                     
@@ -192,17 +193,40 @@
                         <div class="text-sm text-gray-400 text-center py-4">Oldalak betöltése...</div>
                     </div>
 
+                    <!-- KÖZÖS GOMBCSOPORT (ÚJ ELRENDEZÉS) -->
                     <div class="flex gap-2 mt-2">
-                        <button id="insertPageBeforeButton" class="btn-add w-1/2 p-2 rounded-lg text-sm font-bold uppercase" title="Új oldal beszúrása a kiválasztott oldal elé">
-                            <i class="fa-solid fa-plus mr-1"></i> Beszúrás elé
+                        <button id="addPageButton" class="btn-add w-1/3 p-2 rounded-lg text-sm font-bold uppercase" title="Új oldal hozzáadása a történet VÉGÉRE">
+                            <i class="fa-solid fa-plus mr-1"></i> Új a végére
                         </button>
-                        <button id="deletePageButton" class="btn-danger w-1/2 p-2 rounded-lg text-sm font-bold uppercase" title="Aktuális oldal törlése">
-                            <i class="fa-solid fa-trash mr-1"></i> Aktuális Törlése
+                        <button id="insertPageBeforeButton" class="btn-add w-1/3 p-2 rounded-lg text-sm font-bold uppercase" title="Új oldal beszúrása a kiválasztott oldal elé">
+                            <i class="fa-solid fa-arrow-up mr-1"></i> Beszúrás elé
+                        </button>
+                        <button id="deletePageButton" class="btn-danger w-1/3 p-2 rounded-lg text-sm font-bold uppercase" title="Aktuális oldal törlése">
+                            <i class="fa-solid fa-trash mr-1"></i> Törlés
                         </button>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">Összesen: <span id="pageCount">?</span> oldal. Húzd az elemeket a sorrend változtatásához.</p>
                 </div>
+
+                <!-- MOVED: Page Content (Oldal Szövege) - BÁRHOL ELÉRHETŐ -->
+                <div>
+                    <label for="pageContent" class="block text-sm font-medium text-gray-300 mb-1">Oldal Szövege (Pl. §M Szia, Márk vagyok.)</label>
+                    <textarea id="pageContent" rows="5" class="input-style w-full p-3 rounded-lg" placeholder="Pl.: §A Megvizsgáljuk a helyszínt. A szöveg elején lévő §X jelöli a beszélőt."></textarea>
+                </div>
+
+                <!-- MOVED: Next/Back Index (Ugrás/Vissza Index) - BÁRHOL ELÉRHETŐ -->
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label for="nextIndex" class="block text-sm font-medium text-gray-300 mb-1">Ugrás Index (Next Index)</label>
+                        <input type="number" id="nextIndex" class="input-style w-full p-3 rounded-lg" placeholder="Automatikus ha üres">
+                    </div>
+                    <div>
+                        <label for="backIndex" class="block text-sm font-medium text-gray-300 mb-1">Vissza Index (Back Index)</label>
+                        <input type="number" id="backIndex" class="input-style w-full p-3 rounded-lg" placeholder="Vissza ugrás indexe">
+                    </div>
+                </div>
                 
+                <!-- Oldal típusa (pageType Select) -->
                 <div>
                     <label for="pageType" class="block text-sm font-medium text-gray-300 mb-1">Oldal típusa</label>
                     <select id="pageType" class="input-style w-full p-3 rounded-lg text-base">
@@ -214,7 +238,7 @@
                 </div>
             </div>
             
-            <!-- ÁLTALÁNOS TARTALOM BLOKK -->
+            <!-- ÁLTALÁNOS TARTALOM BLOKK (Most csak az Avatar/BG/Galéria opciókat tartalmazza) -->
             <div id="textBlock">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -243,21 +267,6 @@
                         </div>
                     </div>
                     <p class="text-xs text-gray-400 mt-1">Add meg a kép URL(ek)et, soronként egyet. A hozzáadás/eltávolítás a listában szereplő összes URL-re vonatkozik.</p>
-                </div>
-
-                <div>
-                    <label for="pageContent" class="block text-sm font-medium text-gray-300 mb-1">Oldal Szövege (Pl. §M Szia, Márk vagyok.)</label>
-                    <textarea id="pageContent" rows="5" class="input-style w-full p-3 rounded-lg" placeholder="Pl.: §A Megvizsgáljuk a helyszínt. A szöveg elején lévő §X jelöli a beszélőt."></textarea>
-                </div>
-                <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label for="nextIndex" class="block text-sm font-medium text-gray-300 mb-1">Ugrás Index (Next Index)</label>
-                        <input type="number" id="nextIndex" class="input-style w-full p-3 rounded-lg" placeholder="Automatikus ha üres">
-                    </div>
-                    <div>
-                        <label for="backIndex" class="block text-sm font-medium text-gray-300 mb-1">Vissza Index (Back Index)</label>
-                        <input type="number" id="backIndex" class="input-style w-full p-3 rounded-lg" placeholder="Vissza ugrás indexe">
-                    </div>
                 </div>
             </div>
 
@@ -326,10 +335,6 @@
                 </div>
             </div>
 
-            <!-- ÚJ OLDAL HOZZÁADÁSA (MINDIG A VÉGÉRE) -->
-            <button id="addPageButton" class="btn-add w-full p-4 rounded-xl text-lg font-bold uppercase mt-6">
-                <i class="fa-solid fa-plus mr-2"></i> Új oldal hozzáadása a történet végére
-            </button>
             
             <!-- ELŐNÉZET (PREVIEW) KONTÉNER -->
             <div id="previewContainer"></div>
@@ -380,20 +385,20 @@
                 avatarMUrl: document.getElementById('avatarMUrl'), avatarAUrl: document.getElementById('avatarAUrl'), avatarRUrl: document.getElementById('avatarRUrl'), avatarDefaultUrl: document.getElementById('avatarDefaultUrl'),
                 menuMapLink: document.getElementById('menuMapLink'), targetLat: document.getElementById('targetLat'), targetLon: document.getElementById('targetLon'), successRedirectUrl: document.getElementById('successRedirectUrl'), gpsMapLink: document.getElementById('gpsMapLink'),
                 audio1Url: document.getElementById('audio1Url'), audio2Url: document.getElementById('audio2Url'),
-                pageListContainer: document.getElementById('pageListContainer'), // ÚJ: a select helyett div
+                pageListContainer: document.getElementById('pageListContainer'), 
                 pageCount: document.getElementById('pageCount'), pageType: document.getElementById('pageType'), addPageButton: document.getElementById('addPageButton'),
                 deletePageButton: document.getElementById('deletePageButton'),
-                insertPageBeforeButton: document.getElementById('insertPageBeforeButton'), // ÚJ GOMB
+                insertPageBeforeButton: document.getElementById('insertPageBeforeButton'), 
                 textBlock: document.getElementById('textBlock'), 
                 pageContent: document.getElementById('pageContent'), 
                 customAvatarUrl: document.getElementById('customAvatarUrl'),
                 customBackgroundUrl: document.getElementById('customBackgroundUrl'),
-                customGalleryUrl: document.getElementById('customGalleryUrl'), // Most textarea
+                customGalleryUrl: document.getElementById('customGalleryUrl'), 
                 galleryMode: document.getElementById('galleryMode'), 
                 nextIndex: document.getElementById('nextIndex'), backIndex: document.getElementById('backIndex'),
                 audioBlock: document.getElementById('audioBlock'), audioId: document.getElementById('audioId'), audioNextButtonText: document.getElementById('audioNextButtonText'),
                 passwordBlock: document.getElementById('passwordBlock'), passwordPromptText: document.getElementById('passwordPromptText'), correctPassword: document.getElementById('correctPassword'), nextIndexSuccess: document.getElementById('nextIndexSuccess'),
-                passwordHelpMessage: document.getElementById('passwordHelpMessage'), // ÚJ MEZŐ
+                passwordHelpMessage: document.getElementById('passwordHelpMessage'), 
                 choiceBlock: document.getElementById('choiceBlock'), choicesContainer: document.getElementById('choicesContainer'), addChoiceBtn: document.getElementById('addChoiceBtn'),
                 previewContainer: document.getElementById('previewContainer'),
                 resetButton: document.getElementById('resetButton'),
@@ -403,7 +408,7 @@
 
             // Alapértelmezett konfiguráció
             const DEFAULT_CONFIG = {
-                CONFIG_VERSION: '3.4', // ÚJ VERZIÓSZÁM
+                CONFIG_VERSION: '3.6', // ÚJ VERZIÓSZÁM
                 LAST_EDITED_INDEX: 0, 
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
@@ -428,12 +433,10 @@
             // --- DRAG & DROP LOGIKA ---
             
             function handleDragStart(e) {
-                // Csak a page-item elemet húzhatjuk
                 if (!e.target.classList.contains('page-item')) return;
                 
                 draggedItem = e.target;
                 e.dataTransfer.effectAllowed = 'move';
-                // Átmeneti tárolás, bár a logika a DOM sorrenden alapul
                 e.dataTransfer.setData('text/html', draggedItem.dataset.index); 
                 
                 setTimeout(() => draggedItem.classList.add('dragging'), 0);
@@ -445,13 +448,11 @@
                 
                 const target = e.target.closest('.page-item');
                 if (target && target !== draggedItem) {
-                    // Megmutatjuk, hova szúrnánk be
                     const rect = target.getBoundingClientRect();
                     const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
                     
                     const referenceNode = next ? target.nextSibling : target;
                     
-                    // Áthelyezzük a húzott elemet vizuálisan a listában (ez csak vizuális)
                     if (!referenceNode || (next && referenceNode.dataset.index !== draggedItem.dataset.index)) {
                         fields.pageListContainer.insertBefore(draggedItem, referenceNode);
                     } else if (!next && referenceNode.dataset.index !== draggedItem.dataset.index) {
@@ -463,21 +464,19 @@
             function handleDrop(e) {
                 e.preventDefault();
                 
-                // Mivel a handleDragOver már vizuálisan átrendezte, most már csak az adatokon kell módosítani
-                
                 if (!draggedItem) return;
 
                 // 1. Mentés előtt mentjük az aktuális oldal tartalmát
                 saveCurrentStoryPageContent();
                 
-                const oldIndex = parseInt(draggedItem.dataset.originalIndex);
+                const oldIndex = currentLoadedIndex;
                 
                 // 2. Az új sorrend lekérése a DOM-ból
                 const pageItems = Array.from(fields.pageListContainer.querySelectorAll('.page-item'));
                 const newStoryPages = [];
-                let newLoadedIndex = -1;
-
+                
                 pageItems.forEach(item => {
+                    // Az index már nem releváns, de az adat az eredeti tömbből kell!
                     const originalArrayId = parseInt(item.dataset.originalIndex);
                     const pageData = currentStoryPages[originalArrayId];
                     newStoryPages.push(pageData);
@@ -486,12 +485,12 @@
                 // 3. Frissítjük a belső tömböt
                 currentStoryPages = newStoryPages;
 
-                // Megkeressük az újonnan betöltött indexet
-                const newlyDraggedIndex = currentStoryPages.findIndex(page => page === currentStoryPages[oldIndex]); 
+                // A régi currentLoadedIndex (ami az oldIndex volt) helyett most az új indexet kell megkeresnünk
+                const newLoadedIndex = pageItems.findIndex(item => parseInt(item.dataset.originalIndex) === oldIndex);
 
                 // 4. Frissítjük a teljes listát (hogy az új indexek megjelenjenek) és betöltjük a mozgott oldalt.
-                populatePageList(currentLoadedIndex);
-                loadStoryPage(currentLoadedIndex);
+                populatePageList(newLoadedIndex); // A newLoadedIndex helyes
+                loadStoryPage(newLoadedIndex);
                 saveSettings(true); 
             }
 
@@ -500,13 +499,7 @@
                     draggedItem.classList.remove('dragging');
                     draggedItem = null;
                 }
-                // Frissítjük a listát, hogy a vizuális DOM visszatérjen az eredeti indexeléshez
-                // Ha sikeres volt a drop, a drop logika hívja a populatePageList-et.
-                // Ha sikertelen (pl. külső drop), akkor visszaállunk.
-                // Mivel a drop logika hívja a saveSettings-et (ami hívja a populatePageList-et), 
-                // ide csak az osztály eltávolítását hagyjuk.
                 
-                // Bármely kiemelés eltávolítása:
                 Array.from(fields.pageListContainer.children).forEach(item => {
                     item.classList.remove('dragging', 'drag-over', 'opacity-50');
                 });
@@ -542,7 +535,6 @@
             
             // --- PREVIEW LOGIKA ---
             function updatePreview() {
-                // [Nincs változás a preview logikában, megegyezik a V3.3-al]
                 const content = fields.pageContent.value || '';
                 const type = fields.pageType.value;
                 const customAvatar = fields.customAvatarUrl.value;
@@ -564,7 +556,7 @@
                     else if(prefix === '§A') { avatarUrl = fields.avatarAUrl.value; cleanText = content.substring(3); }
                     else if(prefix === '§R') { avatarUrl = fields.avatarRUrl.value; cleanText = content.substring(3); }
                     else if(['§N', '§KOD', '§H', '§RESET'].includes(prefix)) { isAvatarVisible = false; cleanText = content.substring(prefix.length).trim(); }
-                    else { isAvatarVisible = false; } // Ha nincs prefix
+                    else { isAvatarVisible = false; }
                 }
 
                 if (type === 'choice') { isAvatarVisible = false; }
@@ -591,7 +583,6 @@
                         <button class="preview-btn bg-cyan-500 text-black w-full">ELLENŐRZÉS</button>
                      `;
                 } else {
-                    // Mivel a diszkrét Vissza gomb van a felületen, a fő gomb "Tovább"
                     buttonsHtml = `<div class="flex justify-between w-full"><button class="preview-btn opacity-50">Vissza</button><button class="preview-btn">Tovább</button></div>`;
                 }
 
@@ -621,20 +612,20 @@
 
             // --- SEGÉDFÜGGVÉNYEK ---
 
-            // ÚJ: populatePageList - Generálja a dinamikus, húzható oldallistát
             function populatePageList(selectIndex = 0) {
                 fields.pageListContainer.innerHTML = '';
                 fields.pageCount.textContent = currentStoryPages.length;
                 
-                currentLoadedIndex = selectIndex; // Frissítjük az aktuálisan kiválasztott indexet
+                currentLoadedIndex = selectIndex; 
 
                 currentStoryPages.forEach((page, i) => {
                     const pageItem = document.createElement('div');
                     pageItem.className = 'page-item';
                     pageItem.draggable = true;
-                    // A data-index az aktuális sorrend, a data-originalIndex az oldal tömb indexe (a sorrend változhat)
+                    // A data-index az aktuális sorrend
                     pageItem.dataset.index = i; 
-                    pageItem.dataset.originalIndex = i; // Ezzel hivatkozunk vissza a tömb elemére a D&D előtt
+                    // Az eredeti index a tömbből, ez segít a Drag&Drop után az adat visszakeresésében
+                    pageItem.dataset.originalIndex = i; 
 
                     if (i === currentLoadedIndex) {
                         pageItem.classList.add('selected');
@@ -647,17 +638,13 @@
                         </span>
                     `;
                     
-                    // Eseménykezelők a kiválasztáshoz
                     pageItem.addEventListener('click', () => {
-                        // Mentés, majd az oldal betöltése
                         loadStoryPage(i);
                         
-                        // Vizuális frissítés
                         Array.from(fields.pageListContainer.children).forEach(item => item.classList.remove('selected'));
                         pageItem.classList.add('selected');
                     });
                     
-                    // Drag & Drop eventek hozzáadása a page-item-hez
                     pageItem.addEventListener('dragstart', handleDragStart);
                     pageItem.addEventListener('dragenter', handleDragEnter);
                     pageItem.addEventListener('dragleave', handleDragLeave);
@@ -665,7 +652,6 @@
                     fields.pageListContainer.appendChild(pageItem);
                 });
                 
-                // Csak egyszer rakjuk rá a drop/dragover listenereket a konténerre
                 if (!fields.pageListContainer.__listenersAdded) {
                     fields.pageListContainer.addEventListener('dragover', handleDragOver);
                     fields.pageListContainer.addEventListener('drop', handleDrop);
@@ -676,11 +662,13 @@
 
 
             function toggleContentBlocks(pageType) {
-                fields.textBlock.classList.add('hidden');
+                
+                fields.textBlock.classList.add('hidden'); 
                 fields.audioBlock.classList.add('hidden');
                 fields.passwordBlock.classList.add('hidden');
                 fields.choiceBlock.classList.add('hidden');
                 
+                // TextBlock (Avatar/BG/Galéria) az összes alapvető oldaltípusnál látszik
                 if (pageType === 'text') {
                     fields.textBlock.classList.remove('hidden');
                 } else if (pageType === 'audio') {
@@ -707,10 +695,9 @@
                 row.querySelector('.btn-delete-choice').addEventListener('click', () => {
                     row.remove();
                     updateAddChoiceBtnState();
-                    autoSaveAndPreviewHandler(); // AutoSave and Preview for deletion
+                    autoSaveAndPreviewHandler(); 
                 });
 
-                // Cserélve autoSaveAndPreviewHandler-re
                 row.querySelector('.choice-text').addEventListener('input', autoSaveAndPreviewHandler);
                 row.querySelector('.choice-index').addEventListener('input', autoSaveAndPreviewHandler);
                 
@@ -759,7 +746,7 @@
 
             fields.deletePageButton.addEventListener('click', deleteCurrentPage);
             
-            // ÚJ: Oldal beszúrása az aktuális index elé
+            // Oldal beszúrása az aktuális index elé
             fields.insertPageBeforeButton.addEventListener('click', () => {
                 const index = currentLoadedIndex;
                 saveCurrentStoryPageContent();
@@ -770,7 +757,6 @@
                     customAvatarUrl: "", customBackgroundUrl: "", customGalleryUrl: "", galleryMode: "add_url"
                 };
                 
-                // Beszúrás az index elé
                 currentStoryPages.splice(index, 0, newPage);
                 
                 const newIndex = index;
@@ -788,7 +774,6 @@
             function loadStoryPage(index) {
                 const targetIndex = parseInt(index);
                 
-                // JAVÍTVA: Mentjük a KILÉPŐ (régi) oldalt BÁRMELY oldalváltás előtt, kivéve az INITIAL LOAD-ot.
                 if (!isInitialLoad) {
                     saveCurrentStoryPageContent(); 
                 }
@@ -817,7 +802,6 @@
                     }
                 });
 
-                // A nextIndex és backIndex beállítása: ha undefined, akkor ' ', különben az érték
                 fields.nextIndex.value = page.nextIndex !== undefined ? page.nextIndex : '';
                 fields.backIndex.value = page.backIndex !== undefined ? page.backIndex : '';
 
@@ -830,7 +814,6 @@
                     fields.correctPassword.value = page.correctPassword || '';
                     fields.nextIndexSuccess.value = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : '';
 
-                    // ÚJ: Help message betöltése (array -> string)
                     if (page.helpMessage && Array.isArray(page.helpMessage)) {
                         fields.passwordHelpMessage.value = page.helpMessage.join('\n');
                     } else {
@@ -869,7 +852,6 @@
                 page.customGalleryUrl = fields.customGalleryUrl.value; 
                 page.galleryMode = fields.galleryMode.value; 
 
-                // Módosított mentés: ha a mező üres, undefined-ként menti.
                 page.nextIndex = fields.nextIndex.value !== '' ? parseInt(fields.nextIndex.value) : undefined;
                 page.backIndex = fields.backIndex.value !== '' ? parseInt(fields.backIndex.value) : undefined;
                 
@@ -886,7 +868,6 @@
                     page.correctPassword = fields.correctPassword.value;
                     page.nextIndexSuccess = fields.nextIndexSuccess.value !== '' ? parseInt(fields.nextIndexSuccess.value) : undefined;
                     
-                    // ÚJ: Help message mentése (string -> array)
                     const rawHelpText = fields.passwordHelpMessage.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
                     if (rawHelpText.length > 0) {
                         page.helpMessage = rawHelpText;
@@ -909,8 +890,6 @@
                 } else {
                     delete page.choices;
                 }
-                
-                // Nincs szükség listaelem szövegének frissítésére itt, azt a populatePageList végzi
             }
             
             function addNewPage() {
@@ -933,65 +912,50 @@
                 setTimeout(() => MESSAGE_DISPLAY.textContent = '', 3000);
             }
 
-            // ÚJ: Funkció az importált vagy tárolt beállítások űrlapra való alkalmazásához
             function applyConfigToForm(currentConfig) {
-                // Biztosítja, hogy a storyPages friss példányok legyenek
                 currentStoryPages = JSON.parse(JSON.stringify(currentConfig.storyPages || DEFAULT_CONFIG.storyPages));
                 
-                // ÚJ: Verzió kijelzése
                 document.getElementById('configVersion').textContent = `(V${currentConfig.CONFIG_VERSION || DEFAULT_CONFIG.CONFIG_VERSION})`;
 
-                // Globális mezők
                 fields.appTitle.value = currentConfig.APP_TITLE || DEFAULT_CONFIG.APP_TITLE;
                 fields.backgroundUrl.value = currentConfig.BACKGROUND_URL || DEFAULT_CONFIG.BACKGROUND_URL;
                 fields.bgColor.value = currentConfig.BODY_BG_COLOR || DEFAULT_CONFIG.BODY_BG_COLOR;
                 fields.textColor.value = currentConfig.BODY_TEXT_COLOR || DEFAULT_CONFIG.BODY_TEXT_COLOR;
                 
-                // Avatarok
                 fields.avatarMUrl.value = currentConfig.AVATARS.AVATAR_MAP['§M'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§M'];
                 fields.avatarAUrl.value = currentConfig.AVATARS.AVATAR_MAP['§A'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§A'];
                 fields.avatarRUrl.value = currentConfig.AVATARS.AVATAR_MAP['§R'] || DEFAULT_CONFIG.AVATARS.AVATAR_MAP['§R'];
                 fields.avatarDefaultUrl.value = currentConfig.AVATARS.DEFAULT_AVATAR_URL || DEFAULT_CONFIG.AVATARS.DEFAULT_AVATAR_URL;
                 
-                // GPS/Menü
                 fields.menuMapLink.value = currentConfig.MENU_LINKS.MAP_LINK_URL || DEFAULT_CONFIG.MENU_LINKS.MAP_LINK_URL;
                 fields.targetLat.value = currentConfig.GPS_COMPASS.TARGET_LATITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
                 fields.targetLon.value = currentConfig.GPS_COMPASS.TARGET_LONGITUDE || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 fields.successRedirectUrl.value = currentConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL || DEFAULT_CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL;
                 fields.gpsMapLink.value = currentConfig.GPS_COMPASS.MAP_BUTTON_URL || DEFAULT_CONFIG.GPS_COMPASS.MAP_BUTTON_URL;
 
-                // Média
                 fields.audio1Url.value = currentConfig.MEDIA.AUDIO_1_URL || DEFAULT_CONFIG.MEDIA.AUDIO_1_URL;
                 fields.audio2Url.value = currentConfig.MEDIA.AUDIO_2_URL || DEFAULT_CONFIG.MEDIA.AUDIO_2_URL;
 
-                // Jelszó Globális
                 fields.passwordPromptText.value = currentConfig.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
 
-                // Történet oldalak inicializálása
                 const initialIndex = currentConfig.LAST_EDITED_INDEX || 0;
                 populatePageList(initialIndex);
                 loadStoryPage(initialIndex);
             }
 
-            // Cserélve loadSettings-re
             function loadSettingsFromStorage() {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let currentConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
                 
-                // Reset flag before starting load process
                 isInitialLoad = true;
                 
                 applyConfigToForm(currentConfig);
             }
 
-            // ÚJ: Importálás logika
             function importConfig() {
-                
-                // A tényleges importálás a fileInput.onchange eseményben történik
                 fields.fileInput.click();
             }
             
-            // ÚJ: Fájlválasztás eseménykezelő
             fields.fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) {
@@ -1005,14 +969,11 @@
                     try {
                         const importedConfig = JSON.parse(e.target.result);
 
-                        // Alapvető érvényesítés
                         if (!importedConfig.storyPages || !Array.isArray(importedConfig.storyPages)) {
                             throw new Error("A fájl nem érvényes konfigurációs formátumú.");
                         }
                         
-                        // Alkalmazza az importált konfigurációt az űrlapra
                         applyConfigToForm(importedConfig);
-                        // JAVÍTÁS: Automatikus mentés, hogy az adatok megmaradjanak
                         saveSettings(false); 
 
                         MESSAGE_DISPLAY.textContent = `Konfiguráció sikeresen importálva "${file.name}" fájlból. Az adatok beolvasva és elmentve a LocalStorage-ba.`;
@@ -1022,7 +983,6 @@
                         MESSAGE_DISPLAY.style.color = '#FF5555';
                         console.error("Import Error:", error);
                     }
-                    // A fájl input értékének visszaállítása, hogy ugyanazt a fájlt újra lehessen választani
                     fields.fileInput.value = ''; 
                 };
                 reader.readAsText(file);
@@ -1030,7 +990,6 @@
 
 
             function saveSettings(showSuccess = true) {
-                // JAVÍTVA: Mindig mentjük az aktuálisan látható oldal adatait az array-be, ha van oldalunk
                 if (currentStoryPages.length > 0) {
                     saveCurrentStoryPageContent();
                 } 
@@ -1038,7 +997,6 @@
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
                 
-                // ÚJ: Frissítjük a verziót és az utolsó indexet
                 newConfig.CONFIG_VERSION = DEFAULT_CONFIG.CONFIG_VERSION; 
                 newConfig.LAST_EDITED_INDEX = currentLoadedIndex;
 
@@ -1053,7 +1011,6 @@
                 newConfig.AVATARS.AVATAR_MAP['§R'] = fields.avatarRUrl.value;
                 
                 newConfig.MENU_LINKS.MAP_LINK_URL = fields.menuMapLink.value;
-                // Biztonságos float konverzió
                 newConfig.GPS_COMPASS.TARGET_LATITUDE = parseFloat(fields.targetLat.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LATITUDE;
                 newConfig.GPS_COMPASS.TARGET_LONGITUDE = parseFloat(fields.targetLon.value) || DEFAULT_CONFIG.GPS_COMPASS.TARGET_LONGITUDE;
                 newConfig.GPS_COMPASS.SUCCESS_REDIRECT_URL = fields.successRedirectUrl.value;
@@ -1063,7 +1020,6 @@
                 newConfig.MEDIA.AUDIO_1_URL = fields.audio1Url.value;
                 newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
                 
-                // A storyPages már frissítve lett a saveCurrentStoryPageContent hívásával
                 newConfig.storyPages = currentStoryPages;
 
                 try {
@@ -1101,9 +1057,7 @@
                 }
             }
             
-            // --- LISTENERS SETUP ---
             function setupAutoSaveListeners() {
-                // Kezeli az összes globális és oldal-specifikus mezőt (input/textarea)
                 const inputFields = [
                     fields.appTitle, fields.backgroundUrl, fields.bgColor, fields.textColor,
                     fields.avatarMUrl, fields.avatarAUrl, fields.avatarRUrl, fields.avatarDefaultUrl,
@@ -1117,23 +1071,16 @@
 
                 inputFields.forEach(field => addAutoSaveListener(field, 'input'));
 
-                // Kezeli a select (legördülő) mezőket (change event)
                 const selectFields = [
                     fields.galleryMode, fields.audioId
                 ];
                 selectFields.forEach(field => addAutoSaveListener(field, 'change'));
             }
-            // --- LISTENERS SETUP VÉGE ---
 
-            // --- KÖZVETLEN PREVIEW INDÍTÁS LOGIKÁJA ---
-            // Cél: Menteni a beállításokat, és új lapon megnyitni a preview.html oldalt.
             goToGameButton.addEventListener('click', (event) => {
-                event.preventDefault(); // Megakadályozzuk az alapértelmezett navigációt
-
-                // 1. MENTÉS kényszerítése
+                event.preventDefault(); 
                 saveSettings(false); 
 
-                // 2. Új ablak nyitása a "_blank" targettel (új lap).
                 const previewWindow = window.open(goToGameButton.href, '_blank');
                 
                 if (previewWindow) {
@@ -1148,39 +1095,29 @@
 
 
             document.addEventListener('DOMContentLoaded', () => {
-                // A betöltés után beállítjuk az autosave listenereket
                 setupAutoSaveListeners();
                 
                 loadSettingsFromStorage(); 
                 
-                // VISSZAÁLLÍTVA: Így biztosan frissül a felület és mentődik az oldal, amikor oldaltípust váltunk.
                 fields.pageType.addEventListener('change', (e) => {
-                    // 1. Mentjük az aktuális oldal adatait, mielőtt átváltjuk a felületet (így a régi mezők értékei elmentődnek)
                     saveCurrentStoryPageContent();
                     
-                    // 2. Frissítjük a látható blokkokat (pl. Text/Password/Choice)
                     toggleContentBlocks(e.target.value);
 
-                    // 3. Mentjük a teljes configot (most már az új típussal a storyPages-ben)
                     saveSettings(false); 
                     
-                    // 4. Frissítjük az előnézetet
                     updatePreview();
                 });
 
                 fields.addPageButton.addEventListener('click', addNewPage);
                 document.getElementById('saveButton').addEventListener('click', () => saveSettings(true));
                 
-                // GOMBOK WIRING
                 fields.resetButton.addEventListener('click', resetSettings);
                 fields.loadConfigButton.addEventListener('click', importConfig); 
                 
-                // EXPORTÁLÁS GOMB LOGIKA: JSON fájl letöltése
                 document.getElementById('downloadPageButton').addEventListener('click', () => {
-                    // 1. Mentés kényszerítése az export előtt
                     saveSettings(false); 
                     
-                    // 2. A teljes konfiguráció lekérése a LocalStorage-ból
                     const finalConfigJson = localStorage.getItem(STORAGE_KEY);
                     if (!finalConfigJson) {
                         MESSAGE_DISPLAY.textContent = 'HIBA: Nincs konfiguráció a mentéshez!';
@@ -1188,13 +1125,12 @@
                         return;
                     }
                     
-                    // 3. Fájl generálása és letöltése
                     const blob = new Blob([finalConfigJson], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = 'game_config.json'; // A játék oldala ezt a fájlt fogja keresni
+                    a.download = 'game_config.json';
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
