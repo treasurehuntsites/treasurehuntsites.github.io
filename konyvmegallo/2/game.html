@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
     <title id="app-title">Anna és Márk (Telepített) V3.1</title>
     
-    <!-- GPS és Ikonok -->
     <meta http-equiv="Permissions-Policy" content="geolocation=*">
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -279,12 +278,10 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <!-- A src="" attribútum eltávolítva, hogy a böngésző ne próbálja meg feloldani a hiányzó forrást. A JS állítja be. -->
         <img id="story-image" alt="Háttér" onerror="console.error('Game Log: Háttérkép betöltése sikertelen. Ellenőrizd az URL-t a JSON fájlban!', this.src); this.onerror=null; this.style.opacity='0';">
     </div>
 
     <div class="content-box content-hidden" id="content-box"> 
-        <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
@@ -293,7 +290,6 @@
         
         <p id="story-text-display"></p>
         
-        <!-- Audio -->
         <div id="audio-container-1" class="audio-container" style="display:none;">
              <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
         </div>
@@ -302,16 +298,13 @@
         </div>
 
         <div class="bottom-bar">
-            <!-- Normál Navigáció -->
             <div class="interaction-container" id="interaction-container">
                 <button id="prev-page-button" class="page-button" disabled>Vissza</button>
                 <button id="next-page-button" class="page-button">Tovább</button>
             </div>
             
-            <!-- Választás Gombok -->
             <div class="multi-choice-container" id="multi-choice-container" style="display:none;"></div>
 
-            <!-- Jelszó -->
             <div id="password-container">
                 <p>
                     <span id="password-prompt-text">Add meg a kódot:</span>
@@ -332,7 +325,6 @@
         <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
     </div>
     
-    <!-- Modálok -->
     <div id="galleryModal">
       <span class="close-gallery">×</span>
       <div id="gallery-container">
@@ -434,6 +426,19 @@
             }
 
             async function initializeGame() {
+                
+                // ** MÓDOSÍTÁS KEZDETE: A böngésző Vissza gombjának semlegesítése **
+                // 1. Beteszünk egy puffer bejegyzést a böngésző előzményébe.
+                history.pushState(null, null, location.href);
+
+                // 2. Figyeljük a böngésző "Vissza" gombjának megnyomását (popstate esemény).
+                window.addEventListener('popstate', function () {
+                    // 3. Amikor a Vissza gombot megnyomják, azonnal visszahelyezzük ugyanazt a puffer bejegyzést.
+                    // Ez a művelet semlegesíti a visszalépést, így az oldal nem zárul be, és nem lép vissza a történetben.
+                    history.pushState(null, null, location.href);
+                    // Itt nincs szükség további teendőre, mert a felhasználó nem szeretne semmit sem csinálni.
+                });
+                // ** MÓDOSÍTÁS VÉGE **
                 
                 try {
                     const CONFIG = await loadConfig(); // Konfiguráció betöltése
