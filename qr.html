@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Leolvasó v1.3</title>
+    <title>QR Kód Leolvasó v1.4</title>
     <!-- Tailwind CSS a stílusokhoz -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -50,7 +50,7 @@
 
     <!-- Fő alkalmazás konténer -->
     <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-4">
-        <h1 class="text-3xl font-bold text-center text-primary">QR Kód Leolvasó v1.3</h1>
+        <h1 class="text-3xl font-bold text-center text-primary">QR Kód Leolvasó v1.4</h1>
         <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center bg-gray-100 rounded-lg">
             Betöltés...
         </p>
@@ -162,7 +162,9 @@
                     configLoaded = true;
 
                     if (targetValue && redirectUrl) {
-                        statusMessage.textContent = `Készen áll a szkennelésre. Célkód (${targetValue}) betöltve.`;
+                        // KONFIGURÁCIÓ MEGJELENÍTÉSE
+                        const displayUrl = redirectUrl.length > 30 ? redirectUrl.substring(0, 27) + '...' : redirectUrl;
+                        statusMessage.textContent = `Kész. Célkód: "${targetValue}", Átirányítás: "${displayUrl}"`;
                         startScanButton.style.display = 'block';
                     } else {
                         // HIÁNYZÓ KONFIGURÁCIÓ ESETÉN
@@ -189,7 +191,7 @@
             console.error("Kritikus hiba a kamera elérésénél: ", err);
             let errorMessage = "Hiba: Nem sikerült elérni a kamerát. Lehetséges okok: ";
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                errorMessage += "A felhasználó megtagadta az engedélyt, vagy a böngésző blokkolja.";
+                errorMessage += "A felhasználó megtagadta az engedélyt, vagy a böngésző blokkolja. (Ellenőrizd a címsort!)";
             } else if (err.name === 'NotFoundError') {
                 errorMessage += "Nincs elérhető kamera a készüléken.";
             } else if (location.protocol !== 'https:') {
