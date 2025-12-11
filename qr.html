@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Olvasó és Titkos Kulcs Ellenőrző</title>
-    <!-- Tailwind CSS CDN a szép és reszponzív stílushoz -->
+    <title>QR Kód Olvasó és Titkos Kulcs EEllenőrző</title>
+    <!-- Tailwind CSS CDN for beautiful and responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter betűtípus beállítása -->
+    <!-- Set Inter font -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7fafc;
         }
-        /* Egyedi stílus a videó konténerhez */
+        /* Custom styling for the video container */
         #reader {
             width: 100%;
             max-width: 400px;
@@ -23,12 +23,12 @@
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
         }
     </style>
-    <!-- html5-qrcode könyvtár a QR-kód olvasáshoz -->
+    <!-- html5-qrcode library for QR code reading -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- Fő alkalmazás konténer -->
+    <!-- Main application container -->
     <div class="w-full max-w-lg bg-white p-6 md:p-8 rounded-xl shadow-2xl space-y-6">
         
         <header class="text-center">
@@ -36,10 +36,10 @@
             <p class="mt-2 text-gray-500">Olvasson be egy QR kódot a titkos kulcs ellenőrzéséhez.</p>
         </header>
 
-        <!-- A QR-kód olvasó megjelenítési területe -->
+        <!-- The QR code reader display area -->
         <div id="reader"></div>
 
-        <!-- Állapotüzenet megjelenítése -->
+        <!-- Status message display -->
         <div id="status-message" class="text-center p-3 rounded-lg font-medium transition-all duration-300 bg-blue-100 text-blue-700">
             Kamera betöltése...
         </div>
@@ -51,14 +51,14 @@
     </div>
 
     <script>
-        // --- KONFIGURÁCIÓS VÁLTOZÓK ---
-        // A szöveg, amivel a QR-kód tartalmát összehasonlítjuk.
+        // --- CONFIGURATION VARIABLES ---
+        // The text to compare with the QR code content.
         const SECRET_CODE = "TITKOS_ENGEDELYEZO_KULCS_2024";
         
-        // Az URL, ahová a felhasználót átirányítjuk, ha az egyezés sikeres.
+        // The URL to redirect the user to upon successful match.
         const REDIRECT_URL = "https://www.google.com/search?q=sikeres+ellenorzes";
         
-        // Várjon az átirányítással ennyi másodpercet (felhasználói élmény javítása)
+        // Delay the redirect by this many milliseconds (improves user experience)
         const REDIRECT_DELAY_MS = 2000;
         // ------------------------------
 
@@ -66,90 +66,112 @@
         const statusMessageEl = document.getElementById("status-message");
         const secretDisplayEl = document.getElementById("secret-display");
 
-        // A futás idején használt beállítások
+        // Runtime settings
         const config = {
             fps: 10,
             qrbox: { width: 250, height: 250 },
-            // Előnyben részesítjük a hátsó kamerát mobileszközön
-            facingMode: "environment" 
+            // facingMode is now handled by camera enumeration in startScanner
         };
 
         /**
-         * Kezeli a sikeres beolvasást (amikor egy QR kódot dekódoltunk).
-         * @param {string} decodedText - A beolvasott QR kód tartalma.
+         * Handles successful scan (when a QR code is decoded).
+         * @param {string} decodedText - The content of the scanned QR code.
          */
         function onScanSuccess(decodedText) {
-            // A kód leállítása, hogy ne olvasson be folyamatosan
+            // Stop the reader from scanning continuously
             html5QrCode.stop().then((ignore) => {
-                console.log("QR Code olvasás leállítva.");
+                console.log("QR Code reading stopped.");
             }).catch((err) => {
-                console.error("Hiba az olvasó leállításakor:", err);
+                console.error("Error stopping the scanner:", err);
             });
 
-            // 1. Állapot frissítése
+            // 1. Update status
             statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-yellow-100 text-yellow-700";
             statusMessageEl.innerHTML = `Sikeresen beolvasva: <b>${decodedText}</b>. Ellenőrzés...`;
 
-            // 2. Összehasonlítás
+            // 2. Comparison
             if (decodedText.trim() === SECRET_CODE) {
-                // Egyezés sikeres
+                // Match successful
                 statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-green-100 text-green-700";
                 statusMessageEl.innerHTML = `Kód EGYEZIK! Átirányítás ${REDIRECT_DELAY_MS / 1000} másodperc múlva ide: <b>${REDIRECT_URL}</b>`;
                 
-                console.log(`Siker! Átirányítás: ${REDIRECT_URL}`);
+                console.log(`Success! Redirecting to: ${REDIRECT_URL}`);
                 
-                // Átirányítás késleltetése a felhasználói élmény érdekében
+                // Delay the redirect for better user experience
                 setTimeout(() => {
                     window.location.href = REDIRECT_URL;
                 }, REDIRECT_DELAY_MS);
 
             } else {
-                // Egyezés sikertelen
+                // Match failed
                 statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-red-100 text-red-700";
                 statusMessageEl.innerHTML = `Kód NEM EGYEZIK. Várt kulcs: ${SECRET_CODE.substring(0, 5)}... Próbálja újra 5 másodperc múlva.`;
                 
-                console.warn(`Sikertelen egyezés. Beolvasott: "${decodedText}", Várt: "${SECRET_CODE}"`);
+                console.warn(`Failed match. Scanned: "${decodedText}", Expected: "${SECRET_CODE}"`);
 
-                // Újraindítás 5 másodperc múlva
+                // Restart after 5 seconds
                 setTimeout(startScanner, 5000);
             }
         }
 
         /**
-         * Kezeli a beolvasási hibákat (pl. ha a kamera nem lát QR kódot).
-         * @param {string} errorMessage - A hibaüzenet.
+         * Handles scanning errors (e.g., if the camera doesn't see a QR code).
+         * @param {string} errorMessage - The error message.
          */
         function onScanError(errorMessage) {
-            // Nem kell folyamatosan hibaüzenetet kiírni, csak csendben folytatjuk az olvasást
-            // console.error("Olvasási hiba:", errorMessage);
+            // No need to continuously display error messages, just continue scanning silently
+            // console.error("Scanning error:", errorMessage);
         }
 
         /**
-         * Inicializálja és elindítja a QR kód olvasót.
+         * Initializes and starts the QR code reader, explicitly enumerating cameras first.
          */
         async function startScanner() {
             try {
-                // Megpróbáljuk elindítani az olvasót a kamera kiválasztása nélkül
-                // A rendszer automatikusan kéri az engedélyt és kiválaszt egy kamerát
-                await html5QrCode.start(
-                    { facingMode: "environment" }, // Próbáljuk a környezeti kamerát mobileszközön
-                    config, 
-                    onScanSuccess, 
-                    onScanError
-                );
-                statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-blue-100 text-blue-700";
-                statusMessageEl.innerHTML = "QR Kód Olvasó Elindítva. Keresés...";
-                console.log("QR Kód Olvasó sikeresen elindult.");
+                // Retrieve available camera devices
+                const videoInputDevices = await Html5Qrcode.getCameras();
+
+                if (videoInputDevices && videoInputDevices.length) {
+                    // Use the first device found or try to find the back camera ('environment')
+                    let cameraId = videoInputDevices[0].id;
+                    let preferredDevice = videoInputDevices.find(device => 
+                        device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('environment')
+                    );
+
+                    if (preferredDevice) {
+                        cameraId = preferredDevice.id;
+                    }
+
+                    // Attempt to start the scanner with the selected camera ID.
+                    // This explicitly requests the media stream and should trigger the permission prompt.
+                    await html5QrCode.start(
+                        cameraId, 
+                        config, 
+                        onScanSuccess, 
+                        onScanError
+                    );
+
+                    statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-blue-100 text-blue-700";
+                    statusMessageEl.innerHTML = "QR Kód Olvasó Elindítva. Keresés...";
+                    console.log("QR Code Reader successfully started.");
+
+                } else {
+                    // No cameras found
+                    statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-yellow-600 text-white";
+                    statusMessageEl.innerHTML = "HIBA: Nem találtunk kamerát. Ellenőrizze, hogy van-e csatlakoztatva, és engedélyezze a böngészőben.";
+                    console.error("No cameras found on the device.");
+                }
 
             } catch (err) {
-                // Kamera hozzáférési hiba kezelése
+                // Handle camera access failure (e.g., permission denied or browser block)
                 statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-red-500 text-white";
-                statusMessageEl.innerHTML = "HIBA: Nem sikerült elérni a kamerát. Ellenőrizze az engedélyeket!";
-                console.error("Kamera indítási hiba:", err);
+                statusMessageEl.innerHTML = "HIBA: Nem sikerült elérni a kamerát, vagy az engedély meg lett tagadva. Ellenőrizze a böngésző beállításait!";
+                console.error("Camera startup error (likely permission denied or blocked):", err);
             }
         }
 
-        // Indítsa el az olvasót az oldal betöltése után
+        // Start the scanner after the page loads
         window.onload = startScanner;
     </script>
 </body>
