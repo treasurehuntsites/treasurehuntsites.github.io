@@ -162,13 +162,16 @@
                     configLoaded = true;
 
                     if (targetValue && redirectUrl) {
-                        statusMessage.textContent = `Készen áll a szkennelésre. Célkód beállítva.`;
+                        statusMessage.textContent = `Készen áll a szkennelésre. Célkód (${targetValue}) betöltve.`;
                         startScanButton.style.display = 'block';
                     } else {
-                        statusMessage.textContent = "Hiba: Nincs érvényes konfiguráció. Kérem, állítsa be az admin oldalon.";
+                        // HIÁNYZÓ KONFIGURÁCIÓ ESETÉN
+                        statusMessage.innerHTML = "<span class='font-bold text-red-600'>HIBA:</span> Nincs beállítva célkód. Használd a <span class='font-mono bg-yellow-200 px-1 rounded'>qr_config.html</span> fájlt a beállításhoz.";
+                        startScanButton.style.display = 'none'; // Rejtve marad
                     }
                 } else {
-                    statusMessage.textContent = "Konfiguráció nem található. Kérem, állítsa be az admin oldalon.";
+                    // KONFIGURÁCIÓ NEM TALÁLHATÓ
+                    statusMessage.innerHTML = "<span class='font-bold text-red-600'>HIBA:</span> Konfiguráció nem található. Kérem, állítsa be a <span class='font-mono bg-yellow-200 px-1 rounded'>qr_config.html</span> fájlban.";
                 }
             }, (error) => {
                 console.error("Hiba az adatok lekérésekor:", error);
@@ -184,7 +187,8 @@
         async function initializeCamera() {
             if (scanning) return;
             if (!configLoaded || !targetValue || !redirectUrl) {
-                 statusMessage.textContent = "Hiba: A konfiguráció nem teljes. Kérem, állítsa be az admin oldalon.";
+                 // HIÁNYZÓ KONFIGURÁCIÓ ESETÉN A GOMBRÓL VALÓ KLIKK UTÁN
+                 statusMessage.innerHTML = "<span class='font-bold text-red-600'>HIBA:</span> A konfiguráció hiányzik. Kérem, állítsa be a <span class='font-mono bg-yellow-200 px-1 rounded'>qr_config.html</span> fájlban.";
                  return;
             }
 
