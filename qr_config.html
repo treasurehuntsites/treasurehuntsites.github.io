@@ -1,180 +1,190 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Konfiguráció v1.1</title>
-    <!-- Tailwind CSS a stílusokhoz -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'primary': '#4f46e5',
-                        'secondary': '#f97316',
+    <!DOCTYPE html>
+    <html lang="hu">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>QR Kód Konfiguráció v1.2</title>
+        <!-- Tailwind CSS a stílusokhoz -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            'primary': '#4f46e5',
+                            'secondary': '#f97316',
+                        }
                     }
                 }
             }
-        }
-    </script>
-</head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4 font-sans">
+        </script>
+    </head>
+    <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4 font-sans">
 
-    <!-- Fő alkalmazás konténer -->
-    <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-6">
-        <h1 class="text-3xl font-bold text-center text-secondary border-b pb-4">QR Kód Konfiguráció (v1.1)</h1>
-        
-        <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center bg-yellow-50 rounded-lg p-2 border border-yellow-200">
-            Betöltés...
-        </p>
-
-        <!-- Konfigurációs Rész (Firestore adatok) -->
-        <div class="space-y-4">
-            <p class="text-xs text-gray-500">
-                A beolvasott kód tartalma ehhez az értékhez lesz hasonlítva. Ha egyezik, a megadott URL-re irányít át. A felhasználó azonosítója: <span id="user-id" class="font-mono text-xs bg-gray-200 px-1 py-0.5 rounded">Betöltés...</span>
+        <!-- Fő alkalmazás konténer -->
+        <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-6">
+            <h1 class="text-3xl font-bold text-center text-secondary border-b pb-4">QR Kód Konfiguráció (v1.2)</h1>
+            
+            <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center bg-yellow-50 rounded-lg p-2 border border-yellow-200">
+                Betöltés...
             </p>
 
-            <div>
-                <label for="target-value" class="block text-sm font-medium text-gray-700">Cél QR kód Tartalom:</label>
-                <input type="text" id="target-value" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-secondary focus:border-secondary" placeholder="pl.: titkos_kod_123">
+            <!-- Konfigurációs Rész (Firestore adatok) -->
+            <div class="space-y-4">
+                <p class="text-xs text-gray-500">
+                    A beolvasott kód tartalma ehhez az értékhez lesz hasonlítva. Ha egyezik, a megadott URL-re irányít át. A felhasználó azonosítója: <span id="user-id" class="font-mono text-xs bg-gray-200 px-1 py-0.5 rounded">Betöltés...</span>
+                </p>
+
+                <div>
+                    <label for="target-value" class="block text-sm font-medium text-gray-700">Cél QR kód Tartalom:</label>
+                    <input type="text" id="target-value" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-secondary focus:border-secondary" placeholder="pl.: titkos_kod_123">
+                </div>
+
+                <div>
+                    <label for="redirect-url" class="block text-sm font-medium text-gray-700">Siker Esetén Átirányítási URL:</label>
+                    <input type="url" id="redirect-url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-secondary focus:border-secondary" placeholder="pl.: https://pelda.hu/sikeres">
+                </div>
+
+                <button id="save-config-button" class="w-full py-3 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 transition duration-150">
+                    Konfiguráció Mentése
+                </button>
             </div>
 
-            <div>
-                <label for="redirect-url" class="block text-sm font-medium text-gray-700">Siker Esetén Átirányítási URL:</label>
-                <input type="url" id="redirect-url" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-secondary focus:border-secondary" placeholder="pl.: https://pelda.hu/sikeres">
-            </div>
-
-            <button id="save-config-button" class="w-full py-3 bg-secondary text-white font-semibold rounded-lg shadow-md hover:bg-orange-600 transition duration-150">
-                Konfiguráció Mentése
-            </button>
         </div>
 
-    </div>
+        <!-- Firebase Scriptek -->
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+            import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+            import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+            
+            // Global Firebase változók (Canvas környezetből)
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-qr-app-id';
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    <!-- Firebase Scriptek -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Global Firebase változók (Canvas környezetből)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-qr-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            // UI elemek
+            const statusMessage = document.getElementById('status-message');
+            const targetValueInput = document.getElementById('target-value');
+            const redirectUrlInput = document.getElementById('redirect-url');
+            const saveConfigButton = document.getElementById('save-config-button');
+            const userIdDisplay = document.getElementById('user-id');
 
-        // UI elemek
-        const statusMessage = document.getElementById('status-message');
-        const targetValueInput = document.getElementById('target-value');
-        const redirectUrlInput = document.getElementById('redirect-url');
-        const saveConfigButton = document.getElementById('save-config-button');
-        const userIdDisplay = document.getElementById('user-id');
+            // Állapotváltozók
+            let db, auth;
+            let userId = null;
+            let isAuthReady = false;
 
-        // Állapotváltozók
-        let db, auth;
-        let userId = null;
-        let isAuthReady = false;
-
-        // --- Firebase Inicializálás és Hitelesítés ---
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    isAuthReady = true;
-                    userIdDisplay.textContent = userId;
-                    statusMessage.textContent = 'Hitelesítés sikeres. Konfiguráció betöltése...';
-                    setupFirestoreListener();
-                } else {
-                    await signInAnonymously(auth);
-                }
-            });
-
-            if (initialAuthToken) {
-                signInWithCustomToken(auth, initialAuthToken)
-                    .catch(error => {
-                        console.error("Custom token hiba, anonim bejelentkezés indítása:", error);
-                        statusMessage.textContent = `Hiba a bejelentkezéskor: ${error.code}. Anonim bejelentkezés...`;
-                        signInAnonymously(auth)
-                            .catch(anonError => {
-                                console.error("Kritikus hiba: Anonim bejelentkezés is sikertelen.", anonError);
-                                statusMessage.textContent = `Kritikus hiba: Nem sikerült hitelesíteni. ${anonError.code}`;
-                            }); 
-                    });
-            } else {
-                 signInAnonymously(auth)
-                    .catch(error => {
-                        console.error("Anonim bejelentkezés hiba:", error);
-                        statusMessage.textContent = `Kritikus hiba: Nem sikerült hitelesíteni. ${error.code}`;
-                    });
-            }
-
-        } catch (error) {
-            console.error("Firebase inicializálási hiba:", error);
-            statusMessage.textContent = `Hiba a Firebase inicializáláskor: ${error.message}`;
-        }
-
-        // --- Adatbázis (Firestore) Kezelés ---
-
-        const qrConfigRef = () => doc(db, `artifacts/${appId}/public/data/qr_config`, 'config');
-
-        function setupFirestoreListener() {
-            if (!db) return;
-
-            // Figyelés a cél adatokra
-            onSnapshot(qrConfigRef(), (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    targetValueInput.value = data.targetValue || '';
-                    redirectUrlInput.value = data.redirectUrl || '';
-                    const displayUrl = (data.redirectUrl && data.redirectUrl.length > 30) ? data.redirectUrl.substring(0, 27) + '...' : data.redirectUrl;
-
-                    statusMessage.textContent = `Konfiguráció betöltve. Célkód: "${data.targetValue || 'nincs beállítva'}", Átirányítás: "${displayUrl || 'nincs beállítva'}"`;
-                } else {
-                    statusMessage.textContent = "Konfiguráció nem található. Kérem, mentse el a beállításokat a kezdéshez.";
-                }
-            }, (error) => {
-                console.error("Hiba az adatok lekérésekor:", error);
-                statusMessage.textContent = `Hiba a konfiguráció betöltésekor: ${error.message}`;
-            });
-        }
-
-        // Konfiguráció mentése
-        saveConfigButton.addEventListener('click', async () => {
-            if (!isAuthReady) {
-                statusMessage.textContent = "Kérem, várja meg a hitelesítést!";
-                return;
-            }
-            const newTargetValue = targetValueInput.value.trim();
-            const newRedirectUrl = redirectUrlInput.value.trim();
-
-            if (!newTargetValue || !newRedirectUrl) {
-                statusMessage.textContent = "Hiba: Kérem, töltse ki mindkét konfigurációs mezőt!";
-                return;
-            }
-
-            saveConfigButton.disabled = true;
-            saveConfigButton.textContent = "Mentés...";
-
+            // --- Firebase Inicializálás és Hitelesítés ---
             try {
-                await setDoc(qrConfigRef(), {
-                    targetValue: newTargetValue,
-                    redirectUrl: newRedirectUrl,
-                    lastUpdated: new Date().toISOString(),
-                    updaterId: userId
+                // Ellenőrzés: ha a konfiguráció hiányzik, azonnal hibát dobunk.
+                if (Object.keys(firebaseConfig).length === 0) {
+                    throw new Error("Missing or invalid Firebase configuration.");
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        isAuthReady = true;
+                        userIdDisplay.textContent = userId;
+                        statusMessage.textContent = 'Hitelesítés sikeres. Konfiguráció betöltése...';
+                        setupFirestoreListener();
+                    } else {
+                        await signInAnonymously(auth);
+                    }
                 });
-                statusMessage.textContent = "Konfiguráció sikeresen elmentve! Vissza tud váltani a Leolvasó oldalra.";
+
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken)
+                        .catch(error => {
+                            console.error("Custom token hiba, anonim bejelentkezés indítása:", error);
+                            statusMessage.textContent = `Hiba a bejelentkezéskor: ${error.code}. Anonim bejelentkezés...`;
+                            signInAnonymously(auth)
+                                .catch(anonError => {
+                                    console.error("Kritikus hiba: Anonim bejelentkezés is sikertelen.", anonError);
+                                    statusMessage.textContent = `Kritikus hiba: Nem sikerült hitelesíteni. ${anonError.code}`;
+                                }); 
+                        });
+                } else {
+                    signInAnonymously(auth)
+                        .catch(error => {
+                            console.error("Anonim bejelentkezés hiba:", error);
+                            statusMessage.textContent = `Kritikus hiba: Nem sikerült hitelesíteni. ${error.code}`;
+                        });
+                }
+
             } catch (error) {
-                console.error("Hiba a mentéskor:", error);
-                statusMessage.textContent = `Hiba a konfiguráció mentésekor: ${error.message}`;
-            } finally {
-                saveConfigButton.disabled = false;
-                saveConfigButton.textContent = "Konfiguráció Mentése";
+                console.error("Firebase inicializálási hiba:", error);
+                // Ha a konfiguráció hiányzik a Canvasból, ezt jelenítjük meg:
+                if (error.message.includes("Missing or invalid Firebase configuration")) {
+                    statusMessage.textContent = "KRITIKUS HIBA: Hiányzik a Firebase konfiguráció. Kérem, ellenőrizze a környezeti változókat.";
+                } else {
+                    statusMessage.textContent = `Hiba a Firebase inicializáláskor: ${error.message}`;
+                }
             }
-        });
-    </script>
-</body>
-</html>
+
+            // --- Adatbázis (Firestore) Kezelés ---
+
+            const qrConfigRef = () => doc(db, `artifacts/${appId}/public/data/qr_config`, 'config');
+
+            function setupFirestoreListener() {
+                if (!db) return;
+
+                // Figyelés a cél adatokra
+                onSnapshot(qrConfigRef(), (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        targetValueInput.value = data.targetValue || '';
+                        redirectUrlInput.value = data.redirectUrl || '';
+                        const displayUrl = (data.redirectUrl && data.redirectUrl.length > 30) ? data.redirectUrl.substring(0, 27) + '...' : data.redirectUrl;
+
+                        statusMessage.textContent = `Konfiguráció betöltve. Célkód: "${data.targetValue || 'nincs beállítva'}", Átirányítás: "${displayUrl || 'nincs beállítva'}"`;
+                    } else {
+                        statusMessage.textContent = "Konfiguráció nem található. Kérem, mentse el a beállításokat a kezdéshez.";
+                    }
+                }, (error) => {
+                    console.error("Hiba az adatok lekérésekor:", error);
+                    statusMessage.textContent = `Hiba a konfiguráció betöltésekor: ${error.message}`;
+                });
+            }
+
+            // Konfiguráció mentése
+            saveConfigButton.addEventListener('click', async () => {
+                if (!isAuthReady) {
+                    statusMessage.textContent = "Kérem, várja meg a hitelesítést!";
+                    return;
+                }
+                const newTargetValue = targetValueInput.value.trim();
+                const newRedirectUrl = redirectUrlInput.value.trim();
+
+                if (!newTargetValue || !newRedirectUrl) {
+                    statusMessage.textContent = "Hiba: Kérem, töltse ki mindkét konfigurációs mezőt!";
+                    return;
+                }
+
+                saveConfigButton.disabled = true;
+                saveConfigButton.textContent = "Mentés...";
+
+                try {
+                    await setDoc(qrConfigRef(), {
+                        targetValue: newTargetValue,
+                        redirectUrl: newRedirectUrl,
+                        lastUpdated: new Date().toISOString(),
+                        updaterId: userId
+                    });
+                    statusMessage.textContent = "Konfiguráció sikeresen elmentve! Vissza tud váltani a Leolvasó oldalra.";
+                } catch (error) {
+                    console.error("Hiba a mentéskor:", error);
+                    statusMessage.textContent = `Hiba a konfiguráció mentésekor: ${error.message}`;
+                } finally {
+                    saveConfigButton.disabled = false;
+                    saveConfigButton.textContent = "Konfiguráció Mentése";
+                }
+            });
+        </script>
+    </body>
+    </html>
