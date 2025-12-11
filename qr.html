@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Leolvasó v1.2</title>
+    <title>QR Kód Leolvasó v1.3</title>
     <!-- Tailwind CSS a stílusokhoz -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -50,7 +50,7 @@
 
     <!-- Fő alkalmazás konténer -->
     <div class="w-full max-w-lg bg-white shadow-xl rounded-2xl p-6 space-y-4">
-        <h1 class="text-3xl font-bold text-center text-primary">QR Kód Leolvasó v1.2</h1>
+        <h1 class="text-3xl font-bold text-center text-primary">QR Kód Leolvasó v1.3</h1>
         <p id="status-message" class="text-center text-sm font-medium text-gray-700 h-10 flex items-center justify-center bg-gray-100 rounded-lg">
             Betöltés...
         </p>
@@ -183,6 +183,24 @@
 
         // Kamera indítása
         startScanButton.addEventListener('click', initializeCamera);
+        
+        // Hibaüzenet kezelő segédfüggvény
+        function handleCameraError(err) {
+            console.error("Kritikus hiba a kamera elérésénél: ", err);
+            let errorMessage = "Hiba: Nem sikerült elérni a kamerát. Lehetséges okok: ";
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                errorMessage += "A felhasználó megtagadta az engedélyt, vagy a böngésző blokkolja.";
+            } else if (err.name === 'NotFoundError') {
+                errorMessage += "Nincs elérhető kamera a készüléken.";
+            } else if (location.protocol !== 'https:') {
+                errorMessage += "Csak biztonságos (HTTPS) környezetben működik.";
+            } else {
+                 errorMessage += `Ismeretlen hiba (${err.name}). Ellenőrizze a konzolt a részletekért.`;
+            }
+            
+            statusMessage.textContent = errorMessage;
+            startScanButton.style.display = 'block';
+        }
 
         async function initializeCamera() {
             if (scanning) return;
@@ -195,12 +213,37 @@
             statusMessage.textContent = "Kamera engedély kérése...";
             console.log("Kamera engedély kérés megkezdve (navigator.mediaDevices.getUserMedia).");
 
+            let streamAttempted = false;
+            
+            // Kísérlet 1: Hátsó kamera (environment)
             try {
-                // Kamera engedély kérése (hátsó kamera preferálása)
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" }
                 });
-
+                streamAttempted = true;
+            } catch (err) {
+                console.warn("Első kamera indítási kísérlet (environment) sikertelen:", err);
+                
+                if (err.name === 'NotFoundError') {
+                    // Kísérlet 2: Bármely elérhető kamera (user/default)
+                    console.log("Hátsó kamera nem található, kísérlet bármely elérhető kamerával.");
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true }); 
+                        streamAttempted = true;
+                    } catch (secondErr) {
+                        // Ha a második kísérlet is sikertelen
+                        handleCameraError(secondErr);
+                        return;
+                    }
+                } else {
+                    // Más típusú hibák (pl. PermissionDenied) kezelése
+                    handleCameraError(err);
+                    return;
+                }
+            }
+            
+            // Ha sikeresen kaptunk stream-et (akár az első, akár a második kísérletből)
+            if (streamAttempted && stream) {
                 video.srcObject = stream;
                 video.setAttribute("playsinline", true); // iOS-en szükséges
                 video.play();
@@ -212,23 +255,6 @@
                     statusMessage.textContent = "Keresés: Tartsa a QR kódot a célkeresztben.";
                     requestAnimationFrame(tick);
                 });
-
-            } catch (err) {
-                // Itt történik a hiba, ha a felhasználó megtagadta, vagy a böngésző blokkolja.
-                console.error("Hiba a kamera elérésénél: ", err);
-                let errorMessage = "Hiba: Nem sikerült elérni a kamerát. Lehetséges okok: ";
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMessage += "A felhasználó megtagadta az engedélyt.";
-                } else if (err.name === 'NotFoundError') {
-                    errorMessage += "Nincs elérhető kamera.";
-                } else if (location.protocol !== 'https:') {
-                    errorMessage += "Csak biztonságos (HTTPS) környezetben működik.";
-                } else {
-                     errorMessage += "Ismeretlen hiba történt. Ellenőrizze a konzolt.";
-                }
-                
-                statusMessage.textContent = errorMessage;
-                startScanButton.style.display = 'block';
             }
         }
 
