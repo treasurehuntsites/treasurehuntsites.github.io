@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Kód Olvasó és Titkos Kulcs Elelenőrző</title>
+    <title>QR Kód Olvasó és Titkos Kulcs Ellenőrző</title>
     <!-- Tailwind CSS CDN for beautiful and responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Set Inter font -->
@@ -21,7 +21,7 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-            /* Hide initially until button is pressed or scanner starts */
+            /* Hide initially until scanner starts */
             display: none; 
         }
     </style>
@@ -35,12 +35,12 @@
         
         <header class="text-center">
             <h1 class="text-3xl font-bold text-gray-900">QR Kód Ellenőrző</h1>
-            <p class="mt-2 text-gray-500">Kattintson az indító gombra a kamera eléréséhez és a kód beolvasásához.</p>
+            <p class="mt-2 text-gray-500">Az oldal automatikusan kéri a kamera engedélyét. Ha nem jelenik meg, használja a kézi indítás gombot.</p>
         </header>
 
-        <!-- Button to start the scanner, requiring user interaction -->
+        <!-- Button to start the scanner manually, or as a fallback/restart -->
         <button id="start-button" onclick="startScanner()" class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 ease-in-out disabled:bg-gray-400">
-            Kamera Indítása / Engedély Kérése
+            Kézi Indítás / Újrapróbálás
         </button>
 
         <!-- The QR code reader display area (hidden initially) -->
@@ -75,8 +75,6 @@
         const startButtonEl = document.getElementById("start-button");
         const secretDisplayEl = document.getElementById("secret-display");
 
-        let isScanning = false;
-
         // Runtime settings
         const config = {
             fps: 10,
@@ -89,8 +87,8 @@
          * @param {string} decodedText - The content of the scanned QR code.
          */
         function onScanSuccess(decodedText) {
-            if (!isScanning) return; // Prevent double trigger
-            isScanning = false;
+            // Disable button immediately to prevent double scan/start
+            startButtonEl.disabled = true;
 
             // Stop the reader from scanning continuously
             html5QrCode.stop().then((ignore) => {
@@ -124,10 +122,10 @@
                 
                 console.warn(`Failed match. Scanned: "${decodedText}", Expected: "${SECRET_CODE}"`);
 
-                // Re-enable button and restart after 5 seconds
+                // Re-enable button after 5 seconds to allow manual restart
                 setTimeout(() => {
                     startButtonEl.disabled = false;
-                    startButtonEl.textContent = "Újraindítás / Kamera Engedélyezése";
+                    startButtonEl.textContent = "Kézi Indítás / Újrapróbálás";
                 }, 5000);
             }
         }
@@ -142,19 +140,20 @@
 
         /**
          * Initializes and starts the QR code reader, explicitly enumerating cameras first.
-         * Must be triggered by a user action (e.g., button click) to ensure permission request is shown.
+         * This function is now called automatically on page load, and manually via the button.
          */
         async function startScanner() {
-            if (isScanning) return;
-            isScanning = true;
+            // Check if scanner is already running (relying on button disabled state)
+            if (startButtonEl.disabled && startButtonEl.textContent !== "Kézi Indítás / Újrapróbálás") return; 
             
             startButtonEl.disabled = true;
             startButtonEl.textContent = "Kamera Elérése...";
+            readerEl.style.display = 'none'; // Ensure reader is hidden before attempt
             statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-blue-100 text-blue-700";
             statusMessageEl.innerHTML = "Kamera betöltése. Kérem, engedélyezze a hozzáférést a böngészőben.";
 
             try {
-                // Retrieve available camera devices
+                // Retrieve available camera devices - this triggers the permission prompt
                 const videoInputDevices = await Html5Qrcode.getCameras();
 
                 if (videoInputDevices && videoInputDevices.length) {
@@ -182,12 +181,13 @@
 
                     statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-green-100 text-green-700";
                     statusMessageEl.innerHTML = "QR Kód Olvasó Elindítva. Keresés...";
-                    startButtonEl.textContent = "Keresés Folyamatban (Beolvasva Leáll)";
+                    startButtonEl.textContent = "Keresés Folyamatban..."; 
+                    // Button remains disabled while scanning is active
+                    
                     console.log("QR Code Reader successfully started.");
 
                 } else {
                     // No cameras found
-                    isScanning = false;
                     startButtonEl.disabled = false;
                     startButtonEl.textContent = "Nincs Kamera Található - Újrapróbálás";
                     statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-yellow-600 text-white";
@@ -196,21 +196,18 @@
                 }
 
             } catch (err) {
-                // Handle camera access failure (e.g., permission denied or browser block)
-                isScanning = false;
+                // Handle camera access failure (e.g., permission denied, browser block, or iframe restriction)
                 readerEl.style.display = 'none';
                 startButtonEl.disabled = false;
-                startButtonEl.textContent = "Kamera Indítása / Engedély Kérése";
+                startButtonEl.textContent = "Kézi Indítás / Újrapróbálás";
                 statusMessageEl.className = "text-center p-3 rounded-lg font-medium transition-all duration-300 bg-red-500 text-white";
-                statusMessageEl.innerHTML = "HIBA: Nem sikerült elérni a kamerát, vagy az engedély meg lett tagadva. Kérem, nyomja meg újra a gombot, és adja meg az engedélyt!";
+                statusMessageEl.innerHTML = "HIBA: A kamera indítása sikertelen. Kérem, kattintson a gombra a hozzáférés megadásához, vagy ellenőrizze a böngésző engedélyeit!";
                 console.error("Camera startup error (likely permission denied or blocked):", err);
             }
         }
         
-        // Initial setup on load
-        window.onload = () => {
-             statusMessageEl.innerHTML = "Kattintson a fenti gombra a kamera indításához.";
-        };
+        // Initial setup on load - Attempts to start the scanner immediately, fulfilling the user's request.
+        window.onload = startScanner; 
     </script>
 </body>
 </html>
