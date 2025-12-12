@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
     <title id="app-title">Anna és Márk (Telepített) V3.1</title>
     
-    <!-- GPS és Ikonok -->
     <meta http-equiv="Permissions-Policy" content="geolocation=*">
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -279,12 +278,10 @@
 </head>
 <body oncontextmenu="return false;"> 
     <div class="full-width-image-container">
-        <!-- A src="" attribútum eltávolítva, hogy a böngésző ne próbálja meg feloldani a hiányzó forrást. A JS állítja be. -->
         <img id="story-image" alt="Háttér" onerror="console.error('Game Log: Háttérkép betöltése sikertelen. Ellenőrizd az URL-t a JSON fájlban!', this.src); this.onerror=null; this.style.opacity='0';">
     </div>
 
     <div class="content-box content-hidden" id="content-box"> 
-        <!-- Diszkrét Vissza Gomb -->
         <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
             <i class="fa-solid fa-arrow-left"></i>
         </button>
@@ -293,7 +290,6 @@
         
         <p id="story-text-display"></p>
         
-        <!-- Audio -->
         <div id="audio-container-1" class="audio-container" style="display:none;">
              <button id="play-audio-button-1" class="audio-button">▶️ Lejátszás (1)</button>
         </div>
@@ -302,16 +298,13 @@
         </div>
 
         <div class="bottom-bar">
-            <!-- Normál Navigáció -->
             <div class="interaction-container" id="interaction-container">
                 <button id="prev-page-button" class="page-button" disabled>Vissza</button>
                 <button id="next-page-button" class="page-button">Tovább</button>
             </div>
             
-            <!-- Választás Gombok -->
             <div class="multi-choice-container" id="multi-choice-container" style="display:none;"></div>
 
-            <!-- Jelszó -->
             <div id="password-container">
                 <p>
                     <span id="password-prompt-text">Add meg a kódot:</span>
@@ -332,7 +325,6 @@
         <button id="image-button" class="menu-button" title="Galéria / Kép"><i class="fa-solid fa-image"></i></button>
     </div>
     
-    <!-- Modálok -->
     <div id="galleryModal">
       <span class="close-gallery">×</span>
       <div id="gallery-container">
@@ -418,9 +410,9 @@
                         const fileConfig = await response.json();
                         // Alapértelmezett beállítások felülírása a fájl tartalmával
                         CONFIG = { ...CONFIG, ...fileConfig };
-                         if(fileConfig.AVATARS) CONFIG.AVATARS = { ...CONFIG.AVATARS, ...fileConfig.AVATARS };
-                         if(fileConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...CONFIG.GPS_COMPASS, ...fileConfig.GPS_COMPASS };
-                         if(fileConfig.MEDIA) CONFIG.MEDIA = { ...CONFIG.MEDIA, ...fileConfig.MEDIA };
+                         if(fileConfig.AVATARS) CONFIG.AVATARS = { ...fileConfig.AVATARS, ...fileConfig.AVATARS };
+                         if(fileConfig.GPS_COMPASS) CONFIG.GPS_COMPASS = { ...fileConfig.GPS_COMPASS, ...fileConfig.GPS_COMPASS };
+                         if(fileConfig.MEDIA) CONFIG.MEDIA = { ...fileConfig.MEDIA, ...fileConfig.MEDIA };
                         console.log("Game Log: Konfiguráció sikeresen beolvasva game_config.json fájlból.");
                         console.log("Game Log: Teljes betöltött CONFIG (DEBUG):", CONFIG); // DEBUG: Teljes CONFIG
                         return CONFIG;
@@ -467,6 +459,57 @@
                         galleryModal: document.getElementById('galleryModal'), galleryContainer: document.getElementById('gallery-container'),
                         fullImageModal: document.getElementById('full-image-display'), fullImage: document.getElementById('fullImageDisplay')
                     };
+
+                    // ** MÓDOSÍTÁS KEZDETE: A böngésző Vissza gombjának kezelése **
+                    // 1. Beteszünk egy puffer bejegyzést az előzménybe
+                    history.pushState(null, null, location.href);
+
+                    // Eseménykezelő a natív böngésző Vissza gombra (modál bezárása)
+                    window.addEventListener('popstate', function (event) {
+                        
+                        // Fontos: Azonnal visszahelyezzük az állapotot, hogy a modál bezárása után ne lépjen ki.
+                        history.pushState(null, null, location.href);
+                        
+                        // Ellenőrizzük, hogy nyitva van-e valamilyen modál
+                        const isFullImageOpen = els.fullImageModal.style.display === 'flex';
+                        const isGalleryOpen = els.galleryModal.style.display === 'block';
+                        const isHelpOpen = els.helpModal.style.display === 'flex';
+                        const isDistanceOpen = els.distModal.style.display === 'flex';
+
+                        if (isFullImageOpen || isGalleryOpen || isHelpOpen || isDistanceOpen) {
+                            // Ha bármilyen modál nyitva van, bezárjuk azt.
+                            
+                            if (isFullImageOpen) {
+                                closeFullImage();
+                            } else if (isGalleryOpen) {
+                                closeGallery();
+                            } else if (isHelpOpen) {
+                                els.helpModal.style.display = 'none';
+                            } else if (isDistanceOpen) {
+                                els.distModal.style.display = 'none';
+                                if (els.contentBox) els.contentBox.classList.remove('content-hidden');
+                            }
+                        }
+                        // Ha nincs modál, a beforeunload fogja kezelni a kilépési megerősítést.
+                    });
+
+                    // Eseménykezelő a kilépési kísérlet megerősítésére (amikor nincs nyitva modál)
+                    window.addEventListener('beforeunload', function(event) {
+                        // Ellenőrizzük, van-e nyitva bármilyen modál. Ha van, akkor a popstate eseménykezelő már kezelte.
+                        // Ha nincs nyitva, ez a beforeunload esemény a kilépési kísérletre utal.
+                        const isFullImageOpen = els.fullImageModal.style.display === 'flex';
+                        const isGalleryOpen = els.galleryModal.style.display === 'block';
+                        const isHelpOpen = els.helpModal.style.display === 'flex';
+                        const isDistanceOpen = els.distModal.style.display === 'flex';
+
+                        if (!isFullImageOpen && !isGalleryOpen && !isHelpOpen && !isDistanceOpen) {
+                            // Megakadályozzuk az oldal elhagyását, amíg a felhasználó nem erősíti meg.
+                            // A böngésző natív megerősítő üzenetét fogja használni.
+                            event.returnValue = "Biztosan ki akar lépni a játékból?";
+                            return "Biztosan ki akar lépni a játékból?";
+                        }
+                    });
+                    // ** MÓDOSÍTÁS VÉGE **
 
                     // Init Stílusok (Hibatűrő módosítás)
                     const appTitleEl = document.getElementById('app-title');
