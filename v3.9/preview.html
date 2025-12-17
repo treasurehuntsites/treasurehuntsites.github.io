@@ -22,9 +22,9 @@
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
 
         body {
-            /* Kezdeti rejtés: a láthatóságot csak a JS állítja be, ha sikeresen betöltött a config */
-            opacity: 0; /* Kezdetben láthatatlan */
-            transition: opacity 0.5s ease-in-out; /* Fokozatosan megjelenik */
+            /* Kezdeti rejtés: a láthatóságot csak a JS állítja be a betöltés után */
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out; 
             margin: 0; padding: 0;
             background-color: var(--bg-color);
             color: var(--text-color);
@@ -512,8 +512,11 @@
             
             // Háttér beállítása
             const backgroundUrl = page.customBackgroundUrl || config.BACKGROUND_URL;
-            if (backgroundUrl) {
+            // NOTE: Az admin felületről jön a default BACKGROUND_URL, ha az üres, akkor átlátszó marad a háttér, de a body bg-color fogja adni a színt.
+            if (backgroundUrl && backgroundUrl.trim() !== '') {
                 dom.backgroundContainer.style.backgroundImage = `url('${backgroundUrl}')`;
+            } else {
+                dom.backgroundContainer.style.backgroundImage = 'none'; // Fontos, hogy ne maradjon az előző kép.
             }
 
             // Oldal tartalom kiírása (beszélő és szöveg)
@@ -527,14 +530,14 @@
             // Avatar és szöveg tisztítása
             if (page.customAvatarUrl && page.customAvatarUrl.trim() !== '') {
                 avatarUrl = page.customAvatarUrl;
-                if (['§M', '§A', '§R', '§N'].includes(prefix)) {
+                if (['§M', '§A', '§R', '§N'].includes(prefix) || page.type === 'choice') {
                     cleanText = content.substring(prefix.length).trim();
                 }
             } else {
                 if(prefix === '§M') { avatarUrl = config.AVATARS.AVATAR_MAP['§M']; cleanText = content.substring(3).trim(); cssClass = 'text-green-300'; }
                 else if(prefix === '§A') { avatarUrl = config.AVATARS.AVATAR_MAP['§A']; cleanText = content.substring(3).trim(); cssClass = 'text-yellow-300'; }
                 else if(prefix === '§R') { avatarUrl = config.AVATARS.AVATAR_MAP['§R']; cleanText = content.substring(3).trim(); cssClass = 'text-red-300'; }
-                else if(config.AVATARS.HIDDEN_PREFIXES.includes(prefix)) { 
+                else if(config.AVATARS.HIDDEN_PREFIXES.includes(prefix) || page.type === 'choice') { 
                     isAvatarVisible = false; 
                     cleanText = content.substring(prefix.length).trim(); 
                     cssClass = 'text-center italic'; 
@@ -700,7 +703,7 @@
             `).join('');
             
             const backIndex = config.storyPages[gameState.currentIndex].backIndex;
-             if (backIndex !== undefined) {
+             if (backIndex !== undefined && backIndex !== null) {
                 buttonsHtml += `
                     <button class="btn-action bg-gray-600 hover:bg-gray-700" onclick="navigate(${backIndex})">
                         <i class="fa-solid fa-arrow-left mr-2"></i> Vissza
@@ -734,10 +737,14 @@
              const showNext = defaultNext < config.storyPages.length;
              const showBack = defaultBack >= 0;
              
-             const singleClass = (showNext && !showBack) || (!showNext && showBack) ? 'w-full' : 'w-1/2';
+             // Ha a backIndex explicit be van állítva, akkor a Vissza gombot mindig megmutatjuk,
+             // kivéve ha 0-nál kisebb.
+             const showExplicitBack = backIndex !== undefined && backIndex !== null;
+
+             const singleClass = (showNext && (!showBack && !showExplicitBack)) || ((!showNext) && (showBack || showExplicitBack)) ? 'w-full' : 'w-1/2';
              
              dom.actionArea.innerHTML = `<div class="flex gap-4">
-                 <button class="btn-action bg-gray-600 hover:bg-gray-700 ${showBack ? singleClass : 'hidden'}" onclick="navigate(${defaultBack})">
+                 <button class="btn-action bg-gray-600 hover:bg-gray-700 ${showBack || showExplicitBack ? singleClass : 'hidden'}" onclick="navigate(${defaultBack})">
                      <i class="fa-solid fa-arrow-left mr-2"></i> Vissza
                  </button>
                  <button class="btn-action ${showNext ? singleClass : 'hidden'}" onclick="navigate(${defaultNext})">
@@ -747,6 +754,11 @@
         }
 
         function navigate(newIndex) {
+            // Null értékek kezelése az Admin felületről
+            if (newIndex === null || newIndex === undefined) {
+                 newIndex = gameState.currentIndex + 1;
+            }
+
             if (newIndex >= 0 && newIndex < config.storyPages.length) {
                 gameState.currentIndex = newIndex;
                 saveGameState();
@@ -873,6 +885,9 @@
             }
 
             statusDisplay.textContent = 'Helyzet követése elindítva...';
+            // Itt kellene lennie egy watchId beállításnak, de mivel a Canvas/iFrame környezetben a háttérben futó GPS gyakran blokkolva van, 
+            // a watchPosition-t érdemesebb közvetlenül a GPS gombra kötni, ha az az interaktív nézetben van. Itt modal-ban van, ami jó.
+            
             window.watchId = navigator.geolocation.watchPosition(updatePosition, errorPosition, {
                 enableHighAccuracy: true,
                 maximumAge: 5000,
