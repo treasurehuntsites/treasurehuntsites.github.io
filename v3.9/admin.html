@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.8</title>
+    <title>Játék Konfiguráció V3.8 (Gomb Elrendezés Javítva)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -11,35 +11,258 @@
         .card { background-color: #2c2c2c; border: 2px solid #8a2be2; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
         .input-style { background-color: #3f3f46; color: #00ffff; border: 1px solid #6b7280; }
         .btn-primary { background-color: #8a2be2; color: white; transition: background-color 0.2s; }
-        .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; }
+        .btn-primary:hover { background-color: #7b1cd1; }
+        .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; transition: background-color 0.2s; }
+        .btn-secondary:hover { background-color: #00ddee; }
+        .btn-add { background-color: #007bff; color: white; transition: background-color 0.2s; }
+        .btn-add:hover { background-color: #0069d9; }
+        .btn-danger { background-color: #dc3545; color: white; transition: background-color 0.2s; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-reset { background-color: #ff5733; color: white; transition: background-color 0.2s; }
+        .btn-reset:hover { background-color: #c70039; }
+        .hidden { display: none; }
+        
+        .game-preview-box {
+            background-color: rgba(0, 0, 0, 0.85);
+            border: 2px solid #8a2be2;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            position: relative;
+            color: #e0e0e0;
+            font-family: 'Play', sans-serif;
+            background-size: cover;
+            background-position: center;
+        }
+        .preview-avatar {
+            width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ffff;
+            object-fit: cover; margin-right: 15px;
+        }
+        .preview-btn {
+            background-color: #8a2be2; color: white; padding: 8px 16px; 
+            border-radius: 4px; font-weight: bold; text-transform: uppercase;
+            font-size: 0.8rem; margin: 2px;
+        }
+
+        #pageListContainer { cursor: default; }
+        .page-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; margin-bottom: 4px; border-radius: 6px;
+            background-color: #3f3f46; cursor: grab; transition: background-color 0.1s;
+            border: 1px solid transparent; font-size: 0.9rem;
+        }
+        .page-item.selected { background-color: #8a2be2; font-weight: bold; border: 1px solid #00ffff; }
+        .page-item:hover:not(.selected) { background-color: #4a4a50; }
+        .page-item.dragging { opacity: 0.5; border: 2px dashed #00ffff; transform: scale(1.02); }
+        .page-item.drag-over { border: 2px solid #ff0000; box-shadow: 0 0 10px #ff0000; }
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-3xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció</h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.8 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
-        <div class="card p-6 rounded-xl space-y-4">
-            <h2 class="text-xl font-semibold border-b border-gray-600 pb-2">Általános Beállítások</h2>
-            <input type="text" id="appTitle" class="input-style w-full p-3 rounded-lg" placeholder="Játék címe">
-            <input type="url" id="backgroundUrl" class="input-style w-full p-3 rounded-lg" placeholder="Alapértelmezett háttérkép URL">
-        </div>
-
-        <div class="flex gap-4 justify-center">
-            <button id="saveButton" class="btn-primary px-6 py-3 rounded-lg font-bold">Beállítások Mentése</button>
-            <button id="downloadPageButton" class="btn-secondary px-6 py-3 rounded-lg">JSON Letöltése</button>
+        <div class="card p-6 rounded-xl space-y-6">
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Általános Beállítások</h2>
+            <div>
+                <label for="appTitle" class="block text-sm font-medium text-gray-300 mb-1">Weboldal Címe (Title)</label>
+                <input type="text" id="appTitle" class="input-style w-full p-3 rounded-lg focus:ring-purple-500" placeholder="Pl.: Anna és Márk Kincskeresés">
+            </div>
+            <div>
+                <label for="backgroundUrl" class="block text-sm font-medium text-gray-300 mb-1">Alapértelmezett Háttérkép URL</label>
+                <input type="url" id="backgroundUrl" class="input-style w-full p-3 rounded-lg focus:ring-purple-500" placeholder="https://...">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="color" id="bgColor" class="input-style w-full h-12 rounded-lg" value="#1a1a1a">
+                <input type="color" id="textColor" class="input-style w-full h-12 rounded-lg" value="#e0e0e0">
+            </div>
         </div>
         
-        <p id="messageDisplay" class="text-center font-bold mt-4"></p>
+        <div class="card p-6 rounded-xl space-y-4">
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Avatar Képek</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <input type="url" id="avatarMUrl" class="input-style w-full p-3 rounded-lg" placeholder="Márk Avatar">
+                <input type="url" id="avatarAUrl" class="input-style w-full p-3 rounded-lg" placeholder="Anna Avatar">
+                <input type="url" id="avatarRUrl" class="input-style w-full p-3 rounded-lg" placeholder="Rendőr Avatar">
+            </div>
+        </div>
+
+        <div class="card p-6 rounded-xl space-y-6">
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Oldalak Kezelése</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="w-full md:w-1/3">
+                    <button id="addPageBtn" class="btn-add w-full p-2 rounded mb-4"><i class="fas fa-plus mr-2"></i>Új Oldal</button>
+                    <div id="pageListContainer" class="max-h-[500px] overflow-y-auto pr-2"></div>
+                </div>
+
+                <div id="editorContainer" class="w-full md:w-2/3 space-y-4 border-l border-gray-700 pl-0 md:pl-6 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Oldal ID</label>
+                        <input type="text" id="editPageId" class="input-style w-full p-2 rounded" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Háttér URL (Opcionális)</label>
+                        <input type="url" id="editPageBg" class="input-style w-full p-2 rounded">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Szöveg (§M, §A, §R használható)</label>
+                        <textarea id="editPageText" rows="4" class="input-style w-full p-2 rounded"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300">Galéria Kép URL (Ha itt megadod, értesítést küld)</label>
+                        <input type="url" id="editPageGallery" class="input-style w-full p-2 rounded" placeholder="https://...">
+                    </div>
+                    <div id="choicesContainer" class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-300">Választási lehetőségek</label>
+                        <div id="choicesList"></div>
+                        <button id="addChoiceBtn" class="text-xs text-cyan-400 hover:underline">+ Új választás hozzáadása</button>
+                    </div>
+                    <div class="flex justify-between pt-4">
+                        <button id="deletePageBtn" class="btn-danger px-4 py-2 rounded text-sm">Törlés</button>
+                        <button id="savePageBtn" class="btn-primary px-6 py-2 rounded font-bold">Oldal Mentése</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 justify-center pb-10">
+            <button id="downloadPageButton" class="btn-secondary px-8 py-4 rounded-xl shadow-lg text-lg"><i class="fas fa-save mr-2"></i>game_config.json letöltése</button>
+            <button id="previewGameBtn" class="bg-gray-600 text-white px-8 py-4 rounded-xl hover:bg-gray-500 transition shadow-lg text-lg"><i class="fas fa-eye mr-2"></i>Előnézet Megnyitása</button>
+        </div>
     </div>
 
     <script>
-        // Az admin funkciók logikája itt marad az eredeti formában
-        const STORAGE_KEY = 'game_config_preview';
-        
-        document.getElementById('saveButton').addEventListener('click', () => {
-            // Mentési logika...
-            document.getElementById('messageDisplay').textContent = "Sikeresen mentve!";
-        });
+        (function() {
+            const STORAGE_KEY = 'game_editor_config';
+            let config = { pages: [], settings: {} };
+            let currentPageIndex = -1;
+
+            const fields = {
+                appTitle: document.getElementById('appTitle'),
+                backgroundUrl: document.getElementById('backgroundUrl'),
+                bgColor: document.getElementById('bgColor'),
+                textColor: document.getElementById('textColor'),
+                avatarMUrl: document.getElementById('avatarMUrl'),
+                avatarAUrl: document.getElementById('avatarAUrl'),
+                avatarRUrl: document.getElementById('avatarRUrl'),
+                pageList: document.getElementById('pageListContainer'),
+                editor: document.getElementById('editorContainer'),
+                editId: document.getElementById('editPageId'),
+                editBg: document.getElementById('editPageBg'),
+                editText: document.getElementById('editPageText'),
+                editGallery: document.getElementById('editPageGallery'),
+                choicesList: document.getElementById('choicesList')
+            };
+
+            function loadFromStorage() {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    config = JSON.parse(saved);
+                    renderPageList();
+                    fillSettings();
+                }
+            }
+
+            function fillSettings() {
+                fields.appTitle.value = config.settings.appTitle || "";
+                fields.backgroundUrl.value = config.settings.backgroundUrl || "";
+                fields.bgColor.value = config.settings.bgColor || "#1a1a1a";
+                fields.textColor.value = config.settings.textColor || "#e0e0e0";
+                fields.avatarMUrl.value = config.settings.avatars?.M || "";
+                fields.avatarAUrl.value = config.settings.avatars?.A || "";
+                fields.avatarRUrl.value = config.settings.avatars?.R || "";
+            }
+
+            function renderPageList() {
+                fields.pageList.innerHTML = '';
+                config.pages.forEach((p, index) => {
+                    const div = document.createElement('div');
+                    div.className = `page-item ${index === currentPageIndex ? 'selected' : ''}`;
+                    div.innerHTML = `<span>${p.id}</span> <i class="fas fa-bars text-gray-500"></i>`;
+                    div.onclick = () => openEditor(index);
+                    fields.pageList.appendChild(div);
+                });
+            }
+
+            function openEditor(index) {
+                currentPageIndex = index;
+                renderPageList();
+                const p = config.pages[index];
+                fields.editor.classList.remove('hidden');
+                fields.editId.value = p.id;
+                fields.editBg.value = p.backgroundUrl || "";
+                fields.editText.value = p.text || "";
+                fields.editGallery.value = p.galleryImage || "";
+                renderChoices(p.choices || []);
+            }
+
+            function renderChoices(choices) {
+                fields.choicesList.innerHTML = '';
+                choices.forEach((c, i) => {
+                    const d = document.createElement('div');
+                    d.className = "flex gap-2 mb-2";
+                    d.innerHTML = `
+                        <input type="text" placeholder="Szöveg" class="input-style flex-1 p-1 text-xs rounded" value="${c.text}">
+                        <input type="text" placeholder="Cél ID" class="input-style w-20 p-1 text-xs rounded" value="${c.nextId}">
+                        <button class="text-red-500" onclick="this.parentElement.remove()">×</button>
+                    `;
+                    fields.choicesList.appendChild(d);
+                });
+            }
+
+            document.getElementById('addPageBtn').onclick = () => {
+                const id = prompt("Új oldal ID-je:");
+                if (id) {
+                    config.pages.push({ id: id, text: "Új szöveg...", choices: [{ text: "Tovább", nextId: "" }] });
+                    renderPageList();
+                    openEditor(config.pages.length - 1);
+                }
+            };
+
+            document.getElementById('savePageBtn').onclick = () => {
+                if (currentPageIndex === -1) return;
+                const p = config.pages[currentPageIndex];
+                p.backgroundUrl = fields.editBg.value;
+                p.text = fields.editText.value;
+                p.galleryImage = fields.editGallery.value;
+                p.choices = Array.from(fields.choicesList.children).map(div => ({
+                    text: div.querySelectorAll('input')[0].value,
+                    nextId: div.querySelectorAll('input')[1].value
+                }));
+                saveToStorage();
+                alert("Oldal mentve!");
+            };
+
+            function saveToStorage() {
+                config.settings = {
+                    appTitle: fields.appTitle.value,
+                    backgroundUrl: fields.backgroundUrl.value,
+                    bgColor: fields.bgColor.value,
+                    textColor: fields.textColor.value,
+                    avatars: {
+                        M: fields.avatarMUrl.value,
+                        A: fields.avatarAUrl.value,
+                        R: fields.avatarRUrl.value
+                    }
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            }
+
+            document.getElementById('downloadPageButton').onclick = () => {
+                saveToStorage();
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'game_config.json';
+                a.click();
+            };
+
+            document.getElementById('previewGameBtn').onclick = () => {
+                saveToStorage();
+                window.open('preview.html', '_blank');
+            };
+
+            loadFromStorage();
+        })();
     </script>
 </body>
 </html>
