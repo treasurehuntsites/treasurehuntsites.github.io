@@ -3,111 +3,107 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title id="app-title">Anna és Márk - Előnézet V3.1</title>
-    
-    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    <title>Anna és Márk - Előnézet V3.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
-        html { overflow-x: hidden; overflow-y: auto; }
-        body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
-        body {
-            visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
-            margin: 0; padding: 0; font-family: 'Play', sans-serif;
-            color: var(--text-color); background-color: var(--bg-color);
-            display: flex; flex-direction: column; align-items: center;
-            min-height: 100vh; text-align: center; padding-bottom: 60px; 
-        }
-        .full-width-image-container {
-            width: 100%; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; background-color: #111111;
-        }
+        body { visibility: hidden; opacity: 0; transition: opacity 0.3s; margin: 0; font-family: 'Play', sans-serif; color: var(--text-color); background-color: var(--bg-color); text-align: center; padding-bottom: 60px; }
+        .full-width-image-container { width: 100%; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; background-color: #111; }
         .full-width-image-container img { width: 100%; height: 100%; object-fit: cover; }
-        .content-box {
-            background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px 20px; 
-            border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px);
-            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2;
-            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10;
-            text-align: left; min-height: 250px; display: flex; flex-direction: column;
+        .content-box { background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px; border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px); box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column; }
+        .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
+        .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; position: relative; }
+        
+        .notification-badge {
+            position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
+            background-color: #ff0000; border: 2px solid #1a1a1a; border-radius: 50%;
+            display: none; box-shadow: 0 0 5px red;
         }
-        .menu-button-container { position: relative; display: inline-block; }
-        .notification-dot {
-            position: absolute; top: 2px; right: 2px; width: 10px; height: 10px;
-            background-color: #ff3b30; border-radius: 50%; border: 1px solid #1a1a1a;
-            display: none; z-index: 60;
-        }
-        .fixed-menu-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
-            background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
-            display: flex; justify-content: space-around; align-items: center;
-        }
-        .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; }
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.9); display: none; z-index: 100;
-            flex-direction: column; align-items: center; justify-content: center;
-        }
-        .modal.visible { display: flex; }
+
+        .choice-button { background-color: #00FFFF; color: #1a1a1a; padding: 12px; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 10px; border: none; cursor: pointer; }
+        #gallery-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; padding: 20px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; width: 100%; overflow-y: auto; }
+        .gallery-item { width: 100%; aspect-ratio: 1; object-fit: cover; border: 2px solid #8a2be2; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="full-width-image-container"><img id="bg-image-display" src=""></div>
+    <div class="full-width-image-container"><img id="bg-image" src="" alt="háttér"></div>
     <div class="content-box">
-        <div id="story-text-display" style="font-weight:bold; font-size:1.1em; margin-bottom: 20px;"></div>
+        <div id="story-text-display">Betöltés...</div>
         <div id="interaction-area"></div>
     </div>
 
     <div class="fixed-menu-bar">
-        <button class="menu-button" onclick="alert('Térkép')"><i class="fa-solid fa-map-location-dot"></i></button>
-        <div class="menu-button-container">
-            <div id="gallery-dot" class="notification-dot"></div>
-            <button class="menu-button" onclick="openGallery()"><i class="fa-solid fa-images"></i></button>
-        </div>
-        <button class="menu-button" onclick="alert('GPS')"><i class="fa-solid fa-location-crosshairs"></i></button>
+        <button class="menu-button" onclick="location.reload()"><i class="fas fa-home"></i></button>
+        <button class="menu-button" id="gallery-btn" onclick="toggleGallery()">
+            <i class="fas fa-images"></i>
+            <span id="gallery-badge" class="notification-badge"></span>
+        </button>
+        <button class="menu-button" onclick="alert('GPS Előnézet')"><i class="fas fa-location-dot"></i></button>
     </div>
 
-    <div id="gallery-modal" class="modal">
-        <div id="gallery-items" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:20px;"></div>
-        <button onclick="closeModals()" style="padding:10px 20px; background:#8a2be2; color:white; border:none; border-radius:5px;">Bezárás</button>
+    <div id="gallery-modal">
+        <h2 style="color: #00ffff; margin-bottom: 20px;">Galéria Előnézet</h2>
+        <div id="gallery-list" class="gallery-grid"></div>
+        <button onclick="toggleGallery()" style="margin-top: 20px; padding: 10px 30px; background: #8a2be2; color: white; border: none; border-radius: 5px;">Bezárás</button>
     </div>
 
     <script>
-        const STORAGE_KEY = 'game_config_preview';
-        let CONFIG = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        let currentPageId = "start";
-        let visitedPages = new Set();
+        let gameConfig = null;
+        let currentGallery = [];
 
-        function renderPage() {
-            if(!CONFIG) return;
-            const page = CONFIG.pages[currentPageId];
-            if (!page) return;
-
-            if (page.imageUrl && page.imageUrl.trim() !== "" && !visitedPages.has(currentPageId)) {
-                document.getElementById('gallery-dot').style.display = 'block';
-            }
-            visitedPages.add(currentPageId);
-            
-            document.getElementById('bg-image-display').src = page.backgroundUrl || CONFIG.backgroundUrl;
-            document.getElementById('story-text-display').textContent = page.text.replace(/§[MAR]/g, "");
-            
-            const area = document.getElementById('interaction-area');
-            area.innerHTML = `<button onclick="goTo('${page.nextPageId}')" style="padding:10px 20px; background:#8a2be2; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">TOVÁBB</button>`;
-        }
-
-        function goTo(id) { if(id && id !== "undefined") { currentPageId = id; renderPage(); } }
-        function openGallery() {
-            document.getElementById('gallery-dot').style.display = 'none';
-            document.getElementById('gallery-modal').classList.add('visible');
-        }
-        function closeModals() { document.getElementById('gallery-modal').classList.remove('visible'); }
-
-        window.onload = () => {
-            if(CONFIG) {
+        function init() {
+            const saved = localStorage.getItem('game_editor_config');
+            if (saved) {
+                gameConfig = JSON.parse(saved);
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = 1;
-                renderPage();
+                showPage(gameConfig.pages[0].id);
             }
-        };
+        }
+
+        function showPage(pageId) {
+            const page = gameConfig.pages.find(p => p.id === pageId);
+            if (!page) return;
+
+            document.getElementById('story-text-display').innerText = page.text;
+            document.getElementById('bg-image').src = page.backgroundUrl || gameConfig.settings.backgroundUrl;
+
+            if (page.galleryImage && !currentGallery.includes(page.galleryImage)) {
+                currentGallery.push(page.galleryImage);
+                document.getElementById('gallery-badge').style.display = 'block';
+            }
+
+            const area = document.getElementById('interaction-area');
+            area.innerHTML = '';
+            page.choices.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-button';
+                btn.innerText = c.text;
+                btn.onclick = () => showPage(c.nextId);
+                area.appendChild(btn);
+            });
+        }
+
+        function toggleGallery() {
+            const modal = document.getElementById('gallery-modal');
+            const isOpening = modal.style.display !== 'flex';
+            modal.style.display = isOpening ? 'flex' : 'none';
+            if (isOpening) {
+                document.getElementById('gallery-badge').style.display = 'none';
+                const list = document.getElementById('gallery-list');
+                list.innerHTML = '';
+                currentGallery.forEach(img => {
+                    const el = document.createElement('img');
+                    el.src = img;
+                    el.className = 'gallery-item';
+                    list.appendChild(el);
+                });
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
