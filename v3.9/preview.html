@@ -2,20 +2,52 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anna és Márk - Előnézet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Anna és Márk - Előnézet V3.1</title>
+    
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
-        body { visibility: hidden; opacity: 0; margin: 0; padding: 0; font-family: 'Play', sans-serif; color: var(--text-color); background-color: var(--bg-color); transition: opacity 0.3s; text-align: center; }
-        .full-width-image-container { width: 100%; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; background-color: #111; }
+        html { overflow-x: hidden; overflow-y: auto; }
+        body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
+        body {
+            visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
+            margin: 0; padding: 0; font-family: 'Play', sans-serif;
+            color: var(--text-color); background-color: var(--bg-color);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; text-align: center; padding-bottom: 60px; 
+        }
+        .full-width-image-container {
+            width: 100%; height: 100vh; position: absolute; top: 0; left: 0; z-index: 0; background-color: #111111;
+        }
         .full-width-image-container img { width: 100%; height: 100%; object-fit: cover; }
-        .content-box { background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px 20px; border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px); box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column; }
-        .notification-dot { position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; background-color: #ff3b30; border-radius: 50%; border: 1px solid #1a1a1a; display: none; z-index: 60; }
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px 20px; 
+            border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10;
+            text-align: left; min-height: 250px; display: flex; flex-direction: column;
+        }
         .menu-button-container { position: relative; display: inline-block; }
-        .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
+        .notification-dot {
+            position: absolute; top: 2px; right: 2px; width: 10px; height: 10px;
+            background-color: #ff3b30; border-radius: 50%; border: 1px solid #1a1a1a;
+            display: none; z-index: 60;
+        }
+        .fixed-menu-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+            background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
+            display: flex; justify-content: space-around; align-items: center;
+        }
         .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9); display: none; z-index: 100;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .modal.visible { display: flex; }
     </style>
 </head>
 <body>
@@ -24,6 +56,7 @@
         <div id="story-text-display" style="font-weight:bold; font-size:1.1em; margin-bottom: 20px;"></div>
         <div id="interaction-area"></div>
     </div>
+
     <div class="fixed-menu-bar">
         <button class="menu-button" onclick="alert('Térkép')"><i class="fa-solid fa-map-location-dot"></i></button>
         <div class="menu-button-container">
@@ -33,39 +66,46 @@
         <button class="menu-button" onclick="alert('GPS')"><i class="fa-solid fa-location-crosshairs"></i></button>
     </div>
 
+    <div id="gallery-modal" class="modal">
+        <div id="gallery-items" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:20px;"></div>
+        <button onclick="closeModals()" style="padding:10px 20px; background:#8a2be2; color:white; border:none; border-radius:5px;">Bezárás</button>
+    </div>
+
     <script>
-        const STORAGE_KEY = 'game_config_preview'; // Ugyanaz a kulcs, mint az adminnál
-        let CONFIG = null;
+        const STORAGE_KEY = 'game_config_preview';
+        let CONFIG = JSON.parse(localStorage.getItem(STORAGE_KEY));
         let currentPageId = "start";
+        let visitedPages = new Set();
 
         function renderPage() {
-            if(!CONFIG || !CONFIG.pages) return;
+            if(!CONFIG) return;
             const page = CONFIG.pages[currentPageId];
-            if(!page) return;
+            if (!page) return;
 
-            if (page.imageUrl && page.imageUrl.trim() !== "") {
+            if (page.imageUrl && page.imageUrl.trim() !== "" && !visitedPages.has(currentPageId)) {
                 document.getElementById('gallery-dot').style.display = 'block';
             }
-
+            visitedPages.add(currentPageId);
+            
             document.getElementById('bg-image-display').src = page.backgroundUrl || CONFIG.backgroundUrl;
             document.getElementById('story-text-display').textContent = page.text.replace(/§[MAR]/g, "");
-            document.getElementById('interaction-area').innerHTML = `<button onclick="goTo('${page.nextPageId}')" style="padding:15px; background:#8a2be2; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">TOVÁBB</button>`;
+            
+            const area = document.getElementById('interaction-area');
+            area.innerHTML = `<button onclick="goTo('${page.nextPageId}')" style="padding:10px 20px; background:#8a2be2; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">TOVÁBB</button>`;
         }
 
         function goTo(id) { if(id && id !== "undefined") { currentPageId = id; renderPage(); } }
-        function openGallery() { document.getElementById('gallery-dot').style.display = 'none'; alert("Galéria megnyitva (Előnézet)"); }
+        function openGallery() {
+            document.getElementById('gallery-dot').style.display = 'none';
+            document.getElementById('gallery-modal').classList.add('visible');
+        }
+        function closeModals() { document.getElementById('gallery-modal').classList.remove('visible'); }
 
         window.onload = () => {
-            const rawData = localStorage.getItem(STORAGE_KEY);
-            if(rawData) {
-                CONFIG = JSON.parse(rawData);
+            if(CONFIG) {
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = 1;
                 renderPage();
-            } else {
-                document.body.style.visibility = 'visible';
-                document.body.style.opacity = 1;
-                document.body.innerHTML = "<div style='padding:50px;'><h1 style='color:#ff3b30;'>❌ HIBA: Nincs betöltött adat!</h1><p>Menj vissza az Admin oldalra, és nyomd meg a <b>Beállítások Mentése</b> gombot.</p></div>";
             }
         };
     </script>
