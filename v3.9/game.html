@@ -9,16 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* CSS Változók a dinamikus színekhez */
         :root {
             --bg-color: #1a1a1a;
             --text-color: #e0e0e0;
         }
-
         html { overflow-x: hidden; overflow-y: auto; }
-        
         body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
-
         body {
             visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
             margin: 0; padding: 0; font-family: 'Play', sans-serif;
@@ -28,7 +24,6 @@
             overflow-y: auto; min-height: 100vh; touch-action: auto; 
             text-align: center; padding-bottom: 60px; 
         }
-        
         .full-width-image-container {
             width: 100%; height: 100vh; overflow: hidden; position: absolute;
             top: 0; left: 0; z-index: 0; min-height: 100vh; background-color: #111111;
@@ -36,7 +31,6 @@
         .full-width-image-container img {
             width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;
         }
-
         .content-box {
             background-color: rgba(0, 0, 0, 0.85); 
             padding: 40px 20px 10px 20px; 
@@ -56,213 +50,181 @@
             opacity: 1; 
             transition: opacity 0.5s ease-in-out; 
         }
-        
-        .content-hidden { opacity: 0; }
-
         .discreet-back-button {
             position: absolute; top: 10px; left: 10px; background: transparent;
             border: none; color: rgba(255, 255, 255, 0.4); font-size: 1.3em;
             cursor: pointer; transition: color 0.3s, transform 0.2s; z-index: 25; padding: 5px;
         }
-        .discreet-back-button:hover { color: #00ffff; transform: scale(1.1); }
-        .discreet-back-button:disabled { display: none; }
-
-        #story-text-display {
-            font-size: 1.2em; font-weight: 700; line-height: 1.6;
-            margin-bottom: 20px; white-space: pre-wrap; flex-grow: 1; 
-        }
-        
-        .audio-button {
-            padding: 12px 20px; text-decoration: none; color: #1a1a1a;
-            background-color: #00FFFF; border: none; border-radius: 5px;
-            font-size: 1.1em; font-weight: 700; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 8px;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
-        }
-
+        #story-text-display { font-size: 1.2em; font-weight: 700; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; flex-grow: 1; }
         .bottom-bar { padding-top: 10px; border-top: 1px dashed #8a2be2; min-height: 48px; width: 100%; }
         .interaction-container { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .page-button {
             padding: 12px 20px; color: #ffffff; background-color: #8a2be2; border: none; border-radius: 5px;
             font-size: 1.1em; font-weight: 700; cursor: pointer; text-transform: uppercase; margin: 5px;
-            box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4);
         }
-        .page-button:disabled { background-color: #555555; cursor: not-allowed; box-shadow: none; opacity: 0.6; }
-        
-        .choice-button {
-            background-color: #00FFFF; color: #1a1a1a; padding: 12px 15px;
-            border-radius: 5px; font-weight: bold; font-size: 1.1rem; border: none;
-            width: 100%; cursor: pointer; text-transform: uppercase;
-            box-shadow: 0 2px 5px rgba(0, 255, 255, 0.3); transition: background-color 0.2s;
-        }
-        
-        .avatar-image {
-            position: absolute; top: -50px; left: -10px; width: 70px; height: 70px;
-            border-radius: 50%; object-fit: cover; z-index: 20; display: block;
-            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5); transition: opacity 0.3s ease-in-out; 
-        }
-        
         .fixed-menu-bar {
             position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
             background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
             display: flex; justify-content: space-around; align-items: center;
-            box-shadow: 0 -4px 15px rgba(138, 43, 226, 0.5);
         }
-
-        /* --- ÉRTESÍTŐ PONT STÍLUSA --- */
-        .menu-button { 
-            background: none; border: none; color: #ffffff; font-size: 1.5em; 
-            cursor: pointer; padding: 5px 10px; position: relative; 
-        }
-        .menu-button:hover { color: #00ffff; }
+        .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; padding: 5px 10px; }
         
+        /* ÚJ STÍLUS AZ ÉRTESÍTÉSHEZ */
+        .menu-button-container { position: relative; display: inline-block; }
         .notification-dot {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 12px;
-            height: 12px;
-            background-color: #ff0000;
-            border-radius: 50%;
-            border: 2px solid #1a1a1a;
-            display: none; /* Alapból rejtve */
-            box-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
-            z-index: 60;
+            position: absolute; top: 2px; right: 2px; width: 10px; height: 10px;
+            background-color: #ff3b30; border-radius: 50%; border: 1px solid #1a1a1a;
+            display: none; z-index: 60;
         }
 
-        #galleryModal {
-            display: none; position: fixed; z-index: 100; left: 0; top: 0;
-            width: 100%; height: 100%; overflow-y: scroll; background-color: rgba(0, 0, 0, 0.95);
+        /* Modalok stílusai változatlanok... */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.9); display: none; z-index: 100;
+            flex-direction: column; align-items: center; justify-content: center;
         }
-        
-        #gallery-container {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px;
-            width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; padding-top: 50px;
+        .modal.visible { display: flex; }
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px; padding: 20px; width: 90%; max-width: 800px; overflow-y: auto;
         }
-
-        .gallery-thumbnail {
-            width: 100%; height: 150px; overflow: hidden; border: 2px solid #8a2be2;
-            border-radius: 5px; cursor: pointer; box-shadow: 0 0 10px rgba(138, 43, 226, 0.4);
-            transition: transform 0.2s; position: relative;
-        }
-        .gallery-thumbnail img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        
-        .close-gallery {
-            position: absolute; top: 15px; right: 33px; color: #f1f1f1;
-            font-size: 40px; font-weight: bold; cursor: pointer; z-index: 110;
-        }
+        .gallery-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 5px; border: 2px solid #8a2be2; }
     </style>
 </head>
-<body oncontextmenu="return false;">
-    <div class="full-width-image-container">
-        <img id="story-image" alt="Háttér">
-    </div>
-
-    <div class="content-box content-hidden" id="content-box">
-        <button id="discreet-back-button" class="discreet-back-button" title="Vissza">
-            <i class="fa-solid fa-arrow-left"></i>
-        </button>
+<body>
+    <div class="full-width-image-container"><img id="bg-image-display" src="" alt=""></div>
+    <div class="content-box" id="main-content-box">
+        <button class="discreet-back-button" id="back-button" onclick="goBack()" title="Vissza az előző oldalra"><i class="fa-solid fa-chevron-left"></i></button>
         <img id="avatar-display" class="avatar-image" src="" alt="Avatar">
         <div id="story-text-display"></div>
-        <div id="password-container">
-            <input type="text" id="password-input" placeholder="Írd be a jelszót...">
-            <div class="password-interaction">
-                <button id="check-password-button" class="page-button">OK</button>
-            </div>
-        </div>
         <div class="bottom-bar">
-            <div class="interaction-container" id="interaction-container">
-                <button id="next-button" class="page-button">Tovább</button>
-            </div>
+            <div id="interaction-area" class="interaction-container"></div>
         </div>
     </div>
 
     <div class="fixed-menu-bar">
-        <button class="menu-button" id="open-gallery-btn" title="Galéria">
-            <i class="fas fa-images"></i>
-            <span id="gallery-dot" class="notification-dot"></span>
-        </button>
-        <button class="menu-button" onclick="openModal(document.getElementById('help-modal'))" title="Súgó">
-            <i class="fas fa-question-circle"></i>
-        </button>
+        <button class="menu-button" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
+        <div class="menu-button-container">
+            <div id="gallery-dot" class="notification-dot"></div>
+            <button class="menu-button" onclick="openGallery()"><i class="fa-solid fa-images"></i></button>
+        </div>
+        <button class="menu-button" onclick="openGps()"><i class="fa-solid fa-location-crosshairs"></i></button>
     </div>
 
-    <div id="galleryModal">
-        <span class="close-gallery" onclick="closeModal(document.getElementById('galleryModal'))">&times;</span>
-        <div id="gallery-container"></div>
+    <div id="gallery-modal" class="modal">
+        <h2 style="color:#00ffff; margin-top:20px;">Galéria</h2>
+        <div id="gallery-items" class="gallery-grid"></div>
+        <button class="page-button" onclick="closeModals()" style="margin:20px;">Bezárás</button>
     </div>
 
     <script>
         let CONFIG = null;
-        let currentPageIndex = 0;
-        let galleryImages = [];
-        const storyTextDisplay = document.getElementById('story-text-display');
-        const storyImage = document.getElementById('story-image');
-        const avatarDisplay = document.getElementById('avatar-display');
-        const galleryDot = document.getElementById('gallery-dot');
-        const galleryModal = document.getElementById('galleryModal');
+        let currentPageId = "start";
+        let historyStack = [];
+        let visitedPages = new Set();
 
         async function init() {
             try {
-                const response = await fetch('game_config.json');
-                CONFIG = await response.json();
-                document.getElementById('app-title').innerText = CONFIG.gameTitle || "Kaland Játék";
-                updatePage();
+                const res = await fetch('game_config.json');
+                CONFIG = await res.json();
+                document.getElementById('app-title').textContent = CONFIG.appTitle || "Kaland Játék";
                 document.body.style.visibility = 'visible';
                 document.body.style.opacity = 1;
-                document.getElementById('content-box').classList.remove('content-hidden');
-            } catch (err) {
-                console.error("Hiba:", err);
+                renderPage();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderPage() {
+            const page = CONFIG.pages[currentPageId];
+            if (!page) return;
+
+            // ÚJ KÉP JELZÉSE
+            if (page.imageUrl && page.imageUrl.trim() !== "" && !visitedPages.has(currentPageId)) {
+                document.getElementById('gallery-dot').style.display = 'block';
+            }
+            visitedPages.add(currentPageId);
+
+            document.getElementById('bg-image-display').src = page.backgroundUrl || CONFIG.backgroundUrl;
+            
+            const textDisplay = document.getElementById('story-text-display');
+            let rawText = page.text || "";
+            const avatarImg = document.getElementById('avatar-display');
+            
+            if (rawText.includes("§M")) { avatarImg.src = CONFIG.avatarMUrl; rawText = rawText.replace("§M", ""); }
+            else if (rawText.includes("§A")) { avatarImg.src = CONFIG.avatarAUrl; rawText = rawText.replace("§A", ""); }
+            else if (rawText.includes("§R")) { avatarImg.src = CONFIG.avatarRUrl; rawText = rawText.replace("§R", ""); }
+            else { avatarImg.src = CONFIG.avatarDefaultUrl; }
+            
+            textDisplay.textContent = rawText;
+
+            const area = document.getElementById('interaction-area');
+            area.innerHTML = "";
+            if (page.type === "choice" && page.choices) {
+                const container = document.createElement('div');
+                container.className = "multi-choice-container";
+                page.choices.forEach(c => {
+                    const b = document.createElement('button');
+                    b.className = "choice-button";
+                    b.textContent = c.text;
+                    b.onclick = () => goTo(c.nextPageId);
+                    container.appendChild(b);
+                });
+                area.appendChild(container);
+            } else {
+                const b = document.createElement('button');
+                b.className = "page-button";
+                b.textContent = page.buttonText || "Tovább";
+                b.onclick = () => goTo(page.nextPageId);
+                if (!page.nextPageId) b.disabled = true;
+                area.appendChild(b);
+            }
+            document.getElementById('back-button').disabled = historyStack.length === 0;
+        }
+
+        function goTo(id) {
+            if (!id) return;
+            historyStack.push(currentPageId);
+            currentPageId = id;
+            renderPage();
+        }
+
+        function goBack() {
+            if (historyStack.length > 0) {
+                currentPageId = historyStack.pop();
+                renderPage();
             }
         }
 
-        function updatePage() {
-            const page = CONFIG.pages[currentPageIndex];
-            storyTextDisplay.innerText = page.text;
-            storyImage.src = page.backgroundImage;
-            avatarDisplay.src = page.avatarImage || "";
-            avatarDisplay.style.display = page.avatarImage ? "block" : "none";
+        function openGallery() {
+            document.getElementById('gallery-dot').style.display = 'none';
+            const modal = document.getElementById('gallery-modal');
+            const container = document.getElementById('gallery-items');
+            container.innerHTML = "";
+            
+            const images = [];
+            visitedPages.forEach(pId => {
+                if (CONFIG.pages[pId].imageUrl) images.push(CONFIG.pages[pId].imageUrl);
+            });
 
-            // ÚJ: Piros pont megjelenítése, ha van új kép az oldalon
-            if (page.galleryImage && page.galleryImage.trim() !== "") {
-                if (!galleryImages.includes(page.galleryImage)) {
-                    galleryImages.push(page.galleryImage);
-                    galleryDot.style.display = 'block';
-                }
-            }
-
-            const container = document.getElementById('interaction-container');
-            container.innerHTML = '';
-            if (currentPageIndex < CONFIG.pages.length - 1) {
-                const btn = document.createElement('button');
-                btn.className = 'page-button';
-                btn.innerText = 'Tovább';
-                btn.onclick = () => { currentPageIndex++; updatePage(); };
-                container.appendChild(btn);
-            }
-        }
-
-        document.getElementById('open-gallery-btn').onclick = () => {
-            galleryDot.style.display = 'none'; // Kattintásra eltűnik
-            renderGallery();
-            openModal(galleryModal);
-        };
-
-        function renderGallery() {
-            const container = document.getElementById('gallery-container');
-            container.innerHTML = '';
-            galleryImages.forEach(src => {
+            images.forEach(src => {
                 const div = document.createElement('div');
-                div.className = 'gallery-thumbnail';
-                div.innerHTML = `<img src="${src}">`;
+                div.className = "gallery-item";
+                div.innerHTML = `<img src="${src}" onclick="window.open('${src}', '_blank')">`;
                 container.appendChild(div);
             });
+
+            modal.classList.add('visible');
+            document.body.classList.add('modal-open');
         }
 
-        function openModal(m) { m.style.display = 'block'; document.body.classList.add('modal-open'); }
-        function closeModal(m) { m.style.display = 'none'; document.body.classList.remove('modal-open'); }
+        function openMap() { window.open(CONFIG.menuMapLink, '_blank'); }
+        function openGps() { alert("GPS funkció indítása..."); }
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+            document.body.classList.remove('modal-open');
+        }
 
-        init();
+        window.onload = init;
     </script>
 </body>
 </html>
