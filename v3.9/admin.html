@@ -1,9 +1,10 @@
+
 <!doctype html>
 <html lang="hu">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V4.1 (Automatikus Red Dot Trigger)</title>
+    <title>Játék Konfiguráció V3.8 (Gomb Elrendezés Javítva)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
@@ -81,11 +82,25 @@
             border: 2px solid #ff0000;
             box-shadow: 0 0 10px #ff0000;
         }
+
+        /* 5 gombos elrendezés segítése kis képernyőn - Ez a blokk volt a hiba forrása, most eltávolítva/megjegyzésbe téve */
+        /* Ezt a részt távolítottam el:
+        @media (min-width: 640px) {
+            .btn-group-5 > * {
+                width: calc(20% - 0.5rem);
+            }
+            .btn-group-5 {
+                justify-content: space-between;
+            }
+        }
+        */
+        
+        /* A flexbox/w-1/5 párosítás megoldja a layoutot */
     </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-4xl mx-auto space-y-8">
-        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V4.1 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Részletes Játék Konfiguráció V3.8 <span id="configVersion" class="text-lg text-yellow-400"></span></h1>
 
         <!-- ÁLTALÁNOS BEÁLLÍTÁSOK -->
         <div class="card p-6 rounded-xl space-y-6">
@@ -183,7 +198,7 @@
                         <div class="text-sm text-gray-400 text-center py-4">Oldalak betöltése...</div>
                     </div>
 
-                    <!-- KÖZÖS GOMBCSOPORT -->
+                    <!-- KÖZÖS GOMBCSOPORT (ÚJ ELRENDEZÉS) -->
                     <div class="flex gap-2 mt-2">
                         <button id="addPageButton" class="btn-add w-1/3 p-2 rounded-lg text-sm font-bold uppercase" title="Új oldal hozzáadása a történet VÉGÉRE">
                             <i class="fa-solid fa-plus mr-1"></i> Új a végére
@@ -324,6 +339,7 @@
                     <input type="url" id="audio2Url" class="input-style w-full p-3 rounded-lg" placeholder="https://.../Ugynokok2.mp3">
                 </div>
             </div>
+
             
             <!-- ELŐNÉZET (PREVIEW) KONTÉNER -->
             <div id="previewContainer"></div>
@@ -367,7 +383,6 @@
             let currentLoadedIndex = 0; 
             let isInitialLoad = true; // Flag a kezdeti betöltés jelzésére
             let draggedItem = null; // A húzott elem tárolása
-            let originalGalleryUrl = ""; // Eredeti érték a változás érzékeléséhez
 
             // DOM elemek (frissítve a dinamikus listára)
             const fields = {
@@ -398,9 +413,8 @@
 
             // Alapértelmezett konfiguráció
             const DEFAULT_CONFIG = {
-                CONFIG_VERSION: '4.1', // ÚJ VERZIÓSZÁM
+                CONFIG_VERSION: '3.8', // ÚJ VERZIÓSZÁM
                 LAST_EDITED_INDEX: 0, 
-                LAST_GALLERY_ADD_INDEX: -1, 
                 APP_TITLE: "Anna és Márk Kincskeresés (Alapértelmezett)",
                 BACKGROUND_URL: "https://treasurehuntsites.github.io/annaesmark/Img/kr.jpg",
                 BODY_BG_COLOR: "#1a1a1a", BODY_TEXT_COLOR: "#e0e0e0",
@@ -458,7 +472,7 @@
                 if (!draggedItem) return;
 
                 // 1. Mentés előtt mentjük az aktuális oldal tartalmát
-                saveCurrentStoryPageContent(JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_CONFIG))); 
+                saveCurrentStoryPageContent();
                 
                 const oldIndex = currentLoadedIndex;
                 
@@ -467,6 +481,7 @@
                 const newStoryPages = [];
                 
                 pageItems.forEach(item => {
+                    // Az index már nem releváns, de az adat az eredeti tömbből kell!
                     const originalArrayId = parseInt(item.dataset.originalIndex);
                     const pageData = currentStoryPages[originalArrayId];
                     newStoryPages.push(pageData);
@@ -475,10 +490,11 @@
                 // 3. Frissítjük a belső tömböt
                 currentStoryPages = newStoryPages;
 
+                // A régi currentLoadedIndex (ami az oldIndex volt) helyett most az új indexet kell megkeresnünk
                 const newLoadedIndex = pageItems.findIndex(item => parseInt(item.dataset.originalIndex) === oldIndex);
 
                 // 4. Frissítjük a teljes listát (hogy az új indexek megjelenjenek) és betöltjük a mozgott oldalt.
-                populatePageList(newLoadedIndex); 
+                populatePageList(newLoadedIndex); // A newLoadedIndex helyes
                 loadStoryPage(newLoadedIndex);
                 saveSettings(true); 
             }
@@ -611,7 +627,9 @@
                     const pageItem = document.createElement('div');
                     pageItem.className = 'page-item';
                     pageItem.draggable = true;
+                    // A data-index az aktuális sorrend
                     pageItem.dataset.index = i; 
+                    // Az eredeti index a tömbből, ez segít a Drag&Drop után az adat visszakeresésében
                     pageItem.dataset.originalIndex = i; 
 
                     if (i === currentLoadedIndex) {
@@ -736,8 +754,7 @@
             // Oldal beszúrása az aktuális index elé
             fields.insertPageBeforeButton.addEventListener('click', () => {
                 const index = currentLoadedIndex;
-                const tempConfig = JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_CONFIG));
-                saveCurrentStoryPageContent(tempConfig);
+                saveCurrentStoryPageContent();
                 
                 const newPage = {
                     type: 'text',
@@ -763,8 +780,7 @@
                 const targetIndex = parseInt(index);
                 
                 if (!isInitialLoad) {
-                    const tempConfig = JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_CONFIG));
-                    saveCurrentStoryPageContent(tempConfig); 
+                    saveCurrentStoryPageContent(); 
                 }
                 
                 currentLoadedIndex = targetIndex;
@@ -782,9 +798,6 @@
                 fields.customGalleryUrl.value = page.customGalleryUrl || ''; 
                 fields.galleryMode.value = page.galleryMode || 'add_url'; 
                 
-                // Mentjük az aktuális galéria URL tartalmát, hogy érzékelni tudjuk a változást
-                originalGalleryUrl = fields.customGalleryUrl.value; 
-
                 // Vizuális frissítés a listán, hogy a kiválasztott elem ki legyen emelve
                 Array.from(fields.pageListContainer.children).forEach(item => {
                     if (parseInt(item.dataset.index) === targetIndex) {
@@ -830,27 +843,12 @@
                 updatePreview(); 
             }
             
-            function saveCurrentStoryPageContent(configToUpdate) {
+            function saveCurrentStoryPageContent() {
                 const index = currentLoadedIndex;
                 if (isNaN(index) || !currentStoryPages[index]) return;
                 
                 const page = currentStoryPages[index];
                 const pageType = fields.pageType.value;
-
-                // GALÉRIA VÁLTOZÁS ÉRZÉKELÉSE ÉS FRISSÍTÉSE
-                const newGalleryUrl = fields.customGalleryUrl.value;
-                const galleryChanged = originalGalleryUrl !== newGalleryUrl;
-                
-                // Csak akkor állítsuk be a trigger indexet, ha a galéria ténylegesen változott ÉS a mód nem "clear"
-                // és van benne link, vagy üres volt és kapott linket
-                if (galleryChanged && fields.galleryMode.value !== 'clear' && newGalleryUrl.trim().length > 0) {
-                    // Csak akkor frissítsük, ha a jelenlegi index magasabb, mint a mentett
-                    if (index > (configToUpdate.LAST_GALLERY_ADD_INDEX || -1)) {
-                         configToUpdate.LAST_GALLERY_ADD_INDEX = index;
-                    }
-                } 
-                // Frissítjük az originalGalleryUrl-t a következő mentéshez
-                originalGalleryUrl = newGalleryUrl;
                 
                 page.type = pageType;
                 page.content = fields.pageContent.value;
@@ -900,10 +898,8 @@
             }
             
             function addNewPage() {
-                // Konfiguráció létrehozása/frissítése, hogy a saveCurrentStoryPageContent tudjon írni bele
-                const tempConfig = JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_CONFIG));
-                saveCurrentStoryPageContent(tempConfig);
-
+                saveCurrentStoryPageContent();
+                
                 const newIndex = currentStoryPages.length;
                 const newPage = {
                     type: 'text',
@@ -946,7 +942,7 @@
                 fields.audio2Url.value = currentConfig.MEDIA.AUDIO_2_URL || DEFAULT_CONFIG.MEDIA.AUDIO_2_URL;
 
                 fields.passwordPromptText.value = currentConfig.PASSWORD_PAGE.PROMPT_TEXT || DEFAULT_CONFIG.PASSWORD_PAGE.PROMPT_TEXT;
-                
+
                 const initialIndex = currentConfig.LAST_EDITED_INDEX || 0;
                 populatePageList(initialIndex);
                 loadStoryPage(initialIndex);
@@ -999,14 +995,12 @@
 
 
             function saveSettings(showSuccess = true) {
-                // Új konfigurációs objektum létrehozása / betöltése
+                if (currentStoryPages.length > 0) {
+                    saveCurrentStoryPageContent();
+                } 
+
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 let newConfig = savedData ? JSON.parse(savedData) : DEFAULT_CONFIG;
-
-                // Az aktuális oldal tartalmának mentése, ami kezeli a LAST_GALLERY_ADD_INDEX beállítását
-                if (currentStoryPages.length > 0) {
-                    saveCurrentStoryPageContent(newConfig); 
-                }
                 
                 newConfig.CONFIG_VERSION = DEFAULT_CONFIG.CONFIG_VERSION; 
                 newConfig.LAST_EDITED_INDEX = currentLoadedIndex;
@@ -1030,7 +1024,7 @@
                 newConfig.PASSWORD_PAGE.PROMPT_TEXT = fields.passwordPromptText.value;
                 newConfig.MEDIA.AUDIO_1_URL = fields.audio1Url.value;
                 newConfig.MEDIA.AUDIO_2_URL = fields.audio2Url.value;
-
+                
                 newConfig.storyPages = currentStoryPages;
 
                 try {
@@ -1077,7 +1071,7 @@
                     
                     fields.pageContent, fields.customAvatarUrl, fields.customBackgroundUrl, fields.customGalleryUrl,
                     fields.nextIndex, fields.backIndex, fields.audioNextButtonText,
-                    fields.correctPassword, fields.nextIndexSuccess, fields.passwordHelpMessage,
+                    fields.correctPassword, fields.nextIndexSuccess, fields.passwordHelpMessage
                 ];
 
                 inputFields.forEach(field => addAutoSaveListener(field, 'input'));
@@ -1111,8 +1105,7 @@
                 loadSettingsFromStorage(); 
                 
                 fields.pageType.addEventListener('change', (e) => {
-                    const tempConfig = JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_CONFIG));
-                    saveCurrentStoryPageContent(tempConfig);
+                    saveCurrentStoryPageContent();
                     
                     toggleContentBlocks(e.target.value);
 
