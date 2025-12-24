@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szimbólum Tárcsás Zár - Kunyhó</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .label {
+            margin-bottom: 25px;
+            color: #555;
+            letter-spacing: 4px;
+            font-size: 0.85em;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .lock-container {
+            background: #1a1a1a;
+            padding: 45px 25px;
+            border: 3px solid #2a2a2a;
+            border-radius: 4px;
+            box-shadow: 0 0 60px rgba(0,0,0,1), inset 0 0 30px rgba(0,0,0,0.7);
+            display: flex;
+            gap: 12px;
+            position: relative;
+        }
+
+        /* A tárcsák stílusa */
+        .dial {
+            width: 75px;
+            height: 110px;
+            background: linear-gradient(to bottom, #0a0a0a, #262626, #0a0a0a);
+            border: 1px solid #3d3d3d;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, border-color 0.3s;
+        }
+
+        .dial:hover {
+            border-color: #555;
+        }
+
+        .dial:active {
+            transform: scale(0.96);
+        }
+
+        canvas {
+            width: 55px;
+            height: 55px;
+        }
+
+        #status {
+            margin-top: 35px;
+            height: 24px;
+            color: #00ffcc;
+            font-weight: bold;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        /* Dekoratív szegecsek a záron */
+        .lock-container::before, .lock-container::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+        }
+        .lock-container::before { top: 10px; left: 10px; }
+        .lock-container::after { bottom: 10px; right: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="label">ÁLLÍTSD BE A KINYERT SZIMBÓLUMOKAT</div>
+
+    <div class="lock-container">
+        <div class="dial" onclick="rotateDial(0)"><canvas id="c0"></canvas></div>
+        <div class="dial" onclick="rotateDial(1)"><canvas id="c1"></canvas></div>
+        <div class="dial" onclick="rotateDial(2)"><canvas id="c2"></canvas></div>
+        <div class="dial" onclick="rotateDial(3)"><canvas id="c3"></canvas></div>
+    </div>
+
+    <div id="status"></div>
+
+    <script>
+        // Céloldal linkje
+        const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
+
+        // A tárcsák aktuális állapota (indexek 0-3 között)
+        // Kezdéskor szándékosan eltolva, hogy ne a megoldással induljon
+        let currentState = [2, 3, 0, 1]; 
+        
+        // A HELYES MEGOLDÁS: a korábbi feladvány kinyert szimbólumai sorrendben
+        const solution = [0, 1, 2, 3]; 
+
+        function drawSymbol(ctx, type) {
+            ctx.clearRect(0, 0, 100, 100);
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 7;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffcc';
+
+            ctx.beginPath();
+            if(type === 0) { 
+                // 1. Spirális vonal (LE LE LE JOBB JOBB eredménye)
+                ctx.moveTo(20, 20); ctx.lineTo(80, 20); ctx.lineTo(80, 80); ctx.lineTo(40, 80); ctx.lineTo(40, 40);
+            } else if(type === 1) { 
+                // 2. Szögletes szem (JOBB JOBB JOBB LE LE eredménye)
+                ctx.rect(20, 30, 60, 40); ctx.moveTo(50, 35); ctx.lineTo(50, 65);
+            } else if(type === 2) { 
+                // 3. Háromszög-ék (LE LE JOBB JOBB JOBB eredménye)
+                ctx.moveTo(50, 15); ctx.lineTo(85, 85); ctx.lineTo(15, 85); ctx.closePath();
+            } else if(type === 3) { 
+                // 4. Kereszt-rács (JOBB JOBB LE LE LE eredménye)
+                ctx.moveTo(25, 50); ctx.lineTo(75, 50); ctx.moveTo(50, 25); ctx.lineTo(50, 75);
+            }
+            ctx.stroke();
+        }
+
+        function updateAllDials() {
+            for(let i = 0; i < 4; i++) {
+                const canvas = document.getElementById('c' + i);
+                const ctx = canvas.getContext('2d');
+                canvas.width = 100;
+                canvas.height = 100;
+                drawSymbol(ctx, currentState[i]);
+            }
+            checkSolution();
+        }
+
+        function rotateDial(index) {
+            // Forgatás: 0-1-2-3-0 körforgásban
+            currentState[index] = (currentState[index] + 1) % 4;
+            updateAllDials();
+            
+            // Taktilis visszajelzés (rezgés), ha a telefon támogatja
+            if (navigator.vibrate) {
+                navigator.vibrate(15);
+            }
+        }
+
+        function checkSolution() {
+            const isSolved = currentState.every((val, index) => val === solution[index]);
+            if (isSolved) {
+                document.getElementById('status').textContent = "MECHANIZMUS KIOLDVA...";
+                // Interakció letiltása
+                document.querySelectorAll('.dial').forEach(d => {
+                    d.style.pointerEvents = 'none';
+                    d.style.borderColor = '#00ffcc';
+                });
+                
+                // Rövid várakozás az átirányítás előtt a sikerélményért
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1500);
+            }
+        }
+
+        // Első kirajzolás
+        window.onload = updateAllDials;
+    </script>
+</body>
+</html>
