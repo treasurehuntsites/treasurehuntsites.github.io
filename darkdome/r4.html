@@ -2,9 +2,10 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Szimbólum Tárcsás Zár - Kunyhó</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             background-color: #0d0d0d;
             color: #ccc;
@@ -13,38 +14,43 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 10px;
             user-select: none;
+            overflow: hidden;
         }
 
         .label {
             margin-bottom: 25px;
             color: #555;
-            letter-spacing: 4px;
-            font-size: 0.85em;
+            letter-spacing: 2px;
+            font-size: 0.8em;
             text-align: center;
-            padding: 0 10px;
+            max-width: 300px;
         }
 
+        /* Középre rendezett, rugalmas konténer */
         .lock-container {
             background: #1a1a1a;
-            padding: 45px 25px;
+            padding: 35px 15px;
             border: 3px solid #2a2a2a;
-            border-radius: 4px;
-            box-shadow: 0 0 60px rgba(0,0,0,1), inset 0 0 30px rgba(0,0,0,0.7);
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0,0,0,1), inset 0 0 20px rgba(0,0,0,0.7);
             display: flex;
-            gap: 12px;
-            position: relative;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 360px; /* Biztosítja, hogy beférjen mobilon */
         }
 
-        /* A tárcsák stílusa */
         .dial {
-            width: 75px;
-            height: 110px;
+            flex: 1; /* Egyenlő szélességű tárcsák */
+            max-width: 75px;
+            height: 100px;
             background: linear-gradient(to bottom, #0a0a0a, #262626, #0a0a0a);
             border: 1px solid #3d3d3d;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -52,44 +58,27 @@
             transition: transform 0.1s, border-color 0.3s;
         }
 
-        .dial:hover {
-            border-color: #555;
-        }
-
-        .dial:active {
-            transform: scale(0.96);
-        }
+        .dial:active { transform: scale(0.94); }
 
         canvas {
-            width: 55px;
-            height: 55px;
+            width: 90%;
+            height: auto;
+            max-width: 50px;
         }
 
         #status {
-            margin-top: 35px;
+            margin-top: 30px;
             height: 24px;
             color: #00ffcc;
             font-weight: bold;
-            letter-spacing: 3px;
-            text-shadow: 0 0 10px #00ffcc;
+            letter-spacing: 2px;
+            text-align: center;
         }
-
-        /* Dekoratív szegecsek a záron */
-        .lock-container::before, .lock-container::after {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #333;
-            border-radius: 50%;
-        }
-        .lock-container::before { top: 10px; left: 10px; }
-        .lock-container::after { bottom: 10px; right: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="label">ÁLLÍTSD BE A KINYERT SZIMBÓLUMOKAT</div>
+    <div class="label">KERESD MEG A KINYERT JELEKET</div>
 
     <div class="lock-container">
         <div class="dial" onclick="rotateDial(0)"><canvas id="c0"></canvas></div>
@@ -101,14 +90,11 @@
     <div id="status"></div>
 
     <script>
-        // Céloldal linkje
         const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
 
-        // A tárcsák aktuális állapota (indexek 0-3 között)
-        // Kezdéskor szándékosan eltolva, hogy ne a megoldással induljon
-        let currentState = [2, 3, 0, 1]; 
-        
-        // A HELYES MEGOLDÁS: a korábbi feladvány kinyert szimbólumai sorrendben
+        // 7 szimbólumunk van összesen
+        // 0-3: A helyesek, 4-6: A "zaj" (nehezítés)
+        let currentState = [4, 6, 5, 4]; 
         const solution = [0, 1, 2, 3]; 
 
         function drawSymbol(ctx, type) {
@@ -117,22 +103,25 @@
             ctx.lineWidth = 7;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 12;
             ctx.shadowColor = '#00ffcc';
 
             ctx.beginPath();
-            if(type === 0) { 
-                // 1. Spirális vonal (LE LE LE JOBB JOBB eredménye)
-                ctx.moveTo(20, 20); ctx.lineTo(80, 20); ctx.lineTo(80, 80); ctx.lineTo(40, 80); ctx.lineTo(40, 40);
-            } else if(type === 1) { 
-                // 2. Szögletes szem (JOBB JOBB JOBB LE LE eredménye)
-                ctx.rect(20, 30, 60, 40); ctx.moveTo(50, 35); ctx.lineTo(50, 65);
-            } else if(type === 2) { 
-                // 3. Háromszög-ék (LE LE JOBB JOBB JOBB eredménye)
-                ctx.moveTo(50, 15); ctx.lineTo(85, 85); ctx.lineTo(15, 85); ctx.closePath();
-            } else if(type === 3) { 
-                // 4. Kereszt-rács (JOBB JOBB LE LE LE eredménye)
-                ctx.moveTo(25, 50); ctx.lineTo(75, 50); ctx.moveTo(50, 25); ctx.lineTo(50, 75);
+            switch(type) {
+                case 0: // Spirál
+                    ctx.moveTo(20, 20); ctx.lineTo(80, 20); ctx.lineTo(80, 80); ctx.lineTo(40, 80); ctx.lineTo(40, 40); break;
+                case 1: // Szem
+                    ctx.rect(20, 30, 60, 40); ctx.moveTo(50, 35); ctx.lineTo(50, 65); break;
+                case 2: // Háromszög
+                    ctx.moveTo(50, 15); ctx.lineTo(85, 85); ctx.lineTo(15, 85); ctx.closePath(); break;
+                case 3: // Kereszt
+                    ctx.moveTo(25, 50); ctx.lineTo(75, 50); ctx.moveTo(50, 25); ctx.lineTo(50, 75); break;
+                case 4: // ÚJ: Négyzet (Zaj)
+                    ctx.rect(25, 25, 50, 50); break;
+                case 5: // ÚJ: Fordított V (Zaj)
+                    ctx.moveTo(20, 80); ctx.lineTo(50, 20); ctx.lineTo(80, 80); break;
+                case 6: // ÚJ: Körív pöttyel (Zaj)
+                    ctx.arc(50, 50, 30, 0, Math.PI * 1.5); ctx.moveTo(50, 50); ctx.arc(50, 50, 2, 0, Math.PI * 2); break;
             }
             ctx.stroke();
         }
@@ -149,34 +138,20 @@
         }
 
         function rotateDial(index) {
-            // Forgatás: 0-1-2-3-0 körforgásban
-            currentState[index] = (currentState[index] + 1) % 4;
+            currentState[index] = (currentState[index] + 1) % 7; // 7 szimbólumon pörög körbe
             updateAllDials();
-            
-            // Taktilis visszajelzés (rezgés), ha a telefon támogatja
-            if (navigator.vibrate) {
-                navigator.vibrate(15);
-            }
+            if (navigator.vibrate) navigator.vibrate(15);
         }
 
         function checkSolution() {
             const isSolved = currentState.every((val, index) => val === solution[index]);
             if (isSolved) {
-                document.getElementById('status').textContent = "MECHANIZMUS KIOLDVA...";
-                // Interakció letiltása
-                document.querySelectorAll('.dial').forEach(d => {
-                    d.style.pointerEvents = 'none';
-                    d.style.borderColor = '#00ffcc';
-                });
-                
-                // Rövid várakozás az átirányítás előtt a sikerélményért
-                setTimeout(() => {
-                    window.location.href = targetUrl;
-                }, 1500);
+                document.getElementById('status').textContent = "MECHANIZMUS KIOLDVA";
+                document.querySelectorAll('.dial').forEach(d => d.style.pointerEvents = 'none');
+                setTimeout(() => { window.location.href = targetUrl; }, 1200);
             }
         }
 
-        // Első kirajzolás
         window.onload = updateAllDials;
     </script>
 </body>
