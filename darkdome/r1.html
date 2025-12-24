@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penumbra Rejtélye</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .puzzle-container {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            border: 2px solid #444;
+            padding: 20px;
+            background: #222;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Szimbólumok a rács felett */
+        .symbols-header {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .symbol {
+            font-size: 30px;
+            color: #333; /* Alapértelmezett sötét szín */
+            transition: all 0.5s ease;
+            text-shadow: 0 0 5px transparent;
+        }
+
+        .symbol.active {
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff;
+        }
+
+        /* Nyilak elrendezése (D-pad stílus) */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .arrow-btn {
+            background: #333;
+            border: 2px solid #555;
+            color: #ccc;
+            padding: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .arrow-btn:active {
+            background: #00ffff;
+            color: #000;
+        }
+
+        .up { grid-column: 2; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+
+        #message {
+            margin-top: 20px;
+            min-height: 24px;
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .hint {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="puzzle-container">
+        <h2 style="color: #8a2be2;">KUNYHÓ ÁTKA</h2>
+        
+        <div class="symbols-header">
+            <div class="symbol" id="sym0">🌀</div>
+            <div class="symbol" id="sym1">👁️</div>
+            <div class="symbol" id="sym2">💀</div>
+            <div class="symbol" id="sym3">🕯️</div>
+        </div>
+
+        <div id="message">Figyeld az erdő suttogását...</div>
+
+        <div class="controls">
+            <button class="arrow-btn up" onclick="press('FEL')">▲</button>
+            <button class="arrow-btn left" onclick="press('BAL')">◀</button>
+            <button class="arrow-btn right" onclick="press('JOBB')">▶</button>
+            <button class="arrow-btn down" onclick="press('LE')">▼</button>
+        </div>
+
+        <div class="hint">Adja meg a helyes sorozatot a feloldáshoz.</div>
+    </div>
+
+    <script>
+        // A titkos sorozat: Fel, Jobbra, Le, Balra
+        const secretCode = ['FEL', 'JOBB', 'LE', 'BAL'];
+        let currentInput = [];
+        let solvedCount = 0;
+
+        function press(direction) {
+            currentInput.push(direction);
+            
+            // Ellenőrizzük, hogy eddig jó-e
+            const isCorrectSoFar = currentInput.every((val, index) => val === secretCode[index]);
+
+            if (!isCorrectSoFar) {
+                currentInput = [];
+                document.getElementById('message').textContent = "Helytelen mozdulat...";
+                document.getElementById('message').style.color = "#ff4444";
+                setTimeout(() => {
+                    document.getElementById('message').textContent = "Próbáld újra!";
+                    document.getElementById('message').style.color = "#00ffff";
+                }, 1000);
+                return;
+            }
+
+            // Ha végigvitte a sorozatot
+            if (currentInput.length === secretCode.length) {
+                if (solvedCount < 4) {
+                    document.getElementById(`sym${solvedCount}`).classList.add('active');
+                    solvedCount++;
+                    currentInput = [];
+                    document.getElementById('message').textContent = "Egy szimbólum felragyogott!";
+                }
+
+                if (solvedCount === 4) {
+                    document.getElementById('message').textContent = "Siker! A kód: 1924";
+                    document.body.style.boxShadow = "inset 0 0 100px #00ffff55";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
