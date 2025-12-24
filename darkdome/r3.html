@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sötét Mechanizmus - Kunyhó</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .puzzle-box {
+            width: 90%;
+            max-width: 380px;
+            background: #141414;
+            border: 2px solid #2a2a2a;
+            padding: 30px 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .symbol-row {
+            display: flex;
+            justify-content: space-around;
+            background: #080808;
+            padding: 15px;
+            border-radius: 2px;
+            margin-bottom: 40px;
+            border: 1px solid #1a1a1a;
+            height: 60px;
+        }
+
+        canvas {
+            width: 50px;
+            height: 50px;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+        }
+
+        canvas.active {
+            opacity: 1;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 0 auto;
+            width: 220px;
+        }
+
+        .btn {
+            background: #1d1d1d;
+            border: 1px solid #333;
+            color: #666;
+            padding: 20px;
+            font-size: 22px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.1s;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            background: #2a2a2a;
+            color: #00ffcc;
+            border-color: #00ffcc;
+        }
+
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+
+        #redirect-msg {
+            display: none;
+            margin-top: 30px;
+            color: #00ffcc;
+            font-size: 1em;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #00ffcc;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="puzzle-box">
+        <div class="symbol-row">
+            <canvas id="canv0" width="100" height="100"></canvas>
+            <canvas id="canv1" width="100" height="100"></canvas>
+            <canvas id="canv2" width="100" height="100"></canvas>
+            <canvas id="canv3" width="100" height="100"></canvas>
+        </div>
+
+        <div class="controls">
+            <button class="btn up" onclick="handleInput('FEL')">▲</button>
+            <button class="btn left" onclick="handleInput('BAL')">◀</button>
+            <button class="btn right" onclick="handleInput('JOBB')">▶</button>
+            <button class="btn down" onclick="handleInput('LE')">▼</button>
+        </div>
+
+        <div id="redirect-msg">Átirányítás...</div>
+    </div>
+
+    <script>
+        // Ide írd be a céloldal linkjét:
+        const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
+
+        const sequences = [
+            ['LE', 'LE', 'LE', 'JOBB', 'JOBB'], 
+            ['JOBB', 'JOBB', 'JOBB', 'LE', 'LE'], 
+            ['LE', 'LE', 'JOBB', 'JOBB', 'JOBB'], 
+            ['JOBB', 'JOBB', 'LE', 'LE', 'LE']
+        ];
+
+        let solvedSymbols = 0;
+        let inputBuffer = [];
+
+        function drawSymbols() {
+            const canvIds = ['canv0', 'canv1', 'canv2', 'canv3'];
+            canvIds.forEach((id, i) => {
+                const ctx = document.getElementById(id).getContext('2d');
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 7;
+                ctx.lineJoin = 'round';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00ffcc';
+
+                ctx.beginPath();
+                if(i === 0) { // Spirál-szerű
+                    ctx.moveTo(20, 20); ctx.lineTo(80, 20); ctx.lineTo(80, 80); ctx.lineTo(40, 80); ctx.lineTo(40, 40);
+                } else if(i === 1) { // Keretes szem
+                    ctx.rect(20, 30, 60, 40); ctx.moveTo(50, 35); ctx.lineTo(50, 65);
+                } else if(i === 2) { // Háromszög-ék
+                    ctx.moveTo(50, 15); ctx.lineTo(85, 85); ctx.lineTo(15, 85); ctx.closePath();
+                } else if(i === 3) { // Kereszt-rács
+                    ctx.moveTo(20, 50); ctx.lineTo(80, 50); ctx.moveTo(50, 20); ctx.lineTo(50, 80);
+                }
+                ctx.stroke();
+            });
+        }
+
+        function handleInput(dir) {
+            if (solvedSymbols >= 4) return;
+
+            inputBuffer.push(dir);
+            const targetSeq = sequences[solvedSymbols];
+            const isCorrect = inputBuffer.every((val, index) => val === targetSeq[index]);
+
+            if (!isCorrect) {
+                inputBuffer = [];
+                if (dir === targetSeq[0]) inputBuffer.push(dir);
+                return;
+            }
+
+            if (inputBuffer.length === targetSeq.length) {
+                document.getElementById(`canv${solvedSymbols}`).classList.add('active');
+                solvedSymbols++;
+                inputBuffer = [];
+                
+                if (solvedSymbols === 4) {
+                    document.getElementById('redirect-msg').style.display = "block";
+                    // 1 másodperces késleltetés, hogy látszódjon az utolsó szimbólum is
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 1200);
+                }
+            }
+        }
+
+        drawSymbols();
+    </script>
+</body>
+</html>
