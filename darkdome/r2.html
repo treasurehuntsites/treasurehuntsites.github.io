@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunyhó Átka - Titkos Mechanizmus</title>
+    <style>
+        body {
+            background-color: #0f0f0f;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .puzzle-box {
+            width: 90%;
+            max-width: 380px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            padding: 30px 20px;
+            box-shadow: 0 0 40px rgba(0,0,0,1);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        /* Szimbólum rács - teljesen rejtett állapot */
+        .symbol-row {
+            display: flex;
+            justify-content: space-around;
+            background: #050505;
+            padding: 20px;
+            border-radius: 3px;
+            margin-bottom: 40px;
+            border: 1px solid #222;
+            min-height: 50px;
+        }
+
+        .symbol {
+            font-size: 36px;
+            visibility: hidden; /* Teljesen láthatatlan */
+            opacity: 0;
+            transition: opacity 1s ease-in;
+        }
+
+        .symbol.active {
+            visibility: visible;
+            opacity: 1;
+            color: #00ffcc;
+            text-shadow: 0 0 20px #00ffcc;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 0 auto;
+            width: 220px;
+        }
+
+        .btn {
+            background: #222;
+            border: 1px solid #444;
+            color: #888;
+            padding: 25px;
+            font-size: 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.1s;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            background: #333;
+            border-color: #666;
+        }
+
+        /* Csak a LE és JOBB gombok látszanak */
+        .up, .left { visibility: hidden; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+
+        .status-light {
+            width: 5px;
+            height: 5px;
+            background: #111;
+            margin: 10px auto;
+            border-radius: 50%;
+        }
+
+        #win-box {
+            display: none;
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px double #00ffcc;
+            color: #00ffcc;
+            font-weight: bold;
+            letter-spacing: 2px;
+            animation: flicker 0.2s infinite alternate;
+        }
+
+        @keyframes flicker {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="puzzle-box">
+        <div class="status-light"></div>
+        
+        <div class="symbol-row">
+            <div class="symbol" id="sym0">🌀</div>
+            <div class="symbol" id="sym1">👁️</div>
+            <div class="symbol" id="sym2">💀</div>
+            <div class="symbol" id="sym3">🕯️</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn up">▲</button>
+            <button class="btn left">◀</button>
+            <button class="btn right" onclick="handleInput('JOBB')">▶</button>
+            <button class="btn down" onclick="handleInput('LE')">▼</button>
+        </div>
+
+        <div id="win-box">ÁTOK MEGTÖRVE: 1924</div>
+    </div>
+
+    <script>
+        const sequences = [
+            ['LE', 'LE', 'LE', 'JOBB', 'JOBB'], // Spirál
+            ['JOBB', 'JOBB', 'JOBB', 'LE', 'LE'], // Szem
+            ['LE', 'LE', 'JOBB', 'JOBB', 'JOBB'], // Koponya
+            ['JOBB', 'JOBB', 'LE', 'LE', 'LE']  // Gyertya
+        ];
+
+        let solvedSymbols = 0;
+        let inputBuffer = [];
+
+        function handleInput(dir) {
+            if (solvedSymbols >= 4) return;
+
+            inputBuffer.push(dir);
+            const targetSeq = sequences[solvedSymbols];
+            
+            // Ellenőrizzük az eddigi gombnyomásokat
+            const isCorrectSoFar = inputBuffer.every((val, index) => val === targetSeq[index]);
+
+            if (!isCorrectSoFar) {
+                // Hiba esetén csendben resetelünk, nincs visszajelzés
+                inputBuffer = [];
+                // Ha az első gombnyomás már rossz volt az aktuális sorozathoz, 
+                // akkor azt az egy gombot még ellenőrizzük, hátha az egy újrakezdés első gombja
+                if (dir === targetSeq[0]) {
+                    inputBuffer.push(dir);
+                }
+                return;
+            }
+
+            // Ha a teljes aktuális sorozat kész
+            if (inputBuffer.length === targetSeq.length) {
+                document.getElementById(`sym${solvedSymbols}`).classList.add('active');
+                solvedSymbols++;
+                inputBuffer = [];
+                
+                if (solvedSymbols === 4) {
+                    setTimeout(() => {
+                        document.getElementById('win-box').style.display = "block";
+                    }, 500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
