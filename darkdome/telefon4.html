@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bejövő hívás...</title>
     <style>
+        /* Teljes tiltás a görgetésre és kijelölésre */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
-            height: 100%;
-            height: 100dvh;
+            height: 100vh;
+            height: 100dvh; /* Dinamikus magasság mobilhoz */
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: #000;
             color: white;
             overflow: hidden;
-            position: fixed;
-            touch-action: none;
+            position: fixed; /* Megakadályozza a görgetést iOS-en is */
+            touch-action: none; /* Letiltja a zoom-ot és görgetést */
             -webkit-user-select: none;
             user-select: none;
         }
@@ -37,10 +38,10 @@
             flex-direction: column;
             justify-content: space-between;
             width: 100%;
-            height: 100%;
+            height: 100vh;
             height: 100dvh;
             background: linear-gradient(to bottom, #2c3e50, #000000);
-            padding: 60px 20px;
+            padding: 15% 20px;
             box-sizing: border-box;
             text-align: center;
         }
@@ -50,7 +51,7 @@
             color: #bdc3c7;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
         .caller-info h1 {
@@ -65,7 +66,7 @@
             width: 100%;
             max-width: 450px;
             margin: 0 auto;
-            padding-bottom: 50px;
+            padding-bottom: 10%;
         }
 
         .button {
@@ -103,7 +104,7 @@
             font-size: 1.4rem;
             color: #4cd964;
             font-weight: 300;
-            margin-top: 20px;
+            margin-bottom: 200px;
         }
     </style>
 </head>
@@ -133,50 +134,37 @@
     </div>
 </div>
 
-<audio id="ringtone" src="media/chirptone.wav" loop preload="auto"></audio>
-<audio id="audio1" src="media/audio1.mp3" preload="auto"></audio>
+<audio id="ringtone" src="media/chirptone.wav" loop></audio>
+<audio id="audio1" src="media/audio1"></audio>
 
 <script>
     const ringtone = document.getElementById('ringtone');
     const audio1 = document.getElementById('audio1');
-    const targetUrl = "cnn.com";
+    const targetUrl = "https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac";
 
     function initCall() {
-        // Overlay eltávolítása és hívófelület mutatása
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('main-screen').style.display = 'flex';
+        ringtone.play().catch(e => console.log(e));
         
-        // Csengőhang indítása
-        ringtone.play().catch(e => console.log("Csengőhang hiba:", e));
-        
-        // Előre betöltjük a másikat is, hogy ne legyen késleltetés
-        audio1.load();
+        // Teljes képernyő kérése (opcionális, egyes böngészők engedik gombnyomásra)
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+        }
     }
 
     function answerCall() {
-        // 1. Csengőhang megállítása
         ringtone.pause();
         ringtone.currentTime = 0;
-
-        // 2. Felület frissítése
         document.getElementById('button-container').style.display = 'none';
         document.getElementById('status-text').style.display = 'block';
+        audio1.play().catch(e => {
+            window.location.href = targetUrl;
+        });
 
-        // 3. Audio1 indítása (fontos: a play() ígéretet ad vissza)
-        const playPromise = audio1.play();
-
-        if (playPromise !== undefined) {
-            playPromise.then(_ => {
-                // Sikerült a lejátszás indítása
-                audio1.onended = function() {
-                    window.location.href = targetUrl;
-                };
-            }).catch(error => {
-                console.log("Lejátszási hiba:", error);
-                // Ha mégis hiba van, irányítsunk át azonnal
-                window.location.href = targetUrl;
-            });
-        }
+        audio1.onended = function() {
+            window.location.href = targetUrl;
+        };
     }
 </script>
 
