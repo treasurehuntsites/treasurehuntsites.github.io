@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bejövő hívás...</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0);
+            z-index: 9999;
+            cursor: pointer;
+        }
+
+        .phone-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            background: linear-gradient(to bottom, #2c3e50, #000000);
+            padding: 60px 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .caller-info p {
+            font-size: 0.9rem;
+            color: #bdc3c7;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .caller-info h1 {
+            font-size: 2.2rem;
+            font-weight: 400;
+            margin: 0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+        }
+
+        .button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .decline { background-color: #ff3b30; }
+        .accept { background-color: #4cd964; }
+
+        .button svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        .pulse {
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0px rgba(76, 217, 100, 0.5); }
+            100% { box-shadow: 0 0 0 30px rgba(76, 217, 100, 0); }
+        }
+
+        #status-text {
+            display: none;
+            font-size: 1.4rem;
+            color: #4cd964;
+            font-weight: 300;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="overlay" onclick="initCall()"></div>
+
+<div class="phone-screen" id="main-screen">
+    <div class="caller-info">
+        <p>Bejövő hívás</p>
+        <h1>Ismeretlen szám</h1>
+        <p style="text-transform: none; letter-spacing: 0; margin-top: 5px;">Magyarország</p>
+    </div>
+
+    <div>
+        <div id="status-text">Hívás folyamatban...</div>
+    </div>
+
+    <div class="controls" id="button-container">
+        <button class="button decline" onclick="answerCall()">
+            <svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z" transform="rotate(135 12 12)"/></svg>
+        </button>
+        
+        <button class="button accept pulse" onclick="answerCall()">
+            <svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg>
+        </button>
+    </div>
+</div>
+
+<audio id="ringtone" src="media/chirptone.wav" loop preload="auto"></audio>
+<audio id="audio1" src="media/audio1.mp3" preload="auto"></audio>
+
+<script>
+    const ringtone = document.getElementById('ringtone');
+    const audio1 = document.getElementById('audio1');
+    const targetUrl = "cnn.com";
+
+    function initCall() {
+        // Overlay eltávolítása és hívófelület mutatása
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('main-screen').style.display = 'flex';
+        
+        // Csengőhang indítása
+        ringtone.play().catch(e => console.log("Csengőhang hiba:", e));
+        
+        // Előre betöltjük a másikat is, hogy ne legyen késleltetés
+        audio1.load();
+    }
+
+    function answerCall() {
+        // 1. Csengőhang megállítása
+        ringtone.pause();
+        ringtone.currentTime = 0;
+
+        // 2. Felület frissítése
+        document.getElementById('button-container').style.display = 'none';
+        document.getElementById('status-text').style.display = 'block';
+
+        // 3. Audio1 indítása (fontos: a play() ígéretet ad vissza)
+        const playPromise = audio1.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(_ => {
+                // Sikerült a lejátszás indítása
+                audio1.onended = function() {
+                    window.location.href = targetUrl;
+                };
+            }).catch(error => {
+                console.log("Lejátszási hiba:", error);
+                // Ha mégis hiba van, irányítsunk át azonnal
+                window.location.href = targetUrl;
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
