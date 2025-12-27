@@ -2,54 +2,294 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energiahálózat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sötét Energia - Maximális Kanyarok</title>
     <style>
-        body { background: #0d0d0d; color: #ccc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .grid { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; background: #1a1a1a; padding: 20px; border-radius: 8px; }
-        .pipe { width: 80px; height: 80px; background: #222; border: 1px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s; }
-        .line { width: 60px; height: 15px; background: #444; position: relative; border-radius: 5px; }
-        .active .line { background: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
-        #msg { margin-top: 20px; color: #00ffcc; height: 20px; font-family: monospace; }
+        * { box-sizing: border-box; }
+        body {
+            background-color: #080808;
+            color: #d4d4d4;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            position: relative;
+            text-align: center;
+            background: #111;
+            padding: 40px;
+            border-radius: 12px;
+            border: 2px solid #222;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+
+        .label {
+            margin-bottom: 25px;
+            color: #555;
+            letter-spacing: 4px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        canvas {
+            background: #050505;
+            border: 2px solid #222;
+            cursor: pointer;
+            display: block;
+        }
+
+        .input-marker {
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-175px); /* Első sor közepe */
+            width: 10px;
+            height: 10px;
+            background: #00ffcc;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+
+        #status {
+            margin-top: 30px;
+            height: 20px;
+            color: #00ffcc;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px #00ffcc;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
-    <div style="margin-bottom:20px; font-family:monospace; color:#555;">KÖSD ÖSSZE A FORRÁST A CÉLLAL</div>
-    <div class="grid">
-        <div class="pipe" onclick="rotate(this, 0)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 1)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 2)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 3)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 4)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 5)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 6)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 7)"><div class="line"></div></div>
-        <div class="pipe" onclick="rotate(this, 8)"><div class="line"></div></div>
+
+    <div class="container">
+        <div class="label">Komplex Kanyar-Hálózat</div>
+        
+        <div class="canvas-wrapper">
+            <div class="input-marker"></div>
+            <canvas id="puzzleCanvas" width="400" height="400"></canvas>
+        </div>
+
+        <div id="status"></div>
     </div>
-    <div id="msg"></div>
 
     <script>
+        const canvas = document.getElementById('puzzleCanvas');
+        const ctx = canvas.getContext('2d');
         const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
-        let angles = [0, 90, 0, 90, 0, 90, 0, 90, 0]; // Kezdeti állások
-        const solution = [90, 0, 90, 0, 90, 0, 90, 0, 90]; // Egy lehetséges megoldás (példa)
 
-        function rotate(el, idx) {
-            angles[idx] = (angles[idx] + 90) % 180; // Csak vízszintes/függőleges most az egyszerűségért
-            el.style.transform = `rotate(${angles[idx]}deg)`;
-            check();
+        const gridSize = 5;
+        const cellSize = 80;
+        const wireWidth = 14;
+        let solved = false;
+
+        // Típusok: 0: Egyenes (1,3 portok), 1: L-alak (1,2 portok)
+        const tileTypes = [
+            { id: 0, ports: [1, 3] },
+            { id: 1, ports: [1, 2] }
+        ];
+
+        let grid = [];
+
+        // Maximális L-alakú elrendezés (1=L-alak, 0=Egyenes)
+        // A megoldás egy rendkívül cikázó útvonal
+        const layout = [
+            1, 1, 1, 1, 1, // 0-4
+            1, 1, 1, 1, 0, // 5-9
+            1, 1, 1, 1, 1, // 10-14
+            1, 1, 1, 1, 1, // 15-19
+            1, 0, 0, 0, 1  // 20-24
+        ];
+
+        function initGrid() {
+            grid = [];
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                grid.push({
+                    type: layout[i],
+                    rotation: Math.floor(Math.random() * 4),
+                    active: false
+                });
+            }
+            checkState();
+            render();
         }
 
-        function check() {
-            // Itt egy egyszerűsített ellenőrzés van: minden csőnek függőlegesnek vagy vízszintesnek kell lennie a kód szerint
-            if (angles.every((a, i) => a === solution[i])) {
-                document.querySelectorAll('.pipe').forEach(p => p.classList.add('active'));
-                document.getElementById('msg').innerText = "ENERGIA ÁRAMLIK...";
-                setTimeout(() => window.location.href = targetUrl, 1500);
+        function getActivePorts(tile) {
+            return tileTypes[tile.type].ports.map(p => (p + tile.rotation) % 4);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            grid.forEach((tile, i) => {
+                const col = i % gridSize;
+                const row = Math.floor(i / gridSize);
+                const x = col * cellSize;
+                const y = row * cellSize;
+                const cx = x + cellSize / 2;
+                const cy = y + cellSize / 2;
+
+                // Enyhe háttérháló
+                ctx.strokeStyle = '#0d0d0d';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(tile.rotation * Math.PI / 2);
+
+                ctx.lineCap = 'butt';
+                ctx.lineWidth = wireWidth;
+                
+                if (tile.active) {
+                    ctx.strokeStyle = '#00ffcc';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00ffcc';
+                } else {
+                    ctx.strokeStyle = '#1a1a1a';
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.beginPath();
+                if (tile.type === 0) {
+                    ctx.moveTo(-cellSize / 2, 0);
+                    ctx.lineTo(cellSize / 2, 0);
+                } else {
+                    ctx.moveTo(cellSize / 2, 0);
+                    ctx.lineTo(0, 0);
+                    ctx.lineTo(0, cellSize / 2);
+                }
+                ctx.stroke();
+
+                if (tile.type === 1) {
+                    ctx.fillStyle = tile.active ? '#00ffcc' : '#1a1a1a';
+                    ctx.fillRect(-wireWidth/2, -wireWidth/2, wireWidth, wireWidth);
+                }
+
+                ctx.restore();
+
+                // Célpont jelölése (pötty a rács szélén)
+                if (i === grid.length - 1) {
+                    ctx.beginPath();
+                    ctx.arc(x + cellSize, y + cellSize / 2, 6, 0, Math.PI * 2);
+                    if (solved) {
+                        ctx.fillStyle = '#00ffcc';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = '#00ffcc';
+                    } else {
+                        ctx.fillStyle = '#222';
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.fill();
+                }
+            });
+        }
+
+        function checkState() {
+            grid.forEach(t => t.active = false);
+
+            let queue = [];
+            // Bemenet ellenőrzése az A1 cellán (index 0), balra mutató csatlakozás (3-as port)
+            if (getActivePorts(grid[0]).includes(3)) {
+                grid[0].active = true;
+                queue.push(0);
+            }
+
+            let visited = new Set();
+            while (queue.length > 0) {
+                let currentIdx = queue.shift();
+                if (visited.has(currentIdx)) continue;
+                visited.add(currentIdx);
+
+                let currentTile = grid[currentIdx];
+                let currentPorts = getActivePorts(currentTile);
+                const r = Math.floor(currentIdx / gridSize);
+                const c = currentIdx % gridSize;
+
+                const neighbors = [
+                    { dr: -1, dc: 0, port: 0, opp: 2 }, // Fel
+                    { dr: 0, dc: 1, port: 1, opp: 3 },  // Jobbra
+                    { dr: 1, dc: 0, port: 2, opp: 0 },  // Le
+                    { dr: 0, dc: -1, port: 3, opp: 1 }  // Balra
+                ];
+
+                neighbors.forEach(n => {
+                    const nr = r + n.dr;
+                    const nc = c + n.dc;
+                    const nIdx = nr * gridSize + nc;
+
+                    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && currentPorts.includes(n.port)) {
+                        let nextTile = grid[nIdx];
+                        if (getActivePorts(nextTile).includes(n.opp)) {
+                            if (!nextTile.active) {
+                                nextTile.active = true;
+                                queue.push(nIdx);
+                            }
+                        }
+                    }
+                });
+            }
+
+            const lastIdx = grid.length - 1;
+            // Kimenet ellenőrzése az E5 cellán (index 24), jobbra mutató kimenet (1-es port)
+            if (grid[lastIdx].active && getActivePorts(grid[lastIdx]).includes(1)) {
+                solved = true;
+                document.getElementById('status').innerText = "HÁLÓZAT STABIL";
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 1500);
+            } else {
+                solved = false;
+                document.getElementById('status').innerText = "";
             }
         }
 
-        // Inicializálás
-        document.querySelectorAll('.pipe').forEach((p, i) => p.style.transform = `rotate(${angles[i]}deg)`);
+        canvas.addEventListener('click', (e) => {
+            if (solved) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            const index = row * gridSize + col;
+
+            if (index >= 0 && index < grid.length) {
+                grid[index].rotation = (grid[index].rotation + 1) % 4;
+                if (navigator.vibrate) navigator.vibrate(20);
+                checkState();
+                render();
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent("click", {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }, {passive: false});
+
+        initGrid();
     </script>
 </body>
 </html>
+
