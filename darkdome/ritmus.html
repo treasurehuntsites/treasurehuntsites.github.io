@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ritmus kód</title>
+    <style>
+        body { background: #0d0d0d; color: #ccc; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .box { background: #1a1a1a; padding: 30px; border-radius: 8px; border: 2px solid #333; text-align: center; width: 300px; }
+        .btn { background: #222; border: 2px solid #00ffcc; color: #00ffcc; padding: 20px; border-radius: 50%; width: 100px; height: 100px; cursor: pointer; font-weight: bold; margin-top: 20px; transition: 0.1s; }
+        .btn:active { background: #00ffcc; color: #000; transform: scale(0.9); }
+        .listen-btn { background: none; border: 1px solid #555; color: #888; padding: 10px; cursor: pointer; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <button class="listen-btn" onclick="playRhythm()">🔊 MINTA HALLGATÁSA</button>
+        <div id="hint">Utánozd a ritmust a gombbal!</div>
+        <button class="btn" onmousedown="tapStart()" onmouseup="tapEnd()" ontouchstart="tapStart()" ontouchend="tapEnd()">KOPOG</button>
+        <div id="status" style="margin-top:20px; color:#00ffcc;"></div>
+    </div>
+
+    <script>
+        const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
+        const solution = [200, 200, 600, 200]; // Rövid, Rövid, Hosszú, Rövid (ms)
+        let input = [];
+        let lastTime = 0;
+
+        function playRhythm() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let now = audioCtx.currentTime;
+            [0.2, 0.2, 0.6, 0.2].forEach(dur => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + dur);
+                now += dur + 0.3;
+            });
+        }
+
+        function tapStart() { lastTime = Date.now(); }
+        function tapEnd() {
+            let duration = Date.now() - lastTime;
+            input.push(duration > 400 ? 600 : 200);
+            if (input.length > 4) input.shift();
+            if (input.join() === solution.join()) {
+                document.getElementById('status').innerText = "KATTANÁS... NYÍLIK!";
+                setTimeout(() => window.location.href = targetUrl, 1000);
+            }
+        }
+    </script>
+</body>
+</html>
