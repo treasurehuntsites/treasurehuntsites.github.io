@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energiahálózat</title>
+    <style>
+        body { background: #0d0d0d; color: #ccc; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .grid { display: grid; grid-template-columns: repeat(3, 80px); gap: 10px; background: #1a1a1a; padding: 20px; border-radius: 8px; }
+        .pipe { width: 80px; height: 80px; background: #222; border: 1px solid #333; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s; }
+        .line { width: 60px; height: 15px; background: #444; position: relative; border-radius: 5px; }
+        .active .line { background: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        #msg { margin-top: 20px; color: #00ffcc; height: 20px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom:20px; font-family:monospace; color:#555;">KÖSD ÖSSZE A FORRÁST A CÉLLAL</div>
+    <div class="grid">
+        <div class="pipe" onclick="rotate(this, 0)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 1)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 2)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 3)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 4)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 5)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 6)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 7)"><div class="line"></div></div>
+        <div class="pipe" onclick="rotate(this, 8)"><div class="line"></div></div>
+    </div>
+    <div id="msg"></div>
+
+    <script>
+        const targetUrl = "https://treasurehuntsites.github.io/konyvmegallo/2/game.html";
+        let angles = [0, 90, 0, 90, 0, 90, 0, 90, 0]; // Kezdeti állások
+        const solution = [90, 0, 90, 0, 90, 0, 90, 0, 90]; // Egy lehetséges megoldás (példa)
+
+        function rotate(el, idx) {
+            angles[idx] = (angles[idx] + 90) % 180; // Csak vízszintes/függőleges most az egyszerűségért
+            el.style.transform = `rotate(${angles[idx]}deg)`;
+            check();
+        }
+
+        function check() {
+            // Itt egy egyszerűsített ellenőrzés van: minden csőnek függőlegesnek vagy vízszintesnek kell lennie a kód szerint
+            if (angles.every((a, i) => a === solution[i])) {
+                document.querySelectorAll('.pipe').forEach(p => p.classList.add('active'));
+                document.getElementById('msg').innerText = "ENERGIA ÁRAMLIK...";
+                setTimeout(() => window.location.href = targetUrl, 1500);
+            }
+        }
+
+        // Inicializálás
+        document.querySelectorAll('.pipe').forEach((p, i) => p.style.transform = `rotate(${angles[i]}deg)`);
+    </script>
+</body>
+</html>
