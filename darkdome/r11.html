@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sötét Hangüzenet</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #050505;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .console {
+            background: #0a0a0a;
+            border: 2px solid #1a1a1a;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0,0,0,1);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .label {
+            font-size: 0.7em;
+            letter-spacing: 4px;
+            color: #444;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .visualizer {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            margin-bottom: 30px;
+        }
+
+        .bar {
+            width: 4px;
+            background: #00ffcc;
+            height: 10%;
+            transition: height 0.1s ease;
+            box-shadow: 0 0 10px #00ffcc;
+            opacity: 0.3;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background: #111;
+            border: 1px solid #333;
+            color: #00ffcc;
+            padding: 15px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        button:hover:not(:disabled) {
+            background: #1a1a1a;
+            border-color: #00ffcc;
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #444;
+            height: 1.2em;
+        }
+
+        .tape-reel {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            position: absolute;
+            top: -30px;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tape-reel::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #333;
+            border-radius: 50%;
+        }
+
+        .left-reel { left: 40px; }
+        .right-reel { right: 40px; }
+
+        .spinning {
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="console">
+        <div class="tape-reel left-reel" id="reelL"></div>
+        <div class="tape-reel right-reel" id="reelR"></div>
+
+        <div class="label">Audio Analizátor v2.6</div>
+
+        <div class="visualizer" id="visualizer">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="controls">
+            <button id="fetchBtn" onclick="generateAudio()">Üzenet Letöltése</button>
+            <button id="playEncryptedBtn" onclick="playAudio(true)" disabled>Lejátszás (Kódolt)</button>
+            <button id="playDecodedBtn" onclick="playAudio(false)" disabled>Lejátszás (Visszafejtett)</button>
+            <button id="downloadBtn" onclick="downloadAudio(true)" disabled style="border-style: dashed;">Kódolt Letöltés (.wav)</button>
+        </div>
+
+        <div id="status">Készenlétben...</div>
+    </div>
+
+    <script>
+        const apiKey = ""; // Automatikusan kitöltődik futtatáskor
+        let audioBuffer = null;
+        let audioCtx = null;
+        let currentSource = null;
+
+        function updateStatus(msg) {
+            document.getElementById('status').textContent = msg;
+        }
+
+        function setSpinning(isSpinning) {
+            const reels = [document.getElementById('reelL'), document.getElementById('reelR')];
+            reels.forEach(r => isSpinning ? r.classList.add('spinning') : r.classList.remove('spinning'));
+        }
+
+        // PCM16 to WAV konverter
+        function pcmToWav(pcmData, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+            writeString(0, 'RIFF');
+            view.setUint32(4, 32 + pcmData.length * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, pcmData.length * 2, true);
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(44 + i * 2, pcmData[i], true);
+            }
+            return buffer;
+        }
+
+        async function generateAudio() {
+            const btn = document.getElementById('fetchBtn');
+            btn.disabled = true;
+            updateStatus("Kapcsolódás a szerverhez...");
+            
+            const payload = {
+                contents: [{ parts: [{ text: "Mondd el titokzatos hangon: A jelszó szezám tárulj" }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Kore" }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            let retries = 5;
+            let delay = 1000;
+
+            const callApi = async () => {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error("API hiba");
+                return await response.json();
+            };
+
+            try {
+                let result;
+                while (retries > 0) {
+                    try {
+                        result = await callApi();
+                        break;
+                    } catch (e) {
+                        retries--;
+                        if (retries === 0) throw e;
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                    }
+                }
+
+                const audioData = result.candidates[0].content.parts[0].inlineData;
+                const sampleRate = parseInt(audioData.mimeType.match(/rate=(\d+)/)[1]);
+                const binaryString = atob(audioData.data);
+                const pcm = new Int16Array(binaryString.length / 2);
+                for (let i = 0; i < pcm.length; i++) {
+                    pcm[i] = (binaryString.charCodeAt(i * 2 + 1) << 8) | binaryString.charCodeAt(i * 2);
+                }
+
+                const wavBuffer = pcmToWav(pcm, sampleRate);
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioBuffer = await audioCtx.decodeAudioData(wavBuffer);
+
+                updateStatus("Üzenet rögzítve.");
+                document.getElementById('playEncryptedBtn').disabled = false;
+                document.getElementById('playDecodedBtn').disabled = false;
+                document.getElementById('downloadBtn').disabled = false;
+            } catch (error) {
+                updateStatus("Hiba a letöltés során.");
+                btn.disabled = false;
+            }
+        }
+
+        function downloadAudio(isReversed) {
+            if (!audioBuffer) return;
+            
+            const sampleRate = audioBuffer.sampleRate;
+            const channelData = audioBuffer.getChannelData(0);
+            const pcm = new Int16Array(channelData.length);
+            
+            for (let i = 0; i < channelData.length; i++) {
+                const idx = isReversed ? (channelData.length - 1 - i) : i;
+                const s = Math.max(-1, Math.min(1, channelData[idx]));
+                pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            
+            const wavBuffer = pcmToWav(pcm, sampleRate);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = isReversed ? 'titkos_uzenet_kodolt.wav' : 'titkos_uzenet.wav';
+            a.click();
+            URL.revokeObjectURL(url);
+            updateStatus("Fájl mentve.");
+        }
+
+        function playAudio(isReversed) {
+            if (!audioBuffer || !audioCtx) return;
+            if (currentSource) currentSource.stop();
+
+            const source = audioCtx.createBufferSource();
+            const bufferCopy = audioCtx.createBuffer(
+                audioBuffer.numberOfChannels,
+                audioBuffer.length,
+                audioBuffer.sampleRate
+            );
+
+            for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                const channelData = audioBuffer.getChannelData(i);
+                const newData = bufferCopy.getChannelData(i);
+                if (isReversed) {
+                    for (let j = 0; j < channelData.length; j++) {
+                        newData[j] = channelData[channelData.length - 1 - j];
+                    }
+                } else {
+                    newData.set(channelData);
+                }
+            }
+
+            source.buffer = bufferCopy;
+            source.connect(audioCtx.destination);
+            
+            setSpinning(true);
+            updateStatus(isReversed ? "Kódolt lejátszás..." : "Dekódolt lejátszás...");
+            
+            const bars = document.querySelectorAll('.bar');
+            const interval = setInterval(() => {
+                bars.forEach(b => {
+                    b.style.height = (Math.random() * 80 + 10) + "%";
+                    b.style.opacity = "0.8";
+                });
+            }, 100);
+
+            source.onended = () => {
+                setSpinning(false);
+                updateStatus("Vége.");
+                clearInterval(interval);
+                bars.forEach(b => { b.style.height = "10%"; b.style.opacity = "0.3"; });
+            };
+
+            source.start();
+            currentSource = source;
+        }
+    </script>
+</body>
+</html>
+
