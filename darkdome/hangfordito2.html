@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sötét Hangüzenet Dekódoló</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: #050505;
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .console {
+            background: #0a0a0a;
+            border: 2px solid #1a1a1a;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+        }
+
+        .label {
+            font-size: 0.75em;
+            letter-spacing: 5px;
+            color: #333;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+        }
+
+        .visualizer {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 35px;
+        }
+
+        .bar {
+            width: 5px;
+            background: #00ffcc;
+            height: 10%;
+            transition: height 0.1s ease, opacity 0.2s;
+            box-shadow: 0 0 10px rgba(0,255,204,0.5);
+            opacity: 0.2;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background: #0f0f0f;
+            border: 1px solid #222;
+            color: #00ffcc;
+            padding: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.8em;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        button:hover:not(:disabled) {
+            background: #151515;
+            border-color: #00ffcc;
+            box-shadow: 0 0 15px rgba(0,255,204,0.2);
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+
+        button:disabled {
+            opacity: 0.15;
+            cursor: not-allowed;
+            color: #444;
+        }
+
+        .btn-download {
+            border: 1px dashed #00ffcc;
+            margin-top: 10px;
+        }
+
+        #status {
+            margin-top: 25px;
+            font-size: 0.7em;
+            color: #222;
+            letter-spacing: 1px;
+            height: 1.2em;
+            text-transform: uppercase;
+        }
+
+        /* Magnó kerekek */
+        .tape-reel {
+            width: 70px;
+            height: 70px;
+            border: 2px solid #1a1a1a;
+            border-radius: 50%;
+            position: absolute;
+            top: -35px;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+
+        .tape-reel::before {
+            content: '';
+            width: 14px;
+            height: 14px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 50%;
+        }
+
+        .tape-reel::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 2px;
+            background: #1a1a1a;
+        }
+
+        .left-reel { left: 50px; }
+        .right-reel { right: 50px; }
+
+        .spinning {
+            animation: rotate-reel 2s linear infinite;
+        }
+
+        @keyframes rotate-reel {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Beállítások szolidan */
+        .settings-icon {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            font-size: 1.2em;
+            cursor: pointer;
+            opacity: 0.1;
+            transition: opacity 0.3s;
+        }
+        .settings-icon:hover { opacity: 0.5; }
+
+        #configModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0f0f0f;
+            border: 1px solid #333;
+            padding: 25px;
+            z-index: 100;
+            width: 85%;
+            max-width: 320px;
+            box-shadow: 0 0 100px #000;
+        }
+
+        #configModal input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #222;
+            color: #00ffcc;
+            padding: 12px;
+            margin: 15px 0;
+            font-family: inherit;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="console">
+        <div class="tape-reel left-reel" id="reelL"></div>
+        <div class="tape-reel right-reel" id="reelR"></div>
+
+        <div class="label">S.D.U. - ANALYZER 2.8</div>
+
+        <div class="visualizer" id="visualizer">
+            <!-- 20 bar -->
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="controls">
+            <button id="fetchBtn" onclick="generateAudio()">Üzenet Lehívása</button>
+            <button id="playEncBtn" onclick="playAudio(true)" disabled>Kódolt Lejátszás</button>
+            <button id="playDecBtn" onclick="playAudio(false)" disabled>Dekódolt Lejátszás</button>
+            <button id="dlBtn" class="btn-download" onclick="downloadAudio(true)" disabled>Fájl Mentése (.wav)</button>
+        </div>
+
+        <div id="status">Rendszer Kész</div>
+        <div class="settings-icon" onclick="toggleConfig()">⚙️</div>
+    </div>
+
+    <div id="configModal">
+        <div style="font-size: 0.7em; letter-spacing: 2px; color: #555;">API KONFIGURÁCIÓ</div>
+        <input type="password" id="keyInput" placeholder="Gemini API kulcs...">
+        <button onclick="saveKey()" style="width: 100%; padding: 12px;">Rögzítés</button>
+        <button onclick="toggleConfig()" style="width: 100%; padding: 12px; margin-top: 8px; border:none; color: #444;">Mégse</button>
+    </div>
+
+    <script>
+        const chatApiKey = ""; 
+        let storedKey = localStorage.getItem('g_api_key') || "";
+        
+        let masterBuffer = null;
+        let actx = null;
+        let sourceNode = null;
+        let vizInterval = null;
+
+        function toggleConfig() {
+            const m = document.getElementById('configModal');
+            m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function saveKey() {
+            const k = document.getElementById('keyInput').value.trim();
+            if (k) {
+                localStorage.setItem('g_api_key', k);
+                storedKey = k;
+                toggleConfig();
+                updateStatus("Kulcs mentve.");
+            }
+        }
+
+        function updateStatus(t) { document.getElementById('status').innerText = t; }
+
+        function setReels(active) {
+            const r = [document.getElementById('reelL'), document.getElementById('reelR')];
+            r.forEach(el => active ? el.classList.add('spinning') : el.classList.remove('spinning'));
+        }
+
+        function pcmToWav(pcm, sampleRate) {
+            const buf = new ArrayBuffer(44 + pcm.length * 2);
+            const view = new DataView(buf);
+            const s = (o, str) => { for (let i=0; i<str.length; i++) view.setUint8(o+i, str.charCodeAt(i)); };
+            s(0, 'RIFF');
+            view.setUint32(4, 32 + pcm.length * 2, true);
+            s(8, 'WAVE');
+            s(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            s(36, 'data');
+            view.setUint32(40, pcm.length * 2, true);
+            for (let i=0; i<pcm.length; i++) view.setInt16(44 + i*2, pcm[i], true);
+            return buf;
+        }
+
+        async function generateAudio() {
+            const key = chatApiKey || storedKey;
+            if (!key) { updateStatus("Hiba: Hiányzó kulcs."); toggleConfig(); return; }
+
+            const btn = document.getElementById('fetchBtn');
+            btn.disabled = true;
+            updateStatus("Kapcsolódás...");
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: "Mondd el titokzatosan, lassan: A jelszó szezám tárulj" }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
+                        },
+                        model: "gemini-2.5-flash-preview-tts"
+                    })
+                });
+
+                if (!res.ok) throw new Error("API hiba");
+                const data = await res.json();
+                const audioPart = data.candidates[0].content.parts[0].inlineData;
+                const sampleRate = parseInt(audioPart.mimeType.match(/rate=(\d+)/)[1]);
+                const bStr = atob(audioPart.data);
+                const pcm = new Int16Array(bStr.length / 2);
+                for (let i=0; i<pcm.length; i++) pcm[i] = (bStr.charCodeAt(i*2+1) << 8) | bStr.charCodeAt(i*2);
+
+                const wav = pcmToWav(pcm, sampleRate);
+                if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+                masterBuffer = await actx.decodeAudioData(wav);
+
+                updateStatus("Üzenet rögzítve.");
+                document.getElementById('playEncBtn').disabled = false;
+                document.getElementById('playDecBtn').disabled = false;
+                document.getElementById('dlBtn').disabled = false;
+            } catch (e) {
+                updateStatus("Hiba történt.");
+                btn.disabled = false;
+            }
+        }
+
+        function downloadAudio(rev) {
+            if (!masterBuffer) return;
+            const rate = masterBuffer.sampleRate;
+            const data = masterBuffer.getChannelData(0);
+            const pcm = new Int16Array(data.length);
+            for (let i=0; i<data.length; i++) {
+                const idx = rev ? (data.length - 1 - i) : i;
+                const s = Math.max(-1, Math.min(1, data[idx]));
+                pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            const wav = pcmToWav(pcm, rate);
+            const b = new Blob([wav], { type: 'audio/wav' });
+            const u = URL.createObjectURL(b);
+            const a = document.createElement('a');
+            a.href = u; a.download = 'secret_audio.wav';
+            a.click();
+            URL.revokeObjectURL(u);
+        }
+
+        function playAudio(rev) {
+            if (!masterBuffer || !actx) return;
+            if (sourceNode) try { sourceNode.stop(); } catch(e) {}
+
+            const node = actx.createBufferSource();
+            const copy = actx.createBuffer(masterBuffer.numberOfChannels, masterBuffer.length, masterBuffer.sampleRate);
+            for (let i=0; i<masterBuffer.numberOfChannels; i++) {
+                const chan = masterBuffer.getChannelData(i);
+                const dest = copy.getChannelData(i);
+                if (rev) { for (let j=0; j<chan.length; j++) dest[j] = chan[chan.length - 1 - j]; }
+                else { dest.set(chan); }
+            }
+            node.buffer = copy;
+            node.connect(actx.destination);
+            
+            setReels(true);
+            const bars = document.querySelectorAll('.bar');
+            vizInterval = setInterval(() => {
+                bars.forEach(b => {
+                    b.style.height = (Math.random() * 80 + 10) + "%";
+                    b.style.opacity = "0.8";
+                });
+            }, 100);
+
+            node.onended = () => {
+                setReels(false);
+                clearInterval(vizInterval);
+                bars.forEach(b => { b.style.height = "10%"; b.style.opacity = "0.2"; });
+            };
+
+            node.start();
+            sourceNode = node;
+            updateStatus(rev ? "Kódolt lejátszás..." : "Normál lejátszás...");
+        }
+    </script>
+</body>
+</html>
+
