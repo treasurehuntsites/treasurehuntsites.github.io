@@ -1,34 +1,164 @@
 <!doctype html>
 <html lang="hu">
 <head>
-    </head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Anna és Márk V3.9</title>
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
+        body { margin: 0; padding: 0; font-family: 'Play', sans-serif; color: var(--text-color); background-color: var(--bg-color); visibility: hidden; opacity: 0; transition: opacity 0.3s; min-height: 100vh; text-align: center; }
+        .full-width-image-container { width: 100%; height: 100vh; overflow: hidden; position: absolute; top: 0; left: 0; z-index: 0; background-color: #111; }
+        .full-width-image-container img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .content-box { background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px 20px; border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px); box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2; position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column; }
+        .content-hidden { opacity: 0; }
+        .avatar-image { position: absolute; top: -50px; left: -10px; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; z-index: 20; border: 2px solid #00ffff; }
+        #story-text-display { font-size: 1.2em; font-weight: 700; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; flex-grow: 1; }
+        .page-button { padding: 12px 20px; color: #fff; background-color: #8a2be2; border: none; border-radius: 5px; font-size: 1.1em; font-weight: 700; cursor: pointer; text-transform: uppercase; margin: 5px; box-shadow: 0 4px 10px rgba(138, 43, 226, 0.4); }
+        .page-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
+        .menu-button { background: none; border: none; color: #fff; font-size: 1.5em; cursor: pointer; }
+        #password-container { display: none; flex-direction: column; gap: 10px; width: 100%; }
+        #password-input { padding: 12px; border: 2px solid #8a2be2; border-radius: 5px; background: #2c2c2c; color: #00ffff; text-align: center; font-size: 1.2em; }
+        #distanceModal { display: none; position: fixed; z-index: 250; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; }
+    </style>
+</head>
 <body>
+    <div class="full-width-image-container"><img id="story-image" alt="Háttér"></div>
+    <div class="content-box content-hidden" id="content-box">
+        <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
+        <p id="story-text-display"></p>
+        <div class="bottom-bar">
+            <div id="interaction-container" style="display: flex; justify-content: space-between;">
+                <button id="prev-page-button" class="page-button">Vissza</button>
+                <button id="next-page-button" class="page-button">Tovább</button>
+            </div>
+            <div id="password-container">
+                <input type="text" id="password-input" placeholder="Kód...">
+                <button id="check-password-button" class="page-button" style="width:100%">Ellenőrzés</button>
+                <p id="message" style="text-align:center; font-weight:bold;"></p>
+            </div>
+        </div>
+    </div>
+    <div class="fixed-menu-bar">
+        <button id="map-button" class="menu-button"><i class="fa-solid fa-map-location-dot"></i></button>
+        <button id="image-button" class="menu-button"><i class="fa-solid fa-image"></i></button>
+    </div>
+
+    <div id="distanceModal">
+        <h1 style="color:#00ffff">GPS CÉLPONT</h1>
+        <div id="distance-display" style="font-size: 3em; color: #00ff00; margin: 20px;">-- M</div>
+        <p id="gps-status" style="color:white">Helyzetmeghatározás...</p>
+    </div>
+
     <script>
-        function renderPage() {
-            const page = config.pages[currentPageIndex];
-            // ... tartalom frissítése (text, avatar, background) ...
+        (function() {
+            let storyPages = [];
+            let currentPartIndex = 0;
+            let CONFIG = {};
 
-            interactionContainer.innerHTML = '';
-
-            if (page.type === 'story') {
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'page-button';
-                nextBtn.textContent = 'Tovább';
-                nextBtn.onclick = () => {
-                    // MÓDOSÍTÁS: Ha van URL, átirányít, különben lapoz
-                    if (page.redirectUrl && page.redirectUrl.trim() !== "") {
-                        window.location.href = page.redirectUrl;
-                    } else {
-                        if (currentPageIndex < config.pages.length - 1) {
-                            currentPageIndex++;
-                            renderPage();
-                        }
-                    }
-                };
-                interactionContainer.appendChild(nextBtn);
+            async function init() {
+                try {
+                    const response = await fetch('game_config.json');
+                    CONFIG = await response.json();
+                    storyPages = CONFIG.storyPages;
+                    document.getElementById('app-title').textContent = CONFIG.APP_TITLE;
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = 1;
+                    updateUI();
+                } catch (e) { console.error("Config hiba:", e); }
             }
-            // ... choice és password kezelése változatlanul ...
-        }
+
+            function updateUI() {
+                const page = storyPages[currentPartIndex];
+                if (!page) return;
+
+                document.getElementById('story-text-display').textContent = page.content.replace(/§[MARN]/g, '').trim();
+                document.getElementById('story-image').src = page.customBackgroundUrl || CONFIG.BACKGROUND_URL;
+                
+                // Avatar kezelés
+                const prefix = page.content.substring(0, 2);
+                const avatarImg = document.getElementById('avatar-img');
+                if (page.customAvatarUrl) {
+                    avatarImg.src = page.customAvatarUrl;
+                    avatarImg.style.display = 'block';
+                } else if (CONFIG.AVATARS.AVATAR_MAP[prefix]) {
+                    avatarImg.src = CONFIG.AVATARS.AVATAR_MAP[prefix];
+                    avatarImg.style.display = 'block';
+                } else {
+                    avatarImg.style.display = 'none';
+                }
+
+                // Password/Text váltás
+                document.getElementById('password-container').style.display = page.type === 'password' ? 'flex' : 'none';
+                document.getElementById('interaction-container').style.display = page.type === 'password' ? 'none' : 'flex';
+                
+                document.getElementById('prev-page-button').disabled = currentPartIndex === 0;
+                document.getElementById('content-box').classList.remove('content-hidden');
+            }
+
+            document.getElementById('next-page-button').onclick = () => {
+                const page = storyPages[currentPartIndex];
+                
+                // JAVÍTÁS: Átirányítás külső linkre, ha meg van adva
+                if (page.nextUrl && page.nextUrl.trim() !== '') {
+                    window.location.href = page.nextUrl;
+                    return;
+                }
+
+                if (currentPartIndex === storyPages.length - 1) {
+                    document.getElementById('distanceModal').style.display = 'flex';
+                    startGPS();
+                } else {
+                    currentPartIndex = page.nextIndex !== undefined ? page.nextIndex : currentPartIndex + 1;
+                    updateUI();
+                }
+            };
+
+            document.getElementById('prev-page-button').onclick = () => {
+                const page = storyPages[currentPartIndex];
+                currentPartIndex = page.backIndex !== undefined ? page.backIndex : Math.max(0, currentPartIndex - 1);
+                updateUI();
+            };
+
+            document.getElementById('check-password-button').onclick = () => {
+                const page = storyPages[currentPartIndex];
+                const input = document.getElementById('password-input').value;
+                if (input === page.correctPassword) {
+                    if (page.nextUrl && page.nextUrl.trim() !== '') {
+                        window.location.href = page.nextUrl;
+                    } else {
+                        currentPartIndex = page.nextIndexSuccess !== undefined ? page.nextIndexSuccess : currentPartIndex + 1;
+                        updateUI();
+                    }
+                } else {
+                    document.getElementById('message').textContent = "Hibás kód!";
+                    document.getElementById('message').style.color = "red";
+                }
+            };
+
+            function startGPS() {
+                navigator.geolocation.watchPosition(pos => {
+                    const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, CONFIG.GPS_COMPASS.TARGET_LATITUDE, CONFIG.GPS_COMPASS.TARGET_LONGITUDE);
+                    document.getElementById('distance-display').textContent = Math.round(dist) + " M";
+                    if (dist < 20) window.location.href = CONFIG.GPS_COMPASS.SUCCESS_REDIRECT_URL;
+                });
+            }
+
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3;
+                const φ1 = lat1 * Math.PI/180;
+                const φ2 = lat2 * Math.PI/180;
+                const Δφ = (lat2-lat1) * Math.PI/180;
+                const Δλ = (lon2-lon1) * Math.PI/180;
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+
+            init();
+        })();
     </script>
 </body>
 </html>
