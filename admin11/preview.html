@@ -1,69 +1,33 @@
 <!doctype html>
 <html lang="hu">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title id="app-title">Előnézet (URL Támogatással)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <style>
-        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
-        body { visibility: hidden; opacity: 0; transition: opacity 0.5s; font-family: 'Play', sans-serif; background: var(--bg-color); color: var(--text-color); }
-        .content-box { background: rgba(0,0,0,0.85); border: 2px solid #8a2be2; padding: 25px; border-radius: 12px; max-width: 600px; width: 90%; margin: 10vh auto; }
-        .btn-preview { background: #8a2be2; color: white; padding: 10px; width: 100%; border-radius: 8px; margin-top: 10px; font-weight: bold; }
-        .bg-img { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; filter: brightness(0.4); }
-    </style>
-</head>
+    </head>
 <body>
-    <img id="bg-img" class="bg-img" src="">
-    <div class="content-box">
-        <div id="content-text" class="text-lg mb-6"></div>
-        <div id="action-area"></div>
-    </div>
-
     <script>
-        (function() {
-            const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
-            let current = 0;
+        // Itt ugyanazt a logikai módosítást kell elvégezni a renderPage függvényben,
+        // mint a game.html esetében.
 
-            function render() {
-                if (!config) return alert("Nincs konfiguráció!");
-                const page = config.storyPages[current];
-                document.getElementById('content-text').textContent = page.content;
-                document.getElementById('bg-img').src = page.customBackgroundUrl || "";
-                
-                const area = document.getElementById('action-area');
-                area.innerHTML = '';
+        function renderPage() {
+            const page = config.pages[currentPageIndex];
+            interactionContainer.innerHTML = '';
 
-                if (page.pageType === 'story' || !page.pageType) {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn-preview';
-                    btn.textContent = 'Tovább (Előnézet)';
-                    btn.onclick = () => {
-                        if (page.redirectUrl && page.redirectUrl.trim() !== "") {
-                            window.location.href = page.redirectUrl;
-                            return;
+            if (page.type === 'story') {
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'page-button';
+                nextBtn.textContent = 'Tovább';
+                nextBtn.onclick = () => {
+                    if (page.redirectUrl && page.redirectUrl.trim() !== "") {
+                        window.location.href = page.redirectUrl;
+                    } else {
+                        if (currentPageIndex < config.pages.length - 1) {
+                            currentPageIndex++;
+                            renderPage();
                         }
-                        current = (page.nextIndex !== undefined) ? page.nextIndex : current + 1;
-                        render();
-                    };
-                    area.appendChild(btn);
-                } else if (page.pageType === 'choice') {
-                    page.choices.forEach(c => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn-preview';
-                        btn.textContent = c.text;
-                        btn.onclick = () => { current = c.targetIndex; render(); };
-                        area.appendChild(btn);
-                    });
-                }
+                    }
+                };
+                interactionContainer.appendChild(nextBtn);
             }
-
-            document.body.style.visibility = 'visible';
-            document.body.style.opacity = 1;
-            render();
-        })();
+        }
     </script>
 </body>
 </html>
