@@ -1,33 +1,89 @@
 <!doctype html>
 <html lang="hu">
 <head>
-    </head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Játék Előnézet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
+        body { margin: 0; font-family: 'Play', sans-serif; color: var(--text-color); background: var(--bg-color); text-align: center; }
+        .full-width-image-container { width: 100%; height: 100vh; position: absolute; z-index: 0; }
+        .full-width-image-container img { width: 100%; height: 100%; object-fit: cover; }
+        .content-box { background: rgba(0,0,0,0.85); padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; border: 3px solid #8a2be2; position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: left; }
+        .avatar-image { position: absolute; top: -40px; left: 10px; width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ffff; }
+        .page-button { padding: 10px 20px; color: white; background: #8a2be2; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
 <body>
+    <div class="full-width-image-container"><img id="story-image" src=""></div>
+    <div class="content-box">
+        <img id="avatar-img" class="avatar-image" src="">
+        <p id="story-text-display" style="font-size: 1.1em; line-height: 1.5;"></p>
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+            <button id="prev-btn" class="page-button">Vissza</button>
+            <button id="next-btn" class="page-button">Tovább</button>
+        </div>
+        <p id="preview-info" style="font-size: 0.7em; color: #aaa; margin-top: 10px; text-align: center;">ELŐNÉZET MÓD</p>
+    </div>
+
     <script>
-        // Itt ugyanazt a logikai módosítást kell elvégezni a renderPage függvényben,
-        // mint a game.html esetében.
+        (function() {
+            const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG') || '{}');
+            const storyPages = config.storyPages || [];
+            let index = 0;
 
-        function renderPage() {
-            const page = config.pages[currentPageIndex];
-            interactionContainer.innerHTML = '';
+            function update() {
+                const page = storyPages[index];
+                if (!page) return;
 
-            if (page.type === 'story') {
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'page-button';
-                nextBtn.textContent = 'Tovább';
-                nextBtn.onclick = () => {
-                    if (page.redirectUrl && page.redirectUrl.trim() !== "") {
-                        window.location.href = page.redirectUrl;
-                    } else {
-                        if (currentPageIndex < config.pages.length - 1) {
-                            currentPageIndex++;
-                            renderPage();
-                        }
-                    }
-                };
-                interactionContainer.appendChild(nextBtn);
+                document.getElementById('story-text-display').textContent = page.content.replace(/§[MARN]/g, '');
+                document.getElementById('story-image').src = page.customBackgroundUrl || config.BACKGROUND_URL;
+                
+                const prefix = page.content.substring(0, 2);
+                const avatar = document.getElementById('avatar-img');
+                if (page.customAvatarUrl) {
+                    avatar.src = page.customAvatarUrl;
+                    avatar.style.display = 'block';
+                } else if (config.AVATARS && config.AVATARS.AVATAR_MAP[prefix]) {
+                    avatar.src = config.AVATARS.AVATAR_MAP[prefix];
+                    avatar.style.display = 'block';
+                } else {
+                    avatar.style.display = 'none';
+                }
+                
+                document.getElementById('prev-btn').style.visibility = index === 0 ? 'hidden' : 'visible';
+                document.getElementById('next-btn').textContent = (index === storyPages.length - 1) ? "GPS (VÉGE)" : "Tovább";
             }
-        }
+
+            document.getElementById('next-btn').onclick = () => {
+                const page = storyPages[index];
+                
+                // JAVÍTÁS: Preview-ban is működjön a külső link
+                if (page.nextUrl && page.nextUrl.trim() !== '') {
+                    if (confirm("Ez a gomb átirányítana ide: " + page.nextUrl + "\nMegnyitod?")) {
+                        window.location.href = page.nextUrl;
+                    }
+                    return;
+                }
+
+                if (index < storyPages.length - 1) {
+                    index = page.nextIndex !== undefined ? page.nextIndex : index + 1;
+                    update();
+                } else {
+                    alert("Itt érne véget a történet és indulna a GPS.");
+                }
+            };
+
+            document.getElementById('prev-btn').onclick = () => {
+                const page = storyPages[index];
+                index = page.backIndex !== undefined ? page.backIndex : Math.max(0, index - 1);
+                update();
+            };
+
+            update();
+        })();
     </script>
 </body>
 </html>
