@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title>Játék Konfiguráció V3.9 - URL Átirányítással</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e0e0e0; }
+        .card { background-color: #2c2c2c; border: 2px solid #8a2be2; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
+        .input-style { background-color: #3f3f46; color: #00ffff; border: 1px solid #6b7280; }
+        .btn-primary { background-color: #8a2be2; color: white; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #7b1cd1; }
+        .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; transition: background-color 0.2s; }
+        .btn-secondary:hover { background-color: #00ddee; }
+        .btn-danger { background-color: #dc3545; color: white; transition: background-color 0.2s; }
+        .btn-danger:hover { background-color: #c82333; }
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 4px; border-radius: 6px; background-color: #3f3f46; cursor: pointer; }
+        .page-item.selected { background-color: #8a2be2; border: 1px solid #00ffff; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Játék Konfiguráció V3.9</h1>
+
+        <div class="card p-6 rounded-xl space-y-4">
+            <h2 class="text-2xl font-semibold text-white border-b border-gray-600 pb-2">Általános Beállítások</h2>
+            <div>
+                <label class="block text-sm font-medium text-gray-300">Weboldal Címe</label>
+                <input type="text" id="appTitle" class="input-style w-full p-3 rounded-lg" placeholder="Játék címe">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="color" id="bgColor" class="input-style w-full h-12 rounded-lg" title="Háttérszín">
+                <input type="color" id="textColor" class="input-style w-full h-12 rounded-lg" title="Szövegszín">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="card p-4 rounded-xl">
+                <h3 class="font-bold mb-4">Oldalak Listája</h3>
+                <div id="pageListContainer" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
+                <button id="addPageButton" class="btn-primary w-full p-2 mt-4 rounded-lg text-sm">+ Új Oldal</button>
+            </div>
+
+            <div class="md:col-span-2 card p-6 rounded-xl space-y-4">
+                <h3 id="editingHeader" class="text-xl font-bold text-cyan-400">Oldal Szerkesztése (#0)</h3>
+                
+                <div>
+                    <label class="block text-sm text-gray-400">Szöveg (Használd: §A, §M, §R)</label>
+                    <textarea id="pageText" class="input-style w-full p-3 rounded-lg h-32" placeholder="Írd ide a történetet..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400">Következő Oldal Indexe</label>
+                        <input type="number" id="nextPageIndex" class="input-style w-full p-3 rounded-lg" placeholder="Pl. 1">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400">Átirányítás URL (Opcionális)</label>
+                        <input type="url" id="redirectUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://pelda.hu">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400">Oldal típusa</label>
+                        <select id="pageType" class="input-style w-full p-3 rounded-lg">
+                            <option value="story">Normál (Tovább gomb)</option>
+                            <option value="choice">Választás (Több gomb)</option>
+                            <option value="password">Jelszó</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400">Háttérkép URL</label>
+                        <input type="url" id="pageBgUrl" class="input-style w-full p-3 rounded-lg" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="savePageButton" class="btn-primary flex-1 p-3 rounded-lg font-bold">Oldal Mentése</button>
+                    <button id="deletePageButton" class="btn-danger px-6 rounded-lg"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center gap-4">
+            <button id="downloadConfigButton" class="btn-secondary px-8 py-4 rounded-xl text-lg">Konfiguráció Letöltése (.json)</button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'game_config_v3';
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { 
+            appTitle: "Kaland Játék", bgColor: "#1a1a1a", textColor: "#e0e0e0", pages: [{text: "Kezdőoldal", type: "story", nextPageIndex: 1, redirectUrl: ""}] 
+        };
+        let currentPageIndex = 0;
+
+        function renderPageList() {
+            const container = document.getElementById('pageListContainer');
+            container.innerHTML = '';
+            config.pages.forEach((page, index) => {
+                const div = document.createElement('div');
+                div.className = `page-item ${index === currentPageIndex ? 'selected' : ''}`;
+                div.innerHTML = `<span>#${index}: ${page.text.substring(0, 15)}...</span>`;
+                div.onclick = () => loadPage(index);
+                container.appendChild(div);
+            });
+        }
+
+        function loadPage(index) {
+            currentPageIndex = index;
+            const page = config.pages[index];
+            document.getElementById('editingHeader').textContent = `Oldal Szerkesztése (#${index})`;
+            document.getElementById('pageText').value = page.text;
+            document.getElementById('nextPageIndex').value = page.nextPageIndex || "";
+            document.getElementById('redirectUrl').value = page.redirectUrl || ""; // Betöltés
+            document.getElementById('pageType').value = page.type;
+            document.getElementById('pageBgUrl').value = page.backgroundUrl || "";
+            renderPageList();
+        }
+
+        document.getElementById('savePageButton').onclick = () => {
+            const page = config.pages[currentPageIndex];
+            page.text = document.getElementById('pageText').value;
+            page.nextPageIndex = parseInt(document.getElementById('nextPageIndex').value);
+            page.redirectUrl = document.getElementById('redirectUrl').value; // Mentés
+            page.type = document.getElementById('pageType').value;
+            page.backgroundUrl = document.getElementById('pageBgUrl').value;
+            
+            config.appTitle = document.getElementById('appTitle').value;
+            config.bgColor = document.getElementById('bgColor').value;
+            config.textColor = document.getElementById('textColor').value;
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            renderPageList();
+            alert("Mentve a böngészőbe!");
+        };
+
+        document.getElementById('addPageButton').onclick = () => {
+            config.pages.push({text: "Új szöveg", type: "story", nextPageIndex: 0, redirectUrl: ""});
+            loadPage(config.pages.length - 1);
+        };
+
+        document.getElementById('downloadConfigButton').onclick = () => {
+            const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'game_config.json';
+            a.click();
+        };
+
+        // Init
+        document.getElementById('appTitle').value = config.appTitle;
+        document.getElementById('bgColor').value = config.bgColor;
+        document.getElementById('textColor').value = config.textColor;
+        loadPage(0);
+    </script>
+</body>
+</html>
