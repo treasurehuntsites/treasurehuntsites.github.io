@@ -2,70 +2,100 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="app-title">Betöltés...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Anna és Márk (Játék)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <style>
-        body { font-family: 'Play', sans-serif; transition: opacity 0.5s; background: #000; color: #fff; }
-        .content-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid #8a2be2; padding: 20px; border-radius: 10px; }
-        .bg-img { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
+        html { overflow-x: hidden; overflow-y: auto; }
+        body {
+            visibility: hidden; opacity: 0; transition: opacity 0.5s ease-in-out;
+            margin: 0; padding: 0; font-family: 'Play', sans-serif;
+            color: var(--text-color); background-color: var(--bg-color);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+        .bg-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background-size: cover; background-position: center; filter: brightness(0.4); }
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.85); padding: 30px; border-radius: 15px;
+            max-width: 600px; width: 90%; box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+            border: 2px solid #8a2be2; position: relative; z-index: 10; margin: auto;
+            transition: opacity 0.4s;
+        }
+        .btn-game { background: #8a2be2; color: white; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; transition: transform 0.1s; }
+        .btn-game:active { transform: scale(0.98); }
+        .system-msg { color: #00ffff; font-style: italic; }
+        .anna-msg { color: #ff69b4; }
+        .mark-msg { color: #4169e1; }
     </style>
 </head>
 <body>
-    <img id="bg-image" class="bg-img" src="" alt="">
-    <div id="game-container" class="content-box">
-        <p id="story-text" class="text-lg font-bold mb-4"></p>
-        <div id="interaction-area"></div>
+    <div id="bg-layer" class="bg-overlay"></div>
+    <div class="content-box" id="game-box">
+        <div id="story-display" class="text-lg leading-relaxed mb-6"></div>
+        <div id="interaction-area" class="space-y-3"></div>
     </div>
 
     <script>
-        let gameConfig = null;
+        (async function() {
+            let config = null;
 
-        async function init() {
-            try {
-                const response = await fetch('game_config.json');
-                gameConfig = await response.json();
-                document.getElementById('app-title').textContent = gameConfig.appTitle;
-                document.body.style.backgroundColor = gameConfig.bgColor;
+            async function loadConfig() {
+                const res = await fetch('game_config.json');
+                if (!res.ok) throw new Error("A game_config.json nem található!");
+                config = await res.json();
+                document.getElementById('app-title').textContent = config.appTitle;
+                document.documentElement.style.setProperty('--bg-color', config.bgColor);
+                document.documentElement.style.setProperty('--text-color', config.textColor);
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
                 renderPage(0);
-            } catch (e) {
-                document.body.innerHTML = "<h1>Hiba a betöltésnél! Hiányzik a game_config.json?</h1>";
             }
-        }
 
-        function renderPage(index) {
-            const page = gameConfig.pages[index];
-            const textEl = document.getElementById('story-text');
-            const interactionEl = document.getElementById('interaction-area');
-            const bgEl = document.getElementById('bg-image');
-
-            textEl.textContent = page.text;
-            bgEl.src = page.backgroundUrl || "";
-            interactionEl.innerHTML = '';
-
-            if (page.type === 'story') {
-                const btn = document.createElement('button');
-                btn.className = "w-full p-3 bg-purple-600 rounded font-bold uppercase";
-                btn.textContent = "Tovább";
-                btn.onclick = () => goToPage(page);
-                interactionEl.appendChild(btn);
+            function formatText(text) {
+                return text
+                    .replace(/§A/g, '<span class="anna-msg font-bold">Anna:</span>')
+                    .replace(/§M/g, '<span class="mark-msg font-bold">Márk:</span>')
+                    .replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
             }
-            // (Választás és jelszó logika itt folytatódik hasonlóan...)
-        }
 
-        function goToPage(pageData) {
-            // ÚJ LOGIKA: Ha van URL, akkor odaugrik
-            if (pageData.redirectUrl && pageData.redirectUrl.trim() !== "") {
-                window.location.href = pageData.redirectUrl;
-                return;
-            }
-            
-            if (pageData.nextPageIndex !== undefined) {
-                renderPage(pageData.nextPageIndex);
-            }
-        }
+            function renderPage(index) {
+                const page = config.storyPages[index];
+                const display = document.getElementById('story-display');
+                const area = document.getElementById('interaction-area');
+                const bg = document.getElementById('bg-layer');
 
-        init();
+                display.innerHTML = formatText(page.content);
+                bg.style.backgroundImage = page.customBackgroundUrl ? `url('${page.customBackgroundUrl}')` : '';
+                area.innerHTML = '';
+
+                if (page.pageType === 'story') {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-game';
+                    btn.textContent = 'Tovább';
+                    btn.onclick = () => {
+                        if (page.redirectUrl && page.redirectUrl.trim() !== "") {
+                            window.location.href = page.redirectUrl;
+                            return;
+                        }
+                        if (page.nextIndex !== undefined) renderPage(page.nextIndex);
+                    };
+                    area.appendChild(btn);
+                } else if (page.pageType === 'choice') {
+                    page.choices.forEach(c => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-game';
+                        btn.textContent = c.text;
+                        btn.onclick = () => renderPage(c.targetIndex);
+                        area.appendChild(btn);
+                    });
+                }
+                // ... egyéb típusok (password, gps) logikája ...
+            }
+
+            loadConfig().catch(err => alert(err.message));
+        })();
     </script>
 </body>
 </html>
