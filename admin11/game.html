@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Anna és Márk (Telepített) V3.1</title>
+    
+    <meta http-equiv="Permissions-Policy" content="geolocation=*">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+        }
+
+        html { overflow-x: hidden; overflow-y: auto; }
+        body.modal-open { overflow: hidden; height: 100%; touch-action: none; }
+
+        body {
+            visibility: hidden; opacity: 0; transition: opacity 0.3s ease-in-out; 
+            margin: 0; padding: 0; font-family: 'Play', sans-serif;
+            color: var(--text-color); background-color: var(--bg-color);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; text-align: center; padding-bottom: 60px; 
+        }
+
+        .full-width-image-container {
+            width: 100%; height: 100vh; overflow: hidden; position: absolute;
+            top: 0; left: 0; z-index: 0; background-color: #111111;
+        }
+
+        .full-width-image-container img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.85); padding: 40px 20px 10px 20px; 
+            border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.7); border: 3px solid #8a2be2;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column;
+            justify-content: space-between; transition: opacity 0.5s ease-in-out; 
+        }
+
+        .content-hidden { opacity: 0; pointer-events: none; }
+
+        #story-text-display { font-size: 1.2em; font-weight: 700; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; }
+        
+        .anna-name { color: #ff69b4; font-weight: bold; }
+        .mark-name { color: #4169e1; font-weight: bold; }
+        .system-msg { color: #00ffff; font-style: italic; font-weight: bold; }
+
+        .bottom-bar { padding-top: 10px; border-top: 1px dashed #8a2be2; width: 100%; }
+        .interaction-container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+
+        .page-button {
+            padding: 12px 20px; color: #ffffff; background-color: #8a2be2; border: none; border-radius: 5px;
+            font-size: 1.1em; font-weight: 700; cursor: pointer; text-transform: uppercase;
+            flex: 1; min-width: 120px; transition: background-color 0.2s, transform 0.1s;
+        }
+        .page-button:active { transform: scale(0.96); background-color: #7b1cd1; }
+
+        .avatar-image {
+            position: absolute; top: -50px; left: -10px; width: 70px; height: 70px;
+            border-radius: 50%; object-fit: cover; z-index: 20; border: 2px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); display: none;
+        }
+
+        .fixed-menu-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+            background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50;
+            display: flex; justify-content: space-around; align-items: center;
+        }
+
+        .menu-button { background: none; border: none; color: #ffffff; font-size: 1.5em; cursor: pointer; transition: color 0.2s; }
+        .menu-button:active { color: #8a2be2; }
+    </style>
+</head>
+<body>
+    <div class="full-width-image-container">
+        <img id="story-image" src="" alt="Háttérkép">
+    </div>
+
+    <div class="content-box content-hidden" id="content-box"> 
+        <img id="avatar-img" class="avatar-image" src="" alt="Avatar">
+        <p id="story-text-display"></p>
+        <div class="bottom-bar">
+            <div class="interaction-container" id="interaction-container"></div>
+        </div>
+    </div>
+
+    <div class="fixed-menu-bar" id="menu-bar">
+        <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
+        <button class="menu-button" id="img-btn"><i class="fa-solid fa-image"></i></button>
+    </div>
+
+    <script>
+        (function() {
+            let config = null;
+            let currentPartIndex = 0;
+
+            const els = {
+                title: document.getElementById('app-title'),
+                storyDisplay: document.getElementById('story-text-display'),
+                storyImage: document.getElementById('story-image'),
+                avatarImg: document.getElementById('avatar-img'),
+                contentBox: document.getElementById('content-box'),
+                interactionContainer: document.getElementById('interaction-container'),
+                mapBtn: document.getElementById('map-btn')
+            };
+
+            async function start() {
+                try {
+                    const response = await fetch('game_config.json');
+                    if (!response.ok) throw new Error("Hiba a game_config.json betöltésekor.");
+                    config = await response.json();
+
+                    els.title.textContent = config.appTitle;
+                    document.documentElement.style.setProperty('--bg-color', config.bgColor);
+                    document.documentElement.style.setProperty('--text-color', config.textColor);
+
+                    if (!config.showMapIcon) els.mapBtn.style.display = 'none';
+                    els.mapBtn.onclick = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
+
+                    document.body.style.visibility = 'visible';
+                    document.body.style.opacity = 1;
+
+                    renderPage(0);
+                } catch (err) {
+                    alert("Kritikus hiba: " + err.message);
+                }
+            }
+
+            function formatText(text) {
+                return text
+                    .replace(/§A/g, '<span class="anna-name">Anna:</span>')
+                    .replace(/§M/g, '<span class="mark-name">Márk:</span>')
+                    .replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
+            }
+
+            function renderPage(index) {
+                currentPartIndex = index;
+                const page = config.storyPages[index];
+
+                els.contentBox.classList.add('content-hidden');
+
+                setTimeout(() => {
+                    els.storyDisplay.innerHTML = formatText(page.content);
+                    els.storyImage.src = page.customBackgroundUrl || "";
+
+                    // Avatar logika (eredeti)
+                    els.avatarImg.style.display = 'none';
+                    if (page.content.includes("§A") && config.annaAvatarUrl) {
+                        els.avatarImg.src = config.annaAvatarUrl;
+                        els.avatarImg.style.display = 'block';
+                    } else if (page.content.includes("§M") && config.markAvatarUrl) {
+                        els.avatarImg.src = config.markAvatarUrl;
+                        els.avatarImg.style.display = 'block';
+                    }
+
+                    els.interactionContainer.innerHTML = '';
+
+                    if (page.pageType === 'story' || !page.pageType) {
+                        const btn = document.createElement('button');
+                        btn.className = 'page-button';
+                        btn.textContent = 'Tovább';
+                        btn.onclick = () => {
+                            // ÚJ REDIRECT LOGIKA
+                            if (page.redirectUrl && page.redirectUrl.trim() !== "") {
+                                window.location.href = page.redirectUrl;
+                                return;
+                            }
+                            const next = (page.nextIndex !== undefined) ? page.nextIndex : currentPartIndex + 1;
+                            renderPage(next);
+                        };
+                        els.interactionContainer.appendChild(btn);
+                    } else if (page.pageType === 'choice') {
+                        page.choices.forEach(c => {
+                            const btn = document.createElement('button');
+                            btn.className = 'page-button';
+                            btn.textContent = c.text;
+                            btn.onclick = () => renderPage(c.targetIndex);
+                            els.interactionContainer.appendChild(btn);
+                        });
+                    }
+                    // Itt maradhat a Password/GPS logika...
+
+                    els.contentBox.classList.remove('content-hidden');
+                }, 400);
+            }
+
+            start();
+        })();
+    </script>
+</body>
+</html>
