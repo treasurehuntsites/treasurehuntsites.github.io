@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="app-title">Betöltés...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Play', sans-serif; transition: opacity 0.5s; background: #000; color: #fff; }
+        .content-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid #8a2be2; padding: 20px; border-radius: 10px; }
+        .bg-img { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+    </style>
+</head>
+<body>
+    <img id="bg-image" class="bg-img" src="" alt="">
+    <div id="game-container" class="content-box">
+        <p id="story-text" class="text-lg font-bold mb-4"></p>
+        <div id="interaction-area"></div>
+    </div>
+
+    <script>
+        let gameConfig = null;
+
+        async function init() {
+            try {
+                const response = await fetch('game_config.json');
+                gameConfig = await response.json();
+                document.getElementById('app-title').textContent = gameConfig.appTitle;
+                document.body.style.backgroundColor = gameConfig.bgColor;
+                renderPage(0);
+            } catch (e) {
+                document.body.innerHTML = "<h1>Hiba a betöltésnél! Hiányzik a game_config.json?</h1>";
+            }
+        }
+
+        function renderPage(index) {
+            const page = gameConfig.pages[index];
+            const textEl = document.getElementById('story-text');
+            const interactionEl = document.getElementById('interaction-area');
+            const bgEl = document.getElementById('bg-image');
+
+            textEl.textContent = page.text;
+            bgEl.src = page.backgroundUrl || "";
+            interactionEl.innerHTML = '';
+
+            if (page.type === 'story') {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-3 bg-purple-600 rounded font-bold uppercase";
+                btn.textContent = "Tovább";
+                btn.onclick = () => goToPage(page);
+                interactionEl.appendChild(btn);
+            }
+            // (Választás és jelszó logika itt folytatódik hasonlóan...)
+        }
+
+        function goToPage(pageData) {
+            // ÚJ LOGIKA: Ha van URL, akkor odaugrik
+            if (pageData.redirectUrl && pageData.redirectUrl.trim() !== "") {
+                window.location.href = pageData.redirectUrl;
+                return;
+            }
+            
+            if (pageData.nextPageIndex !== undefined) {
+                renderPage(pageData.nextPageIndex);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
