@@ -21,7 +21,7 @@
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
         .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
-        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
+        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 2px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
         .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
@@ -41,7 +41,7 @@
 
     <script>
         (function() {
-            const STORAGE_KEY = 'DYNAMIC_CONFIG'; // Fontos, hogy ez egyezzen az adminnal
+            const STORAGE_KEY = 'DYNAMIC_CONFIG';
             const config = JSON.parse(localStorage.getItem(STORAGE_KEY));
             
             if(!config) {
@@ -56,7 +56,9 @@
             document.documentElement.style.setProperty('--text-color', config.textColor);
             if(!config.showMapIcon) document.getElementById('map-btn').style.display = 'none';
             document.getElementById('map-btn').onclick = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
-            document.body.style.visibility = 'visible'; document.body.style.opacity = 1;
+            
+            document.body.style.visibility = 'visible';
+            document.body.style.opacity = 1;
 
             function format(t) {
                 return t.replace(/§A/g, '<span class="anna-msg">Anna:</span>')
@@ -73,8 +75,8 @@
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
                 const cont = document.getElementById('btn-container'); cont.innerHTML = '';
 
@@ -116,16 +118,19 @@
                     const mBtn = document.createElement('button'); mBtn.className = 'nav-btn'; mBtn.textContent = 'Térkép';
                     mBtn.onclick = () => window.open(p.pageMapUrl || config.mapUrl, '_blank');
                     cont.appendChild(mBtn);
-                    watchId = navigator.geolocation.watchPosition(pos => {
-                        const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
-                        status.textContent = `Távolság: ${Math.round(d)}m`;
-                        if(d < 30) {
-                            navigator.geolocation.clearWatch(watchId);
-                            const ok = document.createElement('button'); ok.className = 'nav-btn bg-green-700'; ok.textContent = 'Megérkeztél! Tovább';
-                            ok.onclick = () => { if(p.redirectUrl) window.location.href = p.redirectUrl; else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); };
-                            cont.appendChild(ok);
-                        }
-                    }, null, {enableHighAccuracy:true});
+                    
+                    if(navigator.geolocation) {
+                        watchId = navigator.geolocation.watchPosition(pos => {
+                            const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                            status.textContent = `Távolság: ${Math.round(d)}m`;
+                            if(d < 30) {
+                                navigator.geolocation.clearWatch(watchId);
+                                const ok = document.createElement('button'); ok.className = 'nav-btn bg-green-700'; ok.textContent = 'Megérkeztél! Tovább';
+                                ok.onclick = () => { if(p.redirectUrl) window.location.href = p.redirectUrl; else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); };
+                                cont.appendChild(ok);
+                            }
+                        }, null, {enableHighAccuracy: true});
+                    }
                 }
             }
             function calcDist(la1, lo1, la2, lo2) {
