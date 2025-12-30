@@ -1,17 +1,36 @@
 <!doctype html>
 <html lang="hu">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Előnézet</title>
     </head>
 <body>
     <script>
         (function() {
-            const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
-            if(!config) { document.body.innerHTML = "Hiba: Nincs konfiguráció!"; return; }
-            // Innen ugyanaz a render/logic mint a game.html-ben, csak a fetch nélkül
-            // ... (A game.html render és navigációs logikája jön ide)
+            // A kulcsnak meg kell egyeznie az admin.html-ben használt STORAGE_KEY-vel
+            const STORAGE_KEY = 'DYNAMIC_CONFIG'; 
+            let config = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+            // Ha nincs adat, hibaüzenet
+            if (!config) {
+                document.body.innerHTML = `
+                    <div style="color:white; padding:50px;">
+                        <h1>Nincs betöltött előnézet</h1>
+                        <p>Kérjük, mentsd el a beállításokat az admin felületen!</p>
+                    </div>`;
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+                return;
+            }
+
+            // Inicializálás és indítás
+            function initPreview() {
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+                renderPage(0); // Kezdés az első oldalon
+            }
+
+            // ... renderPage és egyéb függvények változatlanok ...
+
+            initPreview();
         })();
     </script>
 </body>
