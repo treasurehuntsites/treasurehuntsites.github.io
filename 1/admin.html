@@ -3,17 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
-    <title>Játék Konfiguráció V3.9 - Teljes</title>
+    <title>Játék Konfiguráció V3.9 - Eredeti Modális GPS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e0e0e0; }
         .card { background-color: #2c2c2c; border: 2px solid #8a2be2; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
         .input-style { background-color: #3f3f46; color: #00ffff; border: 1px solid #6b7280; }
-        .btn-primary { background-color: #8a2be2; color: white; transition: background-color 0.2s; }
+        .btn-primary { background-color: #8a2be2; color: white; transition: 0.2s; }
         .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; }
-        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 6px; border-radius: 8px; background-color: #3f3f46; cursor: grab; border: 1px solid transparent; }
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 6px; border-radius: 8px; background-color: #3f3f46; cursor: grab; }
         .page-item.selected { border-color: #00ffff; background-color: #4c1d95; }
         .handle { cursor: grab; padding-right: 15px; color: #6b7280; }
     </style>
@@ -21,7 +21,7 @@
 <body class="p-4 md:p-8 min-h-screen">
     <div class="max-w-6xl mx-auto space-y-8">
         <header class="text-center">
-            <h1 class="text-4xl font-bold text-white tracking-widest uppercase">Konfiguráció <span class="text-purple-500">V3.9</span></h1>
+            <h1 class="text-4xl font-bold text-white uppercase tracking-widest">Konfiguráció <span class="text-purple-500">V3.9</span></h1>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -41,18 +41,18 @@
                     <input type="url" id="markAvatarUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Márk Avatar URL">
                 </section>
                 <section class="card p-6 rounded-xl space-y-4">
-                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center"><i class="fa fa-bars mr-2"></i> Alsó Menü</h2>
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center"><i class="fa fa-bars mr-2"></i> Menü</h2>
                     <div class="flex items-center gap-2">
                         <input type="checkbox" id="showMapIcon" checked> <label class="text-sm">Térkép ikon</label>
                     </div>
-                    <input type="url" id="mapUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Globális Google Maps URL">
+                    <input type="url" id="mapUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Google Maps URL">
                 </section>
             </div>
 
             <div class="lg:col-span-2 space-y-6">
                 <section id="editorSection" class="card p-6 rounded-xl space-y-6 hidden relative">
-                    <h2 id="editingTitle" class="text-2xl font-bold text-cyan-400">Szerkesztés</h2>
-                    <textarea id="pageText" rows="5" class="input-style w-full p-3 rounded-lg outline-none font-sans" placeholder="Történet szövege..."></textarea>
+                    <h2 id="editingTitle" class="text-2xl font-bold text-cyan-400">Oldal Szerkesztése</h2>
+                    <textarea id="pageText" rows="5" class="input-style w-full p-3 rounded-lg outline-none font-sans"></textarea>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -61,8 +61,8 @@
                         </div>
                         <div>
                             <label class="text-xs text-gray-400 italic">Tovább Index / URL</label>
-                            <input type="number" id="nextIndex" class="input-style w-full p-2 rounded">
-                            <input type="url" id="pageRedirectUrl" class="input-style w-full p-2 rounded mt-2 text-xs" placeholder="Külső URL átirányítás">
+                            <input type="number" id="nextIndex" class="input-style w-full p-2 rounded" placeholder="Index">
+                            <input type="url" id="pageRedirectUrl" class="input-style w-full p-2 rounded mt-2 text-xs" placeholder="Külső link">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400 italic">Egyedi Háttérkép</label>
@@ -78,8 +78,10 @@
                     </select>
 
                     <div id="passwordSection" class="hidden space-y-3 p-4 bg-gray-800 rounded-lg">
-                        <input type="text" id="pagePassword" class="input-style w-full p-2 rounded text-xs" placeholder="Helyes jelszó">
-                        <input type="text" id="passwordBtnText" class="input-style w-full p-2 rounded text-xs" placeholder="Gomb felirata">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="pagePassword" class="input-style p-2 rounded text-xs" placeholder="Jelszó">
+                            <input type="text" id="passwordBtnText" class="input-style p-2 rounded text-xs" placeholder="Gomb felirata">
+                        </div>
                         <textarea id="passwordHints" rows="3" class="input-style w-full p-2 rounded text-xs" placeholder="Segítségek (soronként egy tipp)"></textarea>
                     </div>
 
@@ -88,31 +90,31 @@
                             <input type="text" id="targetLat" class="input-style p-2 rounded text-xs" placeholder="Cél Szélesség (Lat)">
                             <input type="text" id="targetLon" class="input-style p-2 rounded text-xs" placeholder="Cél Hosszúság (Lon)">
                         </div>
-                        <input type="url" id="pageMapUrl" class="input-style w-full p-2 rounded text-xs" placeholder="GPS oldal egyedi térkép linkje">
+                        <input type="url" id="pageMapUrl" class="input-style w-full p-2 rounded text-xs" placeholder="GPS modális Google Maps link">
                     </div>
 
                     <div id="choiceSection" class="hidden space-y-2">
                         <div id="choicesList" class="space-y-2"></div>
-                        <button onclick="addChoice()" class="text-cyan-400 text-xs">+ Új gomb</button>
+                        <button onclick="addChoice()" class="text-cyan-400 text-xs">+ Gomb hozzáadása</button>
                     </div>
 
                     <div class="flex justify-between pt-4">
                         <button id="deleteBtn" class="bg-red-600 px-4 py-2 rounded text-sm hover:bg-red-700">Törlés</button>
-                        <button id="savePageBtn" class="btn-primary px-8 py-2 rounded font-bold">Oldal Mentése</button>
+                        <button id="savePageBtn" class="btn-primary px-8 py-2 rounded font-bold">Mentés</button>
                     </div>
                 </section>
 
                 <section class="card p-4 rounded-xl">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-white">Oldalak (Átrendezhető)</h2>
+                        <h2 class="text-lg font-semibold text-white">Oldalak</h2>
                         <button id="previewBtn" class="btn-secondary px-4 py-2 rounded text-sm">Előnézet</button>
                     </div>
-                    <div id="pageList" class="space-y-1 max-h-80 overflow-y-auto pr-2"></div>
+                    <div id="pageList" class="space-y-1 max-h-80 overflow-y-auto"></div>
                     <button id="addPageBtn" class="btn-primary w-full p-3 mt-4 rounded-lg font-bold">+ Új Oldal</button>
                 </section>
             </div>
         </div>
-        <button id="downloadBtn" class="btn-secondary w-full p-4 rounded-xl text-lg shadow-xl"><i class="fa fa-download mr-2"></i> game_config.json letöltése</button>
+        <button id="downloadBtn" class="btn-secondary w-full p-4 rounded-xl text-lg shadow-xl">Konfiguráció Letöltése</button>
     </div>
 
     <script>
@@ -210,7 +212,7 @@
             config.showMapIcon = document.getElementById('showMapIcon').checked;
             config.mapUrl = document.getElementById('mapUrl').value;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-            if(msg) alert("Beállítások mentve a böngészőbe!");
+            if(msg) alert("Mentve!");
             renderList();
         }
 
