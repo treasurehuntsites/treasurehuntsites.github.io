@@ -21,11 +21,10 @@
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
         .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
-        .nav-btn:active { transform: scale(0.96); }
         .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
+        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
-        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
     </style>
 </head>
 <body>
@@ -33,7 +32,7 @@
     <div class="content-box">
         <img id="avatar-img" class="avatar" src="">
         <div id="story-text"></div>
-        <div id="interaction-area" class="interaction-area"></div>
+        <div id="btn-container" class="interaction-area"></div>
     </div>
     <div class="fixed-menu-bar">
         <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
@@ -70,10 +69,10 @@
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
-                const cont = document.getElementById('interaction-area'); cont.innerHTML = '';
+                const cont = document.getElementById('btn-container'); cont.innerHTML = '';
 
                 if(p.pageType === 'story' || !p.pageType) {
                     const b = document.createElement('button'); b.className = 'nav-btn'; b.textContent = 'Vissza';
@@ -103,12 +102,9 @@
                     };
                     cont.appendChild(input); cont.appendChild(btn);
                     if(p.hints && p.hints.length > 0) {
-                        const hintBtn = document.createElement('button'); hintBtn.className = 'nav-btn bg-cyan-900'; hintBtn.textContent = 'Segítség';
-                        hintBtn.onclick = () => {
-                            hintDiv.textContent = p.hints[currentHintIdx];
-                            currentHintIdx = (currentHintIdx + 1) % p.hints.length;
-                        };
-                        cont.appendChild(hintBtn); cont.appendChild(hintDiv);
+                        const hBtn = document.createElement('button'); hBtn.className = 'nav-btn bg-cyan-900'; hBtn.textContent = 'Segítség';
+                        hBtn.onclick = () => { hintDiv.textContent = p.hints[currentHintIdx]; currentHintIdx = (currentHintIdx + 1) % p.hints.length; };
+                        cont.appendChild(hBtn); cont.appendChild(hintDiv);
                     }
                 } else if(p.pageType === 'gps') {
                     const status = document.createElement('div'); status.className = 'w-full text-center text-cyan-400 font-bold'; status.textContent = 'Helyzet meghatározása...';
