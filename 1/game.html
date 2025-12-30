@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title id="app-title">Játék</title>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
+        body { margin: 0; padding: 0; font-family: 'Play', sans-serif; background: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; visibility: hidden; opacity: 0; transition: opacity 0.4s; }
+        .bg-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #000; }
+        .bg-layer img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.45); }
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.88); padding: 40px 20px 15px 20px; 
+            border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px);
+            box-shadow: 0 0 25px rgba(138, 43, 226, 0.65); border: 3px solid #8a2be2;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column;
+        }
+        #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
+        .interaction-area { display: flex; gap: 12px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
+        .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
+        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; }
+        .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
+        .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
+        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; }
+    </style>
+</head>
+<body>
+    <div class="bg-layer"><img id="bg-img" src=""></div>
+    <div class="content-box">
+        <img id="avatar-img" class="avatar" src="">
+        <div id="story-text"></div>
+        <div class="interaction-area" id="btn-container"></div>
+    </div>
+    <div class="fixed-menu-bar">
+        <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
+        <button class="menu-button"><i class="fa-solid fa-image"></i></button>
+    </div>
+
+    <script>
+        (async function() {
+            let config; let watchId;
+            async function init() {
+                try {
+                    const res = await fetch('game_config.json'); config = await res.json();
+                    document.getElementById('app-title').textContent = config.appTitle;
+                    document.documentElement.style.setProperty('--bg-color', config.bgColor);
+                    document.documentElement.style.setProperty('--text-color', config.textColor);
+                    if(!config.showMapIcon) document.getElementById('map-btn').style.display = 'none';
+                    document.getElementById('map-btn').onclick = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
+                    document.body.style.visibility = 'visible'; document.body.style.opacity = 1; render(0);
+                } catch (e) { document.body.innerHTML = "Hiba: game_config.json?"; }
+            }
+
+            function render(idx) {
+                const page = config.storyPages[idx]; if(!page) return;
+                if(watchId) navigator.geolocation.clearWatch(watchId);
+                const textEl = document.getElementById('story-text');
+                textEl.innerHTML = page.content.replace(/§A/g, '<span class="anna-msg">Anna:</span>').replace(/§M/g, '<span class="mark-msg">Márk:</span>');
+                document.getElementById('bg-img').src = page.customBackgroundUrl || "";
+                const avatar = document.getElementById('avatar-img'); avatar.style.display = 'none';
+                if(page.content.includes("§A")) { avatar.src = config.annaAvatarUrl; avatar.style.display = 'block'; }
+                else if(page.content.includes("§M")) { avatar.src = config.markAvatarUrl; avatar.style.display = 'block'; }
+
+                const container = document.getElementById('btn-container'); container.innerHTML = '';
+
+                if(page.pageType === 'story' || !page.pageType) {
+                    const bBtn = document.createElement('button'); bBtn.className = 'nav-btn'; bBtn.textContent = 'Vissza';
+                    bBtn.onclick = () => render(page.prevIndex !== undefined ? page.prevIndex : Math.max(0, idx - 1));
+                    container.appendChild(bBtn);
+                    const nBtn = document.createElement('button'); nBtn.className = 'nav-btn'; nBtn.textContent = 'Tovább';
+                    nBtn.onclick = () => {
+                        if(page.redirectUrl) { window.location.href = page.redirectUrl; return; }
+                        render(page.nextIndex !== undefined ? page.nextIndex : idx + 1);
+                    };
+                    container.appendChild(nBtn);
+                } else if(page.pageType === 'choice') {
+                    page.choices.forEach(c => {
+                        const btn = document.createElement('button'); btn.className = 'nav-btn'; btn.textContent = c.text;
+                        btn.onclick = () => { if(c.url) window.location.href = c.url; else render(parseInt(c.target)); };
+                        container.appendChild(btn);
+                    });
+                } else if(page.pageType === 'password') {
+                    const input = document.createElement('input'); input.className = 'nav-btn bg-gray-800 text-center'; input.placeholder = 'Jelszó...';
+                    const btn = document.createElement('button'); btn.className = 'nav-btn'; btn.textContent = page.passwordBtnText || 'OK';
+                    btn.onclick = () => {
+                        if(input.value.toLowerCase() === page.pagePassword.toLowerCase()) {
+                            if(page.redirectUrl) window.location.href = page.redirectUrl;
+                            else render(page.nextIndex !== undefined ? page.nextIndex : idx + 1);
+                        } else alert('Hibás jelszó!');
+                    };
+                    container.appendChild(input); container.appendChild(btn);
+                } else if(page.pageType === 'gps') {
+                    const status = document.createElement('div'); status.className = 'w-full text-center text-cyan-400 font-bold mb-2'; status.textContent = 'Helyzet meghatározása...';
+                    container.appendChild(status);
+                    const mapBtn = document.createElement('button'); mapBtn.className = 'nav-btn'; mapBtn.textContent = 'Térkép';
+                    mapBtn.onclick = () => window.open(page.pageMapUrl || config.mapUrl, '_blank');
+                    container.appendChild(mapBtn);
+                    watchId = navigator.geolocation.watchPosition(pos => {
+                        const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(page.targetLat), parseFloat(page.targetLon));
+                        status.textContent = `Távolság: ${Math.round(dist)}m`;
+                        if(dist < 30) {
+                            navigator.geolocation.clearWatch(watchId);
+                            const win = document.createElement('button'); win.className = 'nav-btn bg-green-600'; win.textContent = 'Megérkeztél! Tovább';
+                            win.onclick = () => { if(page.redirectUrl) window.location.href = page.redirectUrl; else render(page.nextIndex !== undefined ? page.nextIndex : idx + 1); };
+                            container.appendChild(win);
+                        }
+                    }, null, {enableHighAccuracy:true});
+                }
+            }
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3; const f1 = lat1 * Math.PI/180; const f2 = lat2 * Math.PI/180;
+                const df = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
+                const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+            init();
+        })();
+    </script>
+</body>
+</html>
