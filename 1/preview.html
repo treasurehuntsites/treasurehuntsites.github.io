@@ -11,7 +11,6 @@
         body { margin: 0; padding: 0; font-family: 'Play', sans-serif; background: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; visibility: hidden; opacity: 0; transition: opacity 0.4s; }
         .bg-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #000; }
         .bg-layer img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.45); }
-        
         .content-box {
             background-color: rgba(0, 0, 0, 0.88); padding: 40px 20px 15px 20px; 
             border-radius: 10px 10px 0 0; max-width: 800px; width: calc(100% - 40px);
@@ -19,15 +18,13 @@
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); 
             z-index: 10; text-align: left; min-height: 250px; display: flex; flex-direction: column;
         }
-
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
         .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; font-size: 1.1em; }
         .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
-
-        /* GPS Modal Stílusok */
+        
         .gps-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: none; align-items: center; justify-content: center; }
         .gps-modal-content { background: #2c2c2c; padding: 30px; border: 3px solid #00ffff; border-radius: 15px; width: calc(100% - 60px); max-width: 400px; text-align: center; }
         .gps-distance { font-size: 2.5em; font-weight: bold; color: #00ffff; margin: 20px 0; text-shadow: 0 0 10px #00ffff; }
@@ -36,13 +33,11 @@
 </head>
 <body>
     <div class="bg-layer"><img id="bg-img" src=""></div>
-    
     <div class="content-box">
         <img id="avatar-img" class="avatar" src="">
         <div id="story-text"></div>
-        <div id="btn-container" class="interaction-area"></div>
+        <div id="interaction-area" class="interaction-area"></div>
     </div>
-
     <div class="fixed-menu-bar">
         <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
         <button class="menu-button"><i class="fa-solid fa-image"></i></button>
@@ -53,15 +48,14 @@
             <h2 style="color:white; margin:0;">Célpont keresése...</h2>
             <div id="dist-display" class="gps-distance">--- m</div>
             <button id="modal-map-btn" class="nav-btn" style="background:#00ffff; color:#000; width:100%;">Térkép megnyitása</button>
-            <p style="color:#aaa; font-size:0.8em; margin-top:15px;">A történet automatikusan folytatódik, ha 30 méteren belülre érsz.</p>
+            <p style="color:#aaa; font-size:0.8em; margin-top:15px;">Érj 30 méteren belülre!</p>
         </div>
     </div>
 
     <script>
         (function() {
-            const STORAGE_KEY = 'DYNAMIC_CONFIG';
-            const config = JSON.parse(localStorage.getItem(STORAGE_KEY));
-            if(!config) { document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20vh;'>Nincs konfiguráció!</h2>"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
+            const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
+            if(!config) { document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20vh;'>Mentsd el a beállításokat az admin felületen!</h2>"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
 
             let watchId; let currentHintIdx = 0;
             document.documentElement.style.setProperty('--bg-color', config.bgColor);
@@ -86,10 +80,10 @@
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
-                const cont = document.getElementById('btn-container'); cont.innerHTML = '';
+                const cont = document.getElementById('interaction-area'); cont.innerHTML = '';
 
                 if(p.pageType === 'story' || !p.pageType) {
                     const b = document.createElement('button'); b.className = 'nav-btn'; b.textContent = 'Vissza';
@@ -144,9 +138,12 @@
                     }
                 }
             }
-            function calcDist(la1, lo1, la2, lo2) {
-                const R = 6371e3; const f1 = la1 * Math.PI/180; const f2 = la2 * Math.PI/180;
-                const df = (la2-la1) * Math.PI/180; const dl = (lo2-lo1) * Math.PI/180;
+            function calcDist(lat1, lon1, lat2, lon2) {
+                const R = 6371e3;
+                const f1 = lat1 * Math.PI/180;
+                const f2 = lat2 * Math.PI/180;
+                const df = (lat2-lat1) * Math.PI/180;
+                const dl = (lon2-lon1) * Math.PI/180;
                 const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
                 return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             }
