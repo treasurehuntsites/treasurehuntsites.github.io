@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title>Játék Konfiguráció V3.9 - Jelszóval</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e0e0e0; }
+        .card { background-color: #2c2c2c; border: 2px solid #8a2be2; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
+        .input-style { background-color: #3f3f46; color: #00ffff; border: 1px solid #6b7280; }
+        .btn-primary { background-color: #8a2be2; color: white; transition: 0.2s; }
+        .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; }
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 6px; border-radius: 8px; background-color: #3f3f46; cursor: grab; }
+        .page-item.selected { border-color: #00ffff; background-color: #4c1d95; }
+        .handle { cursor: grab; padding-right: 15px; color: #6b7280; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="max-w-6xl mx-auto space-y-8">
+        <header class="text-center">
+            <h1 class="text-4xl font-bold text-white uppercase tracking-widest">Konfiguráció <span class="text-purple-500">V3.9</span></h1>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <section class="card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center"><i class="fa fa-cog mr-2"></i> Alapok</h2>
+                    <input type="text" id="appTitle" class="input-style w-full p-2 rounded" placeholder="Játék címe">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="color" id="bgColor" class="input-style w-full h-10 rounded">
+                        <input type="color" id="textColor" class="input-style w-full h-10 rounded">
+                    </div>
+                </section>
+                <section class="card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center"><i class="fa fa-users mr-2"></i> Avatarok</h2>
+                    <input type="url" id="annaAvatarUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Anna Avatar Link">
+                    <input type="url" id="markAvatarUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Márk Avatar Link">
+                </section>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <section id="editorSection" class="card p-6 rounded-xl space-y-6 hidden">
+                    <h2 id="editingTitle" class="text-2xl font-bold text-cyan-400">Szerkesztés</h2>
+                    <textarea id="pageText" rows="6" class="input-style w-full p-3 rounded-lg outline-none font-sans"></textarea>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400 italic">Vissza Index</label>
+                            <input type="number" id="prevIndex" class="input-style w-full p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 italic">Tovább Index / URL</label>
+                            <input type="number" id="nextIndex" class="input-style w-full p-2 rounded" placeholder="Index">
+                            <input type="url" id="pageRedirectUrl" class="input-style w-full p-2 rounded mt-2 text-xs" placeholder="Vagy külső link">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 italic">Oldal Típusa</label>
+                            <select id="pageType" class="input-style w-full p-2 rounded" onchange="updateTypeUI()">
+                                <option value="story">Normál</option>
+                                <option value="choice">Választás</option>
+                                <option value="password">Jelszó</option>
+                                <option value="gps">GPS Kapu</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="passwordSection" class="hidden space-y-4 p-4 bg-gray-800 rounded-lg border border-purple-900">
+                        <h3 class="text-purple-400 font-bold text-sm uppercase">Jelszó Beállítások</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" id="pagePassword" class="input-style w-full p-2 rounded text-xs" placeholder="Helyes jelszó">
+                            <input type="text" id="passwordBtnText" class="input-style w-full p-2 rounded text-xs" placeholder="Gomb szövege">
+                        </div>
+                    </div>
+
+                    <div id="choiceContainer" class="hidden space-y-3">
+                        <div id="choicesList" class="space-y-2"></div>
+                        <button onclick="addChoice()" class="text-cyan-400 text-xs">+ Új gomb</button>
+                    </div>
+
+                    <div class="flex justify-between pt-4">
+                        <button id="deleteBtn" class="bg-red-600 px-4 py-2 rounded text-sm hover:bg-red-700">Törlés</button>
+                        <button id="savePageBtn" class="btn-primary px-8 py-2 rounded font-bold">Mentés</button>
+                    </div>
+                </section>
+
+                <section class="card p-4 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-white">Oldalak</h2>
+                        <button id="previewBtn" class="btn-secondary px-4 py-2 rounded text-sm">Előnézet</button>
+                    </div>
+                    <div id="pageList" class="space-y-1 max-h-96 overflow-y-auto"></div>
+                    <button id="addPageBtn" class="btn-primary w-full p-3 mt-4 rounded-lg">+ Új Oldal</button>
+                </section>
+            </div>
+        </div>
+        <button id="downloadBtn" class="btn-secondary w-full p-4 rounded-xl text-lg">Konfiguráció Letöltése</button>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'DYNAMIC_CONFIG';
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { appTitle: "Játék", storyPages: [] };
+        let currentIdx = -1;
+        let sortable;
+
+        function updateTypeUI() {
+            const type = document.getElementById('pageType').value;
+            document.getElementById('choiceContainer').classList.toggle('hidden', type !== 'choice');
+            document.getElementById('passwordSection').classList.toggle('hidden', type !== 'password');
+        }
+
+        function renderList() {
+            const list = document.getElementById('pageList');
+            list.innerHTML = '';
+            config.storyPages.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                item.innerHTML = `<span><i class="fa fa-bars handle mr-3"></i>#${i}: ${p.content.substring(0, 35)}...</span>`;
+                item.onclick = (e) => { if(!e.target.classList.contains('handle')) loadPage(i); };
+                list.appendChild(item);
+            });
+            if(sortable) sortable.destroy();
+            sortable = new Sortable(list, {
+                animation: 150, handle: '.handle',
+                onEnd: (evt) => {
+                    const moved = config.storyPages.splice(evt.oldIndex, 1)[0];
+                    config.storyPages.splice(evt.newIndex, 0, moved);
+                    save(false); renderList();
+                }
+            });
+        }
+
+        function loadPage(i) {
+            currentIdx = i;
+            const p = config.storyPages[i];
+            document.getElementById('editorSection').classList.remove('hidden');
+            document.getElementById('pageText').value = p.content;
+            document.getElementById('prevIndex').value = p.prevIndex ?? "";
+            document.getElementById('nextIndex').value = p.nextIndex ?? "";
+            document.getElementById('pageRedirectUrl').value = p.redirectUrl || "";
+            document.getElementById('pageType').value = p.pageType || "story";
+            document.getElementById('pagePassword').value = p.pagePassword || "";
+            document.getElementById('passwordBtnText').value = p.passwordBtnText || "Ellenőrzés";
+            updateTypeUI(); renderList();
+        }
+
+        function save(msg = true) {
+            if(currentIdx !== -1) {
+                const p = config.storyPages[currentIdx];
+                p.content = document.getElementById('pageText').value;
+                p.prevIndex = document.getElementById('prevIndex').value !== "" ? parseInt(document.getElementById('prevIndex').value) : undefined;
+                p.nextIndex = document.getElementById('nextIndex').value !== "" ? parseInt(document.getElementById('nextIndex').value) : undefined;
+                p.redirectUrl = document.getElementById('pageRedirectUrl').value;
+                p.pageType = document.getElementById('pageType').value;
+                p.pagePassword = document.getElementById('pagePassword').value;
+                p.passwordBtnText = document.getElementById('passwordBtnText').value;
+            }
+            config.appTitle = document.getElementById('appTitle').value;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            if(msg) alert("Mentve!");
+            renderList();
+        }
+
+        document.getElementById('savePageBtn').onclick = () => save();
+        document.getElementById('addPageBtn').onclick = () => { config.storyPages.push({content: "Új tartalom...", pageType: "story"}); loadPage(config.storyPages.length-1); };
+        document.getElementById('previewBtn').onclick = () => { save(false); window.open('preview.html', '_blank'); };
+        document.getElementById('downloadBtn').onclick = () => { save(false); const blob = new Blob([localStorage.getItem(STORAGE_KEY)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'game_config.json'; a.click(); };
+
+        renderList();
+    </script>
+</body>
+</html>
