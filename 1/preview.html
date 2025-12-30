@@ -21,7 +21,7 @@
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
         .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
-        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; }
+        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
         .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
@@ -32,7 +32,7 @@
     <div class="content-box">
         <img id="avatar-img" class="avatar" src="">
         <div id="story-text"></div>
-        <div id="interaction-area" class="interaction-area"></div>
+        <div id="btn-container" class="interaction-area"></div>
     </div>
     <div class="fixed-menu-bar">
         <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
@@ -41,8 +41,15 @@
 
     <script>
         (function() {
-            const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
-            if(!config) { document.body.innerHTML = "<h2 style='color:white;text-align:center;'>Nincs konfiguráció! Mentsd el az adminban.</h2>"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
+            const STORAGE_KEY = 'DYNAMIC_CONFIG'; // Fontos, hogy ez egyezzen az adminnal
+            const config = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            
+            if(!config) {
+                document.body.innerHTML = "<h2 style='color:white;text-align:center;margin-top:20vh;'>Nincs mentett konfiguráció! <br> Mentsd el az admin felületen.</h2>";
+                document.body.style.visibility = 'visible';
+                document.body.style.opacity = 1;
+                return;
+            }
 
             let watchId; let currentHintIdx = 0;
             document.documentElement.style.setProperty('--bg-color', config.bgColor);
@@ -66,10 +73,10 @@
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
-                const cont = document.getElementById('interaction-area'); cont.innerHTML = '';
+                const cont = document.getElementById('btn-container'); cont.innerHTML = '';
 
                 if(p.pageType === 'story' || !p.pageType) {
                     const b = document.createElement('button'); b.className = 'nav-btn'; b.textContent = 'Vissza';
