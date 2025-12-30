@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <style>
         :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; }
-        body { margin: 0; padding: 0; font-family: 'Play', sans-serif; background: var(--bg-color); color: var(--text-color); min-height: 100vh; visibility: hidden; opacity: 0; transition: opacity 0.4s; overflow-x: hidden; }
+        body { margin: 0; padding: 0; font-family: 'Play', sans-serif; background: var(--bg-color); color: var(--text-color); min-height: 100vh; overflow-x: hidden; visibility: hidden; opacity: 0; transition: opacity 0.4s; }
         .bg-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #000; }
         .bg-layer img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.45); }
         .content-box {
@@ -20,11 +20,11 @@
         }
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
-        .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
+        .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; font-size: 1.1em; }
         .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
-        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
+        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
     </style>
 </head>
 <body>
@@ -69,8 +69,8 @@
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
                 const cont = document.getElementById('btn-container'); cont.innerHTML = '';
 
@@ -107,21 +107,24 @@
                         cont.appendChild(hBtn); cont.appendChild(hintDiv);
                     }
                 } else if(p.pageType === 'gps') {
-                    const status = document.createElement('div'); status.className = 'w-full text-center text-cyan-400 font-bold'; status.textContent = 'Helyzet meghatározása...';
+                    const status = document.createElement('div'); status.className = 'w-full text-center text-cyan-400 font-bold mb-2'; status.textContent = 'Helyzet meghatározása...';
                     cont.appendChild(status);
                     const mBtn = document.createElement('button'); mBtn.className = 'nav-btn'; mBtn.textContent = 'Térkép';
                     mBtn.onclick = () => window.open(p.pageMapUrl || config.mapUrl, '_blank');
                     cont.appendChild(mBtn);
-                    watchId = navigator.geolocation.watchPosition(pos => {
-                        const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
-                        status.textContent = `Távolság: ${Math.round(d)}m`;
-                        if(d < 30) {
-                            navigator.geolocation.clearWatch(watchId);
-                            const ok = document.createElement('button'); ok.className = 'nav-btn bg-green-700'; ok.textContent = 'Megérkeztél! Tovább';
-                            ok.onclick = () => { if(p.redirectUrl) window.location.href = p.redirectUrl; else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); };
-                            cont.appendChild(ok);
-                        }
-                    }, null, {enableHighAccuracy:true});
+                    
+                    if(navigator.geolocation) {
+                        watchId = navigator.geolocation.watchPosition(pos => {
+                            const dist = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                            status.textContent = `Távolság: ${Math.round(dist)} méter`;
+                            if(dist < 30) {
+                                navigator.geolocation.clearWatch(watchId);
+                                const ok = document.createElement('button'); ok.className = 'nav-btn bg-green-700'; ok.textContent = 'Megérkeztél! Tovább';
+                                ok.onclick = () => { if(p.redirectUrl) window.location.href = p.redirectUrl; else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); };
+                                cont.appendChild(ok);
+                            }
+                        }, err => { status.textContent = "GPS hiba!"; }, {enableHighAccuracy: true});
+                    }
                 }
             }
             function calcDist(la1, lo1, la2, lo2) {
