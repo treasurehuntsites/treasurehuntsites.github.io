@@ -20,7 +20,7 @@
         }
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
-        .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; font-size: 1.1em; }
+        .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
         .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
@@ -42,7 +42,7 @@
     <script>
         (function() {
             const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
-            if(!config) { document.body.innerHTML = "<h2 style='color:white;text-align:center;'>Nincs mentett konfiguráció!</h2>"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
+            if(!config) { document.body.innerHTML = "Hiba!"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
 
             let watchId;
             document.getElementById('app-title').textContent = config.appTitle;
@@ -52,18 +52,13 @@
             document.getElementById('map-btn').onclick = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
             document.body.style.visibility = 'visible'; document.body.style.opacity = 1;
 
-            function format(t) {
-                return t.replace(/§A/g, '<span class="anna-msg">Anna:</span>')
-                        .replace(/§M/g, '<span class="mark-msg">Márk:</span>')
-                        .replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
-            }
-
             function render(idx) {
                 const p = config.storyPages[idx]; if(!p) return;
                 if(watchId) navigator.geolocation.clearWatch(watchId);
                 const textEl = document.getElementById('story-text');
-                textEl.innerHTML = format(p.content);
-                document.getElementById('bg-img').src = p.customBackgroundUrl || "";
+                textEl.innerHTML = p.content.replace(/§A/g, '<span class="anna-msg">Anna:</span>').replace(/§M/g, '<span class="mark-msg">Márk:</span>').replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
+                
+                document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
                 if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
