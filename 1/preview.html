@@ -21,7 +21,7 @@
         #story-text { font-size: 1.25em; font-weight: 700; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
         .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 15px; flex-wrap: wrap; }
         .nav-btn { flex: 1; padding: 15px; background: #8a2be2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; min-width: 120px; }
-        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; }
+        .avatar { position: absolute; top: -55px; left: -10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #00ffff; display: none; }
         .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
         .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
         .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
@@ -32,7 +32,7 @@
     <div class="content-box">
         <img id="avatar-img" class="avatar" src="">
         <div id="story-text"></div>
-        <div class="interaction-area" id="btn-container"></div>
+        <div id="interaction-area" class="interaction-area"></div>
     </div>
     <div class="fixed-menu-bar">
         <button class="menu-button" id="map-btn"><i class="fa-solid fa-map-location-dot"></i></button>
@@ -42,29 +42,34 @@
     <script>
         (function() {
             const config = JSON.parse(localStorage.getItem('DYNAMIC_CONFIG'));
-            if(!config) { document.body.innerHTML = "Hiba!"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
+            if(!config) { document.body.innerHTML = "<h2 style='color:white;text-align:center;'>Nincs konfiguráció! Mentsd el az adminban.</h2>"; document.body.style.visibility='visible'; document.body.style.opacity=1; return; }
 
-            let watchId;
-            document.getElementById('app-title').textContent = config.appTitle;
+            let watchId; let currentHintIdx = 0;
             document.documentElement.style.setProperty('--bg-color', config.bgColor);
             document.documentElement.style.setProperty('--text-color', config.textColor);
             if(!config.showMapIcon) document.getElementById('map-btn').style.display = 'none';
             document.getElementById('map-btn').onclick = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
             document.body.style.visibility = 'visible'; document.body.style.opacity = 1;
 
+            function format(t) {
+                return t.replace(/§A/g, '<span class="anna-msg">Anna:</span>')
+                        .replace(/§M/g, '<span class="mark-msg">Márk:</span>')
+                        .replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
+            }
+
             function render(idx) {
                 const p = config.storyPages[idx]; if(!p) return;
+                currentHintIdx = 0;
                 if(watchId) navigator.geolocation.clearWatch(watchId);
                 const textEl = document.getElementById('story-text');
-                textEl.innerHTML = p.content.replace(/§A/g, '<span class="anna-msg">Anna:</span>').replace(/§M/g, '<span class="mark-msg">Márk:</span>').replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
-                
+                textEl.innerHTML = format(p.content);
                 document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
                 
                 const av = document.getElementById('avatar-img'); av.style.display = 'none';
-                if(p.content.includes("§A") && config.annaAvatarUrl) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
-                else if(p.content.includes("§M") && config.markAvatarUrl) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
 
-                const cont = document.getElementById('btn-container'); cont.innerHTML = '';
+                const cont = document.getElementById('interaction-area'); cont.innerHTML = '';
 
                 if(p.pageType === 'story' || !p.pageType) {
                     const b = document.createElement('button'); b.className = 'nav-btn'; b.textContent = 'Vissza';
@@ -84,7 +89,7 @@
                     });
                 } else if(p.pageType === 'password') {
                     const input = document.createElement('input'); input.className = 'nav-btn bg-gray-800 text-center'; input.placeholder = 'Jelszó...';
-                    if(p.passwordHint) { const hint = document.createElement('p'); hint.className = 'w-full text-center text-xs italic opacity-60'; hint.textContent = 'Segítség: ' + p.passwordHint; cont.appendChild(hint); }
+                    const hintDiv = document.createElement('div'); hintDiv.className = 'w-full text-center text-xs italic text-cyan-400'; 
                     const btn = document.createElement('button'); btn.className = 'nav-btn'; btn.textContent = p.passwordBtnText || 'OK';
                     btn.onclick = () => {
                         if(input.value.toLowerCase() === p.pagePassword.toLowerCase()) {
@@ -93,6 +98,11 @@
                         } else alert('Hibás jelszó!');
                     };
                     cont.appendChild(input); cont.appendChild(btn);
+                    if(p.hints && p.hints.length > 0) {
+                        const hBtn = document.createElement('button'); hBtn.className = 'nav-btn bg-cyan-900'; hBtn.textContent = 'Segítség';
+                        hBtn.onclick = () => { hintDiv.textContent = p.hints[currentHintIdx]; currentHintIdx = (currentHintIdx + 1) % p.hints.length; };
+                        cont.appendChild(hBtn); cont.appendChild(hintDiv);
+                    }
                 } else if(p.pageType === 'gps') {
                     const status = document.createElement('div'); status.className = 'w-full text-center text-cyan-400 font-bold'; status.textContent = 'Helyzet meghatározása...';
                     cont.appendChild(status);
