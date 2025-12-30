@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title>Játék Konfiguráció V3.8 (Frissített)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a1a1a; color: #e0e0e0; }
+        .card { background-color: #2c2c2c; border: 2px solid #8a2be2; box-shadow: 0 0 20px rgba(138, 43, 226, 0.4); }
+        .input-style { background-color: #3f3f46; color: #00ffff; border: 1px solid #6b7280; }
+        .btn-primary { background-color: #8a2be2; color: white; transition: background-color 0.2s; }
+        .btn-secondary { background-color: #00ffff; color: #1a1a1a; font-weight: bold; }
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 5px; border-radius: 6px; background-color: #3f3f46; cursor: grab; }
+        .page-item.selected { background-color: #8a2be2; border: 1px solid #00ffff; }
+        .scrollbar-custom::-webkit-scrollbar { width: 8px; }
+        .scrollbar-custom::-webkit-scrollbar-thumb { background: #8a2be2; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="max-w-6xl mx-auto space-y-8">
+        <h1 class="text-4xl font-bold text-center text-white mb-6">Játék Konfiguráció V3.8</h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <section class="card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center">
+                        <i class="fa fa-cog mr-2 text-purple-500"></i> Alapbeállítások
+                    </h2>
+                    <div>
+                        <label class="block text-sm text-gray-400">Weboldal Címe</label>
+                        <input type="text" id="appTitle" class="input-style w-full p-2 rounded">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="color" id="bgColor" class="input-style w-full h-10 rounded">
+                        <input type="color" id="textColor" class="input-style w-full h-10 rounded">
+                    </div>
+                </section>
+
+                <section class="card p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2 flex items-center">
+                        <i class="fa fa-users mr-2 text-purple-500"></i> Avatar Képek
+                    </h2>
+                    <input type="url" id="annaAvatarUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Anna Avatar URL">
+                    <input type="url" id="markAvatarUrl" class="input-style w-full p-2 text-xs rounded" placeholder="Márk Avatar URL">
+                </section>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <section id="editorSection" class="card p-6 rounded-xl space-y-6 hidden">
+                    <div class="flex justify-between items-center">
+                        <h2 id="editingTitle" class="text-2xl font-bold text-cyan-400">Oldal Szerkesztése</h2>
+                        <button id="deletePageButton" class="bg-red-600 px-3 py-1 rounded text-sm">Törlés</button>
+                    </div>
+                    <textarea id="pageText" rows="6" class="input-style w-full p-3 rounded-lg outline-none" placeholder="Történet..."></textarea>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400">Vissza Index</label>
+                            <input type="number" id="prevIndex" class="input-style w-full p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Tovább Index</label>
+                            <input type="number" id="nextIndex" class="input-style w-full p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Átirányítás URL</label>
+                            <input type="url" id="pageRedirectUrl" class="input-style w-full p-2 rounded" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div id="gps-fields" class="grid grid-cols-2 gap-4 hidden">
+                        <div>
+                            <label class="text-xs text-gray-400">Cél Lat</label>
+                            <input type="text" id="targetLat" class="input-style w-full p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Cél Lon</label>
+                            <input type="text" id="targetLon" class="input-style w-full p-2 rounded">
+                        </div>
+                    </div>
+
+                    <select id="pageType" class="input-style w-full p-3 rounded-lg">
+                        <option value="story">Normál történet</option>
+                        <option value="choice">Választás</option>
+                        <option value="password">Jelszó</option>
+                        <option value="gps">GPS</option>
+                    </select>
+
+                    <button id="savePageButton" class="btn-primary w-full py-3 rounded-lg font-bold">Oldal Mentése</button>
+                </section>
+
+                <section class="card p-4 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-white">Oldalak (Húzd az átrendezéshez)</h2>
+                        <button id="openPreviewButton" class="btn-secondary px-4 py-2 rounded text-sm">Előnézet</button>
+                    </div>
+                    <div id="pageList" class="space-y-1 max-h-80 overflow-y-auto scrollbar-custom"></div>
+                    <button id="addPageButton" class="btn-primary w-full p-3 mt-4 rounded-lg">+ Új Oldal</button>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const STORAGE_KEY = 'DYNAMIC_CONFIG';
+            let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { appTitle: "Játék", bgColor: "#1a1a1a", textColor: "#e0e0e0", storyPages: [] };
+            let currentEditingIndex = -1;
+
+            const fields = {
+                appTitle: document.getElementById('appTitle'),
+                bgColor: document.getElementById('bgColor'),
+                textColor: document.getElementById('textColor'),
+                annaAvatarUrl: document.getElementById('annaAvatarUrl'),
+                markAvatarUrl: document.getElementById('markAvatarUrl'),
+                pageList: document.getElementById('pageList'),
+                editorSection: document.getElementById('editorSection'),
+                pageText: document.getElementById('pageText'),
+                prevIndex: document.getElementById('prevIndex'),
+                nextIndex: document.getElementById('nextIndex'),
+                pageRedirectUrl: document.getElementById('pageRedirectUrl'),
+                pageType: document.getElementById('pageType'),
+                targetLat: document.getElementById('targetLat'),
+                targetLon: document.getElementById('targetLon'),
+                gpsFields: document.getElementById('gps-fields')
+            };
+
+            function renderPageList() {
+                fields.pageList.innerHTML = '';
+                config.storyPages.forEach((page, index) => {
+                    const div = document.createElement('div');
+                    div.className = `page-item ${index === currentEditingIndex ? 'selected' : ''}`;
+                    div.innerHTML = `<span><i class="fa fa-bars mr-3 text-gray-600"></i>#${index}: ${page.content.substring(0, 30)}...</span>`;
+                    div.onclick = (e) => { if(!e.target.classList.contains('fa-bars')) loadPageSettings(index); };
+                    fields.pageList.appendChild(div);
+                });
+
+                new Sortable(fields.pageList, {
+                    animation: 150, handle: '.fa-bars',
+                    onEnd: (evt) => {
+                        const moved = config.storyPages.splice(evt.oldIndex, 1)[0];
+                        config.storyPages.splice(evt.newIndex, 0, moved);
+                        saveToLocal(); renderPageList();
+                    }
+                });
+            }
+
+            function loadPageSettings(index) {
+                currentEditingIndex = index;
+                const p = config.storyPages[index];
+                fields.editorSection.classList.remove('hidden');
+                fields.pageText.value = p.content || "";
+                fields.prevIndex.value = p.prevIndex !== undefined ? p.prevIndex : "";
+                fields.nextIndex.value = p.nextIndex !== undefined ? p.nextIndex : "";
+                fields.pageRedirectUrl.value = p.redirectUrl || "";
+                fields.pageType.value = p.pageType || "story";
+                fields.targetLat.value = p.targetLat || "";
+                fields.targetLon.value = p.targetLon || "";
+                fields.gpsFields.classList.toggle('hidden', fields.pageType.value !== 'gps');
+                renderPageList();
+            }
+
+            function saveToLocal() {
+                config.appTitle = fields.appTitle.value;
+                config.bgColor = fields.bgColor.value;
+                config.textColor = fields.textColor.value;
+                config.annaAvatarUrl = fields.annaAvatarUrl.value;
+                config.markAvatarUrl = fields.markAvatarUrl.value;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            }
+
+            document.getElementById('savePageButton').onclick = () => {
+                const p = config.storyPages[currentEditingIndex];
+                p.content = fields.pageText.value;
+                p.prevIndex = fields.prevIndex.value !== "" ? parseInt(fields.prevIndex.value) : undefined;
+                p.nextIndex = fields.nextIndex.value !== "" ? parseInt(fields.nextIndex.value) : undefined;
+                p.redirectUrl = fields.pageRedirectUrl.value;
+                p.pageType = fields.pageType.value;
+                p.targetLat = fields.targetLat.value;
+                p.targetLon = fields.targetLon.value;
+                saveToLocal(); renderPageList();
+            };
+
+            document.getElementById('addPageButton').onclick = () => {
+                config.storyPages.push({ content: "Új oldal...", pageType: "story" });
+                loadPageSettings(config.storyPages.length - 1);
+            };
+
+            document.getElementById('openPreviewButton').onclick = () => { saveToLocal(); window.open('preview.html', '_blank'); };
+
+            fields.pageType.onchange = () => fields.gpsFields.classList.toggle('hidden', fields.pageType.value !== 'gps');
+
+            fields.appTitle.value = config.appTitle;
+            fields.bgColor.value = config.bgColor;
+            fields.textColor.value = config.textColor;
+            fields.annaAvatarUrl.value = config.annaAvatarUrl;
+            fields.markAvatarUrl.value = config.markAvatarUrl;
+            renderPageList();
+        })();
+    </script>
+</body>
+</html>
