@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>Kaland Játék Lejátszó V1.5 ✨</title>
+    <title>Kaland Játék Lejátszó V1.6 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
             --sat: env(safe-area-inset-top);
         }
 
-        /* Teljes képernyős görgethető alapváz */
+        /* Teljes képernyős görgethető alapváz a címsor elrejtéséhez */
         html, body { 
             font-family: 'Inter', sans-serif; 
             background-color: var(--bg-dark); 
@@ -23,8 +23,8 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            min-height: 100%;
-            /* Engedjük a görgetést a teljes képernyős módhoz */
+            /* Magasság növelése a görgethetőség érdekében */
+            min-height: 120vh;
             overflow-x: hidden;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
@@ -32,36 +32,38 @@
 
         .play-font { font-family: 'Play', sans-serif; }
         
-        /* A fő konténer, ami kitölti a képernyőt */
+        /* A fő konténer rögzítve marad a nézeten belül */
         .game-container {
             width: 100%;
-            min-height: 100dvh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            position: relative;
+            position: fixed; /* Fixáljuk a UI-t a viewportra */
+            top: 0;
+            left: 0;
+            z-index: 10;
         }
 
         @media (min-width: 640px) {
-            body { display: flex; align-items: center; justify-content: center; background: #0f172a; }
+            body { display: flex; align-items: center; justify-content: center; background: #0f172a; min-height: 100vh; }
             .game-container {
+                position: relative;
                 max-width: 420px;
                 height: 90vh;
-                min-height: auto;
                 border: 8px solid #1e293b;
                 border-radius: 3rem;
                 overflow: hidden;
                 box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-                position: relative;
             }
         }
 
-        /* Görgethető háttér réteg */
+        /* Háttér réteg, ami a body görgetésekor elmozdulhat */
         #bg-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 120%; /* Kicsit magasabb, hogy biztosan lehessen görgetni a címsor elrejtéséhez */
+            height: 150vh; /* Hosszabb háttér a görgetés élményéhez */
             z-index: 0;
         }
         #bg-layer {
@@ -72,19 +74,23 @@
             transition: opacity 0.5s ease;
         }
         
-        /* Tartalmi réteg */
+        /* Tartalmi réteg rögzítése az aljára */
         #content-wrapper {
-            position: relative;
-            z-index: 10;
-            flex: 1;
+            position: absolute; /* A game-containeren belül rögzítjük */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 20;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding-bottom: calc(75px + var(--sab)); /* Hely a fix menünek */
+            padding-bottom: calc(75px + var(--sab)); 
+            pointer-events: none; /* Átengedi a kattintást a háttérre ha kell */
         }
         
         .story-box { 
             position: relative;
+            pointer-events: auto; /* A dobozon belül már kell a kattintás */
             background: rgba(0,0,0,0.92); 
             backdrop-filter: blur(20px);
             border-top: 3px solid var(--accent); 
@@ -142,9 +148,8 @@
         .btn-cyan { background: #22d3ee !important; color: #000 !important; }
         .btn-secondary { background: #334155; }
         
-        /* Fix Alsó Menüsor */
         .bottom-nav { 
-            position: fixed;
+            position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
@@ -157,10 +162,6 @@
             align-items: center; 
             padding-bottom: var(--sab); 
             z-index: 100; 
-        }
-
-        @media (min-width: 640px) {
-            .bottom-nav { position: absolute; }
         }
         
         .nav-btn { position: relative; color: #64748b; font-size: 1.6rem; cursor: pointer; transition: 0.3s; background: none; border: none; }
@@ -179,7 +180,7 @@
         }
 
         #inventory-view { 
-            position: fixed; 
+            position: absolute; 
             inset: 0; 
             background: var(--bg-dark); 
             z-index: 150; 
@@ -188,24 +189,19 @@
             overflow-y: auto; 
         }
 
-        @media (min-width: 640px) {
-            #inventory-view { position: absolute; padding-bottom: 90px; }
-        }
-
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .inv-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; text-align: center; }
         .inv-img { width: 100%; height: 120px; object-fit: cover; }
         .inv-name { font-size: 12px; padding: 12px; color: #cbd5e1; font-weight: 600; }
 
-        /* Képnézegető (Pinch-Zoom támogatással) */
         #fullscreen-modal { 
-            position: fixed; 
+            position: absolute; 
             inset: 0; 
             background: rgba(0,0,0,0.98); 
             z-index: 200; 
             display: none; 
             flex-direction: column;
-            touch-action: none; /* Letiltjuk az alapértelmezett böngésző gesztusokat */
+            touch-action: none; 
         }
         #modal-header {
             display: flex;
@@ -234,7 +230,7 @@
         }
 
         #import-overlay {
-            position: fixed;
+            position: absolute;
             inset: 0;
             background: var(--bg-dark);
             z-index: 1000;
@@ -261,6 +257,12 @@
 </head>
 <body>
 
+    <!-- A háttér, ami a body-val együtt görög -->
+    <div id="bg-container">
+        <img id="bg-layer" src="">
+    </div>
+
+    <!-- A fix kezelőfelület -->
     <div class="game-container">
         <!-- Kezdő / Importáló képernyő -->
         <div id="import-overlay">
@@ -277,45 +279,42 @@
             </div>
         </div>
 
-        <!-- Görgethető háttér -->
-        <div id="bg-container">
-            <img id="bg-layer" src="">
-        </div>
+        <div id="viewport" class="flex flex-col h-full">
+            <!-- Tartalom rögzítése az aljára -->
+            <div id="content-wrapper">
+                <div class="story-box play-font">
+                    <img id="avatar-img" class="avatar-img" style="display:none" src="">
+                    <div id="header-area" class="px-2"></div>
+                    
+                    <div id="text-scroll-area" class="overflow-y-auto pr-1 mb-4 scroll-smooth" style="max-height: 50vh;">
+                        <img id="page-illustration" class="w-full rounded-2xl mb-5 hidden shadow-lg border border-white/10" src="">
+                        <div id="story-text-container" class="text-white leading-relaxed"></div>
+                    </div>
 
-        <!-- Tartalom -->
-        <div id="content-wrapper">
-            <div class="story-box play-font">
-                <img id="avatar-img" class="avatar-img" style="display:none" src="">
-                <div id="header-area" class="px-2"></div>
-                
-                <div id="text-scroll-area" class="overflow-y-auto pr-1 mb-4 scroll-smooth" style="max-height: 50vh;">
-                    <img id="page-illustration" class="w-full rounded-2xl mb-5 hidden shadow-lg border border-white/10" src="">
-                    <div id="story-text-container" class="text-white leading-relaxed"></div>
+                    <div id="action-area" class="flex gap-2"></div>
                 </div>
-
-                <div id="action-area" class="flex gap-2"></div>
             </div>
-        </div>
 
-        <!-- Hátizsák -->
-        <div id="inventory-view">
-            <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
-            <div id="inv-grid" class="inv-grid"></div>
-            <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
-                <i class="fa-solid fa-box-open text-5xl mb-5 opacity-10 block mx-auto"></i>
-                Üres a táskád.
+            <!-- Hátizsák -->
+            <div id="inventory-view">
+                <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
+                <div id="inv-grid" class="inv-grid"></div>
+                <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
+                    <i class="fa-solid fa-box-open text-5xl mb-5 opacity-10 block mx-auto"></i>
+                    Üres a táskád.
+                </div>
             </div>
-        </div>
 
-        <!-- Nagyítható Képnézegető Modal -->
-        <div id="fullscreen-modal">
-            <div id="modal-header">
-                <button onclick="closeModal()" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
-                    <i class="fa fa-times text-xl"></i>
-                </button>
-            </div>
-            <div id="zoom-viewport">
-                <img id="modal-img" src="">
+            <!-- Nagyítható Képnézegető Modal -->
+            <div id="fullscreen-modal">
+                <div id="modal-header">
+                    <button onclick="closeModal()" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="zoom-viewport">
+                    <img id="modal-img" src="">
+                </div>
             </div>
         </div>
 
@@ -338,11 +337,9 @@
         let currentView = 'game';
         let gpsWatchId = null;
 
-        // Pinch-Zoom változók
         let scale = 1;
         let lastScale = 1;
         let startDist = 0;
-        let isZoomed = false;
 
         function loadConfig(data) {
             config = data;
@@ -421,7 +418,6 @@
             document.getElementById('fullscreen-modal').style.display = 'none';
         }
 
-        // Pinch-Zoom implementáció
         const zoomViewport = document.getElementById('zoom-viewport');
         const modalImg = document.getElementById('modal-img');
 
@@ -441,7 +437,6 @@
                     e.touches[0].pageY - e.touches[1].pageY
                 );
                 scale = lastScale * (dist / startDist);
-                // Korlátozzuk a nagyítást
                 if (scale < 1) scale = 1;
                 if (scale > 5) scale = 5;
                 modalImg.style.transform = `scale(${scale})`;
@@ -558,10 +553,9 @@
                 next.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); };
                 actions.appendChild(next);
             }
-            // Mindig görgessünk a szöveg tetejére
             document.getElementById('text-scroll-area').scrollTop = 0;
-            // Görgessünk egy picit az oldalon, hogy elinduljon a teljes képernyős mód
-            window.scrollTo(0, 1);
+            // A UI-t nem görgetjük, csak a body-t egy picit a bar-ok elrejtéséhez
+            setTimeout(() => window.scrollTo(0, 1), 100);
         }
 
         window.onload = async () => {
