@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kaland Játék Lejátszó V1.2 ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sar: env(safe-area-inset-right);
+            --sab: env(safe-area-inset-bottom);
+            --sal: env(safe-area-inset-left);
+        }
+
+        html, body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #020617; 
+            color: #f8fafc; 
+            margin: 0;
+            padding: 0;
+            /* Megakadályozzuk a görgetést és a "gumiszalag" effektet */
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+        }
+
+        .play-font { font-family: 'Play', sans-serif; }
+        
+        .game-container {
+            width: 100%;
+            height: 100dvh; /* Dinamikus viewport magasság */
+            background: #000;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Asztali nézetben marad a keret */
+        @media (min-width: 640px) {
+            body {
+                position: relative;
+                overflow: auto;
+            }
+            .game-container {
+                margin: auto;
+                max-width: 400px;
+                height: 90vh;
+                border: 8px solid #1e293b;
+                border-radius: 3rem;
+                overflow: hidden;
+            }
+        }
+
+        #viewport { 
+            position: relative; 
+            flex: 1; 
+            overflow: hidden; 
+            background: #000; 
+        }
+        
+        #bg-layer { 
+            position: absolute; 
+            inset: 0; 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            filter: brightness(0.4); 
+            transition: 0.5s ease-in-out; 
+        }
+        
+        #content-layer { 
+            position: relative; 
+            z-index: 10; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+        }
+        
+        .story-box { 
+            position: relative;
+            background: rgba(0,0,0,0.9); 
+            backdrop-filter: blur(10px);
+            border-top: 3px solid #8b5cf6; 
+            border-radius: 1.5rem 1.5rem 0 0; 
+            padding: 24px; 
+            padding-top: 40px;
+            /* Rugalmas magasságkezelés */
+            max-height: 70%;
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+        }
+        
+        .avatar-img { 
+            position: absolute; 
+            top: -35px; 
+            left: 25px; 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            border: 3px solid #8b5cf6; 
+            background: #000; 
+            z-index: 20; 
+            object-fit: cover; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .back-arrow {
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            width: fit-content;
+        }
+
+        .game-btn { 
+            width: 100%;
+            background: #8b5cf6; 
+            color: white; 
+            padding: 14px; 
+            border-radius: 12px; 
+            font-weight: bold; 
+            text-align: center; 
+            font-size: 0.85rem; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .game-btn:active { transform: scale(0.98); background: #a855f7; }
+        .btn-cyan { background: #22d3ee !important; color: #000 !important; }
+        .btn-secondary { background: #334155; }
+        
+        .bottom-nav { 
+            flex-shrink: 0;
+            height: calc(70px + var(--sab)); 
+            background: #0f172a; 
+            border-top: 1px solid rgba(139, 92, 246, 0.2); 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            padding-bottom: var(--sab); /* Mobil navigációs sáv helye */
+            z-index: 100; 
+        }
+        
+        .nav-btn { position: relative; color: #64748b; font-size: 1.4rem; cursor: pointer; border: none; background: transparent; }
+        .nav-btn.active { color: #8b5cf6; }
+
+        .notif-dot {
+            position: absolute;
+            top: -2px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+            display: none;
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        #inventory-view { 
+            position: absolute; 
+            inset: 0; 
+            background: #0f172a; 
+            z-index: 50; 
+            display: none; 
+            padding: calc(30px + var(--sat)) 20px 20px 20px; 
+            overflow-y: auto; 
+        }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .inv-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; text-align: center; cursor: pointer; }
+        .inv-img { width: 100%; height: 100px; object-fit: cover; }
+        .inv-name { font-size: 11px; padding: 10px; color: #cbd5e1; font-weight: 600; }
+        .new-tag { position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 800; }
+
+        #fullscreen-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+        #fullscreen-modal img { max-width: 100%; border-radius: 1.5rem; }
+
+        #import-overlay {
+            position: absolute;
+            inset: 0;
+            background: #020617;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .sim-input { 
+            background: rgba(255,255,255,0.05); 
+            border: 1px solid #334155; 
+            color: #fff; 
+            border-radius: 12px; 
+            padding: 14px; 
+            font-size: 14px; 
+            width: 100%; 
+            margin-bottom: 15px;
+        }
+        .hint-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            margin: 0 auto 15px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div id="import-overlay">
+            <div class="mb-8">
+                <i class="fa-solid fa-wand-magic-sparkles text-6xl text-purple-500 mb-6 block"></i>
+                <h1 class="text-2xl font-bold uppercase tracking-widest mb-2">Kaland Lejátszó</h1>
+                <p id="status-msg" class="text-slate-400 text-sm">Játék keresése...</p>
+            </div>
+            <div id="manual-import" class="hidden w-full">
+                <button onclick="document.getElementById('fileInput').click()" class="game-btn">
+                    <i class="fa fa-file-import mr-2"></i> Manuális betöltés
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadGameFile(event)">
+            </div>
+        </div>
+
+        <div id="viewport">
+            <img id="bg-layer" src="">
+            <div id="content-layer">
+                <div class="story-box play-font">
+                    <img id="avatar-img" class="avatar-img" style="display:none" src="">
+                    <div id="header-area"></div>
+                    <div id="text-scroll-area" class="overflow-y-auto flex-grow pr-2 mb-4 scroll-smooth">
+                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-white/10" src="">
+                        <div id="story-text" class="text-white text-[14px] leading-relaxed"></div>
+                    </div>
+                    <div id="action-area" class="flex-shrink-0"></div>
+                </div>
+            </div>
+
+            <div id="inventory-view">
+                <h2 class="text-cyan-400 font-bold text-center mb-8 uppercase text-sm tracking-widest">Hátizsák</h2>
+                <div id="inv-grid" class="inv-grid"></div>
+                <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
+                    <i class="fa-solid fa-box-open text-4xl mb-4 opacity-10 block mx-auto"></i>
+                    Jelenleg üres a táskád.
+                </div>
+            </div>
+
+            <div id="fullscreen-modal" onclick="this.style.display='none'">
+                <img id="modal-img" src="">
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-btn active" id="nav-game" onclick="switchView('game')"><i class="fa fa-house"></i></button>
+            <button class="nav-btn" id="nav-map" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
+            <button class="nav-btn" id="nav-inv" onclick="switchView('inventory')">
+                <i class="fa-solid fa-briefcase"></i>
+                <div id="notif-dot" class="notif-dot"></div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'KALAND_STUDIO_V86_DYNAMIC';
+        let config = null;
+        let simIdx = 0;
+        let hintIdx = 0;
+        let currentView = 'game';
+        let gpsWatchId = null;
+
+        function loadConfig(data) {
+            config = data;
+            config.storyPages.forEach(p => {
+                if (p.inventory) {
+                    p.inventory.forEach(item => {
+                        if (item.seen === undefined) item.seen = true;
+                    });
+                }
+            });
+            startGame();
+        }
+
+        function loadGameFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    loadConfig(JSON.parse(e.target.result));
+                } catch (err) { alert("Hibás fájl!"); }
+            };
+            reader.readAsText(file);
+        }
+
+        function startGame() {
+            document.getElementById('import-overlay').style.display = 'none';
+            simIdx = 0;
+            renderPage();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.getElementById('inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
+            document.getElementById('nav-game').classList.toggle('active', view === 'game');
+            document.getElementById('nav-inv').classList.toggle('active', view === 'inventory');
+            if (view === 'inventory') {
+                document.getElementById('notif-dot').style.display = 'none';
+                renderInventory();
+            }
+        }
+
+        function renderInventory() {
+            const grid = document.getElementById('inv-grid');
+            const empty = document.getElementById('inv-empty');
+            grid.innerHTML = '';
+            const p = config.storyPages[simIdx];
+            if (!p || !p.inventory || p.inventory.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                p.inventory.forEach((item, i) => {
+                    const card = document.createElement('div');
+                    card.className = "inv-card animate-in zoom-in duration-300";
+                    const newTag = item.seen === false ? '<div class="new-tag">Új</div>' : '';
+                    card.innerHTML = `${newTag}<img src="${item.url}" class="inv-img" onerror="this.src='https://via.placeholder.com/150x100?text=Tárgy'"><div class="inv-name">${item.name || 'Névtelen'}</div>`;
+                    card.onclick = () => {
+                        item.seen = true;
+                        if (item.url) {
+                            document.getElementById('modal-img').src = item.url;
+                            document.getElementById('fullscreen-modal').style.display = 'flex';
+                        }
+                        renderInventory();
+                    };
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function openMap() {
+            if (config && config.mapUrl) window.open(config.mapUrl, '_blank');
+            else alert("Nincs térkép link!");
+        }
+
+        function calcDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const f1 = lat1 * Math.PI/180; const f2 = lat2 * Math.PI/180;
+            const df = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function renderPage() {
+            if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+            const p = config.storyPages[simIdx];
+            if (!p) return;
+
+            document.getElementById('bg-layer').src = p.pageBg || config.globalBg || "";
+            const pageImg = document.getElementById('page-illustration');
+            if (p.pageImage) { pageImg.src = p.pageImage; pageImg.classList.remove('hidden'); }
+            else pageImg.classList.add('hidden');
+
+            let rawText = p.content || "";
+            rawText = rawText.replace(/§R/g, '<span class="text-cyan-400 font-bold italic">[Rendszer]:</span>');
+
+            const avImg = document.getElementById('avatar-img');
+            avImg.style.display = 'none';
+            document.getElementById('text-scroll-area').style.paddingTop = "0px";
+
+            let firstAvatar = null;
+            if (config.avatars) {
+                config.avatars.forEach(av => {
+                    const regex = new RegExp(`§${av.id}`, 'g');
+                    if (rawText.includes(`§${av.id}`)) {
+                        if (!firstAvatar) firstAvatar = av;
+                        rawText = rawText.replace(regex, `<span style="color: ${av.color}; font-weight: bold;">${av.name}:</span>`);
+                    }
+                });
+            }
+
+            if (firstAvatar && firstAvatar.url) {
+                avImg.src = firstAvatar.url; avImg.style.display = 'block'; avImg.style.borderColor = firstAvatar.color;
+                document.getElementById('text-scroll-area').style.paddingTop = "20px";
+            }
+            document.getElementById('story-text').innerHTML = rawText;
+
+            const header = document.getElementById('header-area');
+            const actions = document.getElementById('action-area');
+            header.innerHTML = ''; actions.innerHTML = '';
+
+            const goBack = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : Math.max(0, simIdx - 1); hintIdx = 0; renderPage(); };
+
+            if (simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
+                if (['choice', 'password', 'gps'].includes(p.pageType)) {
+                    const arrow = document.createElement('div'); arrow.className = "back-arrow"; arrow.innerHTML = '<i class="fa fa-chevron-left mr-2"></i>'; arrow.onclick = goBack;
+                    header.appendChild(arrow);
+                } else {
+                    const btn = document.createElement('div'); btn.className = "game-btn btn-secondary"; btn.textContent = "Vissza"; btn.onclick = goBack;
+                    actions.appendChild(btn);
+                }
+            }
+
+            const hasNewItem = p.inventory && p.inventory.some(i => i.seen === false);
+            if (hasNewItem && currentView !== 'inventory') document.getElementById('notif-dot').style.display = 'block';
+
+            if (p.pageType === 'choice') {
+                p.choices.forEach(c => {
+                    const btn = document.createElement('div'); btn.className = "game-btn"; btn.textContent = c.text;
+                    btn.onclick = () => { simIdx = parseInt(c.target); renderPage(); };
+                    actions.appendChild(btn);
+                });
+            } else if (p.pageType === 'password') {
+                const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-2";
+                const tipArea = document.createElement('div'); tipArea.className = "text-[11px] text-cyan-400 italic text-center mb-2 hidden"; wrap.appendChild(tipArea);
+                const hBtn = document.createElement('div'); hBtn.className = "hint-btn"; hBtn.innerHTML = '<i class="fa fa-lightbulb"></i>';
+                hBtn.onclick = () => { if (p.hints?.length) { tipArea.textContent = "Tipp: " + p.hints[hintIdx % p.hints.length]; tipArea.classList.remove('hidden'); hintIdx++; } };
+                wrap.appendChild(hBtn);
+                const input = document.createElement('input'); input.className = "sim-input"; input.placeholder = "Üsd be a kódot..."; wrap.appendChild(input);
+                const ok = document.createElement('div'); ok.className = "game-btn"; ok.textContent = "OK";
+                ok.onclick = () => {
+                    if (input.value.trim().toLowerCase() === (p.password || "").trim().toLowerCase()) { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); }
+                    else input.style.borderColor = "#ef4444";
+                };
+                wrap.appendChild(ok); actions.appendChild(wrap);
+            } else if (p.pageType === 'gps') {
+                const info = document.createElement('div'); info.className = "text-center p-4 bg-white/5 rounded-2xl border border-cyan-500/20 mb-4 animate-pulse";
+                info.innerHTML = `<div class="text-[10px] uppercase text-slate-400 mb-1">Cél távolsága</div><div id="gps-dist-val" class="text-xl font-bold text-cyan-400">Mérés...</div>`;
+                actions.appendChild(info);
+                const mapBtn = document.createElement('div'); mapBtn.className = "game-btn btn-cyan mb-2"; mapBtn.innerHTML = '<i class="fa-solid fa-location-dot mr-2"></i> Térkép'; mapBtn.onclick = openMap;
+                actions.appendChild(mapBtn);
+                if (navigator.geolocation) {
+                    gpsWatchId = navigator.geolocation.watchPosition(pos => {
+                        const d = calcDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        const el = document.getElementById('gps-dist-val'); if (el) el.textContent = `${Math.round(d)} m`;
+                        if (d < 25) { navigator.geolocation.clearWatch(gpsWatchId); simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); }
+                    }, null, { enableHighAccuracy: true });
+                }
+            } else {
+                const next = document.createElement('div'); next.className = "game-btn"; next.textContent = "Tovább";
+                next.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); };
+                actions.appendChild(next);
+            }
+            document.getElementById('text-scroll-area').scrollTop = 0;
+        }
+
+        window.onload = async () => {
+            try {
+                const response = await fetch('export.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    loadConfig(data);
+                    return;
+                }
+            } catch (e) { console.log("Nincs szerveroldali fájl."); }
+
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                loadConfig(JSON.parse(saved));
+                return;
+            }
+
+            document.getElementById('status-msg').textContent = "Nem található mentett kaland.";
+            document.getElementById('manual-import').classList.remove('hidden');
+        };
+    </script>
+</body>
+</html>
