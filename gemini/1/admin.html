@@ -86,6 +86,10 @@
         .inv-item-img { width: 100%; height: 80px; object-fit: cover; }
         .inv-item-name { font-size: 10px; padding: 5px; color: #aaa; }
 
+        /* Simulator Modal (For enlarged images) */
+        #sim-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+        #sim-modal img { max-width: 100%; border: 2px solid #00ffff; border-radius: 10px; }
+
         .sim-back-arrow {
             color: #666;
             cursor: pointer;
@@ -118,6 +122,9 @@
         .hint-circle-btn:hover { border-color: #8a2be2; color: #fff; background: rgba(138, 43, 226, 0.2); }
 
         #save-indicator { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.7rem; font-weight: bold; display: none; z-index: 1000; }
+        
+        /* Karakter színek a szimulátorban */
+        .anna-txt { color: #ff69b4; } .mark-txt { color: #4169e1; } .sys-txt { color: #00ffff; font-style: italic; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -223,6 +230,10 @@
                             <div id="sim-inv-grid" class="inv-grid"></div>
                             <p id="sim-inv-empty" class="text-gray-600 text-center mt-10 text-xs hidden">Még nincsenek tárgyaid.</p>
                         </div>
+                        <!-- Simulator Modal -->
+                        <div id="sim-modal" onclick="this.style.display='none'">
+                            <img id="sim-modal-img" src="">
+                        </div>
                     </div>
                     <div class="sim-bottom-bar">
                         <button class="sim-menu-btn active" id="sim-btn-game" onclick="simSwitch('game')"><i class="fa fa-house"></i></button>
@@ -283,6 +294,15 @@
                     const div = document.createElement('div');
                     div.className = "inv-item-card";
                     div.innerHTML = `<img src="${item.url}" class="inv-item-img" onerror="this.src='https://placehold.co/100x80?text=Err'"><div class="inv-item-name">${item.name}</div>`;
+                    
+                    // Kinagyítás logika
+                    div.onclick = () => {
+                        if(item.url) {
+                            document.getElementById('sim-modal-img').src = item.url;
+                            document.getElementById('sim-modal').style.display = 'flex';
+                        }
+                    };
+                    
                     grid.appendChild(div);
                 });
             }
@@ -382,6 +402,7 @@
 
         function loadPage(i) {
             currentIdx = i; const p = config.storyPages[i];
+            if(!p) return;
             document.getElementById('editorPanel').classList.remove('hidden');
             document.getElementById('pageText').value = p.content;
             document.getElementById('prevIdx').value = p.prevIdx ?? "";
