@@ -76,8 +76,15 @@
         .sim-btn-secondary { background: #444; }
         
         .sim-bottom-bar { height: 50px; background: #1a1a1a; border-top: 2px solid #8a2be2; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-        .sim-menu-btn { color: #888; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .sim-menu-btn { color: #888; font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
         .sim-menu-btn.active { color: #8a2be2; text-shadow: 0 0 8px rgba(138, 43, 226, 0.6); }
+
+        /* Inventory Simulator View */
+        #sim-inventory-view { position: absolute; inset: 0; background: #111; z-index: 50; display: none; padding: 15px; padding-top: 40px; overflow-y: auto; }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inv-item-card { background: #222; border: 1px solid #444; border-radius: 8px; overflow: hidden; text-align: center; cursor: pointer; }
+        .inv-item-img { width: 100%; height: 80px; object-fit: cover; }
+        .inv-item-name { font-size: 10px; padding: 5px; color: #aaa; }
 
         .sim-back-arrow {
             color: #666;
@@ -146,6 +153,15 @@
                     </div>
                 </div>
 
+                <!-- Eszköztár szerkesztő -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px]">Inventory elemek</h3>
+                        <button onclick="addInventoryItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ Új tárgy</button>
+                    </div>
+                    <div id="adminInventoryList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
                 <div class="glass-card p-4">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-purple-400 font-bold uppercase text-[10px]">Oldalak (Rendezhető ↕️)</h3>
@@ -201,11 +217,17 @@
                                 <div id="sim-actions" class="mt-3 flex flex-row gap-2"></div>
                             </div>
                         </div>
+                        <!-- Simulator Inventory View -->
+                        <div id="sim-inventory-view" class="play-font">
+                            <h2 class="text-purple-400 font-bold text-center mb-4 uppercase text-sm">Inventory</h2>
+                            <div id="sim-inv-grid" class="inv-grid"></div>
+                            <p id="sim-inv-empty" class="text-gray-600 text-center mt-10 text-xs hidden">Még nincsenek tárgyaid.</p>
+                        </div>
                     </div>
                     <div class="sim-bottom-bar">
-                        <div class="sim-menu-btn active"><i class="fa fa-house"></i></div>
-                        <div class="sim-menu-btn" onclick="if(config.mapUrl) window.open(config.mapUrl, '_blank')"><i class="fa-solid fa-map-location-dot"></i></div>
-                        <div class="sim-menu-btn"><i class="fa-solid fa-briefcase"></i></div>
+                        <button class="sim-menu-btn active" id="sim-btn-game" onclick="simSwitch('game')"><i class="fa fa-house"></i></button>
+                        <button class="sim-menu-btn" onclick="if(config.mapUrl) window.open(config.mapUrl, '_blank')"><i class="fa-solid fa-map-location-dot"></i></button>
+                        <button class="sim-menu-btn" id="sim-btn-inv" onclick="simSwitch('inventory')"><i class="fa-solid fa-briefcase"></i></button>
                     </div>
                 </div>
             </div>
@@ -220,12 +242,14 @@
             mapUrl: "",
             annaAvatar: "",
             markAvatar: "",
+            inventory: [],
             storyPages: [{ content: "Üdvözöllek!", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [] }]
         };
 
         let currentIdx = -1;
         let simIdx = 0;
         let simHintIdx = 0;
+        let simView = 'game';
         let saveTimeout;
         let sortableInstance = null;
         let gpsWatchId = null;
@@ -236,6 +260,32 @@
             const df = (la2-la1) * Math.PI/180; const dl = (lo2-lo1) * Math.PI/180;
             const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // Simulator View Switcher
+        function simSwitch(view) {
+            simView = view;
+            document.getElementById('sim-inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
+            document.getElementById('sim-btn-game').classList.toggle('active', view === 'game');
+            document.getElementById('sim-btn-inv').classList.toggle('active', view === 'inventory');
+            if(view === 'inventory') renderInventorySim();
+        }
+
+        function renderInventorySim() {
+            const grid = document.getElementById('sim-inv-grid');
+            const empty = document.getElementById('sim-inv-empty');
+            grid.innerHTML = '';
+            if(!config.inventory || config.inventory.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                config.inventory.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = "inv-item-card";
+                    div.innerHTML = `<img src="${item.url}" class="inv-item-img" onerror="this.src='https://placehold.co/100x80?text=Err'"><div class="inv-item-name">${item.name}</div>`;
+                    grid.appendChild(div);
+                });
+            }
         }
 
         function updateSimulator() {
@@ -364,6 +414,26 @@
             });
         }
 
+        // Inventory Editor Logic
+        function renderInventoryAdmin() {
+            const container = document.getElementById('adminInventoryList');
+            container.innerHTML = '';
+            if(!config.inventory) config.inventory = [];
+            config.inventory.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = "bg-[#222] p-2 rounded flex flex-col gap-1 relative border border-gray-600";
+                div.innerHTML = `
+                    <input type="text" class="input-style text-xs py-1" value="${item.name}" placeholder="Név" oninput="updateInvItem(${i}, 'name', this.value)">
+                    <input type="url" class="input-style text-[10px] py-1" value="${item.url}" placeholder="URL" oninput="updateInvItem(${i}, 'url', this.value)">
+                    <button onclick="removeInvItem(${i})" class="absolute -top-1 -right-1 bg-red-600 w-4 h-4 rounded-full text-[10px] flex items-center justify-center">×</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        function addInventoryItem() { if(!config.inventory) config.inventory = []; config.inventory.push({name: 'Tárgy', url: ''}); renderInventoryAdmin(); autoSave(); }
+        function updateInvItem(i, k, v) { config.inventory[i][k] = v; autoSave(); }
+        function removeInvItem(i) { config.inventory.splice(i, 1); renderInventoryAdmin(); autoSave(); }
+
         function autoSave() {
             clearTimeout(saveTimeout);
             document.getElementById('save-indicator').style.display = 'block';
@@ -385,8 +455,10 @@
                 config.mapUrl = document.getElementById('mapUrl').value;
                 config.annaAvatar = document.getElementById('annaAvatar').value;
                 config.markAvatar = document.getElementById('markAvatar').value;
+                
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
                 renderPageList(); updateSimulator();
+                if(simView === 'inventory') renderInventorySim();
                 setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 500);
             }, 500);
         }
@@ -425,6 +497,7 @@
                 document.getElementById('mapUrl').value = config.mapUrl || "";
                 document.getElementById('annaAvatar').value = config.annaAvatar || "";
                 document.getElementById('markAvatar').value = config.markAvatar || "";
+                renderInventoryAdmin();
                 renderPageList(); if (config.storyPages.length > 0) loadPage(0);
             };
             reader.readAsText(file);
@@ -436,6 +509,7 @@
             document.getElementById('mapUrl').value = config.mapUrl;
             document.getElementById('annaAvatar').value = config.annaAvatar;
             document.getElementById('markAvatar').value = config.markAvatar;
+            renderInventoryAdmin();
             renderPageList(); if(config.storyPages.length > 0) loadPage(0);
         };
     </script>
