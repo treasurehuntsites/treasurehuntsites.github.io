@@ -3,10 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>Kaland Játék Lejátszó V1.7 ✨</title>
+    <title>Kaland Játék Lejátszó V1.8 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Csak a Play betűtípust töltjük be a mintának megfelelően -->
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #020617;
@@ -17,7 +18,7 @@
 
         /* Teljes képernyős görgethető alapváz a címsor elrejtéséhez */
         html, body { 
-            font-family: 'Inter', sans-serif; 
+            font-family: 'Play', sans-serif; 
             background-color: var(--bg-dark); 
             color: #f8fafc; 
             margin: 0;
@@ -28,8 +29,6 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
-
-        .play-font { font-family: 'Play', sans-serif; }
         
         .game-container {
             width: 100%;
@@ -121,7 +120,7 @@
             hyphens: auto;
             padding: 0 5px;
             line-height: 1.6;
-            font-size: 15px;
+            font-size: 16px; /* Kicsit növelve a Play font sajátosságai miatt */
         }
 
         .game-btn { 
@@ -239,6 +238,7 @@
         }
 
         .sim-input { 
+            font-family: 'Play', sans-serif;
             background: rgba(255,255,255,0.05); 
             border: 1px solid #334155; 
             color: #fff; 
@@ -274,7 +274,7 @@
 
         <div id="viewport" class="flex flex-col h-full">
             <div id="content-wrapper">
-                <div class="story-box play-font">
+                <div class="story-box">
                     <img id="avatar-img" class="avatar-img" style="display:none" src="">
                     <div id="header-area" class="px-2"></div>
                     
@@ -329,11 +329,9 @@
 
         // Vissza gomb kezelő logika
         window.onpopstate = function(event) {
-            // Ha meg van nyitva a galéria, zárjuk be
             if (document.getElementById('fullscreen-modal').style.display === 'flex') {
                 closeModal(false);
             } 
-            // Ha meg van nyitva az eszköztár, váltsunk vissza a játékra
             else if (currentView === 'inventory') {
                 switchView('game', false);
             }
@@ -411,9 +409,7 @@
         }
 
         function openGallery(url) {
-            // Elmentjük az állapotot, hogy a vissza gombbal lehessen zárni
             history.pushState({modal: "gallery"}, "");
-            
             const img = document.getElementById('modal-img');
             img.src = url;
             scale = 1;
@@ -427,8 +423,6 @@
             if (modal.style.display === 'none') return;
 
             modal.style.display = 'none';
-            // Ha manuálisan (X gombbal) zárták be, vissza kell ugranunk a history-ban,
-            // hogy a következő fizikai vissza gomb ne "ugorjon" feleslegeset
             if (manual) {
                 history.back();
             }
