@@ -144,7 +144,7 @@
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.6</span> ✨</h1>
-                <p class="text-gray-500 text-sm">GPS Modullal Frissítve</p>
+                <p class="text-gray-500 text-sm">Oldalszintű Eszköztár Modullal</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="downloadConfig()" class="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-lg font-bold text-xs uppercase">Letöltés</button>
@@ -170,15 +170,6 @@
                     </div>
                 </div>
 
-                <!-- Eszköztár szerkesztő -->
-                <div class="glass-card p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-purple-400 font-bold uppercase text-[10px]">Inventory elemek</h3>
-                        <button onclick="addInventoryItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ Új tárgy</button>
-                    </div>
-                    <div id="adminInventoryList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                </div>
-
                 <div class="glass-card p-4">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-purple-400 font-bold uppercase text-[10px]">Oldalak (Rendezhető ↕️)</h3>
@@ -202,9 +193,17 @@
                         <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi háttér" oninput="autoSave()">
                     </div>
 
-                    <!-- Új mező a belső kép számára -->
                     <div class="grid grid-cols-1 gap-4">
                         <input type="url" id="pageInnerImage" class="input-style text-xs" placeholder="Belső kép URL (a szövegdobozba, a szöveg fölé)" oninput="autoSave()">
+                    </div>
+
+                    <!-- Eszköztár szerkesztő az adott oldalhoz -->
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-purple-400 font-bold uppercase text-[10px]">Inventory elemek ezen az oldalon</h3>
+                            <button onclick="addInventoryItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ Új tárgy</button>
+                        </div>
+                        <div id="adminInventoryList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                     </div>
 
                     <div id="choiceArea" class="hidden space-y-2 border-t border-gray-700 pt-4">
@@ -235,7 +234,6 @@
                             <div class="sim-box play-font">
                                 <img id="sim-avatar" class="sim-avatar" src="">
                                 <div id="sim-text-header" class="flex flex-col"></div>
-                                <!-- Új kép elem a szimulátor szövegdobozában -->
                                 <img id="sim-inner-img" class="sim-inner-img" src="">
                                 <div id="sim-text" class="text-white text-[13px] leading-relaxed overflow-y-auto pr-1 flex-grow"></div>
                                 <div id="sim-actions" class="mt-3 flex flex-row gap-2"></div>
@@ -245,7 +243,7 @@
                         <div id="sim-inventory-view" class="play-font">
                             <h2 class="text-purple-400 font-bold text-center mb-4 uppercase text-sm">Inventory</h2>
                             <div id="sim-inv-grid" class="inv-grid"></div>
-                            <p id="sim-inv-empty" class="text-gray-600 text-center mt-10 text-xs hidden">Még nincsenek tárgyaid.</p>
+                            <p id="sim-inv-empty" class="text-gray-600 text-center mt-10 text-xs hidden">Még nincsenek tárgyaid ezen a helyszínen.</p>
                         </div>
                         <!-- Simulator Modal -->
                         <div id="sim-modal" onclick="this.style.display='none'">
@@ -270,8 +268,7 @@
             mapUrl: "",
             annaAvatar: "",
             markAvatar: "",
-            inventory: [],
-            storyPages: [{ content: "Üdvözöllek!", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [] }]
+            storyPages: [{ content: "Üdvözöllek!", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [], inventory: [] }]
         };
 
         let currentIdx = -1;
@@ -290,7 +287,6 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // Simulator View Switcher
         function simSwitch(view) {
             simView = view;
             document.getElementById('sim-inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
@@ -303,16 +299,17 @@
             const grid = document.getElementById('sim-inv-grid');
             const empty = document.getElementById('sim-inv-empty');
             grid.innerHTML = '';
-            if(!config.inventory || config.inventory.length === 0) {
+            
+            const currentPage = config.storyPages[simIdx];
+            if(!currentPage || !currentPage.inventory || currentPage.inventory.length === 0) {
                 empty.classList.remove('hidden');
             } else {
                 empty.classList.add('hidden');
-                config.inventory.forEach(item => {
+                currentPage.inventory.forEach(item => {
                     const div = document.createElement('div');
                     div.className = "inv-item-card";
                     div.innerHTML = `<img src="${item.url}" class="inv-item-img" onerror="this.src='https://placehold.co/100x80?text=Err'"><div class="inv-item-name">${item.name}</div>`;
                     
-                    // Kinagyítás logika
                     div.onclick = () => {
                         if(item.url) {
                             document.getElementById('sim-modal-img').src = item.url;
@@ -341,7 +338,6 @@
             if(p.content.includes("§A") && config.annaAvatar) { av.src = config.annaAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
             else if(p.content.includes("§M") && config.markAvatar) { av.src = config.markAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
 
-            // Belső kép megjelenítése a szövegdobozban
             const innerImg = document.getElementById('sim-inner-img');
             if(p.pageInnerImage) {
                 innerImg.src = p.pageInnerImage;
@@ -357,7 +353,6 @@
             const backAction = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : simIdx - 1; simHintIdx = 0; updateSimulator(); };
             const hasBack = simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "");
 
-            // DISZKRÉT VISSZA NYÍL NAVIGÁCIÓ (Choice, Password, GPS)
             if (hasBack) {
                 if (p.pageType === 'choice' || p.pageType === 'password' || p.pageType === 'gps') {
                     const arrow = document.createElement('div');
@@ -424,6 +419,7 @@
                 bNext.onclick = () => { simIdx = parseInt(p.nextIdx || simIdx + 1); updateSimulator(); };
                 actions.appendChild(bNext);
             }
+            if(simView === 'inventory') renderInventorySim();
         }
 
         function loadPage(i) {
@@ -440,7 +436,7 @@
             document.getElementById('passHints').value = (p.hints || []).join('\n');
             document.getElementById('targetLat').value = p.targetLat || "";
             document.getElementById('targetLon').value = p.targetLon || "";
-            updateUI(); renderChoices(); renderPageList(); simIdx = i; simHintIdx = 0; updateSimulator();
+            updateUI(); renderChoices(); renderPageList(); renderInventoryAdmin(); simIdx = i; simHintIdx = 0; updateSimulator();
         }
 
         function renderPageList() {
@@ -462,12 +458,14 @@
             });
         }
 
-        // Inventory Editor Logic
         function renderInventoryAdmin() {
             const container = document.getElementById('adminInventoryList');
             container.innerHTML = '';
-            if(!config.inventory) config.inventory = [];
-            config.inventory.forEach((item, i) => {
+            const currentPage = config.storyPages[currentIdx];
+            if(!currentPage) return;
+            if(!currentPage.inventory) currentPage.inventory = [];
+            
+            currentPage.inventory.forEach((item, i) => {
                 const div = document.createElement('div');
                 div.className = "bg-[#222] p-2 rounded flex flex-col gap-1 relative border border-gray-600";
                 div.innerHTML = `
@@ -478,9 +476,25 @@
                 container.appendChild(div);
             });
         }
-        function addInventoryItem() { if(!config.inventory) config.inventory = []; config.inventory.push({name: 'Tárgy', url: ''}); renderInventoryAdmin(); autoSave(); }
-        function updateInvItem(i, k, v) { config.inventory[i][k] = v; autoSave(); }
-        function removeInvItem(i) { config.inventory.splice(i, 1); renderInventoryAdmin(); autoSave(); }
+
+        function addInventoryItem() {
+            const p = config.storyPages[currentIdx];
+            if(!p.inventory) p.inventory = [];
+            p.inventory.push({name: 'Új tárgy', url: ''});
+            renderInventoryAdmin();
+            autoSave();
+        }
+
+        function updateInvItem(i, k, v) {
+            config.storyPages[currentIdx].inventory[i][k] = v;
+            autoSave();
+        }
+
+        function removeInvItem(i) {
+            config.storyPages[currentIdx].inventory.splice(i, 1);
+            renderInventoryAdmin();
+            autoSave();
+        }
 
         function autoSave() {
             clearTimeout(saveTimeout);
@@ -507,7 +521,6 @@
                 
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
                 renderPageList(); updateSimulator();
-                if(simView === 'inventory') renderInventorySim();
                 setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 500);
             }, 500);
         }
@@ -532,7 +545,7 @@
         function updateChoice(i, k, v) { config.storyPages[currentIdx].choices[i][k] = v; autoSave(); }
         function removeChoice(i) { config.storyPages[currentIdx].choices.splice(i, 1); renderChoices(); autoSave(); }
 
-        function addPage() { config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: config.storyPages.length, prevIdx: config.storyPages.length - 1, choices: [] }); loadPage(config.storyPages.length - 1); autoSave(); }
+        function addPage() { config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: config.storyPages.length, prevIdx: config.storyPages.length - 1, choices: [], inventory: [] }); loadPage(config.storyPages.length - 1); autoSave(); }
         function deletePage(i) { if(confirm("Törlöd?")) { config.storyPages.splice(i, 1); currentIdx = -1; autoSave(); } }
 
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game_config.json'; a.click(); }
@@ -540,13 +553,15 @@
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                config = JSON.parse(e.target.result);
+                const imported = JSON.parse(e.target.result);
+                // Kompatibilitás biztosítása régi konfigurációkkal
+                imported.storyPages.forEach(p => { if(!p.inventory) p.inventory = []; });
+                config = imported;
                 document.getElementById('appTitle').value = config.appTitle || "";
                 document.getElementById('globalBg').value = config.globalBg || "";
                 document.getElementById('mapUrl').value = config.mapUrl || "";
                 document.getElementById('annaAvatar').value = config.annaAvatar || "";
                 document.getElementById('markAvatar').value = config.markAvatar || "";
-                renderInventoryAdmin();
                 renderPageList(); if (config.storyPages.length > 0) loadPage(0);
             };
             reader.readAsText(file);
@@ -558,7 +573,6 @@
             document.getElementById('mapUrl').value = config.mapUrl;
             document.getElementById('annaAvatar').value = config.annaAvatar;
             document.getElementById('markAvatar').value = config.markAvatar;
-            renderInventoryAdmin();
             renderPageList(); if(config.storyPages.length > 0) loadPage(0);
         };
     </script>
