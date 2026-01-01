@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <title>Kaland Játék Lejátszó V1.6 ✨</title>
+    <title>Kaland Játék Lejátszó V1.7 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -23,7 +23,6 @@
             margin: 0;
             padding: 0;
             width: 100%;
-            /* Magasság növelése a görgethetőség érdekében */
             min-height: 120vh;
             overflow-x: hidden;
             overflow-y: auto;
@@ -32,13 +31,12 @@
 
         .play-font { font-family: 'Play', sans-serif; }
         
-        /* A fő konténer rögzítve marad a nézeten belül */
         .game-container {
             width: 100%;
             height: 100dvh;
             display: flex;
             flex-direction: column;
-            position: fixed; /* Fixáljuk a UI-t a viewportra */
+            position: fixed; 
             top: 0;
             left: 0;
             z-index: 10;
@@ -57,13 +55,12 @@
             }
         }
 
-        /* Háttér réteg, ami a body görgetésekor elmozdulhat */
         #bg-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 150vh; /* Hosszabb háttér a görgetés élményéhez */
+            height: 150vh; 
             z-index: 0;
         }
         #bg-layer {
@@ -74,9 +71,8 @@
             transition: opacity 0.5s ease;
         }
         
-        /* Tartalmi réteg rögzítése az aljára */
         #content-wrapper {
-            position: absolute; /* A game-containeren belül rögzítjük */
+            position: absolute; 
             bottom: 0;
             left: 0;
             width: 100%;
@@ -85,12 +81,12 @@
             flex-direction: column;
             justify-content: flex-end;
             padding-bottom: calc(75px + var(--sab)); 
-            pointer-events: none; /* Átengedi a kattintást a háttérre ha kell */
+            pointer-events: none; 
         }
         
         .story-box { 
             position: relative;
-            pointer-events: auto; /* A dobozon belül már kell a kattintás */
+            pointer-events: auto; 
             background: rgba(0,0,0,0.92); 
             backdrop-filter: blur(20px);
             border-top: 3px solid var(--accent); 
@@ -257,22 +253,19 @@
 </head>
 <body>
 
-    <!-- A háttér, ami a body-val együtt görög -->
     <div id="bg-container">
         <img id="bg-layer" src="">
     </div>
 
-    <!-- A fix kezelőfelület -->
     <div class="game-container">
-        <!-- Kezdő / Importáló képernyő -->
         <div id="import-overlay">
             <div class="mb-10">
                 <i class="fa-solid fa-wand-magic-sparkles text-8xl text-purple-500 mb-6 block animate-bounce"></i>
                 <h1 class="text-3xl font-bold uppercase tracking-widest mb-2">Kaland Vár</h1>
                 <p id="status-msg" class="text-slate-400 text-sm">Adatok betöltése...</p>
             </div>
-            <div id="manual-import" class="hidden w-full max-w-xs">
-                <button onclick="document.getElementById('fileInput').click()" class="game-btn">
+            <div id="manual-import" class="hidden w-full max-w-xs mx-auto">
+                <button onclick="document.getElementById('fileInput').click()" class="game-btn w-full">
                     <i class="fa fa-file-import mr-2"></i> Játék betöltése
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadGameFile(event)">
@@ -280,7 +273,6 @@
         </div>
 
         <div id="viewport" class="flex flex-col h-full">
-            <!-- Tartalom rögzítése az aljára -->
             <div id="content-wrapper">
                 <div class="story-box play-font">
                     <img id="avatar-img" class="avatar-img" style="display:none" src="">
@@ -295,7 +287,6 @@
                 </div>
             </div>
 
-            <!-- Hátizsák -->
             <div id="inventory-view">
                 <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
                 <div id="inv-grid" class="inv-grid"></div>
@@ -305,10 +296,9 @@
                 </div>
             </div>
 
-            <!-- Nagyítható Képnézegető Modal -->
             <div id="fullscreen-modal">
                 <div id="modal-header">
-                    <button onclick="closeModal()" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
+                    <button onclick="closeModal(true)" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
                         <i class="fa fa-times text-xl"></i>
                     </button>
                 </div>
@@ -318,14 +308,10 @@
             </div>
         </div>
 
-        <!-- Alsó Menüsor -->
         <div class="bottom-nav">
-            <button class="nav-btn active" id="nav-game" onclick="switchView('game')"><i class="fa fa-house"></i></button>
+            <button class="nav-btn active" id="nav-game" onclick="switchView('game', true)"><i class="fa fa-house"></i></button>
             <button class="nav-btn" id="nav-map" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
-            <button class="nav-btn" id="nav-inv" onclick="switchView('inventory')">
-                <i class="fa-solid fa-briefcase"></i>
-                <div id="notif-dot" class="notif-dot"></div>
-            </button>
+            <button class="nav-btn" id="nav-inv" onclick="switchView('inventory', true)"><i class="fa-solid fa-briefcase"></i><div id="notif-dot" class="notif-dot"></div></button>
         </div>
     </div>
 
@@ -340,6 +326,18 @@
         let scale = 1;
         let lastScale = 1;
         let startDist = 0;
+
+        // Vissza gomb kezelő logika
+        window.onpopstate = function(event) {
+            // Ha meg van nyitva a galéria, zárjuk be
+            if (document.getElementById('fullscreen-modal').style.display === 'flex') {
+                closeModal(false);
+            } 
+            // Ha meg van nyitva az eszköztár, váltsunk vissza a játékra
+            else if (currentView === 'inventory') {
+                switchView('game', false);
+            }
+        };
 
         function loadConfig(data) {
             config = data;
@@ -370,11 +368,18 @@
             renderPage();
         }
 
-        function switchView(view) {
+        function switchView(view, pushState = true) {
+            if (view === currentView) return;
+            
+            if (pushState) {
+                history.pushState({view: view}, "");
+            }
+
             currentView = view;
             document.getElementById('inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
             document.getElementById('nav-game').classList.toggle('active', view === 'game');
             document.getElementById('nav-inv').classList.toggle('active', view === 'inventory');
+            
             if (view === 'inventory') {
                 document.getElementById('notif-dot').style.display = 'none';
                 renderInventory();
@@ -406,6 +411,9 @@
         }
 
         function openGallery(url) {
+            // Elmentjük az állapotot, hogy a vissza gombbal lehessen zárni
+            history.pushState({modal: "gallery"}, "");
+            
             const img = document.getElementById('modal-img');
             img.src = url;
             scale = 1;
@@ -414,8 +422,16 @@
             document.getElementById('fullscreen-modal').style.display = 'flex';
         }
 
-        function closeModal() {
-            document.getElementById('fullscreen-modal').style.display = 'none';
+        function closeModal(manual = true) {
+            const modal = document.getElementById('fullscreen-modal');
+            if (modal.style.display === 'none') return;
+
+            modal.style.display = 'none';
+            // Ha manuálisan (X gombbal) zárták be, vissza kell ugranunk a history-ban,
+            // hogy a következő fizikai vissza gomb ne "ugorjon" feleslegeset
+            if (manual) {
+                history.back();
+            }
         }
 
         const zoomViewport = document.getElementById('zoom-viewport');
@@ -554,7 +570,6 @@
                 actions.appendChild(next);
             }
             document.getElementById('text-scroll-area').scrollTop = 0;
-            // A UI-t nem görgetjük, csak a body-t egy picit a bar-ok elrejtéséhez
             setTimeout(() => window.scrollTo(0, 1), 100);
         }
 
