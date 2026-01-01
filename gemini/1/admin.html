@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0">
+    <title>Kaland Játék Stúdió V8.6 ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111; color: #eee; overflow-x: hidden; }
+        .play-font { font-family: 'Play', sans-serif; }
+        
+        .glass-card { background: rgba(44, 44, 44, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(138, 43, 226, 0.3); border-radius: 1rem; }
+        .input-style { background: #2a2a2e; color: #00ffff; border: 1px solid #444; border-radius: 0.5rem; padding: 0.6rem; outline: none; transition: 0.2s; width: 100%; }
+        .input-style:focus { border-color: #8a2be2; box-shadow: 0 0 10px rgba(138, 43, 226, 0.3); }
+        
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #333; border: 1px solid transparent; cursor: pointer; transition: 0.2s; }
+        .page-item.selected { border-color: #00ffff; background: #4c1d95; }
+        .handle { cursor: grab; padding-right: 15px; color: #666; font-size: 1.2rem; }
+        .handle:active { cursor: grabbing; }
+
+        .btn-ai { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: white; transition: 0.3s; box-shadow: 0 2px 10px rgba(168, 85, 247, 0.3); }
+        .btn-ai:hover { transform: translateY(-1px); opacity: 0.9; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.5); }
+        
+        /* Mobile Simulator Layout */
+        .sim-container {
+            position: sticky;
+            top: 1rem;
+            width: 320px;
+            height: 580px;
+            background: #000;
+            border: 8px solid #222;
+            border-radius: 2.5rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; padding-bottom: 20px; }
+        
+        .sim-box { 
+            position: relative;
+            background: rgba(0,0,0,0.85); 
+            border: 2px solid #8a2be2; 
+            border-radius: 1rem 1rem 0 0; 
+            padding: 12px; 
+            min-height: 150px; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        .sim-avatar { 
+            position: absolute; 
+            top: 12px; 
+            left: 12px; 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 50%; 
+            border: 2px solid #00ffff; 
+            background: #000; 
+            z-index: 20; 
+            object-fit: cover; 
+            display: none; 
+        }
+
+        #sim-text { transition: padding 0.2s; }
+
+        .sim-btn { flex: 1; background: #8a2be2; color: white; padding: 8px; border-radius: 0.4rem; font-weight: bold; text-align: center; font-size: 0.75rem; cursor: pointer; text-transform: uppercase; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+        .sim-btn:hover { background: #a855f7; }
+        .sim-btn-cyan { background: #00ffff !important; color: #000 !important; }
+        .sim-btn-secondary { background: #444; }
+        
+        .sim-bottom-bar { height: 50px; background: #1a1a1a; border-top: 2px solid #8a2be2; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+        .sim-menu-btn { color: #888; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .sim-menu-btn.active { color: #8a2be2; text-shadow: 0 0 8px rgba(138, 43, 226, 0.6); }
+
+        .sim-back-arrow {
+            color: #666;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            width: fit-content;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .sim-back-arrow:hover { color: #8a2be2; }
+
+        .sim-input { background: rgba(255,255,255,0.1); border: 1px solid #444; color: #fff; border-radius: 4px; padding: 6px; font-size: 11px; outline: none; transition: 0.3s; width: 100%; }
+        .sim-input:focus { border-color: #8a2be2; }
+        
+        .hint-circle-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin: 0 auto 8px auto;
+            color: #aaa;
+        }
+        .hint-circle-btn:hover { border-color: #8a2be2; color: #fff; background: rgba(138, 43, 226, 0.2); }
+
+        #save-indicator { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #10b981; color: white; padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.7rem; font-weight: bold; display: none; z-index: 1000; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="save-indicator"><i class="fa fa-sync-alt fa-spin mr-2"></i> MENTÉS...</div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.6</span> ✨</h1>
+                <p class="text-gray-500 text-sm">GPS Modullal Frissítve</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="downloadConfig()" class="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-lg font-bold text-xs uppercase">Letöltés</button>
+                <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase">Betöltés</button>
+                <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- BAL OLDAL: SZERKESZTŐ -->
+            <div class="flex-1 space-y-6">
+                <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px]">Alapok</h3>
+                        <input type="text" id="appTitle" class="input-style" placeholder="Játék címe" oninput="autoSave()">
+                        <input type="url" id="globalBg" class="input-style" placeholder="Globális Háttér URL" oninput="autoSave()">
+                        <input type="url" id="mapUrl" class="input-style" placeholder="Térkép URL" oninput="autoSave()">
+                    </div>
+                    <div class="space-y-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px]">Avatarok</h3>
+                        <input type="url" id="annaAvatar" class="input-style" placeholder="Anna Avatar URL" oninput="autoSave()">
+                        <input type="url" id="markAvatar" class="input-style" placeholder="Márk Avatar URL" oninput="autoSave()">
+                    </div>
+                </div>
+
+                <div class="glass-card p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px]">Oldalak (Rendezhető ↕️)</h3>
+                        <button onclick="addPage()" class="bg-purple-600 px-3 py-1 rounded text-[10px] font-bold">+ ÚJ OLDAL</button>
+                    </div>
+                    <div id="pageList" class="max-h-64 overflow-y-auto pr-2"></div>
+                </div>
+
+                <div id="editorPanel" class="glass-card p-6 space-y-4 hidden relative">
+                    <textarea id="pageText" rows="5" class="input-style text-sm" placeholder="Szöveg... (§A, §M, §R)" oninput="autoSave()"></textarea>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <select id="pageType" class="input-style text-xs" onchange="updateUI(); autoSave();">
+                            <option value="story">Normál</option>
+                            <option value="choice">Választás</option>
+                            <option value="password">Kód</option>
+                            <option value="gps">GPS</option>
+                        </select>
+                        <input type="number" id="prevIdx" class="input-style text-xs" placeholder="Vissza #" oninput="autoSave()">
+                        <input type="number" id="nextIdx" class="input-style text-xs" placeholder="Tovább #" oninput="autoSave()">
+                        <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi háttér" oninput="autoSave()">
+                    </div>
+
+                    <div id="choiceArea" class="hidden space-y-2 border-t border-gray-700 pt-4">
+                        <div id="choicesContainer" class="space-y-2"></div>
+                        <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ Új opció</button>
+                    </div>
+
+                    <div id="passwordArea" class="hidden space-y-2 border-t border-gray-700 pt-4">
+                        <input type="text" id="correctPass" class="input-style text-xs" placeholder="Megoldás" oninput="autoSave()">
+                        <textarea id="passHints" rows="2" class="input-style text-[10px]" placeholder="Tippek (soronként)" oninput="autoSave()"></textarea>
+                    </div>
+
+                    <div id="gpsArea" class="hidden space-y-2 border-t border-gray-700 pt-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" id="targetLat" class="input-style text-xs" placeholder="Szélesség (Lat)" oninput="autoSave()">
+                            <input type="text" id="targetLon" class="input-style text-xs" placeholder="Hosszúság (Lon)" oninput="autoSave()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JOBB OLDAL: SZIMULÁTOR -->
+            <div class="w-full lg:w-auto flex justify-center">
+                <div class="sim-container">
+                    <div id="sim-viewport">
+                        <img id="sim-bg" src="">
+                        <div id="sim-content">
+                            <div class="sim-box play-font">
+                                <img id="sim-avatar" class="sim-avatar" src="">
+                                <div id="sim-text-header" class="flex flex-col"></div>
+                                <div id="sim-text" class="text-white text-[13px] leading-relaxed overflow-y-auto pr-1 flex-grow"></div>
+                                <div id="sim-actions" class="mt-3 flex flex-row gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sim-bottom-bar">
+                        <div class="sim-menu-btn active"><i class="fa fa-house"></i></div>
+                        <div class="sim-menu-btn" onclick="if(config.mapUrl) window.open(config.mapUrl, '_blank')"><i class="fa-solid fa-map-location-dot"></i></div>
+                        <div class="sim-menu-btn"><i class="fa-solid fa-briefcase"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'KALAND_STUDIO_V86';
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+            appTitle: "Kaland",
+            globalBg: "",
+            mapUrl: "",
+            annaAvatar: "",
+            markAvatar: "",
+            storyPages: [{ content: "Üdvözöllek!", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [] }]
+        };
+
+        let currentIdx = -1;
+        let simIdx = 0;
+        let simHintIdx = 0;
+        let saveTimeout;
+        let sortableInstance = null;
+        let gpsWatchId = null;
+
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3; 
+            const f1 = la1 * Math.PI/180; const f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180; const dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function updateSimulator() {
+            if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+            const p = config.storyPages[simIdx];
+            if(!p) return;
+
+            document.getElementById('sim-bg').src = p.pageBg || config.globalBg || "";
+            const simText = document.getElementById('sim-text');
+            simText.innerHTML = p.content.replace(/§A/g, '<span class="anna-txt font-bold">Anna:</span>').replace(/§M/g, '<span class="mark-txt font-bold">Márk:</span>').replace(/§R/g, '<span class="sys-txt font-bold">[Rendszer]:</span>');
+            
+            const av = document.getElementById('sim-avatar');
+            av.style.display = 'none';
+            simText.style.paddingLeft = "0px";
+
+            if(p.content.includes("§A") && config.annaAvatar) { av.src = config.annaAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
+            else if(p.content.includes("§M") && config.markAvatar) { av.src = config.markAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
+
+            const header = document.getElementById('sim-text-header');
+            const actions = document.getElementById('sim-actions');
+            header.innerHTML = ''; actions.innerHTML = '';
+
+            const backAction = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : simIdx - 1; simHintIdx = 0; updateSimulator(); };
+            const hasBack = simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "");
+
+            // DISZKRÉT VISSZA NYÍL NAVIGÁCIÓ (Choice, Password, GPS)
+            if (hasBack) {
+                if (p.pageType === 'choice' || p.pageType === 'password' || p.pageType === 'gps') {
+                    const arrow = document.createElement('div');
+                    arrow.className = "sim-back-arrow";
+                    if(av.style.display === 'block') arrow.style.marginLeft = "60px";
+                    arrow.innerHTML = '<i class="fa fa-chevron-left mr-1"></i>';
+                    arrow.onclick = backAction;
+                    header.appendChild(arrow);
+                } else {
+                    const b = document.createElement('div'); b.className = "sim-btn sim-btn-secondary"; b.textContent = "VISSZA";
+                    b.onclick = backAction; actions.appendChild(b);
+                }
+            }
+
+            if(p.pageType === 'choice' && p.choices) {
+                const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-1 flex-grow";
+                p.choices.forEach(c => {
+                    const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = c.text;
+                    b.onclick = () => { simIdx = parseInt(c.target); simHintIdx = 0; updateSimulator(); };
+                    wrap.appendChild(b);
+                });
+                actions.appendChild(wrap);
+            } else if(p.pageType === 'password') {
+                const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-1 flex-grow items-center";
+                const hintDisp = document.createElement('div');
+                hintDisp.className = "text-[10px] text-cyan-400 italic mb-2 hidden hint-msg";
+                wrap.appendChild(hintDisp);
+                const hBtn = document.createElement('div'); hBtn.className = "hint-circle-btn"; hBtn.innerHTML = '<i class="fa fa-question"></i>';
+                hBtn.onclick = () => { 
+                    if(p.hints && p.hints.length > 0) {
+                        hintDisp.textContent = "Tipp: " + p.hints[simHintIdx % p.hints.length];
+                        hintDisp.classList.remove('hidden');
+                        simHintIdx++;
+                    }
+                };
+                wrap.appendChild(hBtn);
+                const input = document.createElement('input'); input.className = "sim-input mb-2"; input.placeholder = "Kód beírása..."; input.id = "sim-pass-input";
+                wrap.appendChild(input);
+                const ok = document.createElement('div'); ok.className = "sim-btn w-full"; ok.textContent = "OK";
+                ok.onclick = () => { 
+                    const val = document.getElementById('sim-pass-input').value.trim().toLowerCase();
+                    const sol = (p.password || "").trim().toLowerCase();
+                    if(val === sol) { simIdx = parseInt(p.nextIdx || simIdx + 1); simHintIdx = 0; updateSimulator(); } else { document.getElementById('sim-pass-input').style.borderColor = "red"; }
+                };
+                wrap.appendChild(ok); actions.appendChild(wrap);
+            } else if(p.pageType === 'gps') {
+                const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-2 flex-grow";
+                const dBox = document.createElement('div'); dBox.className = "text-center p-2 bg-black/60 rounded border border-cyan-500/30 text-[10px]";
+                dBox.innerHTML = `Cél: <span id="sim-gps-dist" class="font-bold text-cyan-400">-- m</span>`;
+                wrap.appendChild(dBox);
+                const nextB = document.createElement('div'); nextB.className = "sim-btn sim-btn-cyan"; 
+                nextB.innerHTML = '<i class="fa-solid fa-map-location-dot mr-2"></i> TÉRKÉP';
+                nextB.onclick = () => { simIdx = parseInt(p.nextIdx || simIdx + 1); updateSimulator(); };
+                wrap.appendChild(nextB); actions.appendChild(wrap);
+                if(navigator.geolocation) {
+                    gpsWatchId = navigator.geolocation.watchPosition(pos => {
+                        const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        const el = document.getElementById('sim-gps-dist'); if(el) el.textContent = `${Math.round(d)} m`;
+                        if(d < 25) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; simIdx = parseInt(p.nextIdx || simIdx + 1); updateSimulator(); }
+                    }, null, {enableHighAccuracy: true});
+                }
+            } else {
+                const bNext = document.createElement('div'); bNext.className = "sim-btn"; bNext.textContent = "TOVÁBB";
+                bNext.onclick = () => { simIdx = parseInt(p.nextIdx || simIdx + 1); updateSimulator(); };
+                actions.appendChild(bNext);
+            }
+        }
+
+        function loadPage(i) {
+            currentIdx = i; const p = config.storyPages[i];
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('pageText').value = p.content;
+            document.getElementById('prevIdx').value = p.prevIdx ?? "";
+            document.getElementById('nextIdx').value = p.nextIdx ?? "";
+            document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('correctPass').value = p.password || "";
+            document.getElementById('passHints').value = (p.hints || []).join('\n');
+            document.getElementById('targetLat').value = p.targetLat || "";
+            document.getElementById('targetLon').value = p.targetLon || "";
+            updateUI(); renderChoices(); renderPageList(); simIdx = i; simHintIdx = 0; updateSimulator();
+        }
+
+        function renderPageList() {
+            const list = document.getElementById('pageList'); list.innerHTML = '';
+            config.storyPages.forEach((p, i) => {
+                const div = document.createElement('div'); div.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                div.innerHTML = `<div class="flex items-center flex-grow overflow-hidden"><i class="fa fa-bars handle"></i><span onclick="loadPage(${i})" class="flex-grow truncate text-xs">#${i}: ${p.content.substring(0, 20)}</span></div><i class="fa fa-trash text-red-400 p-1" onclick="deletePage(${i})"></i>`;
+                list.appendChild(div);
+            });
+            if (sortableInstance) sortableInstance.destroy();
+            sortableInstance = new Sortable(list, {
+                handle: '.handle', animation: 150,
+                onEnd: (evt) => {
+                    const movedItem = config.storyPages.splice(evt.oldIndex, 1)[0];
+                    config.storyPages.splice(evt.newIndex, 0, movedItem);
+                    if (currentIdx === evt.oldIndex) currentIdx = evt.newIndex;
+                    autoSave();
+                }
+            });
+        }
+
+        function autoSave() {
+            clearTimeout(saveTimeout);
+            document.getElementById('save-indicator').style.display = 'block';
+            saveTimeout = setTimeout(() => {
+                if(currentIdx !== -1 && config.storyPages[currentIdx]) {
+                    const p = config.storyPages[currentIdx];
+                    p.content = document.getElementById('pageText').value;
+                    p.prevIdx = document.getElementById('prevIdx').value;
+                    p.nextIdx = document.getElementById('nextIdx').value;
+                    p.pageType = document.getElementById('pageType').value;
+                    p.pageBg = document.getElementById('pageBg').value;
+                    p.password = document.getElementById('correctPass').value;
+                    p.hints = document.getElementById('passHints').value.split('\n').filter(t => t.trim());
+                    p.targetLat = document.getElementById('targetLat').value;
+                    p.targetLon = document.getElementById('targetLon').value;
+                }
+                config.appTitle = document.getElementById('appTitle').value;
+                config.globalBg = document.getElementById('globalBg').value;
+                config.mapUrl = document.getElementById('mapUrl').value;
+                config.annaAvatar = document.getElementById('annaAvatar').value;
+                config.markAvatar = document.getElementById('markAvatar').value;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                renderPageList(); updateSimulator();
+                setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 500);
+            }, 500);
+        }
+
+        function updateUI() {
+            const t = document.getElementById('pageType').value;
+            document.getElementById('choiceArea').classList.toggle('hidden', t !== 'choice');
+            document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password');
+            document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps');
+        }
+
+        function renderChoices() {
+            const container = document.getElementById('choicesContainer'); container.innerHTML = '';
+            const p = config.storyPages[currentIdx]; if(!p || !p.choices) return;
+            p.choices.forEach((c, i) => {
+                const div = document.createElement('div'); div.className = "flex gap-2";
+                div.innerHTML = `<input type="text" class="input-style flex-1 text-[10px]" value="${c.text}" oninput="updateChoice(${i}, 'text', this.value)"><input type="number" class="input-style w-16 text-[10px]" value="${c.target}" oninput="updateChoice(${i}, 'target', this.value)"><button onclick="removeChoice(${i})" class="text-red-400">×</button>`;
+                container.appendChild(div);
+            });
+        }
+        function addChoiceItem() { config.storyPages[currentIdx].choices.push({text: 'Opció', target: 0}); renderChoices(); autoSave(); }
+        function updateChoice(i, k, v) { config.storyPages[currentIdx].choices[i][k] = v; autoSave(); }
+        function removeChoice(i) { config.storyPages[currentIdx].choices.splice(i, 1); renderChoices(); autoSave(); }
+
+        function addPage() { config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: config.storyPages.length, prevIdx: config.storyPages.length - 1, choices: [] }); loadPage(config.storyPages.length - 1); autoSave(); }
+        function deletePage(i) { if(confirm("Törlöd?")) { config.storyPages.splice(i, 1); currentIdx = -1; autoSave(); } }
+
+        function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game_config.json'; a.click(); }
+        function handleFileUpload(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                config = JSON.parse(e.target.result);
+                document.getElementById('appTitle').value = config.appTitle || "";
+                document.getElementById('globalBg').value = config.globalBg || "";
+                document.getElementById('mapUrl').value = config.mapUrl || "";
+                document.getElementById('annaAvatar').value = config.annaAvatar || "";
+                document.getElementById('markAvatar').value = config.markAvatar || "";
+                renderPageList(); if (config.storyPages.length > 0) loadPage(0);
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = () => {
+            document.getElementById('appTitle').value = config.appTitle;
+            document.getElementById('globalBg').value = config.globalBg;
+            document.getElementById('mapUrl').value = config.mapUrl;
+            document.getElementById('annaAvatar').value = config.annaAvatar;
+            document.getElementById('markAvatar').value = config.markAvatar;
+            renderPageList(); if(config.storyPages.length > 0) loadPage(0);
+        };
+    </script>
+</body>
+</html>
