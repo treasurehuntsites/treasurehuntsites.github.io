@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaland Játék Stúdió V8.6 ✨</title>
+    <title>Kaland Játék Stúdió V8.7 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -154,8 +154,27 @@
             z-index: 100; 
         }
         
-        .sim-menu-btn { color: #64748b; font-size: 1.3rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
+        .sim-menu-btn { position: relative; color: #64748b; font-size: 1.3rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
         .sim-menu-btn.active { color: #8b5cf6; text-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
+
+        /* Értesítő piros pont az ikonon */
+        .notification-dot {
+            position: absolute;
+            top: -2px;
+            right: -5px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 1.5px solid #0f172a;
+            display: none;
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
 
         /* Inventory View in Simulator */
         #sim-inventory-view { 
@@ -169,10 +188,25 @@
             overflow-y: auto; 
         }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .inv-item-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; text-align: center; cursor: pointer; transition: 0.2s; }
+        .inv-item-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; text-align: center; cursor: pointer; transition: 0.2s; }
         .inv-item-card:hover { border-color: #8b5cf6; transform: translateY(-2px); }
         .inv-item-img { width: 100%; height: 80px; object-fit: cover; }
         .inv-item-name { font-size: 10px; padding: 8px; color: #cbd5e1; }
+        
+        /* Új tárgy jelölés a kártyán */
+        .item-new-tag {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ef4444;
+            color: white;
+            font-size: 7px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
 
         #sim-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
         #sim-modal img { max-width: 100%; border: 2px solid #22d3ee; border-radius: 1rem; box-shadow: 0 0 30px rgba(34, 211, 238, 0.3); }
@@ -253,7 +287,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
-                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.6</span> ✨</h1>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.7</span> ✨</h1>
                 <p class="text-slate-400 text-sm mt-1">Dinamikus Avatar Rendszer & GPS Modul</p>
             </div>
             <div class="flex gap-3">
@@ -397,7 +431,10 @@
                     <div class="sim-bottom-bar">
                         <button class="sim-menu-btn active" id="sim-btn-game" onclick="simSwitch('game')"><i class="fa fa-house"></i></button>
                         <button class="sim-menu-btn" onclick="if(config.mapUrl) window.open(config.mapUrl, '_blank')"><i class="fa-solid fa-map-location-dot"></i></button>
-                        <button class="sim-menu-btn" id="sim-btn-inv" onclick="simSwitch('inventory')"><i class="fa-solid fa-briefcase"></i></button>
+                        <button class="sim-menu-btn" id="sim-btn-inv" onclick="simSwitch('inventory')">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <div id="sim-inv-dot" class="notification-dot"></div>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -453,7 +490,12 @@
             document.getElementById('sim-inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
             document.getElementById('sim-btn-game').classList.toggle('active', view === 'game');
             document.getElementById('sim-btn-inv').classList.toggle('active', view === 'inventory');
-            if(view === 'inventory') renderInventorySim();
+            
+            // Ha megnyitottuk az eszköztárat, tűnjön el a fő ikonon a pötty
+            if (view === 'inventory') {
+                document.getElementById('sim-inv-dot').style.display = 'none';
+                renderInventorySim();
+            }
         }
 
         function renderInventorySim() {
@@ -466,16 +508,33 @@
                 empty.classList.remove('hidden');
             } else {
                 empty.classList.add('hidden');
-                currentPage.inventory.forEach(item => {
+                currentPage.inventory.forEach((item, i) => {
                     if(!item.name && !item.url) return;
                     const div = document.createElement('div');
                     div.className = "inv-item-card animate-in zoom-in duration-200";
-                    div.innerHTML = `<img src="${item.url}" class="inv-item-img" onerror="this.src='https://via.placeholder.com/150x120?text=Kép'"><div class="inv-item-name">${item.name || 'Névtelen tárgy'}</div>`;
+                    
+                    // Ha új a tárgy (nincs megtekintve), tegyünk rá jelzést
+                    let newBadge = "";
+                    if (item.seen === false) {
+                        newBadge = `<div class="item-new-tag">Új</div>`;
+                    }
+
+                    div.innerHTML = `
+                        ${newBadge}
+                        <img src="${item.url}" class="inv-item-img" onerror="this.src='https://via.placeholder.com/150x120?text=Kép'">
+                        <div class="inv-item-name">${item.name || 'Névtelen tárgy'}</div>
+                    `;
+
                     div.onclick = () => {
+                        // Megtekintettnek jelöljük
+                        item.seen = true;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                        
                         if(item.url) {
                             document.getElementById('sim-modal-img').src = item.url;
                             document.getElementById('sim-modal').style.display = 'flex';
                         }
+                        renderInventorySim(); // Frissítjük a rácsot a jelzés eltávolításához
                     };
                     grid.appendChild(div);
                 });
@@ -537,6 +596,15 @@
                 simPageImg.classList.remove('hidden');
             } else {
                 simPageImg.classList.add('hidden');
+            }
+
+            // Értesítő pötty ellenőrzése az eszköztárhoz
+            const hasNewItem = p.inventory && p.inventory.some(item => item.seen === false);
+            const dot = document.getElementById('sim-inv-dot');
+            if (hasNewItem && simView !== 'inventory') {
+                dot.style.display = 'block';
+            } else {
+                dot.style.display = 'none';
             }
 
             let processedText = p.content || "";
@@ -769,7 +837,7 @@
         function addInventoryItem() {
             const p = config.storyPages[currentIdx];
             if(!p.inventory) p.inventory = [];
-            p.inventory.push({name: 'Új tárgy', url: ''});
+            p.inventory.push({name: 'Új tárgy', url: '', seen: false});
             renderInventoryAdmin();
             autoSave();
         }
@@ -819,29 +887,23 @@
         function removeChoice(i) { config.storyPages[currentIdx].choices.splice(i, 1); renderChoices(); autoSave(); }
 
         function addPage() { 
-            // 1. Mentjük a jelenlegi állapotot a configba, hogy a friss tárgyak is bekerüljenek
             syncEditorToConfig();
-
             const newId = config.storyPages.length;
             
-            // 2. Összes eddigi egyedi tárgy kigyűjtése
             const allItems = new Map();
             config.storyPages.forEach(p => {
                 if (p.inventory) {
                     p.inventory.forEach(item => {
-                        // Csak akkor adjuk hozzá, ha van neve vagy URL-je
                         if ((item.name && item.name.trim() !== "") || (item.url && item.url.trim() !== "")) {
                             const key = (item.name || "").trim() + "|" + (item.url || "").trim();
-                            allItems.set(key, { name: item.name, url: item.url });
+                            allItems.set(key, { name: item.name, url: item.url, seen: item.seen ?? true });
                         }
                     });
                 }
             });
             
-            // 3. Örökölt tárgyak listája
             const inheritedInventory = Array.from(allItems.values()).map(item => ({...item}));
 
-            // 4. Új oldal hozzáadása
             config.storyPages.push({ 
                 content: "Új oldal...", 
                 pageType: "story", 
@@ -852,7 +914,6 @@
                 pageImage: "" 
             }); 
             
-            // 5. Azonnali mentés és betöltés
             localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
             loadPage(newId); 
             renderPageList();
