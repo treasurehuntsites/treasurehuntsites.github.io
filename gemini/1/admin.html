@@ -68,6 +68,16 @@
             display: none; 
         }
 
+        .sim-inner-img {
+            width: 100%;
+            max-height: 120px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+            margin-bottom: 10px;
+            display: none;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
         #sim-text { transition: padding 0.2s; }
 
         .sim-btn { flex: 1; background: #8a2be2; color: white; padding: 8px; border-radius: 0.4rem; font-weight: bold; text-align: center; font-size: 0.75rem; cursor: pointer; text-transform: uppercase; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
@@ -192,6 +202,11 @@
                         <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi háttér" oninput="autoSave()">
                     </div>
 
+                    <!-- Új mező a belső kép számára -->
+                    <div class="grid grid-cols-1 gap-4">
+                        <input type="url" id="pageInnerImage" class="input-style text-xs" placeholder="Belső kép URL (a szövegdobozba, a szöveg fölé)" oninput="autoSave()">
+                    </div>
+
                     <div id="choiceArea" class="hidden space-y-2 border-t border-gray-700 pt-4">
                         <div id="choicesContainer" class="space-y-2"></div>
                         <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ Új opció</button>
@@ -220,6 +235,8 @@
                             <div class="sim-box play-font">
                                 <img id="sim-avatar" class="sim-avatar" src="">
                                 <div id="sim-text-header" class="flex flex-col"></div>
+                                <!-- Új kép elem a szimulátor szövegdobozában -->
+                                <img id="sim-inner-img" class="sim-inner-img" src="">
                                 <div id="sim-text" class="text-white text-[13px] leading-relaxed overflow-y-auto pr-1 flex-grow"></div>
                                 <div id="sim-actions" class="mt-3 flex flex-row gap-2"></div>
                             </div>
@@ -324,6 +341,15 @@
             if(p.content.includes("§A") && config.annaAvatar) { av.src = config.annaAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
             else if(p.content.includes("§M") && config.markAvatar) { av.src = config.markAvatar; av.style.display = 'block'; simText.style.paddingLeft = "60px"; }
 
+            // Belső kép megjelenítése a szövegdobozban
+            const innerImg = document.getElementById('sim-inner-img');
+            if(p.pageInnerImage) {
+                innerImg.src = p.pageInnerImage;
+                innerImg.style.display = 'block';
+            } else {
+                innerImg.style.display = 'none';
+            }
+
             const header = document.getElementById('sim-text-header');
             const actions = document.getElementById('sim-actions');
             header.innerHTML = ''; actions.innerHTML = '';
@@ -409,6 +435,7 @@
             document.getElementById('nextIdx').value = p.nextIdx ?? "";
             document.getElementById('pageType').value = p.pageType || 'story';
             document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('pageInnerImage').value = p.pageInnerImage || "";
             document.getElementById('correctPass').value = p.password || "";
             document.getElementById('passHints').value = (p.hints || []).join('\n');
             document.getElementById('targetLat').value = p.targetLat || "";
@@ -466,6 +493,7 @@
                     p.nextIdx = document.getElementById('nextIdx').value;
                     p.pageType = document.getElementById('pageType').value;
                     p.pageBg = document.getElementById('pageBg').value;
+                    p.pageInnerImage = document.getElementById('pageInnerImage').value;
                     p.password = document.getElementById('correctPass').value;
                     p.hints = document.getElementById('passHints').value.split('\n').filter(t => t.trim());
                     p.targetLat = document.getElementById('targetLat').value;
