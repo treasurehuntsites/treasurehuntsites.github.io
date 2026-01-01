@@ -2,111 +2,135 @@
 <html lang="hu">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kaland Játék Lejátszó V1.4 ✨</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Kaland Játék Lejátszó V1.5 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --sat: env(safe-area-inset-top);
-            --sar: env(safe-area-inset-right);
+            --bg-dark: #020617;
+            --accent: #8b5cf6;
             --sab: env(safe-area-inset-bottom);
-            --sal: env(safe-area-inset-left);
+            --sat: env(safe-area-inset-top);
         }
 
+        /* Teljes képernyős görgethető alapváz */
         html, body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #020617; 
+            background-color: var(--bg-dark); 
             color: #f8fafc; 
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            position: fixed;
             width: 100%;
-            height: 100%;
-            height: 100dvh;
+            min-height: 100%;
+            /* Engedjük a görgetést a teljes képernyős módhoz */
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .play-font { font-family: 'Play', sans-serif; }
         
+        /* A fő konténer, ami kitölti a képernyőt */
         .game-container {
             width: 100%;
-            height: 100dvh;
-            background: #000;
-            position: relative;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         @media (min-width: 640px) {
-            body { position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; background: #0f172a; }
+            body { display: flex; align-items: center; justify-content: center; background: #0f172a; }
             .game-container {
                 max-width: 420px;
                 height: 90vh;
+                min-height: auto;
                 border: 8px solid #1e293b;
                 border-radius: 3rem;
                 overflow: hidden;
                 box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                position: relative;
             }
         }
 
-        #viewport { position: relative; flex: 1; overflow: hidden; background: #000; }
-        #bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); transition: 0.5s ease-in-out; }
+        /* Görgethető háttér réteg */
+        #bg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 120%; /* Kicsit magasabb, hogy biztosan lehessen görgetni a címsor elrejtéséhez */
+            z-index: 0;
+        }
+        #bg-layer {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.35);
+            transition: opacity 0.5s ease;
+        }
         
-        #content-layer { 
-            position: relative; 
-            z-index: 10; 
-            height: 100%; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-end; 
+        /* Tartalmi réteg */
+        #content-wrapper {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: calc(75px + var(--sab)); /* Hely a fix menünek */
         }
         
         .story-box { 
             position: relative;
             background: rgba(0,0,0,0.92); 
-            backdrop-filter: blur(15px);
-            border-top: 3px solid #8b5cf6; 
-            border-radius: 1.5rem 1.5rem 0 0; 
+            backdrop-filter: blur(20px);
+            border-top: 3px solid var(--accent); 
+            border-radius: 2rem 2rem 0 0; 
             padding: 24px; 
-            padding-top: 45px;
-            max-height: 75%;
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+            padding-top: 50px;
+            box-shadow: 0 -15px 40px rgba(0,0,0,0.8);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
         }
         
         .avatar-img { 
             position: absolute; 
-            top: -35px; 
-            left: 25px; 
-            width: 75px; 
-            height: 75px; 
+            top: -40px; 
+            left: 30px; 
+            width: 80px; 
+            height: 80px; 
             border-radius: 50%; 
-            border: 3px solid #8b5cf6; 
+            border: 3px solid var(--accent); 
             background: #000; 
-            z-index: 20; 
+            z-index: 25; 
             object-fit: cover; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
         }
 
         #story-text-container {
             text-align: justify;
             hyphens: auto;
-            padding: 0 8px;
+            padding: 0 5px;
             line-height: 1.6;
+            font-size: 15px;
         }
 
         .game-btn { 
             flex: 1;
-            background: #8b5cf6; 
+            background: var(--accent); 
             color: white; 
             padding: 16px; 
             border-radius: 14px; 
             font-weight: bold; 
             text-align: center; 
-            font-size: 0.9rem; 
+            font-size: 0.95rem; 
             cursor: pointer; 
             text-transform: uppercase; 
             transition: 0.2s;
@@ -118,55 +142,62 @@
         .btn-cyan { background: #22d3ee !important; color: #000 !important; }
         .btn-secondary { background: #334155; }
         
+        /* Fix Alsó Menüsor */
         .bottom-nav { 
-            flex-shrink: 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             height: calc(70px + var(--sab)); 
-            background: #0f172a; 
-            border-top: 1px solid rgba(139, 92, 246, 0.2); 
+            background: rgba(15, 23, 42, 0.95); 
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(139, 92, 246, 0.3); 
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
             padding-bottom: var(--sab); 
             z-index: 100; 
         }
+
+        @media (min-width: 640px) {
+            .bottom-nav { position: absolute; }
+        }
         
         .nav-btn { position: relative; color: #64748b; font-size: 1.6rem; cursor: pointer; transition: 0.3s; background: none; border: none; }
-        .nav-btn.active { color: #8b5cf6; }
+        .nav-btn.active { color: var(--accent); }
 
         .notif-dot {
             position: absolute;
             top: -2px;
             right: -5px;
-            width: 10px;
-            height: 10px;
+            width: 10px; height: 10px;
             background: #ef4444;
             border-radius: 50%;
             border: 2px solid #0f172a;
             display: none;
             animation: pulse-red 2s infinite;
         }
-        @keyframes pulse-red {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
 
         #inventory-view { 
-            position: absolute; 
+            position: fixed; 
             inset: 0; 
-            background: #0f172a; 
-            z-index: 50; 
+            background: var(--bg-dark); 
+            z-index: 150; 
             display: none; 
-            padding: calc(30px + var(--sat)) 20px calc(20px + var(--sab)) 20px; 
+            padding: calc(30px + var(--sat)) 20px calc(90px + var(--sab)) 20px; 
             overflow-y: auto; 
         }
+
+        @media (min-width: 640px) {
+            #inventory-view { position: absolute; padding-bottom: 90px; }
+        }
+
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .inv-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; text-align: center; }
         .inv-img { width: 100%; height: 120px; object-fit: cover; }
         .inv-name { font-size: 12px; padding: 12px; color: #cbd5e1; font-weight: 600; }
-        .new-tag { position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; }
 
-        /* Nagyítható képnézegető */
+        /* Képnézegető (Pinch-Zoom támogatással) */
         #fullscreen-modal { 
             position: fixed; 
             inset: 0; 
@@ -174,7 +205,7 @@
             z-index: 200; 
             display: none; 
             flex-direction: column;
-            overflow: hidden;
+            touch-action: none; /* Letiltjuk az alapértelmezett böngésző gesztusokat */
         }
         #modal-header {
             display: flex;
@@ -182,31 +213,30 @@
             padding: calc(15px + var(--sat)) 20px 10px 20px;
             z-index: 210;
         }
-        #zoom-container {
+        #zoom-viewport {
             flex: 1;
-            overflow: auto;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: zoom-in;
-            padding: 20px;
+            position: relative;
         }
         #modal-img { 
-            transition: all 0.3s ease-in-out; 
-            border-radius: 0.5rem;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
-        }
-        #modal-img.zoomed {
-            width: 250%;
-            max-width: none;
-            max-height: none;
-            cursor: zoom-out;
+            user-select: none;
+            -webkit-user-drag: none;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
         }
 
         #import-overlay {
-            position: absolute;
+            position: fixed;
             inset: 0;
-            background: #020617;
+            background: var(--bg-dark);
             z-index: 1000;
             display: flex;
             flex-direction: column;
@@ -214,8 +244,6 @@
             justify-content: center;
             padding: 40px;
             text-align: center;
-            padding-top: var(--sat);
-            padding-bottom: var(--sab);
         }
 
         .sim-input { 
@@ -223,89 +251,75 @@
             border: 1px solid #334155; 
             color: #fff; 
             border-radius: 12px; 
-            padding: 14px; 
-            font-size: 14px; 
+            padding: 16px; 
+            font-size: 16px; 
             width: 100%; 
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             outline: none;
-        }
-        .sim-input:focus { border-color: #8b5cf6; background: rgba(255,255,255,0.1); }
-
-        .hint-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #334155;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            margin: 0 auto 15px auto;
-            cursor: pointer;
-            font-size: 1.2rem;
         }
     </style>
 </head>
 <body>
 
     <div class="game-container">
-        <!-- Importáló felület -->
+        <!-- Kezdő / Importáló képernyő -->
         <div id="import-overlay">
             <div class="mb-10">
-                <i class="fa-solid fa-wand-magic-sparkles text-8xl text-purple-500 mb-6 block animate-pulse"></i>
-                <h1 class="text-3xl font-bold uppercase tracking-widest mb-2">Kaland Lejátszó</h1>
-                <p id="status-msg" class="text-slate-400 text-sm">Betöltés...</p>
+                <i class="fa-solid fa-wand-magic-sparkles text-8xl text-purple-500 mb-6 block animate-bounce"></i>
+                <h1 class="text-3xl font-bold uppercase tracking-widest mb-2">Kaland Vár</h1>
+                <p id="status-msg" class="text-slate-400 text-sm">Adatok betöltése...</p>
             </div>
             <div id="manual-import" class="hidden w-full max-w-xs">
                 <button onclick="document.getElementById('fileInput').click()" class="game-btn">
-                    <i class="fa fa-file-import mr-2"></i> Fájl Importálása
+                    <i class="fa fa-file-import mr-2"></i> Játék betöltése
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadGameFile(event)">
             </div>
         </div>
 
-        <div id="viewport">
+        <!-- Görgethető háttér -->
+        <div id="bg-container">
             <img id="bg-layer" src="">
-            
-            <div id="content-layer">
-                <div class="story-box play-font">
-                    <img id="avatar-img" class="avatar-img" style="display:none" src="">
-                    <div id="header-area" class="px-2"></div>
-                    
-                    <div id="text-scroll-area" class="overflow-y-auto flex-grow pr-1 mb-4 scroll-smooth">
-                        <img id="page-illustration" class="w-full rounded-2xl mb-5 hidden shadow-lg border border-white/10" src="">
-                        <div id="story-text-container" class="text-white text-[15px] leading-relaxed"></div>
-                    </div>
+        </div>
 
-                    <div id="action-area" class="flex gap-2"></div>
+        <!-- Tartalom -->
+        <div id="content-wrapper">
+            <div class="story-box play-font">
+                <img id="avatar-img" class="avatar-img" style="display:none" src="">
+                <div id="header-area" class="px-2"></div>
+                
+                <div id="text-scroll-area" class="overflow-y-auto pr-1 mb-4 scroll-smooth" style="max-height: 50vh;">
+                    <img id="page-illustration" class="w-full rounded-2xl mb-5 hidden shadow-lg border border-white/10" src="">
+                    <div id="story-text-container" class="text-white leading-relaxed"></div>
                 </div>
-            </div>
 
-            <!-- Hátizsák nézet -->
-            <div id="inventory-view">
-                <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
-                <div id="inv-grid" class="inv-grid"></div>
-                <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
-                    <i class="fa-solid fa-box-open text-5xl mb-5 opacity-10 block mx-auto"></i>
-                    A hátizsákod jelenleg üres.
-                </div>
-            </div>
-
-            <!-- Galéria modal -->
-            <div id="fullscreen-modal">
-                <div id="modal-header">
-                    <button onclick="closeModal()" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
-                        <i class="fa fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div id="zoom-container" onclick="toggleImageZoom()">
-                    <img id="modal-img" class="max-w-full max-h-full" src="">
-                </div>
+                <div id="action-area" class="flex gap-2"></div>
             </div>
         </div>
 
-        <!-- Navigáció -->
+        <!-- Hátizsák -->
+        <div id="inventory-view">
+            <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
+            <div id="inv-grid" class="inv-grid"></div>
+            <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
+                <i class="fa-solid fa-box-open text-5xl mb-5 opacity-10 block mx-auto"></i>
+                Üres a táskád.
+            </div>
+        </div>
+
+        <!-- Nagyítható Képnézegető Modal -->
+        <div id="fullscreen-modal">
+            <div id="modal-header">
+                <button onclick="closeModal()" class="text-white bg-white/10 w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="zoom-viewport">
+                <img id="modal-img" src="">
+            </div>
+        </div>
+
+        <!-- Alsó Menüsor -->
         <div class="bottom-nav">
             <button class="nav-btn active" id="nav-game" onclick="switchView('game')"><i class="fa fa-house"></i></button>
             <button class="nav-btn" id="nav-map" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
@@ -323,6 +337,12 @@
         let hintIdx = 0;
         let currentView = 'game';
         let gpsWatchId = null;
+
+        // Pinch-Zoom változók
+        let scale = 1;
+        let lastScale = 1;
+        let startDist = 0;
+        let isZoomed = false;
 
         function loadConfig(data) {
             config = data;
@@ -375,14 +395,12 @@
                 empty.classList.add('hidden');
                 p.inventory.forEach((item, i) => {
                     const card = document.createElement('div');
-                    card.className = "inv-card animate-in zoom-in duration-300";
+                    card.className = "inv-card";
                     const newTag = item.seen === false ? '<div class="new-tag">Új</div>' : '';
-                    card.innerHTML = `${newTag}<img src="${item.url}" class="inv-img" onerror="this.src='https://via.placeholder.com/150x100?text=Tárgy'"><div class="inv-name">${item.name || 'Ismeretlen tárgy'}</div>`;
+                    card.innerHTML = `${newTag}<img src="${item.url}" class="inv-img" onerror="this.src='https://via.placeholder.com/150x100?text=Kép'"><div class="inv-name">${item.name || 'Tárgy'}</div>`;
                     card.onclick = () => {
                         item.seen = true;
-                        if (item.url) {
-                            openGallery(item.url);
-                        }
+                        if (item.url) openGallery(item.url);
                         renderInventory();
                     };
                     grid.appendChild(card);
@@ -393,33 +411,50 @@
         function openGallery(url) {
             const img = document.getElementById('modal-img');
             img.src = url;
-            img.classList.remove('zoomed');
-            document.getElementById('zoom-container').style.cursor = 'zoom-in';
+            scale = 1;
+            lastScale = 1;
+            img.style.transform = `scale(1)`;
             document.getElementById('fullscreen-modal').style.display = 'flex';
         }
 
         function closeModal() {
             document.getElementById('fullscreen-modal').style.display = 'none';
-            const img = document.getElementById('modal-img');
-            img.classList.remove('zoomed');
         }
 
-        function toggleImageZoom() {
-            const img = document.getElementById('modal-img');
-            const container = document.getElementById('zoom-container');
-            if (img.classList.contains('zoomed')) {
-                img.classList.remove('zoomed');
-                container.style.cursor = 'zoom-in';
-                container.scrollTo({top: 0, left: 0, behavior: 'smooth'});
-            } else {
-                img.classList.add('zoomed');
-                container.style.cursor = 'zoom-out';
+        // Pinch-Zoom implementáció
+        const zoomViewport = document.getElementById('zoom-viewport');
+        const modalImg = document.getElementById('modal-img');
+
+        zoomViewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                startDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
             }
-        }
+        });
+
+        zoomViewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                scale = lastScale * (dist / startDist);
+                // Korlátozzuk a nagyítást
+                if (scale < 1) scale = 1;
+                if (scale > 5) scale = 5;
+                modalImg.style.transform = `scale(${scale})`;
+            }
+        });
+
+        zoomViewport.addEventListener('touchend', (e) => {
+            lastScale = scale;
+        });
 
         function openMap() {
             if (config?.mapUrl) window.open(config.mapUrl, '_blank');
-            else alert("Nincs megadva térkép link.");
+            else alert("Nincs térkép megadva.");
         }
 
         function calcDist(lat1, lon1, lat2, lon2) {
@@ -445,8 +480,7 @@
 
             const avImg = document.getElementById('avatar-img');
             avImg.style.display = 'none';
-            document.getElementById('text-scroll-area').style.paddingTop = "0px";
-
+            
             let firstAv = null;
             if (config.avatars) {
                 config.avatars.forEach(av => {
@@ -460,7 +494,6 @@
 
             if (firstAv?.url) {
                 avImg.src = firstAv.url; avImg.style.display = 'block'; avImg.style.borderColor = firstAv.color;
-                document.getElementById('text-scroll-area').style.paddingTop = "25px";
             }
             document.getElementById('story-text-container').innerHTML = rawText;
 
@@ -496,10 +529,10 @@
             } else if (p.pageType === 'password') {
                 actions.className = "flex flex-col w-full";
                 const tipArea = document.createElement('div'); tipArea.className = "text-[12px] text-cyan-400 italic text-center mb-3 hidden";
-                const hBtn = document.createElement('div'); hBtn.className = "hint-btn"; hBtn.innerHTML = '<i class="fa fa-lightbulb"></i>';
-                hBtn.onclick = () => { if (p.hints?.length) { tipArea.textContent = "Segítség: " + p.hints[hintIdx % p.hints.length]; tipArea.classList.remove('hidden'); hintIdx++; } };
-                const input = document.createElement('input'); input.className = "sim-input"; input.placeholder = "Üsd be a kódot...";
-                const ok = document.createElement('div'); ok.className = "game-btn"; ok.textContent = "Ellenőrzés";
+                const hBtn = document.createElement('div'); hBtn.className = "w-10 h-10 rounded-full bg-white/5 border border-slate-700 flex items-center justify-center text-slate-400 mx-auto mb-3 cursor-pointer"; hBtn.innerHTML = '<i class="fa fa-lightbulb"></i>';
+                hBtn.onclick = () => { if (p.hints?.length) { tipArea.textContent = "Tipp: " + p.hints[hintIdx % p.hints.length]; tipArea.classList.remove('hidden'); hintIdx++; } };
+                const input = document.createElement('input'); input.className = "sim-input"; input.placeholder = "Kód...";
+                const ok = document.createElement('div'); ok.className = "game-btn"; ok.textContent = "OK";
                 ok.onclick = () => {
                     if (input.value.trim().toLowerCase() === (p.password || "").trim().toLowerCase()) { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); }
                     else input.style.borderColor = "#ef4444";
@@ -508,8 +541,8 @@
             } else if (p.pageType === 'gps') {
                 actions.className = "flex flex-col w-full";
                 const info = document.createElement('div'); info.className = "text-center p-5 bg-white/5 rounded-2xl border border-cyan-500/20 mb-4 animate-pulse";
-                info.innerHTML = `<div class="text-[10px] uppercase text-slate-500 mb-1 tracking-widest">Cél távolsága</div><div id="gps-val" class="text-2xl font-bold text-cyan-400">Mérés...</div>`;
-                const mapBtn = document.createElement('div'); mapBtn.className = "game-btn btn-cyan mb-2"; mapBtn.innerHTML = '<i class="fa-solid fa-location-arrow mr-2"></i> Térkép Segítség';
+                info.innerHTML = `<div class="text-[10px] uppercase text-slate-500 mb-1">Távolság</div><div id="gps-val" class="text-2xl font-bold text-cyan-400">...</div>`;
+                const mapBtn = document.createElement('div'); mapBtn.className = "game-btn btn-cyan mb-2"; mapBtn.innerHTML = '<i class="fa-solid fa-location-dot mr-2"></i> Térkép';
                 mapBtn.onclick = openMap;
                 actions.append(info, mapBtn);
                 if (navigator.geolocation) {
@@ -525,7 +558,10 @@
                 next.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); };
                 actions.appendChild(next);
             }
+            // Mindig görgessünk a szöveg tetejére
             document.getElementById('text-scroll-area').scrollTop = 0;
+            // Görgessünk egy picit az oldalon, hogy elinduljon a teljes képernyős mód
+            window.scrollTo(0, 1);
         }
 
         window.onload = async () => {
@@ -537,7 +573,7 @@
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) { loadConfig(JSON.parse(saved)); return; }
 
-            document.getElementById('status-msg').textContent = "Válaszd ki a kalandod!";
+            document.getElementById('status-msg').textContent = "Válassz egy kalandot!";
             document.getElementById('manual-import').classList.remove('hidden');
         };
     </script>
