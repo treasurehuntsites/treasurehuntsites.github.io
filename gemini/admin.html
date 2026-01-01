@@ -78,7 +78,10 @@
                 <p class="text-gray-500 text-sm">Élő szimulátor Inventory rendszerrel</p>
             </div>
             <div class="flex gap-2">
-                <button onclick="downloadConfig()" class="bg-cyan-500 text-black px-4 py-2 rounded-lg font-bold text-sm uppercase"><i class="fa fa-download mr-2"></i>Konfiguráció letöltése</button>
+                <!-- ÚJ BETÖLTÉS GOMB -->
+                <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm uppercase transition-colors"><i class="fa fa-upload mr-2"></i>Betöltés</button>
+                <button onclick="downloadConfig()" class="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-lg font-bold text-sm uppercase transition-colors"><i class="fa fa-download mr-2"></i>Letöltés</button>
+                <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
             </div>
         </header>
 
@@ -354,7 +357,6 @@
 
         function updateUI() {
             const type = document.getElementById('pageType').value;
-            // Add additional UI toggles if needed
         }
 
         function autoSave() {
@@ -424,12 +426,52 @@
             a.download = 'game_config.json'; a.click();
         }
 
+        // ÚJ: FÁJL BETÖLTÉS KEZELÉSE
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const newConfig = JSON.parse(e.target.result);
+                    // Egyszerű ellenőrzés: legyen benne storyPages
+                    if (!newConfig.storyPages) throw new Error("Érvénytelen konfiguráció");
+                    
+                    config = newConfig;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                    
+                    // UI Frissítése
+                    window.onload();
+                    resetSim();
+                    
+                    // Visszajelzés
+                    const indicator = document.getElementById('save-indicator');
+                    indicator.innerHTML = '<i class="fa fa-check mr-2"></i> KONFIGURÁCIÓ BETÖLTVE!';
+                    indicator.style.display = 'block';
+                    setTimeout(() => {
+                        indicator.style.display = 'none';
+                        indicator.innerHTML = '<i class="fa fa-sync-alt fa-spin mr-2"></i> MENTÉS...';
+                    }, 2000);
+                } catch (err) {
+                    console.error("Hiba a betöltéskor", err);
+                    alert("Sikertelen betöltés: Érvénytelen JSON fájl!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ""; // Input resetelése
+        }
+
         window.onload = () => {
-            document.getElementById('appTitle').value = config.appTitle;
-            document.getElementById('globalBg').value = config.globalBg;
-            document.getElementById('mapUrl').value = config.mapUrl;
-            document.getElementById('annaAvatar').value = config.annaAvatar;
-            document.getElementById('markAvatar').value = config.markAvatar;
+            document.getElementById('appTitle').value = config.appTitle || "";
+            document.getElementById('globalBg').value = config.globalBg || "";
+            document.getElementById('mapUrl').value = config.mapUrl || "";
+            document.getElementById('annaAvatar').value = config.annaAvatar || "";
+            document.getElementById('markAvatar').value = config.markAvatar || "";
+            
+            // Editor panel resetelése
+            currentIdx = -1;
+            document.getElementById('editorPanel').classList.add('hidden');
+            
             renderInventoryAdmin();
             renderPageList();
             simSwitch('game');
