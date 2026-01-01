@@ -3,19 +3,18 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaland Játék Stúdió V8.8 ✨</title>
+    <title>Kaland Játék Stúdió V8.9 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { 
-            font-family: 'Inter', sans-serif; 
+            font-family: 'Play', sans-serif; 
             background-color: #0f172a; 
             color: #f8fafc; 
             overflow-x: hidden; 
         }
-        .play-font { font-family: 'Play', sans-serif; }
         
         .glass-card { 
             background: rgba(30, 41, 59, 0.7); 
@@ -130,9 +129,9 @@
             color: white; 
             padding: 12px; 
             border-radius: 0.75rem; 
-            font-weight: bold; 
+            font-weight: 700; 
             text-align: center; 
-            font-size: 0.75rem; 
+            font-size: 0.85rem; 
             cursor: pointer; 
             text-transform: uppercase; 
             transition: 0.2s; 
@@ -262,11 +261,13 @@
         }
         .hint-circle-btn:hover { border-color: #8b5cf6; color: #fff; background: rgba(139, 92, 246, 0.2); }
 
-        /* Szimulátor szöveg tördelés */
+        /* Szimulátor szöveg tördelés - A lejátszó V1.9 stílusával egyezően */
         #sim-actual-text {
             text-align: justify;
             hyphens: auto;
             padding: 0 5px;
+            font-size: 14px;
+            font-weight: 700;
         }
     </style>
 </head>
@@ -291,7 +292,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
-                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.8</span> ✨</h1>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.9</span> ✨</h1>
                 <p class="text-slate-400 text-sm mt-1">Dinamikus Avatar Rendszer & GPS Modul</p>
             </div>
             <div class="flex gap-3">
@@ -367,7 +368,7 @@
                         </div>
                     </div>
 
-                    <!-- Eszköztárkezelés -->
+                    <!-- Eszköztár admin -->
                     <div class="border-t border-slate-700/50 pt-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Eszköztár elemek ezen az oldalon</h3>
@@ -406,7 +407,7 @@
                     <div id="sim-viewport">
                         <img id="sim-bg" src="">
                         <div id="sim-content">
-                            <div class="sim-box play-font">
+                            <div class="sim-box">
                                 <img id="sim-avatar" class="sim-avatar" src="">
                                 <div id="sim-text-header" class="flex flex-col"></div>
                                 <div id="sim-text" class="text-white text-[13px] leading-relaxed overflow-y-auto pr-1 flex-grow scroll-smooth">
@@ -417,17 +418,17 @@
                             </div>
                         </div>
 
-                        <!-- Eszköztár nézet a szimulátorban -->
-                        <div id="sim-inventory-view" class="play-font">
+                        <!-- Szimulátor Eszköztár -->
+                        <div id="sim-inventory-view">
                             <h2 class="text-cyan-400 font-bold text-center mb-6 uppercase text-sm tracking-widest">Tárgyaid</h2>
                             <div id="sim-inv-grid" class="inv-grid"></div>
                             <div id="sim-inv-empty" class="text-slate-500 text-center mt-20 text-xs hidden">
                                 <i class="fa-solid fa-box-open text-3xl mb-4 opacity-20 block mx-auto"></i>
-                                Ezen a helyszínen nincs nálad semmi.
+                                Nincs nálad semmi.
                             </div>
                         </div>
 
-                        <!-- Nagyított kép nézet -->
+                        <!-- Galéria nézet -->
                         <div id="sim-modal" onclick="this.style.display='none'">
                             <img id="sim-modal-img" src="">
                         </div>
@@ -514,22 +515,11 @@
                     if(!item.name && !item.url) return;
                     const div = document.createElement('div');
                     div.className = "inv-item-card animate-in zoom-in duration-200";
-                    
-                    let newBadge = "";
-                    if (item.seen === false) {
-                        newBadge = `<div class="item-new-tag">Új</div>`;
-                    }
-
-                    div.innerHTML = `
-                        ${newBadge}
-                        <img src="${item.url}" class="inv-item-img" onerror="this.src='https://via.placeholder.com/150x120?text=Kép'">
-                        <div class="inv-item-name">${item.name || 'Névtelen tárgy'}</div>
-                    `;
-
+                    let newBadge = (item.seen === false) ? `<div class="item-new-tag">Új</div>` : "";
+                    div.innerHTML = `${newBadge}<img src="${item.url}" class="inv-item-img" onerror="this.src='https://via.placeholder.com/150x120?text=Kép'"><div class="inv-item-name">${item.name || 'Tárgy'}</div>`;
                     div.onclick = () => {
                         item.seen = true;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-                        
                         if(item.url) {
                             document.getElementById('sim-modal-img').src = item.url;
                             document.getElementById('sim-modal').style.display = 'flex';
@@ -591,20 +581,12 @@
             const simActualText = document.getElementById('sim-actual-text');
             const simPageImg = document.getElementById('sim-page-img');
             
-            if (p.pageImage) {
-                simPageImg.src = p.pageImage;
-                simPageImg.classList.remove('hidden');
-            } else {
-                simPageImg.classList.add('hidden');
-            }
+            if (p.pageImage) { simPageImg.src = p.pageImage; simPageImg.classList.remove('hidden'); }
+            else { simPageImg.classList.add('hidden'); }
 
             const hasNewItem = p.inventory && p.inventory.some(item => item.seen === false);
             const dot = document.getElementById('sim-inv-dot');
-            if (hasNewItem && simView !== 'inventory') {
-                dot.style.display = 'block';
-            } else {
-                dot.style.display = 'none';
-            }
+            dot.style.display = (hasNewItem && simView !== 'inventory') ? 'block' : 'none';
 
             let processedText = p.content || "";
             processedText = processedText.replace(/§R/g, '<span class="sys-txt font-bold">[Rendszer]:</span>');
@@ -638,10 +620,8 @@
             header.innerHTML = ''; actions.innerHTML = '';
 
             const backAction = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : Math.max(0, simIdx - 1); simHintIdx = 0; updateSimulator(); };
-            
             const hasBack = simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "");
 
-            // Gombok elhelyezése: Vissza és Tovább egymás mellett flexbox-szal
             if (hasBack) {
                 if (['choice', 'password', 'gps'].includes(p.pageType)) {
                     const arrow = document.createElement('div');
@@ -680,7 +660,7 @@
                     }
                 };
                 wrap.appendChild(hBtn);
-                const input = document.createElement('input'); input.className = "sim-input mb-2"; input.placeholder = "Üsd be a kódot..."; input.id = "sim-pass-input";
+                const input = document.createElement('input'); input.className = "sim-input mb-2"; input.placeholder = "Kód..."; input.id = "sim-pass-input";
                 wrap.appendChild(input);
                 const ok = document.createElement('div'); ok.className = "sim-btn w-full"; ok.textContent = "OK";
                 ok.onclick = () => { 
@@ -693,10 +673,7 @@
             } else if(p.pageType === 'gps') {
                 const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-2 flex-grow";
                 const dBox = document.createElement('div'); dBox.className = "text-center p-4 bg-slate-900/80 rounded-xl border border-cyan-500/30 text-[12px] animate-pulse";
-                dBox.innerHTML = `
-                    <div class="text-slate-400 mb-1 uppercase text-[9px] tracking-widest">Cél távolsága</div>
-                    <div id="sim-gps-dist" class="font-bold text-cyan-400 text-lg">Mérés...</div>
-                `;
+                dBox.innerHTML = `<div class="text-slate-400 mb-1 uppercase text-[9px] tracking-widest">Cél távolsága</div><div id="sim-gps-dist" class="font-bold text-cyan-400 text-lg">Mérés...</div>`;
                 wrap.appendChild(dBox);
                 if (config.mapUrl) {
                     const mapB = document.createElement('div');
@@ -721,22 +698,14 @@
                         }
                         const d = calcDist(pos.coords.latitude, pos.coords.longitude, targetLat, targetLon);
                         const el = document.getElementById('sim-gps-dist'); 
-                        if(el) {
-                            el.textContent = `${Math.round(d)} m`;
-                            if(d < 25) { 
-                                navigator.geolocation.clearWatch(gpsWatchId); 
-                                gpsWatchId = null;
-                                simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; 
-                                updateSimulator(); 
+                        if(el) { el.textContent = `${Math.round(d)} m`;
+                            if(d < 25) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null;
+                                simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); 
                             }
                         }
-                    }, err => {
-                        const el = document.getElementById('sim-gps-dist');
-                        if(el) el.textContent = "GPS Hiba";
-                    }, {enableHighAccuracy: true});
+                    }, null, {enableHighAccuracy: true});
                 }
             } else {
-                // Normál story oldal esetén a Tovább gomb a Vissza mellett
                 const bNext = document.createElement('div'); bNext.className = "sim-btn"; bNext.textContent = "Tovább";
                 bNext.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; simHintIdx = 0; updateSimulator(); };
                 actions.appendChild(bNext);
@@ -756,7 +725,6 @@
             p.hints = document.getElementById('passHints').value.split('\n').filter(t => t.trim());
             p.targetLat = document.getElementById('targetLat').value;
             p.targetLon = document.getElementById('targetLon').value;
-            
             config.appTitle = document.getElementById('appTitle').value;
             config.globalBg = document.getElementById('globalBg').value;
             config.mapUrl = document.getElementById('mapUrl').value;
@@ -791,7 +759,7 @@
             if(config.storyPages) {
                 config.storyPages.forEach((p, i) => {
                     const div = document.createElement('div'); div.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
-                    const displayContent = p.content ? p.content.substring(0, 30) : "Nincs tartalom";
+                    const displayContent = p.content ? p.content.substring(0, 30) : "Üres oldal";
                     div.innerHTML = `
                         <div class="flex items-center flex-grow overflow-hidden">
                             <i class="fa fa-bars handle text-slate-600 mr-2"></i>
@@ -819,7 +787,6 @@
             const currentPage = config.storyPages[currentIdx];
             if(!currentPage) return;
             if(!currentPage.inventory) currentPage.inventory = [];
-            
             currentPage.inventory.forEach((item, i) => {
                 const div = document.createElement('div');
                 div.className = "bg-[#0f172a] p-3 rounded-xl flex flex-col gap-2 relative border border-slate-700/50";
@@ -840,16 +807,8 @@
             autoSave();
         }
 
-        function updateInvItem(i, k, v) {
-            config.storyPages[currentIdx].inventory[i][k] = v;
-            autoSave();
-        }
-
-        function removeInvItem(i) {
-            config.storyPages[currentIdx].inventory.splice(i, 1);
-            renderInventoryAdmin();
-            autoSave();
-        }
+        function updateInvItem(i, k, v) { config.storyPages[currentIdx].inventory[i][k] = v; autoSave(); }
+        function removeInvItem(i) { config.storyPages[currentIdx].inventory.splice(i, 1); renderInventoryAdmin(); autoSave(); }
 
         function autoSave() {
             clearTimeout(saveTimeout);
@@ -887,7 +846,6 @@
         function addPage() { 
             syncEditorToConfig();
             const newId = config.storyPages.length;
-            
             const allItems = new Map();
             config.storyPages.forEach(p => {
                 if (p.inventory) {
@@ -899,19 +857,8 @@
                     });
                 }
             });
-            
             const inheritedInventory = Array.from(allItems.values()).map(item => ({...item}));
-
-            config.storyPages.push({ 
-                content: "Új oldal...", 
-                pageType: "story", 
-                nextIdx: newId + 1, 
-                prevIdx: newId - 1, 
-                choices: [], 
-                inventory: inheritedInventory, 
-                pageImage: "" 
-            }); 
-            
+            config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: newId + 1, prevIdx: newId - 1, choices: [], inventory: inheritedInventory, pageImage: "" }); 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
             loadPage(newId); 
             renderPageList();
@@ -929,25 +876,19 @@
             reader.onload = (e) => {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    imported.storyPages.forEach(p => { 
-                        if(!p.inventory) p.inventory = []; 
-                        if(p.pageImage === undefined) p.pageImage = "";
-                    });
+                    imported.storyPages.forEach(p => { if(!p.inventory) p.inventory = []; if(p.pageImage === undefined) p.pageImage = ""; });
                     if(!imported.avatars) imported.avatars = [];
                     config = imported;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
                     document.getElementById('appTitle').value = config.appTitle || "";
                     document.getElementById('globalBg').value = config.globalBg || "";
                     document.getElementById('mapUrl').value = config.mapUrl || "";
-                    renderAvatarAdmin();
-                    renderPageList(); 
+                    renderAvatarAdmin(); renderPageList(); 
                     if (config.storyPages.length > 0) loadPage(0);
                     else document.getElementById('editorPanel').classList.add('hidden');
                     document.getElementById('save-indicator').style.display = 'block';
                     setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 1000);
-                } catch(err) {
-                    console.error("Hiba a fájl betöltése közben:", err);
-                }
+                } catch(err) { console.error("Fájl hiba:", err); }
             };
             reader.readAsText(file);
         }
@@ -956,8 +897,7 @@
             document.getElementById('appTitle').value = config.appTitle || "";
             document.getElementById('globalBg').value = config.globalBg || "";
             document.getElementById('mapUrl').value = config.mapUrl || "";
-            renderAvatarAdmin();
-            renderPageList(); 
+            renderAvatarAdmin(); renderPageList(); 
             if(config.storyPages && config.storyPages.length > 0) loadPage(0);
         };
     </script>
