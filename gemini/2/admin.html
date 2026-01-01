@@ -145,6 +145,26 @@
         .sim-menu-btn { color: #64748b; font-size: 1.3rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; }
         .sim-menu-btn.active { color: #8b5cf6; text-shadow: 0 0 10px rgba(139, 92, 246, 0.5); }
 
+        /* Inventory View in Simulator */
+        #sim-inventory-view { 
+            position: absolute; 
+            inset: 0; 
+            background: #0f172a; 
+            z-index: 50; 
+            display: none; 
+            padding: 20px; 
+            padding-top: 40px; 
+            overflow-y: auto; 
+        }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .inv-item-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; text-align: center; cursor: pointer; transition: 0.2s; }
+        .inv-item-card:hover { border-color: #8b5cf6; transform: translateY(-2px); }
+        .inv-item-img { width: 100%; height: 80px; object-fit: cover; }
+        .inv-item-name { font-size: 10px; padding: 8px; color: #cbd5e1; }
+
+        #sim-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; cursor: pointer; }
+        #sim-modal img { max-width: 100%; border: 2px solid #22d3ee; border-radius: 1rem; box-shadow: 0 0 30px rgba(34, 211, 238, 0.3); }
+
         #save-indicator { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 0.6rem 1.2rem; border-radius: 2rem; font-size: 0.75rem; font-weight: bold; display: none; z-index: 1000; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4); }
         
         .sys-txt { color: #22d3ee; font-style: italic; }
@@ -222,7 +242,7 @@
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
                 <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V8.6</span> ✨</h1>
-                <p class="text-slate-400 text-sm mt-1">Dinamikus Avatar Rendszer Modullal</p>
+                <p class="text-slate-400 text-sm mt-1">Dinamikus Avatar Rendszer & GPS Modul</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="downloadConfig()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 px-5 py-2.5 rounded-xl font-bold text-xs uppercase transition-all">Letöltés</button>
@@ -265,7 +285,6 @@
                 <div id="editorPanel" class="glass-card p-8 space-y-6 hidden relative animate-in fade-in duration-300">
                     <div class="space-y-2">
                          <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Tartalom</h3>
-                         <p class="text-[9px] text-slate-500 italic">Használd a §-t és a karakter kódját (pl. §A) a név kiírásához.</p>
                          <textarea id="pageText" rows="6" class="input-style text-sm leading-relaxed" placeholder="Írd ide a történetet..." oninput="autoSave()"></textarea>
                     </div>
                     
@@ -291,6 +310,15 @@
                             <label class="text-[9px] uppercase text-slate-500 ml-1">Egyedi Háttér</label>
                             <input type="url" id="pageBg" class="input-style text-xs" oninput="autoSave()">
                         </div>
+                    </div>
+
+                    <!-- Inventory Admin Section -->
+                    <div class="border-t border-slate-700/50 pt-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Eszköztár elemek ezen az oldalon</h3>
+                            <button onclick="addInventoryItem()" class="text-cyan-400 text-[10px] font-bold uppercase hover:underline">+ ÚJ TÁRGY</button>
+                        </div>
+                        <div id="adminInventoryList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                     </div>
 
                     <div id="choiceArea" class="hidden space-y-4 border-t border-slate-700/50 pt-6">
@@ -330,11 +358,26 @@
                                 <div id="sim-actions" class="mt-4 flex flex-row gap-2"></div>
                             </div>
                         </div>
+
+                        <!-- Simulator Inventory View -->
+                        <div id="sim-inventory-view" class="play-font">
+                            <h2 class="text-cyan-400 font-bold text-center mb-6 uppercase text-sm tracking-widest">Tárgyaid</h2>
+                            <div id="sim-inv-grid" class="inv-grid"></div>
+                            <div id="sim-inv-empty" class="text-slate-500 text-center mt-20 text-xs hidden">
+                                <i class="fa-solid fa-box-open text-3xl mb-4 opacity-20 block mx-auto"></i>
+                                Ezen a helyszínen nincs nálad semmi.
+                            </div>
+                        </div>
+
+                        <!-- Simulator Enlargement Modal -->
+                        <div id="sim-modal" onclick="this.style.display='none'">
+                            <img id="sim-modal-img" src="">
+                        </div>
                     </div>
                     <div class="sim-bottom-bar">
-                        <button class="sim-menu-btn active"><i class="fa fa-house"></i></button>
+                        <button class="sim-menu-btn active" id="sim-btn-game" onclick="simSwitch('game')"><i class="fa fa-house"></i></button>
                         <button class="sim-menu-btn" onclick="if(config.mapUrl) window.open(config.mapUrl, '_blank')"><i class="fa-solid fa-map-location-dot"></i></button>
-                        <button class="sim-menu-btn"><i class="fa-solid fa-briefcase"></i></button>
+                        <button class="sim-menu-btn" id="sim-btn-inv" onclick="simSwitch('inventory')"><i class="fa-solid fa-briefcase"></i></button>
                     </div>
                 </div>
             </div>
@@ -351,12 +394,13 @@
                 { id: 'A', name: 'Anna', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833591.png', color: '#f472b6' },
                 { id: 'M', name: 'Márk', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833605.png', color: '#60a5fa' }
             ],
-            storyPages: [{ content: "Üdvözöllek! §A Szia! Én vagyok az első karakter.", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [] }]
+            storyPages: [{ content: "Üdvözöllek! §A Szia! Én vagyok az első karakter.", pageType: "story", nextIdx: 1, prevIdx: 0, choices: [], inventory: [] }]
         };
 
         let currentIdx = -1;
         let simIdx = 0;
         let simHintIdx = 0;
+        let simView = 'game';
         let saveTimeout;
         let sortableInstance = null;
         let pageToDelete = null;
@@ -382,6 +426,39 @@
         function deletePage(i) {
             pageToDelete = i;
             document.getElementById('confirm-modal').style.display = 'flex';
+        }
+
+        function simSwitch(view) {
+            simView = view;
+            document.getElementById('sim-inventory-view').style.display = view === 'inventory' ? 'block' : 'none';
+            document.getElementById('sim-btn-game').classList.toggle('active', view === 'game');
+            document.getElementById('sim-btn-inv').classList.toggle('active', view === 'inventory');
+            if(view === 'inventory') renderInventorySim();
+        }
+
+        function renderInventorySim() {
+            const grid = document.getElementById('sim-inv-grid');
+            const empty = document.getElementById('sim-inv-empty');
+            grid.innerHTML = '';
+            
+            const currentPage = config.storyPages[simIdx];
+            if(!currentPage || !currentPage.inventory || currentPage.inventory.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                currentPage.inventory.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = "inv-item-card animate-in zoom-in duration-200";
+                    div.innerHTML = `<img src="${item.url}" class="inv-item-img" onerror="this.src='https://via.placeholder.com/150x120?text=Kép'"><div class="inv-item-name">${item.name}</div>`;
+                    div.onclick = () => {
+                        if(item.url) {
+                            document.getElementById('sim-modal-img').src = item.url;
+                            document.getElementById('sim-modal').style.display = 'flex';
+                        }
+                    };
+                    grid.appendChild(div);
+                });
+            }
         }
 
         function addAvatar() {
@@ -432,7 +509,7 @@
 
             document.getElementById('sim-bg').src = p.pageBg || config.globalBg || "";
             const simText = document.getElementById('sim-text');
-            let processedText = p.content;
+            let processedText = p.content || "";
 
             processedText = processedText.replace(/§R/g, '<span class="sys-txt font-bold">[Rendszer]:</span>');
 
@@ -441,13 +518,15 @@
             simText.style.paddingTop = "0px";
             
             let foundAvatar = null;
-            config.avatars.forEach(av => {
-                const regex = new RegExp(`§${av.id}`, 'g');
-                if (p.content.includes(`§${av.id}`)) {
-                    if (!foundAvatar) foundAvatar = av;
-                    processedText = processedText.replace(regex, `<span style="color: ${av.color}; font-weight: bold;">${av.name}:</span>`);
-                }
-            });
+            if(config.avatars) {
+                config.avatars.forEach(av => {
+                    const regex = new RegExp(`§${av.id}`, 'g');
+                    if (p.content && p.content.includes(`§${av.id}`)) {
+                        if (!foundAvatar) foundAvatar = av;
+                        processedText = processedText.replace(regex, `<span style="color: ${av.color}; font-weight: bold;">${av.name}:</span>`);
+                    }
+                });
+            }
 
             if (foundAvatar && foundAvatar.url) {
                 avImg.src = foundAvatar.url;
@@ -508,17 +587,35 @@
             } else if(p.pageType === 'gps') {
                 const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-2 flex-grow";
                 const dBox = document.createElement('div'); dBox.className = "text-center p-3 bg-slate-900/80 rounded-xl border border-cyan-500/30 text-[11px]";
-                dBox.innerHTML = `GPS: <span id="sim-gps-dist" class="font-bold text-cyan-400">mérés...</span>`;
+                dBox.innerHTML = `GPS Távolság: <span id="sim-gps-dist" class="font-bold text-cyan-400">mérés...</span>`;
                 wrap.appendChild(dBox);
-                const nextB = document.createElement('div'); nextB.className = "sim-btn"; 
-                nextB.textContent = "Tovább"; 
-                nextB.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); };
-                wrap.appendChild(nextB); actions.appendChild(wrap);
+
+                if (config.mapUrl) {
+                    const mapB = document.createElement('div');
+                    mapB.className = "sim-btn sim-btn-cyan";
+                    mapB.innerHTML = '<i class="fa-solid fa-map-location-dot mr-2"></i> TÉRKÉP MEGNYITÁSA';
+                    mapB.onclick = () => window.open(config.mapUrl, '_blank');
+                    wrap.appendChild(mapB);
+                }
+
+                const skipB = document.createElement('div'); skipB.className = "sim-btn sim-btn-secondary"; 
+                skipB.textContent = "Kihagyás / Tovább"; 
+                skipB.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); };
+                wrap.appendChild(skipB); 
+                actions.appendChild(wrap);
+
                 if(navigator.geolocation) {
                     gpsWatchId = navigator.geolocation.watchPosition(pos => {
                         const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
-                        const el = document.getElementById('sim-gps-dist'); if(el) el.textContent = `${Math.round(d)} m`;
-                        if(d < 25) { navigator.geolocation.clearWatch(gpsWatchId); simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); }
+                        const el = document.getElementById('sim-gps-dist'); 
+                        if(el) el.textContent = `${Math.round(d)} m`;
+                        
+                        if(d < 25) { 
+                            navigator.geolocation.clearWatch(gpsWatchId); 
+                            gpsWatchId = null;
+                            simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; 
+                            updateSimulator(); 
+                        }
                     }, null, {enableHighAccuracy: true});
                 }
             } else {
@@ -532,7 +629,7 @@
             currentIdx = i; const p = config.storyPages[i];
             if(!p) return;
             document.getElementById('editorPanel').classList.remove('hidden');
-            document.getElementById('pageText').value = p.content;
+            document.getElementById('pageText').value = p.content || "";
             document.getElementById('prevIdx').value = p.prevIdx ?? "";
             document.getElementById('nextIdx').value = p.nextIdx ?? "";
             document.getElementById('pageType').value = p.pageType || 'story';
@@ -541,23 +638,26 @@
             document.getElementById('passHints').value = (p.hints || []).join('\n');
             document.getElementById('targetLat').value = p.targetLat || "";
             document.getElementById('targetLon').value = p.targetLon || "";
-            updateUI(); renderChoices(); renderPageList(); renderAvatarAdmin(); simIdx = i; simHintIdx = 0; updateSimulator();
+            updateUI(); renderChoices(); renderPageList(); renderAvatarAdmin(); renderInventoryAdmin(); simIdx = i; simHintIdx = 0; updateSimulator();
         }
 
         function renderPageList() {
             const list = document.getElementById('pageList'); list.innerHTML = '';
-            config.storyPages.forEach((p, i) => {
-                const div = document.createElement('div'); div.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
-                div.innerHTML = `
-                    <div class="flex items-center flex-grow overflow-hidden">
-                        <i class="fa fa-bars handle text-slate-600 mr-2"></i>
-                        <span onclick="loadPage(${i})" class="flex-grow truncate text-xs font-medium">#${i}: ${p.content.substring(0, 30)}...</span>
-                    </div>
-                    <button onclick="deletePage(${i})" class="ml-2 hover:bg-red-500/20 p-2 rounded-lg transition-colors group">
-                        <i class="fa fa-trash text-red-400 group-hover:text-red-300 text-xs"></i>
-                    </button>`;
-                list.appendChild(div);
-            });
+            if(config.storyPages) {
+                config.storyPages.forEach((p, i) => {
+                    const div = document.createElement('div'); div.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                    const displayContent = p.content ? p.content.substring(0, 30) : "Nincs tartalom";
+                    div.innerHTML = `
+                        <div class="flex items-center flex-grow overflow-hidden">
+                            <i class="fa fa-bars handle text-slate-600 mr-2"></i>
+                            <span onclick="loadPage(${i})" class="flex-grow truncate text-xs font-medium">#${i}: ${displayContent}...</span>
+                        </div>
+                        <button onclick="deletePage(${i})" class="ml-2 hover:bg-red-500/20 p-2 rounded-lg transition-colors group">
+                            <i class="fa fa-trash text-red-400 group-hover:text-red-300 text-xs"></i>
+                        </button>`;
+                    list.appendChild(div);
+                });
+            }
             if (sortableInstance) sortableInstance.destroy();
             sortableInstance = new Sortable(list, {
                 handle: '.handle', animation: 200, onEnd: (evt) => {
@@ -566,6 +666,44 @@
                     autoSave();
                 }
             });
+        }
+
+        function renderInventoryAdmin() {
+            const container = document.getElementById('adminInventoryList');
+            container.innerHTML = '';
+            const currentPage = config.storyPages[currentIdx];
+            if(!currentPage) return;
+            if(!currentPage.inventory) currentPage.inventory = [];
+            
+            currentPage.inventory.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = "bg-[#0f172a] p-3 rounded-xl flex flex-col gap-2 relative border border-slate-700/50";
+                div.innerHTML = `
+                    <input type="text" class="input-style text-xs py-1.5" value="${item.name}" placeholder="Tárgy neve" oninput="updateInvItem(${i}, 'name', this.value)">
+                    <input type="url" class="input-style text-[10px] py-1.5" value="${item.url}" placeholder="Kép URL" oninput="updateInvItem(${i}, 'url', this.value)">
+                    <button onclick="removeInvItem(${i})" class="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 w-6 h-6 rounded-full text-xs flex items-center justify-center shadow-lg transition-colors">×</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addInventoryItem() {
+            const p = config.storyPages[currentIdx];
+            if(!p.inventory) p.inventory = [];
+            p.inventory.push({name: 'Új tárgy', url: ''});
+            renderInventoryAdmin();
+            autoSave();
+        }
+
+        function updateInvItem(i, k, v) {
+            config.storyPages[currentIdx].inventory[i][k] = v;
+            autoSave();
+        }
+
+        function removeInvItem(i) {
+            config.storyPages[currentIdx].inventory.splice(i, 1);
+            renderInventoryAdmin();
+            autoSave();
         }
 
         function autoSave() {
@@ -616,7 +754,7 @@
 
         function addPage() { 
             const newId = config.storyPages.length;
-            config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: newId + 1, prevIdx: newId - 1, choices: [] }); 
+            config.storyPages.push({ content: "Új oldal...", pageType: "story", nextIdx: newId + 1, prevIdx: newId - 1, choices: [], inventory: [] }); 
             loadPage(newId); autoSave(); 
         }
 
@@ -630,8 +768,31 @@
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                config = JSON.parse(e.target.result);
-                window.location.reload();
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    imported.storyPages.forEach(p => { if(!p.inventory) p.inventory = []; });
+                    if(!imported.avatars) imported.avatars = [];
+                    
+                    config = imported;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                    
+                    document.getElementById('appTitle').value = config.appTitle || "";
+                    document.getElementById('globalBg').value = config.globalBg || "";
+                    document.getElementById('mapUrl').value = config.mapUrl || "";
+                    
+                    renderAvatarAdmin();
+                    renderPageList(); 
+                    if (config.storyPages.length > 0) {
+                        loadPage(0);
+                    } else {
+                        document.getElementById('editorPanel').classList.add('hidden');
+                    }
+                    
+                    document.getElementById('save-indicator').style.display = 'block';
+                    setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 1000);
+                } catch(err) {
+                    console.error("Hiba a fájl betöltése közben:", err);
+                }
             };
             reader.readAsText(file);
         }
@@ -642,7 +803,7 @@
             document.getElementById('mapUrl').value = config.mapUrl || "";
             renderAvatarAdmin();
             renderPageList(); 
-            if(config.storyPages.length > 0) loadPage(0);
+            if(config.storyPages && config.storyPages.length > 0) loadPage(0);
         };
     </script>
 </body>
