@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Kaland Játék Lejátszó V1.2 ✨</title>
+    <title>Kaland Játék Lejátszó V1.3 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -21,7 +21,6 @@
             color: #f8fafc; 
             margin: 0;
             padding: 0;
-            /* Megakadályozzuk a görgetést és a "gumiszalag" effektet */
             overflow: hidden;
             position: fixed;
             width: 100%;
@@ -33,46 +32,27 @@
         
         .game-container {
             width: 100%;
-            height: 100dvh; /* Dinamikus viewport magasság */
+            height: 100dvh;
             background: #000;
             position: relative;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* Asztali nézetben marad a keret */
         @media (min-width: 640px) {
-            body {
-                position: relative;
-                overflow: auto;
-            }
+            body { position: relative; overflow: auto; display: flex; align-items: center; justify-content: center; background: #0f172a; }
             .game-container {
-                margin: auto;
                 max-width: 400px;
                 height: 90vh;
                 border: 8px solid #1e293b;
                 border-radius: 3rem;
                 overflow: hidden;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             }
         }
 
-        #viewport { 
-            position: relative; 
-            flex: 1; 
-            overflow: hidden; 
-            background: #000; 
-        }
-        
-        #bg-layer { 
-            position: absolute; 
-            inset: 0; 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
-            filter: brightness(0.4); 
-            transition: 0.5s ease-in-out; 
-        }
+        #viewport { position: relative; flex: 1; overflow: hidden; background: #000; }
+        #bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); transition: 0.5s ease-in-out; }
         
         #content-layer { 
             position: relative; 
@@ -85,25 +65,24 @@
         
         .story-box { 
             position: relative;
-            background: rgba(0,0,0,0.9); 
-            backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.92); 
+            backdrop-filter: blur(15px);
             border-top: 3px solid #8b5cf6; 
             border-radius: 1.5rem 1.5rem 0 0; 
             padding: 24px; 
-            padding-top: 40px;
-            /* Rugalmas magasságkezelés */
-            max-height: 70%;
+            padding-top: 45px;
+            max-height: 75%;
             display: flex; 
             flex-direction: column; 
-            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
         }
         
         .avatar-img { 
             position: absolute; 
             top: -35px; 
             left: 25px; 
-            width: 70px; 
-            height: 70px; 
+            width: 75px; 
+            height: 75px; 
             border-radius: 50%; 
             border: 3px solid #8b5cf6; 
             background: #000; 
@@ -112,18 +91,15 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        .back-arrow {
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 1.2rem;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            width: fit-content;
+        #story-text-container {
+            text-align: justify;
+            hyphens: auto;
+            padding: 0 5px;
+            line-height: 1.6;
         }
 
         .game-btn { 
-            width: 100%;
+            flex: 1;
             background: #8b5cf6; 
             color: white; 
             padding: 14px; 
@@ -133,10 +109,12 @@
             font-size: 0.85rem; 
             cursor: pointer; 
             text-transform: uppercase; 
-            margin-bottom: 8px;
-            flex-shrink: 0;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .game-btn:active { transform: scale(0.98); background: #a855f7; }
+        .game-btn:active { transform: scale(0.96); background: #a855f7; }
         .btn-cyan { background: #22d3ee !important; color: #000 !important; }
         .btn-secondary { background: #334155; }
         
@@ -148,11 +126,11 @@
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
-            padding-bottom: var(--sab); /* Mobil navigációs sáv helye */
+            padding-bottom: var(--sab); 
             z-index: 100; 
         }
         
-        .nav-btn { position: relative; color: #64748b; font-size: 1.4rem; cursor: pointer; border: none; background: transparent; }
+        .nav-btn { position: relative; color: #64748b; font-size: 1.5rem; cursor: pointer; transition: 0.3s; background: none; border: none; }
         .nav-btn.active { color: #8b5cf6; }
 
         .notif-dot {
@@ -183,13 +161,13 @@
             overflow-y: auto; 
         }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .inv-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; text-align: center; cursor: pointer; }
-        .inv-img { width: 100%; height: 100px; object-fit: cover; }
+        .inv-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; text-align: center; }
+        .inv-img { width: 100%; height: 110px; object-fit: cover; }
         .inv-name { font-size: 11px; padding: 10px; color: #cbd5e1; font-weight: 600; }
-        .new-tag { position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 800; }
+        .new-tag { position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; }
 
         #fullscreen-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
-        #fullscreen-modal img { max-width: 100%; border-radius: 1.5rem; }
+        #fullscreen-modal img { max-width: 100%; border: 2px solid #22d3ee; border-radius: 1.5rem; }
 
         #import-overlay {
             position: absolute;
@@ -212,11 +190,14 @@
             padding: 14px; 
             font-size: 14px; 
             width: 100%; 
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            outline: none;
         }
+        .sim-input:focus { border-color: #8b5cf6; background: rgba(255,255,255,0.1); }
+
         .hint-btn {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             background: rgba(255,255,255,0.05);
             border: 1px solid #334155;
@@ -225,21 +206,23 @@
             justify-content: center;
             color: #94a3b8;
             margin: 0 auto 15px auto;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div class="game-container">
+        <!-- Kezdőképernyő -->
         <div id="import-overlay">
-            <div class="mb-8">
-                <i class="fa-solid fa-wand-magic-sparkles text-6xl text-purple-500 mb-6 block"></i>
-                <h1 class="text-2xl font-bold uppercase tracking-widest mb-2">Kaland Lejátszó</h1>
-                <p id="status-msg" class="text-slate-400 text-sm">Játék keresése...</p>
+            <div class="mb-10">
+                <i class="fa-solid fa-wand-magic-sparkles text-7xl text-purple-500 mb-6 block animate-pulse"></i>
+                <h1 class="text-3xl font-bold uppercase tracking-widest mb-2">Kaland Vár</h1>
+                <p id="status-msg" class="text-slate-400 text-sm">Adatok keresése...</p>
             </div>
             <div id="manual-import" class="hidden w-full">
                 <button onclick="document.getElementById('fileInput').click()" class="game-btn">
-                    <i class="fa fa-file-import mr-2"></i> Manuális betöltés
+                    <i class="fa fa-file-import mr-2"></i> Kaland Betöltése
                 </button>
                 <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadGameFile(event)">
             </div>
@@ -247,32 +230,38 @@
 
         <div id="viewport">
             <img id="bg-layer" src="">
+            
             <div id="content-layer">
                 <div class="story-box play-font">
                     <img id="avatar-img" class="avatar-img" style="display:none" src="">
                     <div id="header-area"></div>
-                    <div id="text-scroll-area" class="overflow-y-auto flex-grow pr-2 mb-4 scroll-smooth">
-                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-white/10" src="">
-                        <div id="story-text" class="text-white text-[14px] leading-relaxed"></div>
+                    
+                    <div id="text-scroll-area" class="overflow-y-auto flex-grow pr-1 mb-4 scroll-smooth">
+                        <img id="page-illustration" class="w-full rounded-2xl mb-5 hidden shadow-lg border border-white/10" src="">
+                        <div id="story-text-container" class="text-white text-[15px] leading-relaxed"></div>
                     </div>
-                    <div id="action-area" class="flex-shrink-0"></div>
+
+                    <div id="action-area" class="flex gap-2"></div>
                 </div>
             </div>
 
+            <!-- Inventory View -->
             <div id="inventory-view">
-                <h2 class="text-cyan-400 font-bold text-center mb-8 uppercase text-sm tracking-widest">Hátizsák</h2>
+                <h2 class="text-cyan-400 font-bold text-center mb-10 uppercase text-sm tracking-widest">Felszerelés</h2>
                 <div id="inv-grid" class="inv-grid"></div>
                 <div id="inv-empty" class="text-slate-500 text-center mt-32 text-xs hidden">
-                    <i class="fa-solid fa-box-open text-4xl mb-4 opacity-10 block mx-auto"></i>
-                    Jelenleg üres a táskád.
+                    <i class="fa-solid fa-box-open text-5xl mb-5 opacity-10 block mx-auto"></i>
+                    A hátizsákod jelenleg üres.
                 </div>
             </div>
 
+            <!-- Fullscreen View -->
             <div id="fullscreen-modal" onclick="this.style.display='none'">
                 <img id="modal-img" src="">
             </div>
         </div>
 
+        <!-- Navigation -->
         <div class="bottom-nav">
             <button class="nav-btn active" id="nav-game" onclick="switchView('game')"><i class="fa fa-house"></i></button>
             <button class="nav-btn" id="nav-map" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
@@ -308,9 +297,8 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                try {
-                    loadConfig(JSON.parse(e.target.result));
-                } catch (err) { alert("Hibás fájl!"); }
+                try { loadConfig(JSON.parse(e.target.result)); } 
+                catch (err) { alert("Hiba a fájl feldolgozásakor!"); }
             };
             reader.readAsText(file);
         }
@@ -345,7 +333,7 @@
                     const card = document.createElement('div');
                     card.className = "inv-card animate-in zoom-in duration-300";
                     const newTag = item.seen === false ? '<div class="new-tag">Új</div>' : '';
-                    card.innerHTML = `${newTag}<img src="${item.url}" class="inv-img" onerror="this.src='https://via.placeholder.com/150x100?text=Tárgy'"><div class="inv-name">${item.name || 'Névtelen'}</div>`;
+                    card.innerHTML = `${newTag}<img src="${item.url}" class="inv-img" onerror="this.src='https://via.placeholder.com/150x100?text=Tárgy'"><div class="inv-name">${item.name || 'Ismeretlen tárgy'}</div>`;
                     card.onclick = () => {
                         item.seen = true;
                         if (item.url) {
@@ -360,11 +348,11 @@
         }
 
         function openMap() {
-            if (config && config.mapUrl) window.open(config.mapUrl, '_blank');
-            else alert("Nincs térkép link!");
+            if (config?.mapUrl) window.open(config.mapUrl, '_blank');
+            else alert("Ehhez a kalandhoz nincs térkép.");
         }
 
-        function calcDistance(lat1, lon1, lat2, lon2) {
+        function calcDist(lat1, lon1, lat2, lon2) {
             const R = 6371e3; 
             const f1 = lat1 * Math.PI/180; const f2 = lat2 * Math.PI/180;
             const df = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
@@ -389,22 +377,22 @@
             avImg.style.display = 'none';
             document.getElementById('text-scroll-area').style.paddingTop = "0px";
 
-            let firstAvatar = null;
+            let firstAv = null;
             if (config.avatars) {
                 config.avatars.forEach(av => {
                     const regex = new RegExp(`§${av.id}`, 'g');
                     if (rawText.includes(`§${av.id}`)) {
-                        if (!firstAvatar) firstAvatar = av;
+                        if (!firstAv) firstAv = av;
                         rawText = rawText.replace(regex, `<span style="color: ${av.color}; font-weight: bold;">${av.name}:</span>`);
                     }
                 });
             }
 
-            if (firstAvatar && firstAvatar.url) {
-                avImg.src = firstAvatar.url; avImg.style.display = 'block'; avImg.style.borderColor = firstAvatar.color;
-                document.getElementById('text-scroll-area').style.paddingTop = "20px";
+            if (firstAv?.url) {
+                avImg.src = firstAv.url; avImg.style.display = 'block'; avImg.style.borderColor = firstAv.color;
+                document.getElementById('text-scroll-area').style.paddingTop = "25px";
             }
-            document.getElementById('story-text').innerHTML = rawText;
+            document.getElementById('story-text-container').innerHTML = rawText;
 
             const header = document.getElementById('header-area');
             const actions = document.getElementById('action-area');
@@ -412,9 +400,16 @@
 
             const goBack = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : Math.max(0, simIdx - 1); hintIdx = 0; renderPage(); };
 
+            // Értesítés
+            const hasNew = p.inventory?.some(i => i.seen === false);
+            if (hasNew && currentView !== 'inventory') document.getElementById('notif-dot').style.display = 'block';
+
             if (simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
                 if (['choice', 'password', 'gps'].includes(p.pageType)) {
-                    const arrow = document.createElement('div'); arrow.className = "back-arrow"; arrow.innerHTML = '<i class="fa fa-chevron-left mr-2"></i>'; arrow.onclick = goBack;
+                    const arrow = document.createElement('div');
+                    arrow.className = "text-slate-400 mb-3 cursor-pointer w-fit";
+                    arrow.innerHTML = '<i class="fa fa-chevron-left mr-2"></i>';
+                    arrow.onclick = goBack;
                     header.appendChild(arrow);
                 } else {
                     const btn = document.createElement('div'); btn.className = "game-btn btn-secondary"; btn.textContent = "Vissza"; btn.onclick = goBack;
@@ -422,42 +417,41 @@
                 }
             }
 
-            const hasNewItem = p.inventory && p.inventory.some(i => i.seen === false);
-            if (hasNewItem && currentView !== 'inventory') document.getElementById('notif-dot').style.display = 'block';
-
             if (p.pageType === 'choice') {
+                actions.className = "flex flex-col gap-2";
                 p.choices.forEach(c => {
                     const btn = document.createElement('div'); btn.className = "game-btn"; btn.textContent = c.text;
                     btn.onclick = () => { simIdx = parseInt(c.target); renderPage(); };
                     actions.appendChild(btn);
                 });
             } else if (p.pageType === 'password') {
-                const wrap = document.createElement('div'); wrap.className = "flex flex-col gap-2";
-                const tipArea = document.createElement('div'); tipArea.className = "text-[11px] text-cyan-400 italic text-center mb-2 hidden"; wrap.appendChild(tipArea);
+                actions.className = "flex flex-col w-full";
+                const tipArea = document.createElement('div'); tipArea.className = "text-[12px] text-cyan-400 italic text-center mb-3 hidden";
                 const hBtn = document.createElement('div'); hBtn.className = "hint-btn"; hBtn.innerHTML = '<i class="fa fa-lightbulb"></i>';
-                hBtn.onclick = () => { if (p.hints?.length) { tipArea.textContent = "Tipp: " + p.hints[hintIdx % p.hints.length]; tipArea.classList.remove('hidden'); hintIdx++; } };
-                wrap.appendChild(hBtn);
-                const input = document.createElement('input'); input.className = "sim-input"; input.placeholder = "Üsd be a kódot..."; wrap.appendChild(input);
+                hBtn.onclick = () => { if (p.hints?.length) { tipArea.textContent = "Segítség: " + p.hints[hintIdx % p.hints.length]; tipArea.classList.remove('hidden'); hintIdx++; } };
+                const input = document.createElement('input'); input.className = "sim-input"; input.placeholder = "Üsd be a kódot...";
                 const ok = document.createElement('div'); ok.className = "game-btn"; ok.textContent = "OK";
                 ok.onclick = () => {
                     if (input.value.trim().toLowerCase() === (p.password || "").trim().toLowerCase()) { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); }
                     else input.style.borderColor = "#ef4444";
                 };
-                wrap.appendChild(ok); actions.appendChild(wrap);
+                actions.append(tipArea, hBtn, input, ok);
             } else if (p.pageType === 'gps') {
-                const info = document.createElement('div'); info.className = "text-center p-4 bg-white/5 rounded-2xl border border-cyan-500/20 mb-4 animate-pulse";
-                info.innerHTML = `<div class="text-[10px] uppercase text-slate-400 mb-1">Cél távolsága</div><div id="gps-dist-val" class="text-xl font-bold text-cyan-400">Mérés...</div>`;
-                actions.appendChild(info);
-                const mapBtn = document.createElement('div'); mapBtn.className = "game-btn btn-cyan mb-2"; mapBtn.innerHTML = '<i class="fa-solid fa-location-dot mr-2"></i> Térkép'; mapBtn.onclick = openMap;
-                actions.appendChild(mapBtn);
+                actions.className = "flex flex-col w-full";
+                const info = document.createElement('div'); info.className = "text-center p-5 bg-white/5 rounded-2xl border border-cyan-500/20 mb-4 animate-pulse";
+                info.innerHTML = `<div class="text-[10px] uppercase text-slate-500 mb-1 tracking-widest">Cél távolsága</div><div id="gps-val" class="text-2xl font-bold text-cyan-400">Mérés...</div>`;
+                const mapBtn = document.createElement('div'); mapBtn.className = "game-btn btn-cyan mb-2"; mapBtn.innerHTML = '<i class="fa-solid fa-location-arrow mr-2"></i> Térkép Segítség';
+                mapBtn.onclick = openMap;
+                actions.append(info, mapBtn);
                 if (navigator.geolocation) {
                     gpsWatchId = navigator.geolocation.watchPosition(pos => {
-                        const d = calcDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
-                        const el = document.getElementById('gps-dist-val'); if (el) el.textContent = `${Math.round(d)} m`;
+                        const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        const el = document.getElementById('gps-val'); if (el) el.textContent = `${Math.round(d)} m`;
                         if (d < 25) { navigator.geolocation.clearWatch(gpsWatchId); simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); }
                     }, null, { enableHighAccuracy: true });
                 }
             } else {
+                actions.className = "flex gap-2";
                 const next = document.createElement('div'); next.className = "game-btn"; next.textContent = "Tovább";
                 next.onclick = () => { simIdx = (p.nextIdx !== undefined && p.nextIdx !== "") ? parseInt(p.nextIdx) : simIdx + 1; renderPage(); };
                 actions.appendChild(next);
@@ -468,20 +462,13 @@
         window.onload = async () => {
             try {
                 const response = await fetch('export.json');
-                if (response.ok) {
-                    const data = await response.json();
-                    loadConfig(data);
-                    return;
-                }
-            } catch (e) { console.log("Nincs szerveroldali fájl."); }
+                if (response.ok) { loadConfig(await response.json()); return; }
+            } catch (e) {}
 
             const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                loadConfig(JSON.parse(saved));
-                return;
-            }
+            if (saved) { loadConfig(JSON.parse(saved)); return; }
 
-            document.getElementById('status-msg').textContent = "Nem található mentett kaland.";
+            document.getElementById('status-msg').textContent = "Válaszd ki a kalandod!";
             document.getElementById('manual-import').classList.remove('hidden');
         };
     </script>
