@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=10.0, user-scalable=no">
+    <title id="app-title">Játék folyamatban</title>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #ffffff; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            margin: 0; padding: 0; font-family: 'Play', sans-serif; 
+            background: var(--bg-color); color: var(--text-color); 
+            min-height: 100vh; overflow-x: hidden; visibility: hidden; opacity: 0; transition: opacity 0.5s; 
+        }
+        
+        .bg-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: #000; }
+        .bg-layer img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.45); transition: opacity 0.6s ease; }
+        
+        /* SZÖVEGDOBOZ - FIX SZÉLESSÉG */
+        .content-box {
+            background-color: rgba(0, 0, 0, 0.92); padding: 45px 20px 20px 20px; 
+            border-radius: 12px 12px 0 0; max-width: 800px; 
+            width: calc(100% - 40px); /* 20-20px margó */
+            box-shadow: 0 -3px 25px rgba(138, 43, 226, 0.5); border: 3px solid #8a2be2;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); 
+            z-index: 10; text-align: left; min-height: 260px; display: flex; flex-direction: column;
+        }
+
+        #story-text { font-size: 1.15em; font-weight: 700; line-height: 1.5; margin-bottom: 25px; white-space: pre-wrap; flex-grow: 1; }
+        .interaction-area { display: flex; gap: 10px; border-top: 1px dashed #8a2be2; padding-top: 20px; flex-wrap: wrap; position: relative; }
+        
+        /* GOMBOK - ÉLES ÉS TISZTA */
+        .nav-btn { 
+            flex: 1; padding: 15px 10px; background: #8a2be2; color: white; 
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; min-width: 100px; font-size: 0.9em; 
+            box-shadow: none; transition: background 0.2s, transform 0.1s; 
+        }
+        .nav-btn:active { transform: translateY(2px); background: #7116c5; }
+        
+        /* KÓD MEZŐ */
+        .code-input {
+            width: 100%; background: rgba(255,255,255,0.08); color: white; border: 2px solid #8a2be2;
+            padding: 15px; border-radius: 8px; text-align: center; font-size: 1.25em; font-weight: bold; margin-bottom: 15px; outline: none;
+        }
+
+        /* SEGÍTSÉG GOMB (?) - KISEBB ÉS KÖZÉPEN */
+        .help-trigger {
+            position: absolute; top: -38px; left: 50%; transform: translateX(-50%); 
+            width: 32px; height: 32px; 
+            background: #00ffff; color: #000; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.2em; font-weight: bold; cursor: pointer; z-index: 20;
+            box-shadow: 0 0 12px rgba(0,255,255,0.4);
+        }
+
+        .avatar { position: absolute; top: -65px; left: -10px; width: 90px; height: 90px; border-radius: 50%; border: 3px solid #00ffff; display: none; box-shadow: 0 0 15px #00ffff; background: #000; z-index: 20; }
+        .fixed-menu-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 50px; background-color: #1a1a1a; border-top: 2px solid #8a2be2; z-index: 50; display: flex; justify-content: space-around; align-items: center; }
+        .menu-button { background: none; border: none; color: white; font-size: 1.6em; cursor: pointer; }
+
+        /* MODALS */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; display: none; align-items: center; justify-content: center; flex-direction: column; }
+        .modal-content { background: #1a1a1a; padding: 25px; border: 3px solid #8a2be2; border-radius: 15px; width: calc(100% - 40px); max-width: 500px; text-align: center; max-height: 85vh; overflow-y: auto; position: relative; }
+        
+        /* INVENTORY - KÉT OSZLOP FIXEN */
+        .inventory-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 12px; padding: 5px 0; }
+        .inventory-grid img { width: 100%; border-radius: 10px; border: none; object-fit: cover; aspect-ratio: 1/1; cursor: pointer; }
+        
+        /* LIGHTBOX */
+        #lightbox-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; align-items: center; justify-content: center; }
+        #lightbox-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #lightbox-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 3em; cursor: pointer; z-index: 210; }
+
+        .gps-dist { font-size: 3.5em; font-weight: bold; color: #00ffff; text-shadow: 0 0 10px #00ffff; margin: 15px 0; }
+        .hint-text { font-size: 1.2em; color: #00ffff; margin: 20px 0; min-height: 60px; display: flex; align-items: center; justify-content: center; line-height: 1.4; font-weight: bold; }
+        .anna-msg { color: #ff69b4; } .mark-msg { color: #4169e1; } .system-msg { color: #00ffff; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="bg-layer"><img id="bg-img" src=""></div>
+    
+    <div class="content-box">
+        <img id="avatar-img" class="avatar" src="">
+        <div id="story-text"></div>
+        <div id="interaction-area" class="interaction-area"></div>
+    </div>
+
+    <div class="fixed-menu-bar">
+        <button class="menu-button" onclick="openMap()"><i class="fa-solid fa-map-location-dot"></i></button>
+        <button class="menu-button" onclick="openInventory()"><i class="fa-solid fa-briefcase"></i></button>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="gallery-modal" class="modal" onclick="this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 style="margin-top:0; color: #00ffff; letter-spacing: 2px; font-weight: 700;">INVENTORY</h2>
+            <div id="inventory-list" class="inventory-grid"></div>
+            <button class="nav-btn" style="margin-top:20px; width:100%; background:#222;" onclick="document.getElementById('gallery-modal').style.display='none'">BEZÁRÁS</button>
+        </div>
+    </div>
+
+    <!-- Hint Modal -->
+    <div id="hint-modal" class="modal" onclick="this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 style="margin-top:0; color: #00ffff; font-weight: 700;">SEGÍTSÉG</h2>
+            <div id="hint-display" class="hint-text"></div>
+            <div style="display:flex; gap:10px;">
+                <button id="next-hint-btn" class="nav-btn">TOVÁBB</button>
+                <button class="nav-btn" style="background:#444;" onclick="document.getElementById('hint-modal').style.display='none'">BEZÁRÁS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox-modal" onclick="this.style.display='none'">
+        <span id="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="">
+    </div>
+
+    <!-- GPS Modal -->
+    <div id="gps-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin:0; font-size:1.3em; color: white; font-weight: 700;">HELYSZÍN KERESÉSE</h2>
+            <div id="gps-dist-display" class="gps-dist">--- m</div>
+            <button id="modal-map-btn" class="nav-btn" style="background:#00ffff; color:#000; width:100%;">
+                <i class="fa-solid fa-map-location-dot mr-2"></i> TÉRKÉP MEGNYITÁSA
+            </button>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            let config; let watchId; let currentHintIdx = 0; let activeHints = [];
+            
+            async function start() {
+                try {
+                    const res = await fetch('game_config.json');
+                    config = await res.json();
+                    document.getElementById('app-title').textContent = config.appTitle || "Játék";
+                    document.documentElement.style.setProperty('--bg-color', config.bgColor);
+                    document.documentElement.style.setProperty('--text-color', config.textColor);
+                    document.body.style.visibility = 'visible'; document.body.style.opacity = 1;
+                    render(0);
+                } catch (e) {
+                    document.body.innerHTML = `<div style='color:red; text-align:center; padding-top:20vh; font-weight:bold;'>HIBA: game_config.json betöltése sikertelen!</div>`;
+                    document.body.style.visibility = 'visible'; document.body.style.opacity = 1;
+                }
+            }
+
+            window.openInventory = () => {
+                const list = document.getElementById('inventory-list'); 
+                list.innerHTML = '';
+                if(config.gallery && config.gallery.length > 0) {
+                    config.gallery.forEach(imgUrl => {
+                        if (!imgUrl.trim()) return;
+                        const el = document.createElement('img');
+                        el.src = imgUrl;
+                        el.onclick = (e) => { e.stopPropagation(); showLightbox(imgUrl); };
+                        list.appendChild(el);
+                    });
+                }
+                document.getElementById('gallery-modal').style.display = 'flex';
+            };
+
+            function showLightbox(url) {
+                const lb = document.getElementById('lightbox-modal');
+                const img = document.getElementById('lightbox-img');
+                img.src = url; lb.style.display = 'flex';
+            }
+
+            window.openMap = () => { if(config.mapUrl) window.open(config.mapUrl, '_blank'); };
+
+            function format(t) {
+                return t.replace(/§A/g, '<span class="anna-msg">Anna:</span>')
+                        .replace(/§M/g, '<span class="mark-msg">Márk:</span>')
+                        .replace(/§R/g, '<span class="system-msg">[Rendszer]:</span>');
+            }
+
+            function render(idx) {
+                if (!config.storyPages[idx]) {
+                    document.getElementById('story-text').textContent = "Vége a játéknak.";
+                    document.getElementById('interaction-area').innerHTML = '<button class="nav-btn" onclick="location.reload()">ÚJRAKEZDÉS</button>';
+                    return;
+                }
+
+                const p = config.storyPages[idx];
+                currentHintIdx = 0; activeHints = p.hints || [];
+                document.getElementById('gps-modal').style.display = 'none';
+                if(watchId) navigator.geolocation.clearWatch(watchId);
+                
+                document.getElementById('story-text').innerHTML = format(p.content);
+                document.getElementById('bg-img').src = p.pageBgUrl || config.globalBgUrl || "";
+                
+                const av = document.getElementById('avatar-img'); av.style.display = 'none';
+                if(p.content.includes("§A")) { av.src = config.annaAvatarUrl; av.style.display = 'block'; }
+                else if(p.content.includes("§M")) { av.src = config.markAvatarUrl; av.style.display = 'block'; }
+
+                const cont = document.getElementById('interaction-area'); 
+                cont.innerHTML = '';
+
+                if(p.pageType === 'story' || !p.pageType) {
+                    const b = document.createElement('button'); b.className = 'nav-btn'; b.textContent = 'Vissza';
+                    b.onclick = () => render(p.prevIndex !== undefined ? p.prevIndex : Math.max(0, idx - 1));
+                    cont.appendChild(b);
+                    const n = document.createElement('button'); n.className = 'nav-btn'; n.textContent = 'Tovább';
+                    n.onclick = () => { if(p.redirectUrl) window.location.href = p.redirectUrl; else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); };
+                    cont.appendChild(n);
+                } else if(p.pageType === 'choice') {
+                    p.choices.forEach(c => {
+                        const btn = document.createElement('button'); btn.className = 'nav-btn'; btn.textContent = c.text;
+                        btn.onclick = () => { if(c.url) window.location.href = c.url; else render(parseInt(c.target)); };
+                        cont.appendChild(btn);
+                    });
+                } else if(p.pageType === 'password') {
+                    const inputField = document.createElement('input');
+                    inputField.type = 'text'; inputField.className = 'code-input'; inputField.placeholder = "KÓD...";
+                    cont.appendChild(inputField);
+
+                    const btnContainer = document.createElement('div');
+                    btnContainer.style.display = 'flex'; btnContainer.style.gap = '10px'; btnContainer.style.width = '100%';
+                    
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'nav-btn'; backBtn.style.background = '#333'; backBtn.textContent = 'Vissza';
+                    backBtn.onclick = () => render(p.prevIndex !== undefined ? p.prevIndex : Math.max(0, idx - 1));
+
+                    const okBtn = document.createElement('button');
+                    okBtn.className = 'nav-btn'; okBtn.textContent = p.passwordBtnText || 'OK';
+                    okBtn.onclick = () => {
+                        if (inputField.value.trim().toLowerCase() === p.pagePassword.trim().toLowerCase()) {
+                            if (p.redirectUrl) window.location.href = p.redirectUrl;
+                            else render(p.nextIndex !== undefined ? p.nextIndex : idx + 1);
+                        } else alert("Hibás kód!");
+                    };
+                    
+                    btnContainer.appendChild(backBtn); btnContainer.appendChild(okBtn);
+                    cont.appendChild(btnContainer);
+
+                    if (activeHints.length > 0) {
+                        const hTrigger = document.createElement('div');
+                        hTrigger.className = 'help-trigger'; hTrigger.innerHTML = '?';
+                        hTrigger.onclick = () => {
+                            currentHintIdx = 0; updateHintDisplay();
+                            document.getElementById('hint-modal').style.display = 'flex';
+                        };
+                        cont.appendChild(hTrigger);
+                    }
+                } else if(p.pageType === 'gps') {
+                    const modal = document.getElementById('gps-modal'); const distEl = document.getElementById('gps-dist-display');
+                    modal.style.display = 'flex';
+                    document.getElementById('modal-map-btn').onclick = () => window.open(p.pageMapUrl || config.mapUrl, '_blank');
+                    if(navigator.geolocation) {
+                        watchId = navigator.geolocation.watchPosition(pos => {
+                            const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                            distEl.textContent = `${Math.round(d)} m`;
+                            if(d < 30) { 
+                                navigator.geolocation.clearWatch(watchId); 
+                                modal.style.display = 'none'; 
+                                render(p.nextIndex !== undefined ? p.nextIndex : idx + 1); 
+                            }
+                        }, null, {enableHighAccuracy:true});
+                    }
+                }
+            }
+
+            function updateHintDisplay() {
+                const display = document.getElementById('hint-display');
+                const nextBtn = document.getElementById('next-hint-btn');
+                display.textContent = activeHints[currentHintIdx];
+                nextBtn.style.display = activeHints.length > 1 ? 'block' : 'none';
+            }
+
+            document.getElementById('next-hint-btn').onclick = () => {
+                currentHintIdx = (currentHintIdx + 1) % activeHints.length;
+                updateHintDisplay();
+            };
+
+            function calcDist(la1, lo1, la2, lo2) {
+                const R = 6371e3; const f1 = la1 * Math.PI/180; const f2 = la2 * Math.PI/180;
+                const df = (la2-la1) * Math.PI/180; const dl = (lo2-lo1) * Math.PI/180;
+                const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+
+            start();
+        })();
+    </script>
+</body>
+</html>
+
