@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaland Játék Stúdió V9.3 ✨ (Real QR Scanner)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Play', sans-serif; 
+            background-color: #0f172a; 
+            color: #f8fafc; 
+            overflow-x: hidden; 
+        }
+        
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(139, 92, 246, 0.3); 
+            border-radius: 1rem; 
+        }
+        
+        .input-style { 
+            background: #0f172a; 
+            color: #22d3ee; 
+            border: 1px solid #334155; 
+            border-radius: 0.5rem; 
+            padding: 0.6rem; 
+            outline: none; 
+            transition: 0.2s; 
+            width: 100%; 
+        }
+        .input-style:focus { 
+            border-color: #8b5cf6; 
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); 
+        }
+        
+        .page-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0.75rem; 
+            margin-bottom: 0.5rem; 
+            border-radius: 0.5rem; 
+            background: #1e293b; 
+            border: 1px solid transparent; 
+            cursor: pointer; 
+            transition: 0.2s; 
+        }
+        .page-item:hover { background: #334155; }
+        .page-item.selected { border-color: #22d3ee; background: #4c1d95; }
+
+        /* Mobil Szimulátor */
+        .sim-container {
+            position: sticky;
+            top: 1rem;
+            width: 320px;
+            height: 600px;
+            background: #000;
+            border: 12px solid #1e293b;
+            border-radius: 3rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; transition: opacity 0.5s; }
+        
+        #sim-content { 
+            position: relative; 
+            z-index: 10; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+            padding: 0;
+        }
+        
+        .sim-box { 
+            position: relative;
+            background: rgba(0,0,0,0.94); 
+            border-top: 3px solid #8b5cf6; 
+            border-radius: 1.5rem 1.5rem 0 0; 
+            padding: 20px; 
+            padding-top: 35px;
+            min-height: 250px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+        }
+        
+        .sim-btn { 
+            flex: 1; 
+            background: #8b5cf6; 
+            color: white; 
+            padding: 10px; 
+            border-radius: 0.75rem; 
+            font-weight: 700; 
+            text-align: center; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            transition: 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .sim-btn:hover { background: #a855f7; transform: translateY(-1px); }
+        .sim-btn-back { background: #334155; }
+        
+        .sim-bottom-bar { 
+            height: 65px; 
+            background: #0f172a; 
+            border-top: 1px solid rgba(139, 92, 246, 0.3); 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            z-index: 100; 
+        }
+        
+        .sim-menu-btn { color: #64748b; font-size: 1.3rem; cursor: pointer; border: none; background: transparent; position: relative; }
+        .sim-menu-btn.active { color: #8b5cf6; }
+        .badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 8px; padding: 2px 5px; border-radius: 50%; font-weight: bold; }
+
+        /* QR Scanner UI */
+        .qr-scanner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 60;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .qr-reader-container {
+            width: 240px;
+            height: 240px;
+            background: #000;
+            border: 2px solid #22d3ee;
+            border-radius: 20px;
+            position: relative;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+            overflow: hidden;
+        }
+        #reader { width: 100%; height: 100%; }
+        
+        .qr-scan-line {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: #22d3ee;
+            z-index: 5;
+            animation: scan-line 2s linear infinite;
+        }
+        @keyframes scan-line { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+
+        #inventory-view {
+            position: absolute; inset: 0; background: #0f172a; z-index: 70; display: none; padding: 20px; padding-top: 40px;
+        }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inv-item-card { 
+            background: #1e293b; 
+            border: 1px solid #334155; 
+            border-radius: 12px; 
+            padding: 15px; 
+            text-align: center; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 8px;
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop-in { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .ai-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; background: #22d3ee; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .gps-display {
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid #22d3ee;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div id="save-indicator" class="fixed bottom-8 right-8 bg-green-500 text-white px-4 py-2 rounded-full hidden z-50 text-xs font-bold">
+        <i class="fa fa-sync fa-spin mr-2"></i> MENTÉS...
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V9.3</span> ✨</h1>
+                <p class="text-cyan-400 text-sm mt-1">Városi Szabadulószoba Szerkesztő</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs">EXPORT</button>
+                <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs">IMPORT</button>
+                <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-10">
+            <div class="flex-1 space-y-8">
+                <!-- OLDALAK -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-card p-6 md:col-span-2">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Kaland Oldalak</h3>
+                            <button onclick="addPage()" class="bg-purple-600 px-4 py-2 rounded-lg text-[10px] font-bold">+ ÚJ OLDAL</button>
+                        </div>
+                        <div id="pageList" class="max-h-60 overflow-y-auto pr-2 space-y-1"></div>
+                    </div>
+                    <div class="glass-card p-6">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest mb-4">Világ Beállítások</h3>
+                        <div class="space-y-4">
+                            <input type="text" id="appTitle" class="input-style text-xs" placeholder="Kaland címe" oninput="autoSave()">
+                            <input type="url" id="globalBg" class="input-style text-xs" placeholder="Globális Háttérkép" oninput="autoSave()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SZERKESZTŐ -->
+                <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-grow space-y-4">
+                            <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Szöveg és AI</h3>
+                            <textarea id="pageText" rows="4" class="input-style text-sm" placeholder="Írd le a jelenetet..." oninput="autoSave()"></textarea>
+                            <div class="flex gap-2">
+                                <button onclick="aiAction('continue')" class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-[10px] font-bold text-white hover:bg-slate-700 flex-1"><i class="fa fa-magic mr-1"></i> AI FOLYTATÁS</button>
+                                <button onclick="aiAction('choices')" class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-[10px] font-bold text-white hover:bg-slate-700 flex-1"><i class="fa fa-code-branch mr-1"></i> AI VÁLASZTÁSOK</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Típus</label>
+                            <select id="pageType" class="input-style text-xs" onchange="updateUI(); autoSave();">
+                                <option value="story">Leírás</option>
+                                <option value="choice">Választás</option>
+                                <option value="qr">QR Tárgy / Kód</option>
+                                <option value="gps">GPS Pont</option>
+                                <option value="password">Kódzár</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Vissza ID</label>
+                            <input type="number" id="prevIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Tovább ID</label>
+                            <input type="number" id="nextIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Kép URL</label>
+                            <input type="url" id="pageImage" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Avatar Kód</label>
+                            <input type="text" id="avatarSelector" class="input-style text-xs" placeholder="pl: §A" oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <!-- QR BEÁLLÍTÁSOK -->
+                    <div id="qrArea" class="hidden border-t border-slate-700/50 pt-6 space-y-4">
+                        <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Virtuális QR Tárgy</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[9px] uppercase text-slate-500">Várható QR Tartalom</label>
+                                <input type="text" id="qrTargetCode" class="input-style text-xs" placeholder="pl: TITKOSKOD" oninput="autoSave()">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] uppercase text-slate-500">Tárgy Neve</label>
+                                <input type="text" id="qrItemName" class="input-style text-xs" placeholder="pl: Vaskulcs" oninput="autoSave()">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] uppercase text-slate-500">Ikon</label>
+                                <input type="text" id="qrItemIcon" class="input-style text-xs" placeholder="pl: 🔑" oninput="autoSave()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPS BEÁLLÍTÁSOK -->
+                    <div id="gpsArea" class="hidden border-t border-slate-700/50 pt-6 grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Lat</label>
+                            <input type="text" id="targetLat" class="input-style text-xs" placeholder="47.49..." oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Lon</label>
+                            <input type="text" id="targetLon" class="input-style text-xs" placeholder="19.04..." oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <!-- KÓDZÁR BEÁLLÍTÁSOK -->
+                    <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-6">
+                         <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest mb-4">Kódzár</h3>
+                         <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes válasz..." oninput="autoSave()">
+                    </div>
+
+                    <!-- VÁLASZTÁSOK -->
+                    <div id="choiceArea" class="hidden border-t border-slate-700/50 pt-6">
+                        <div class="flex justify-between items-center mb-4">
+                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Gombok</h3>
+                             <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold uppercase">+ ÚJ OPCIÓ</button>
+                        </div>
+                        <div id="choicesContainer" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SZIMULÁTOR -->
+            <div class="w-full lg:w-auto flex justify-center">
+                <div class="sim-container">
+                    <div id="sim-viewport">
+                        <img id="sim-bg" src="">
+                        
+                        <!-- Real QR Scanner UI -->
+                        <div id="qr-scanner-ui" class="qr-scanner-overlay">
+                            <div class="qr-reader-container">
+                                <div id="reader"></div>
+                                <div class="qr-scan-line"></div>
+                            </div>
+                            <p class="text-white text-[10px] mb-4 text-center px-4">Mutasd a kamerának a QR kódot!</p>
+                            
+                            <div id="qr-manual-ui" class="w-full px-6 hidden">
+                                <input type="text" id="sim-qr-input" class="input-style text-center mb-2 text-xs" placeholder="Kód beírása...">
+                                <button onclick="checkQRManual()" class="sim-btn w-full mb-2">OK</button>
+                            </div>
+                            
+                            <div class="flex gap-2 w-full px-6">
+                                <button id="btn-toggle-manual" onclick="toggleQRManual()" class="sim-btn sim-btn-back text-[9px]">MANUÁLIS</button>
+                                <button onclick="closeQR()" class="sim-btn sim-btn-back">MÉGSE</button>
+                            </div>
+                        </div>
+
+                        <!-- Eszköztár -->
+                        <div id="inventory-view">
+                            <h2 class="text-center text-cyan-400 font-bold mb-6 uppercase text-sm">🎒 Hátizsák</h2>
+                            <div id="inv-list" class="inv-grid"></div>
+                            <button onclick="toggleInventory()" class="sim-btn mt-8 bg-slate-700">BEZÁRÁS</button>
+                        </div>
+
+                        <div id="sim-content">
+                            <div class="sim-box">
+                                <div id="sim-text" class="text-white text-[13px] leading-relaxed overflow-y-auto pr-1 flex-grow">
+                                    <div id="ai-working" class="hidden mb-2"><span class="ai-status-dot"></span><span class="text-[9px] text-cyan-400 font-bold">AI GONDOLKOZIK...</span></div>
+                                    <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden border border-slate-700" src="">
+                                    <div id="sim-gps-display" class="hidden gps-display">
+                                        <div class="text-[9px] uppercase opacity-50">Cél távolsága</div>
+                                        <div id="gps-dist-val" class="text-lg font-bold text-cyan-400">--- m</div>
+                                    </div>
+                                    <div id="sim-actual-text"></div>
+                                </div>
+                                <div id="sim-actions" class="mt-4 flex flex-col gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sim-bottom-bar">
+                        <button class="sim-menu-btn active"><i class="fa fa-map-marked-alt"></i></button>
+                        <button class="sim-menu-btn" onclick="toggleInventory()">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <div id="inv-badge" class="badge hidden">0</div>
+                        </button>
+                        <button class="sim-menu-btn" onclick="restartGame()"><i class="fa-solid fa-rotate-left"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        const STORAGE_KEY = 'KALAND_STUDIO_V93_CITY_SECRET';
+        
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+            appTitle: "A Város Elfeledett Titka",
+            globalBg: "https://images.unsplash.com/photo-1514924013411-cbf25faa35bb?auto=format&fit=crop&q=80",
+            avatars: [{ id: 'A', name: 'Nyomozó', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833605.png', color: '#60a5fa' }],
+            storyPages: [
+                { content: "Kaptál egy névtelen levelet. 'A város sötét titkot őriz. Menj a Szabadság térre, és keresd az öreg gyógyszertárat!' §A Ez érdekesnek tűnik...", pageType: "story", nextIdx: 1 },
+                { content: "Elérted a megadott helyszínt. Most figyeld a GPS-t, hogy pontosan a fal elé állj!", pageType: "gps", targetLat: "47.4979", targetLon: "19.0402", nextIdx: 2 },
+                { content: "A gyógyszertár falán egy évszám van bevésve a téglafalba. Mi ez a szám? §A Figyelnem kell a részletekre.", pageType: "password", password: "1892", nextIdx: 3 },
+                { content: "Remek! A szám egy koordinátát rejtett. Menj tovább a Városliget szélére, a nagy platánfához!", pageType: "story", nextIdx: 4 },
+                { content: "A platánfa tövében egy üreg van. Benne egy QR kódot találsz egy üvegkapszulán. Olvasd be!", pageType: "qr", qrTargetCode: "KAPSZULA_01", qrItemName: "Üvegkapszula", qrItemIcon: "🧪", nextIdx: 5 },
+                { content: "A kapszulában egy térképvázlat van: 'A kincset a régi szobor mögött ásták el. De puszta kézzel nem fog menni.' Keresd meg a közelben elrejtett ásót!", pageType: "qr", qrTargetCode: "ASO_REJTVE", qrItemName: "Ásó", qrItemIcon: "⛏️", nextIdx: 6 },
+                { content: "Megvan az ásó és a kapszula is. Menj a szobor mögötti kijelölt GPS ponthoz!", pageType: "gps", targetLat: "47.5141", targetLon: "19.0822", nextIdx: 7 },
+                { content: "Itt a hely! Mit teszel? §A Most vagy soha.", pageType: "choice", choices: [{text: "Ásni kezdek", target: 8}, {text: "Tovább keresgélek", target: 7}] },
+                { content: "Sikerült! Az ásó egy kis fémdobozt talált. A doboz zárva van egy 4 jegyű kóddal. (Tipp: A falon talált szám utolsó két számjegye kétszer egymás után).", pageType: "password", password: "9292", nextIdx: 9 },
+                { content: "Kinyílt! A dobozban a város elveszett Alapító Okirata pihen. Gratulálok, megoldottad a rejtélyt!", pageType: "story", nextIdx: 0 }
+            ]
+        };
+
+        let gameState = { simIdx: 0, inventory: [], html5QrCode: null, gpsWatch: null };
+        let currentIdx = -1;
+        let saveTimeout;
+
+        // --- AI LOGIKA ---
+        async function aiAction(type) {
+            const prompt = type === 'continue' 
+                ? `Folytasd ezt a kalandot egy mondattal: "${document.getElementById('pageText').value}"`
+                : `Adj 3 rövid választási lehetőséget ehhez: "${document.getElementById('pageText').value}". Csak vesszővel válaszd el őket!`;
+            
+            document.getElementById('ai-working').classList.remove('hidden');
+            const res = await geminiCall(prompt);
+            document.getElementById('ai-working').classList.add('hidden');
+
+            if(type === 'continue') {
+                document.getElementById('pageText').value += " " + res.trim();
+            } else {
+                const opts = res.split(',').map(o => o.trim());
+                config.storyPages[currentIdx].pageType = 'choice';
+                config.storyPages[currentIdx].choices = opts.map(o => ({ text: o, target: config.storyPages.length }));
+                loadPage(currentIdx);
+            }
+            autoSave();
+        }
+
+        async function geminiCall(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            try {
+                const r = await fetch(url, { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const d = await r.json();
+                return d.candidates?.[0]?.content?.parts?.[0]?.text || "...";
+            } catch(e) { return "Hiba történt."; }
+        }
+
+        // --- GPS LOGIKA ---
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const f1 = la1 * Math.PI/180; const f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180; const dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // --- REAL QR LOGIKA ---
+        function startQRScanner() {
+            document.getElementById('qr-scanner-ui').style.display = 'flex';
+            if (!gameState.html5QrCode) gameState.html5QrCode = new Html5Qrcode("reader");
+            gameState.html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => handleQRSuccess(decodedText), () => {}).catch(() => toggleQRManual(true));
+        }
+
+        function handleQRSuccess(decodedText) {
+            const p = config.storyPages[gameState.simIdx];
+            if (decodedText.trim().toUpperCase() === (p.qrTargetCode || "").toUpperCase()) {
+                if(p.qrItemName) gameState.inventory.push({ name: p.qrItemName, icon: p.qrItemIcon || '📦' });
+                closeQR(); gameState.simIdx = parseInt(p.nextIdx) || gameState.simIdx + 1; updateSimulator();
+            } else {
+                document.querySelector('.qr-reader-container').style.borderColor = 'red';
+                setTimeout(() => document.querySelector('.qr-reader-container').style.borderColor = '#22d3ee', 1000);
+            }
+        }
+
+        function checkQRManual() { handleQRSuccess(document.getElementById('sim-qr-input').value); }
+        function toggleQRManual(f = false) { 
+            const m = document.getElementById('qr-manual-ui'); const r = document.querySelector('.qr-reader-container');
+            if(f || m.classList.contains('hidden')) { m.classList.remove('hidden'); r.classList.add('hidden'); }
+            else { m.classList.add('hidden'); r.classList.remove('hidden'); }
+        }
+        function closeQR() {
+            if (gameState.html5QrCode && gameState.html5QrCode.isScanning) {
+                gameState.html5QrCode.stop().then(() => { document.getElementById('qr-scanner-ui').style.display = 'none'; });
+            } else { document.getElementById('qr-scanner-ui').style.display = 'none'; }
+        }
+
+        // --- SZIMULÁTOR ---
+        function updateSimulator() {
+            if(gameState.gpsWatch) navigator.geolocation.clearWatch(gameState.gpsWatch);
+            const p = config.storyPages[gameState.simIdx];
+            if(!p) return;
+
+            document.getElementById('sim-bg').src = config.globalBg || "";
+            let text = p.content || "";
+            config.avatars.forEach(av => {
+                if(text.includes(`§${av.id}`)) text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`);
+            });
+            document.getElementById('sim-actual-text').innerHTML = text;
+            
+            const img = document.getElementById('sim-page-img');
+            if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
+
+            const gpsDisp = document.getElementById('sim-gps-display');
+            gpsDisp.classList.toggle('hidden', p.pageType !== 'gps');
+
+            const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
+            const wrapper = document.createElement('div'); wrapper.className = "flex gap-2 w-full"; acts.appendChild(wrapper);
+
+            if (gameState.simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
+                const b = document.createElement('div'); b.className = "sim-btn sim-btn-back w-16"; b.innerHTML = '<i class="fa fa-arrow-left"></i>';
+                b.onclick = () => { gameState.simIdx = p.prevIdx !== undefined ? parseInt(p.prevIdx) : gameState.simIdx - 1; updateSimulator(); };
+                wrapper.appendChild(b);
+            }
+
+            const mainActs = document.createElement('div'); mainActs.className = "flex flex-col gap-2 flex-grow"; wrapper.appendChild(mainActs);
+
+            if(p.pageType === 'qr') {
+                const b = document.createElement('div'); b.className = "sim-btn bg-cyan-600"; b.innerHTML = '<i class="fa fa-camera mr-2"></i> QR SZKENNELÉS';
+                b.onclick = startQRScanner; mainActs.appendChild(b);
+            } else if(p.pageType === 'gps') {
+                if(navigator.geolocation) {
+                    gameState.gpsWatch = navigator.geolocation.watchPosition(pos => {
+                        const d = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        document.getElementById('gps-dist-val').textContent = `${Math.round(d)} m`;
+                        if(d < 20) { 
+                            navigator.geolocation.clearWatch(gameState.gpsWatch);
+                            gameState.simIdx = parseInt(p.nextIdx) || gameState.simIdx + 1; updateSimulator(); 
+                        }
+                    }, null, {enableHighAccuracy: true});
+                }
+                const b = document.createElement('div'); b.className = "sim-btn opacity-30 text-[9px]"; b.textContent = "Átugrás (Admin)";
+                b.onclick = () => { gameState.simIdx = parseInt(p.nextIdx) || gameState.simIdx + 1; updateSimulator(); };
+                mainActs.appendChild(b);
+            } else if(p.pageType === 'password') {
+                const inp = document.createElement('input'); inp.className = "sim-input"; inp.placeholder = "KÓD...";
+                const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = "OK";
+                b.onclick = () => { if(inp.value == p.password) { gameState.simIdx = parseInt(p.nextIdx); updateSimulator(); } else { inp.style.borderColor = 'red'; } };
+                mainActs.append(inp, b);
+            } else if(p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => {
+                    const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = c.text;
+                    b.onclick = () => { gameState.simIdx = parseInt(c.target); updateSimulator(); };
+                    mainActs.appendChild(b);
+                });
+            } else {
+                const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = "Tovább";
+                b.onclick = () => { gameState.simIdx = parseInt(p.nextIdx) || gameState.simIdx + 1; updateSimulator(); };
+                mainActs.appendChild(b);
+            }
+            updateInventoryBadge();
+        }
+
+        function toggleInventory() {
+            const view = document.getElementById('inventory-view');
+            const list = document.getElementById('inv-list');
+            list.innerHTML = '';
+            if(gameState.inventory.length === 0) list.innerHTML = '<p class="col-span-2 text-center text-slate-500 py-10">Üres...</p>';
+            else gameState.inventory.forEach(item => {
+                const d = document.createElement('div'); d.className = "inv-item-card";
+                d.innerHTML = `<span class="text-2xl">${item.icon}</span><span class="text-[10px] font-bold">${item.name}</span>`;
+                list.appendChild(d);
+            });
+            view.style.display = view.style.display === 'block' ? 'none' : 'block';
+        }
+        function updateInventoryBadge() {
+            const b = document.getElementById('inv-badge');
+            b.textContent = gameState.inventory.length; b.classList.toggle('hidden', gameState.inventory.length === 0);
+        }
+        function restartGame() { gameState.simIdx = 0; gameState.inventory = []; updateSimulator(); }
+
+        // --- SZERKESZTŐ ---
+        function loadPage(i) {
+            currentIdx = i; const p = config.storyPages[i];
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('pageText').value = p.content || "";
+            document.getElementById('pageImage').value = p.pageImage || "";
+            document.getElementById('prevIdx').value = p.prevIdx ?? "";
+            document.getElementById('nextIdx').value = p.nextIdx ?? "";
+            document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('qrTargetCode').value = p.qrTargetCode || "";
+            document.getElementById('qrItemName').value = p.qrItemName || "";
+            document.getElementById('qrItemIcon').value = p.qrItemIcon || "";
+            document.getElementById('targetLat').value = p.targetLat || "";
+            document.getElementById('targetLon').value = p.targetLon || "";
+            document.getElementById('correctPass').value = p.password || "";
+            updateUI(); renderChoices(); renderPageList(); gameState.simIdx = i; updateSimulator();
+        }
+
+        function autoSave() {
+            clearTimeout(saveTimeout);
+            document.getElementById('save-indicator').classList.remove('hidden');
+            saveTimeout = setTimeout(() => {
+                const p = config.storyPages[currentIdx];
+                if(p) {
+                    p.content = document.getElementById('pageText').value;
+                    p.pageImage = document.getElementById('pageImage').value;
+                    p.prevIdx = document.getElementById('prevIdx').value || undefined;
+                    p.nextIdx = document.getElementById('nextIdx').value;
+                    p.pageType = document.getElementById('pageType').value;
+                    p.qrTargetCode = document.getElementById('qrTargetCode').value;
+                    p.qrItemName = document.getElementById('qrItemName').value;
+                    p.qrItemIcon = document.getElementById('qrItemIcon').value;
+                    p.targetLat = document.getElementById('targetLat').value;
+                    p.targetLon = document.getElementById('targetLon').value;
+                    p.password = document.getElementById('correctPass').value;
+                }
+                config.appTitle = document.getElementById('appTitle').value;
+                config.globalBg = document.getElementById('globalBg').value;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                renderPageList(); updateSimulator();
+                setTimeout(() => document.getElementById('save-indicator').classList.add('hidden'), 500);
+            }, 1000);
+        }
+
+        function updateUI() {
+            const t = document.getElementById('pageType').value;
+            document.getElementById('choiceArea').classList.toggle('hidden', t !== 'choice');
+            document.getElementById('qrArea').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps');
+            document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password');
+        }
+
+        function renderChoices() {
+            const c = document.getElementById('choicesContainer'); c.innerHTML = '';
+            const p = config.storyPages[currentIdx]; if(!p.choices) return;
+            p.choices.forEach((ch, i) => {
+                const row = document.createElement('div'); row.className = "flex gap-2";
+                row.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-16 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()">`;
+                c.appendChild(row);
+            });
+        }
+
+        function renderPageList() {
+            const l = document.getElementById('pageList'); l.innerHTML = '';
+            config.storyPages.forEach((p, i) => {
+                const d = document.createElement('div'); d.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                d.innerHTML = `<span onclick="loadPage(${i})" class="truncate text-xs font-bold">#${i}: ${p.content.substring(0, 20)}...</span>`;
+                l.appendChild(d);
+            });
+        }
+
+        function addChoiceItem() { config.storyPages[currentIdx].choices.push({text: "Új opció", target: 0}); renderChoices(); autoSave(); }
+        function addPage() { config.storyPages.push({content: "Új oldal...", pageType: "story", choices: [], prevIdx: currentIdx}); loadPage(config.storyPages.length-1); }
+        function downloadConfig() { const b = new Blob([JSON.stringify(config)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download='kaland_export.json'; a.click(); }
+        function handleFileUpload(e) { const f = e.target.files[0]; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); loadPage(0); }; r.readAsText(f); }
+
+        window.onload = () => {
+            document.getElementById('appTitle').value = config.appTitle;
+            document.getElementById('globalBg').value = config.globalBg;
+            renderPageList(); loadPage(0);
+        };
+    </script>
+</body>
+</html>
