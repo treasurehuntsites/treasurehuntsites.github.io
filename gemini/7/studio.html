@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaland Játék Stúdió V9.7 ✨</title>
+    <title>Kaland Játék Stúdió V9.9 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -54,7 +54,7 @@
         .page-item.selected { border-color: #22d3ee; background: #4c1d95; }
         .handle { cursor: grab; padding-right: 15px; color: #64748b; }
 
-        /* Mobil Szimulátor - Player V9.6 szinkron */
+        /* Mobil Szimulátor */
         .sim-container {
             position: sticky;
             top: 1rem;
@@ -109,6 +109,7 @@
             display: none; 
         }
 
+        /* Gomb stílusok - Minta fájl alapján */
         .sim-btn { 
             flex: 1; 
             background: #8b5cf6; 
@@ -124,8 +125,11 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
+            width: 100%;
         }
-        .sim-btn-back { background: #334155; }
+        .sim-btn:hover { background: #a855f7; transform: translateY(-1px); }
+        .sim-btn-back { background: #334155; margin-top: 4px; }
+        .sim-btn-back:hover { background: #475569; }
         
         .sim-bottom-bar { 
             height: 65px; 
@@ -150,6 +154,16 @@
             line-height: 1.5;
         }
 
+        .gps-display-sim {
+            background: rgba(34, 211, 238, 0.15);
+            border: 1px solid #22d3ee;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+        }
+
         #save-indicator { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 0.6rem 1.2rem; border-radius: 2rem; font-size: 0.75rem; font-weight: bold; display: none; z-index: 1000; }
         
         .avatar-card {
@@ -171,7 +185,6 @@
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; padding: 10px; text-align: center; }
 
-        /* QR Scanner Sim Overlay */
         .qr-overlay-sim { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 60; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         .qr-frame-sim { width: 180px; height: 180px; border: 2px solid #22d3ee; border-radius: 15px; position: relative; overflow: hidden; }
         .scan-line-sim { position: absolute; top: 0; width: 100%; height: 2px; background: #22d3ee; animation: scan-move 2s linear infinite; }
@@ -184,8 +197,8 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V9.7</span> ✨</h1>
-                <p class="text-cyan-400 text-sm mt-1">Komplex Szerkesztő & Szimulátor</p>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V9.9</span> ✨</h1>
+                <p class="text-cyan-400 text-sm mt-1">Navigáció & Szimuláció Optimalizálás</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs">EXPORT</button>
@@ -216,7 +229,7 @@
                 <!-- OLDALAK LISTÁJA -->
                 <div class="glass-card p-6">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Történetfolyam (↕️ átrendezhető)</h3>
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Történetfolyam</h3>
                         <button onclick="addPage()" class="bg-purple-600 px-4 py-2 rounded-lg text-[10px] font-bold">+ ÚJ OLDAL</button>
                     </div>
                     <div id="pageList" class="max-h-60 overflow-y-auto pr-2 space-y-1"></div>
@@ -226,10 +239,10 @@
                 <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Szöveges Tartalom</h3>
+                            <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Oldal Szerkesztése</h3>
                             <input type="url" id="pageImage" class="input-style w-1/2 text-xs py-1" placeholder="Oldal illusztráció URL" oninput="autoSave()">
                         </div>
-                        <textarea id="pageText" rows="5" class="input-style text-sm" placeholder="Írd le a jelenetet... (Használd a §ID kódot az avatarhoz)" oninput="autoSave()"></textarea>
+                        <textarea id="pageText" rows="5" class="input-style text-sm" placeholder="Szöveg... (Használd a §ID kódot)" oninput="autoSave()"></textarea>
                     </div>
 
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -257,34 +270,30 @@
                         </div>
                         <div class="space-y-1">
                             <label class="text-[9px] uppercase text-slate-500">Avatar</label>
-                            <input type="text" id="avatarSelector" class="input-style text-xs" placeholder="pl: §A" oninput="autoSave()">
-                        </div>
-                    </div>
-
-                    <!-- REJTVÉNY SPECIFIKUSOK -->
-                    <div id="qrArea" class="hidden border-t border-slate-700/50 pt-6 space-y-4">
-                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">QR Kód & Tárgy</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input type="text" id="qrCode" class="input-style text-xs" placeholder="QR Tartalom" oninput="autoSave()">
-                            <input type="text" id="qrItemName" class="input-style text-xs" placeholder="Tárgy Neve" oninput="autoSave()">
-                            <input type="text" id="qrItemIcon" class="input-style text-xs" placeholder="Ikon (Emoji)" oninput="autoSave()">
+                            <input type="text" id="avatarSelector" class="input-style text-xs" oninput="autoSave()">
                         </div>
                     </div>
 
                     <div id="gpsArea" class="hidden border-t border-slate-700/50 pt-6 grid grid-cols-2 gap-4">
-                        <input type="text" id="targetLat" class="input-style text-xs" placeholder="Lat (47.49...)" oninput="autoSave()">
-                        <input type="text" id="targetLon" class="input-style text-xs" placeholder="Lon (19.04...)" oninput="autoSave()">
+                        <input type="text" id="targetLat" class="input-style text-xs" placeholder="Szélesség (Lat)" oninput="autoSave()">
+                        <input type="text" id="targetLon" class="input-style text-xs" placeholder="Hosszúság (Lon)" oninput="autoSave()">
+                    </div>
+
+                    <div id="qrArea" class="hidden border-t border-slate-700/50 pt-6 grid grid-cols-3 gap-4">
+                        <input type="text" id="qrCode" class="input-style text-xs" placeholder="Várt QR kód" oninput="autoSave()">
+                        <input type="text" id="qrItemName" class="input-style text-xs" placeholder="Tárgy neve" oninput="autoSave()">
+                        <input type="text" id="qrItemIcon" class="input-style text-xs" placeholder="Ikon" oninput="autoSave()">
                     </div>
 
                     <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-6 space-y-4">
-                        <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes megoldás" oninput="autoSave()">
-                        <textarea id="passHints" rows="2" class="input-style text-xs" placeholder="Tippek (soronként)" oninput="autoSave()"></textarea>
+                        <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes válasz" oninput="autoSave()">
+                        <textarea id="passHints" rows="2" class="input-style text-xs" placeholder="Tippek..." oninput="autoSave()"></textarea>
                     </div>
 
                     <div id="choiceArea" class="hidden border-t border-slate-700/50 pt-6">
                         <div class="flex justify-between items-center mb-4">
-                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Gombok</h3>
-                             <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ OPCIÓ</button>
+                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Opciók</h3>
+                             <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ</button>
                         </div>
                         <div id="choicesContainer" class="space-y-2"></div>
                     </div>
@@ -315,8 +324,12 @@
                         <div id="sim-content">
                             <div class="sim-box">
                                 <img id="sim-avatar" class="sim-avatar" src="">
-                                <div id="sim-text-area" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
+                                <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
                                     <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden border border-slate-700" src="">
+                                    <div id="sim-gps-display" class="gps-display-sim">
+                                        <div class="text-[9px] uppercase opacity-60 font-bold text-cyan-400 mb-1 tracking-widest">Célpont távolsága</div>
+                                        <div id="gps-val-sim" class="text-2xl font-bold text-white">--- m</div>
+                                    </div>
                                     <div id="sim-actual-text"></div>
                                 </div>
                                 <div id="sim-actions" class="mt-4 flex flex-col gap-2"></div>
@@ -329,7 +342,7 @@
                             <i class="fa-solid fa-briefcase"></i>
                             <div id="sim-inv-badge" class="badge hidden">0</div>
                         </button>
-                        <button class="sim-menu-btn" onclick="simIdx=0; updateSimulator()"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button class="sim-menu-btn" onclick="resetSim()"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -337,22 +350,33 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'KALAND_STUDIO_V97';
+        const STORAGE_KEY = 'KALAND_STUDIO_V98';
         let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-            appTitle: "Kaland Játék",
+            appTitle: "A Város Elveszett Legendája",
             globalBg: "https://images.unsplash.com/photo-1514924013411-cbf25faa35bb?auto=format&fit=crop&q=80",
-            mapUrl: "",
-            avatars: [{ id: 'A', name: 'Kalandor', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833605.png', color: '#60a5fa' }],
-            storyPages: [{ content: "Üdvözöllek! §A Kezdjük el a küldetést.", pageType: "story", nextIdx: 1, inventory: [] }]
+            avatars: [{ id: 'A', name: 'Nyomozó', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833605.png', color: '#60a5fa' }],
+            storyPages: [
+                { content: "Üdvözöllek! §A Kezdjük a nyomozást!", pageType: "story", nextIdx: 1 }
+            ]
         };
 
         let currentIdx = -1;
         let simIdx = 0;
         let saveTimeout;
         let simInv = [];
+        let gpsWatcher = null;
 
-        // --- SZIMULÁTOR ---
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const f1 = la1 * Math.PI/180, f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // --- SZIMULÁTOR - FRISSÍTETT NAVIGÁCIÓVAL ---
         function updateSimulator() {
+            if (gpsWatcher) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
             const p = config.storyPages[simIdx];
             if(!p) return;
 
@@ -374,12 +398,37 @@
             const img = document.getElementById('sim-page-img');
             if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
 
+            const gpsDisplay = document.getElementById('sim-gps-display');
+            gpsDisplay.style.display = p.pageType === 'gps' ? 'block' : 'none';
+
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
             
-            if(p.pageType === 'qr') {
-                const b = document.createElement('div'); b.className = "sim-btn"; b.innerHTML = '<i class="fa fa-camera mr-2"></i> SCAN';
+            // FŐ AKCIÓK
+            if (p.pageType === 'gps') {
+                if (navigator.geolocation) {
+                    gpsWatcher = navigator.geolocation.watchPosition(pos => {
+                        const dist = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        document.getElementById('gps-val-sim').textContent = `${Math.round(dist)} m`;
+                        if (dist < 15) {
+                            navigator.geolocation.clearWatch(gpsWatcher);
+                            gpsWatcher = null;
+                            simIdx = parseInt(p.nextIdx) || simIdx + 1;
+                            updateSimulator();
+                        }
+                    }, null, { enableHighAccuracy: true });
+                }
+                const b = document.createElement('div'); b.className = "sim-btn"; b.innerHTML = 'TOVÁBB <i class="fa fa-chevron-right ml-2 text-[10px]"></i>';
+                b.onclick = () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); };
+                acts.appendChild(b);
+            } else if(p.pageType === 'qr') {
+                const b = document.createElement('div'); b.className = "sim-btn"; b.innerHTML = '<i class="fa fa-camera mr-2"></i> QR BEOLVASÁSA';
                 b.onclick = () => document.getElementById('qr-sim').style.display='flex';
                 acts.appendChild(b);
+            } else if(p.pageType === 'password') {
+                const inp = document.createElement('input'); inp.className = "input-style text-center py-2 text-xs mb-2"; inp.placeholder = "ÍRD IDE A KÓDOT...";
+                const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = "NYITÁS";
+                b.onclick = () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); } else { inp.style.borderColor = 'red'; } };
+                acts.append(inp, b);
             } else if(p.pageType === 'choice' && p.choices) {
                 p.choices.forEach(c => {
                     const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = c.text;
@@ -387,14 +436,20 @@
                     acts.appendChild(b);
                 });
             } else {
-                const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = "Tovább";
+                const b = document.createElement('div'); b.className = "sim-btn"; b.innerHTML = 'TOVÁBB <i class="fa fa-chevron-right ml-2 text-[10px]"></i>';
                 b.onclick = () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); };
                 acts.appendChild(b);
             }
 
-            if(simIdx > 0) {
-                const back = document.createElement('div'); back.className = "sim-btn sim-btn-back text-xs py-1 opacity-70"; back.textContent = "Vissza";
-                back.onclick = () => { simIdx = parseInt(p.prevIdx) || simIdx - 1; updateSimulator(); };
+            // VISSZA GOMB - Minden oldalnál, ha van érvényes előzmény
+            if(simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
+                const back = document.createElement('div'); 
+                back.className = "sim-btn sim-btn-back"; 
+                back.innerHTML = '<i class="fa fa-arrow-left mr-2"></i> VISSZALÉPÉS';
+                back.onclick = () => { 
+                    simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : simIdx - 1; 
+                    updateSimulator(); 
+                };
                 acts.appendChild(back);
             }
         }
@@ -408,6 +463,8 @@
                 simIdx = parseInt(p.nextIdx) || simIdx + 1;
                 updateSimulator();
                 updateInvBadge();
+            } else {
+                document.getElementById('sim-qr-input').style.borderColor = 'red';
             }
         }
 
@@ -417,7 +474,7 @@
             list.innerHTML = '';
             simInv.forEach(item => {
                 const d = document.createElement('div'); d.className = "inv-card";
-                d.innerHTML = `<div class="text-2xl">${item.icon}</div><div class="text-[9px] font-bold text-white uppercase">${item.name}</div>`;
+                d.innerHTML = `<div class="text-3xl mb-2">${item.icon}</div><div class="text-[9px] font-bold text-white uppercase">${item.name}</div>`;
                 list.appendChild(d);
             });
             view.style.display = view.style.display === 'block' ? 'none' : 'block';
@@ -428,6 +485,8 @@
             b.textContent = simInv.length;
             b.classList.toggle('hidden', simInv.length === 0);
         }
+
+        function resetSim() { simIdx = 0; simInv = []; updateInvBadge(); updateSimulator(); }
 
         // --- SZERKESZTŐ ---
         function loadPage(i) {
@@ -467,7 +526,7 @@
                     p.targetLat = document.getElementById('targetLat').value;
                     p.targetLon = document.getElementById('targetLon').value;
                     p.password = document.getElementById('correctPass').value;
-                    p.hints = document.getElementById('passHints').value.split('\n');
+                    p.hints = (document.getElementById('passHints').value || "").split('\n');
                 }
                 config.appTitle = document.getElementById('appTitle').value;
                 config.globalBg = document.getElementById('globalBg').value;
@@ -549,7 +608,12 @@
         function handleFileUpload(e) {
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
-            reader.onload = (ev) => { config = JSON.parse(ev.target.result); renderAvatarAdmin(); renderPageList(); if(config.storyPages.length) loadPage(0); };
+            reader.onload = (ev) => { 
+                const imported = JSON.parse(ev.target.result);
+                imported.storyPages.forEach(p => { if(!p.inventory) p.inventory = []; });
+                config = imported; 
+                renderAvatarAdmin(); renderPageList(); if(config.storyPages.length) loadPage(0); 
+            };
             reader.readAsText(file);
         }
 
@@ -557,7 +621,7 @@
             document.getElementById('appTitle').value = config.appTitle;
             document.getElementById('globalBg').value = config.globalBg;
             document.getElementById('mapUrl').value = config.mapUrl;
-            renderAvatarAdmin(); renderPageList(); if(config.storyPages.length) loadPage(0);
+            renderAvatarAdmin(); renderPageList(); if(config.storyPages && config.storyPages.length > 0) loadPage(0);
         };
     </script>
 </body>
