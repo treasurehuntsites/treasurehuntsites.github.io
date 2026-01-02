@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Dome Escape Studio ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --card: #141418;
+            --accent: #991b1b;
+            --text: #d1d5db;
+        }
+        body { font-family: 'Special+Elite', serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+        h1, h2, .creep { font-family: 'Creepster', cursive; letter-spacing: 2px; }
+        
+        .glass-card { background: rgba(20, 20, 24, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(153, 27, 27, 0.3); border-radius: 0.5rem; }
+        .input-style { background: #050505; color: #ef4444; border: 1px solid #2d2d35; border-radius: 0.25rem; padding: 0.6rem; outline: none; transition: 0.2s; width: 100%; font-family: 'Special+Elite'; }
+        .input-style:focus { border-color: var(--accent); box-shadow: 0 0 15px rgba(153, 27, 27, 0.4); }
+        
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.25rem; background: #1a1a20; border: 1px solid transparent; cursor: pointer; transition: 0.2s; }
+        .page-item:hover { background: #25252d; border-color: #450a0a; }
+        .page-item.selected { border-color: #ef4444; background: #3b0707; }
+        
+        /* Telefon szimulátor stílusa */
+        .sim-container { position: sticky; top: 1rem; width: 340px; height: 650px; background: #000; border: 8px solid #1a1a20; border-radius: 2rem; overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,1); display: flex; flex-direction: column; }
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #050505; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: sepia(0.3) brightness(0.5) contrast(1.2); transition: 0.8s ease-in-out; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sim-box { position: relative; background: linear-gradient(to top, rgba(0,0,0,1) 80%, transparent); padding: 25px; min-height: 250px; display: flex; flex-direction: column; }
+        .sim-btn { background: #1a1a20; color: #ef4444; padding: 10px; border: 1px solid #450a0a; border-radius: 0px; font-weight: bold; text-align: center; font-size: 0.75rem; cursor: pointer; text-transform: uppercase; transition: 0.3s; margin-bottom: 6px; }
+        .sim-btn:hover { background: #991b1b; color: white; transform: scale(1.02); }
+        
+        #save-indicator { position: fixed; bottom: 2rem; left: 2rem; background: #991b1b; color: white; padding: 0.5rem 1rem; border-radius: 0.25rem; font-size: 0.6rem; text-transform: uppercase; display: none; z-index: 1000; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="save-indicator"><i class="fa fa-skull mr-2"></i> Adatok mentése a ködbe...</div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-12 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-red-900/30 pb-6">
+            <div>
+                <h1 class="text-6xl text-red-700 uppercase">Dark Dome <span class="text-zinc-600">Studio</span></h1>
+                <p class="text-zinc-500 italic text-sm mt-2">Escape Room & CYOA Generator V1.0</p>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="downloadConfig()" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-6 py-2 hover:bg-red-900 transition-colors uppercase text-xs font-bold">Exportálás</button>
+                <button onclick="document.getElementById('uploadInput').click()" class="bg-red-900 text-white px-6 py-2 hover:bg-red-700 transition-colors uppercase text-xs font-bold">Importálás</button>
+                <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <!-- Bal oldal: Szerkesztő -->
+            <div class="lg:col-span-8 space-y-8">
+                
+                <!-- Globális Beállítások -->
+                <div class="glass-card p-6 border-l-4 border-l-red-800">
+                    <h3 class="creep text-red-500 mb-4 uppercase">Világ Beállításai</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-zinc-500 uppercase font-bold">A ház neve</label>
+                            <input type="text" id="appTitle" class="input-style" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] text-zinc-500 uppercase font-bold">Atmoszféra URL (Háttér)</label>
+                            <input type="url" id="globalBg" class="input-style" oninput="autoSave()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Oldal Lista -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="creep text-red-500 uppercase">Helyszínek és Jelenetek</h3>
+                        <button onclick="addPage()" class="text-xs font-bold text-red-500 hover:text-white uppercase">+ Új Helyszín</button>
+                    </div>
+                    <div id="pageList" class="max-h-64 overflow-y-auto pr-2 space-y-1 custom-scroll"></div>
+                </div>
+
+                <!-- Aktív Szerkesztő Panel -->
+                <div id="editorPanel" class="glass-card p-8 space-y-6 hidden border-t-4 border-t-red-800">
+                    <div class="flex justify-between items-start">
+                        <h2 id="editingHeader" class="text-xl text-red-500 uppercase">Szerkesztés...</h2>
+                        <div class="flex gap-4">
+                             <div class="text-center">
+                                <label class="block text-[8px] text-zinc-500 uppercase mb-1">Típusa</label>
+                                <select id="pageType" class="input-style py-1 text-[10px] w-28" onchange="updateUI(); autoSave();">
+                                    <option value="story">Leírás</option>
+                                    <option value="choice">Választás / Interakció</option>
+                                </select>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <label class="block text-[10px] text-zinc-500 uppercase font-bold">A jelenet leírása (Dark Dome stílusban sötét és rejtélyes)</label>
+                        <textarea id="pageText" rows="4" class="input-style text-sm leading-relaxed" placeholder="A szoba sarkaiban sűrű árnyékok gyülekeznek..." oninput="autoSave()"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase mb-1">Jelenet Képe (URL)</label>
+                            <input type="url" id="pageBg" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase mb-1">Visszaút ID</label>
+                            <input type="number" id="prevIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-500 uppercase mb-1">Automata Tovább ID</label>
+                            <input type="number" id="nextIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <!-- Választások / Puzzle-ök -->
+                    <div id="choiceArea" class="hidden pt-6 border-t border-zinc-800">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-red-500 text-[10px] font-bold uppercase">Interakciók / Tárgyhasználat</h4>
+                            <button onclick="addChoiceItem()" class="text-red-400 text-[10px] font-bold uppercase">+ Interakció hozzáadása</button>
+                        </div>
+                        <div id="choicesContainer" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Inventory Kezelés -->
+                    <div class="pt-6 border-t border-zinc-800">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-zinc-400 text-[10px] font-bold uppercase">Tárgyak (Keresés / Feltétel)</h4>
+                            <button onclick="addInventoryItem()" class="text-zinc-500 text-[10px] font-bold uppercase">+ Tárgy esemény</button>
+                        </div>
+                        <div id="inventoryContainer" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jobb oldal: Játék Tesztelő -->
+            <div class="lg:col-span-4 flex justify-center">
+                <div class="sim-container">
+                    <div id="sim-viewport">
+                        <img id="sim-bg" src="">
+                        <div id="sim-content">
+                            <div class="sim-box">
+                                <div id="sim-actual-text" class="text-zinc-300 text-xs italic leading-relaxed mb-6"></div>
+                                <div id="sim-actions" class="flex flex-col"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Kis "Inventory" sáv a szimulátorban -->
+                    <div class="bg-black p-2 border-t border-zinc-900 flex gap-2 overflow-x-auto min-h-[40px]" id="sim-inv-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'DARKDOME_STUDIO_DATA';
+
+        // DARK DOME MINTA TÖRTÉNET
+        const darkDomeConfig = {
+            appTitle: "Az Árnyékok Fészke",
+            globalBg: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=2000",
+            storyPages: [
+                {
+                    content: "Egy dohos szobában ébredsz. Az ablakokat bedeszkázták. Csak egy régi komód és egy nehéz tölgyfa ajtó van a helyiségben.",
+                    pageType: "choice",
+                    nextIdx: 0, prevIdx: 0,
+                    pageBg: "https://images.unsplash.com/photo-1519074063912-ad25b5ce4920?q=80&w=1000",
+                    choices: [
+                        { text: "Megvizsgálom a komódot", target: 1 },
+                        { text: "Megpróbálom kinyitni az ajtót", target: 2 }
+                    ],
+                    inventory: []
+                },
+                {
+                    content: "A komód fiókjai üresek, de az egyik alján egy karcolt feliratot látsz: 'A kulcs a fény alatt van'. Megtaláltad a pincék kulcsát!",
+                    pageType: "story",
+                    nextIdx: 0, prevIdx: 0,
+                    pageBg: "https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=1000",
+                    choices: [],
+                    inventory: [{ action: "add", name: "Régi Kulcs" }]
+                },
+                {
+                    content: "Az ajtó zárva van. Szükséged lesz a kulcsra, hogy kijuss innen.",
+                    pageType: "choice",
+                    nextIdx: 0, prevIdx: 0,
+                    choices: [
+                        { text: "Használom a Régi Kulcsot", target: 3 }
+                    ],
+                    inventory: [{ action: "require", name: "Régi Kulcs" }]
+                },
+                {
+                    content: "Kinyitottad az ajtót. Egy sötét folyosóra érsz. A bal oldali ajtó mögül furcsa kaparászás hallatszik.",
+                    pageType: "choice",
+                    nextIdx: 0, prevIdx: 2,
+                    pageBg: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000",
+                    choices: [
+                        { text: "Bemegyek a konyhába", target: 4 },
+                        { text: "Leereszkedem a pincébe", target: 5 }
+                    ],
+                    inventory: []
+                }
+            ]
+        };
+
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || darkDomeConfig;
+        let currentIdx = -1;
+        let simIdx = 0;
+        let playerInv = new Set();
+
+        function renderPageList() {
+            const list = document.getElementById('pageList');
+            list.innerHTML = '';
+            config.storyPages.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center flex-grow overflow-hidden" onclick="loadPage(${i})">
+                        <span class="text-red-900 font-bold mr-3 text-xs">#${i}</span>
+                        <span class="truncate text-[10px] text-zinc-400 font-bold uppercase">${p.content.substring(0, 35)}...</span>
+                    </div>
+                    <button onclick="deletePage(${i}, event)" class="text-zinc-700 hover:text-red-500 px-2"><i class="fa fa-times text-xs"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function loadPage(i) {
+            currentIdx = i;
+            const p = config.storyPages[i];
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('editingHeader').innerText = `Helyszín #${i} szerkesztése`;
+            document.getElementById('pageText').value = p.content;
+            document.getElementById('pageType').value = p.pageType;
+            document.getElementById('nextIdx').value = p.nextIdx;
+            document.getElementById('prevIdx').value = p.prevIdx;
+            document.getElementById('pageBg').value = p.pageBg || "";
+            
+            updateUI();
+            renderChoices();
+            renderInventory();
+            renderPageList();
+            simIdx = i;
+            updateSimulator();
+        }
+
+        function updateUI() {
+            const type = document.getElementById('pageType').value;
+            document.getElementById('choiceArea').classList.toggle('hidden', type !== 'choice');
+        }
+
+        function renderChoices() {
+            const container = document.getElementById('choicesContainer');
+            container.innerHTML = '';
+            const p = config.storyPages[currentIdx];
+            if(!p.choices) p.choices = [];
+            p.choices.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-black/40 p-2 border border-zinc-800";
+                div.innerHTML = `
+                    <input type="text" class="input-style flex-1 text-[10px] py-1" value="${c.text}" placeholder="Interakció szövege" oninput="config.storyPages[currentIdx].choices[${i}].text=this.value; autoSave()">
+                    <i class="fa fa-arrow-right text-zinc-700 text-xs"></i>
+                    <input type="number" class="input-style w-16 text-[10px] py-1" value="${c.target}" placeholder="Cél ID" oninput="config.storyPages[currentIdx].choices[${i}].target=this.value; autoSave()">
+                    <button onclick="config.storyPages[currentIdx].choices.splice(${i},1); renderChoices(); autoSave()"><i class="fa fa-trash text-red-900 text-xs"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addChoiceItem() {
+            config.storyPages[currentIdx].choices.push({ text: "Megnézem a...", target: 0 });
+            renderChoices();
+            autoSave();
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventoryContainer');
+            container.innerHTML = '';
+            const p = config.storyPages[currentIdx];
+            if(!p.inventory) p.inventory = [];
+            p.inventory.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-black/20 p-2 border border-zinc-900";
+                div.innerHTML = `
+                    <select class="input-style w-28 text-[9px] py-1" onchange="config.storyPages[currentIdx].inventory[${i}].action=this.value; autoSave()">
+                        <option value="add" ${item.action==='add'?'selected':''}>MEGTALÁLJA</option>
+                        <option value="remove" ${item.action==='remove'?'selected':''}>ELVESZÍTI</option>
+                        <option value="require" ${item.action==='require'?'selected':''}>SZÜKSÉGES</option>
+                    </select>
+                    <input type="text" class="input-style flex-1 text-[10px] py-1" value="${item.name}" placeholder="Tárgy neve" oninput="config.storyPages[currentIdx].inventory[${i}].name=this.value; autoSave()">
+                    <button onclick="config.storyPages[currentIdx].inventory.splice(${i},1); renderInventory(); autoSave()"><i class="fa fa-times text-zinc-700"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addInventoryItem() {
+            config.storyPages[currentIdx].inventory.push({ action: "add", name: "Tárgy neve" });
+            renderInventory();
+            autoSave();
+        }
+
+        function addPage() {
+            config.storyPages.push({ 
+                content: "Sötétség...", 
+                pageType: "story", 
+                nextIdx: 0, 
+                prevIdx: 0, 
+                choices: [], 
+                inventory: [] 
+            });
+            autoSave();
+            loadPage(config.storyPages.length - 1);
+        }
+
+        function deletePage(i, e) {
+            e.stopPropagation();
+            if(config.storyPages.length <= 1) return;
+            config.storyPages.splice(i, 1);
+            currentIdx = -1;
+            document.getElementById('editorPanel').classList.add('hidden');
+            autoSave();
+        }
+
+        function updateSimulator() {
+            const p = config.storyPages[simIdx];
+            if(!p) return;
+            
+            // Háttér és szöveg
+            document.getElementById('sim-bg').src = p.pageBg || config.globalBg;
+            document.getElementById('sim-actual-text').textContent = p.content;
+            
+            // Inventory feldolgozása a jelenethez érve
+            if(p.inventory) {
+                p.inventory.forEach(inv => {
+                    if(inv.action === 'add') playerInv.add(inv.name);
+                    if(inv.action === 'remove') playerInv.delete(inv.name);
+                });
+            }
+            
+            // Inventory sáv frissítése
+            const invBar = document.getElementById('sim-inv-list');
+            invBar.innerHTML = '';
+            playerInv.forEach(item => {
+                const span = document.createElement('div');
+                span.className = "bg-red-900/30 text-[8px] px-2 py-1 border border-red-900 text-red-500 whitespace-nowrap uppercase font-bold";
+                span.textContent = item;
+                invBar.appendChild(span);
+            });
+
+            // Gombok
+            const actions = document.getElementById('sim-actions');
+            actions.innerHTML = '';
+
+            if (p.pageType === 'choice') {
+                p.choices.forEach(c => {
+                    // Megnézzük, van-e ehhez a célhoz kötve tárgy-feltétel az oldalon
+                    let canClick = true;
+                    if(p.inventory) {
+                        const requirements = p.inventory.filter(i => i.action === 'require');
+                        requirements.forEach(req => {
+                            if(!playerInv.has(req.name)) canClick = false;
+                        });
+                    }
+
+                    const b = document.createElement('div');
+                    b.className = `sim-btn ${!canClick ? 'opacity-30 cursor-not-allowed' : ''}`;
+                    b.innerHTML = !canClick ? `<i class="fa fa-lock mr-2"></i> ${c.text}` : c.text;
+                    if(canClick) b.onclick = () => { simIdx = parseInt(c.target); updateSimulator(); };
+                    actions.appendChild(b);
+                });
+            } else {
+                const b = document.createElement('div');
+                b.className = "sim-btn";
+                b.textContent = "Következő...";
+                b.onclick = () => { simIdx = parseInt(p.nextIdx); updateSimulator(); };
+                actions.appendChild(b);
+            }
+        }
+
+        function autoSave() {
+            const ind = document.getElementById('save-indicator');
+            ind.style.display = 'block';
+            
+            if(currentIdx !== -1) {
+                const p = config.storyPages[currentIdx];
+                p.content = document.getElementById('pageText').value;
+                p.pageType = document.getElementById('pageType').value;
+                p.nextIdx = document.getElementById('nextIdx').value;
+                p.prevIdx = document.getElementById('prevIdx').value;
+                p.pageBg = document.getElementById('pageBg').value;
+            }
+            
+            config.appTitle = document.getElementById('appTitle').value;
+            config.globalBg = document.getElementById('globalBg').value;
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            renderPageList();
+            setTimeout(() => ind.style.display = 'none', 600);
+        }
+
+        function downloadConfig() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "dark_dome_escape.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                config = JSON.parse(e.target.result);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                location.reload();
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = () => {
+            document.getElementById('appTitle').value = config.appTitle;
+            document.getElementById('globalBg').value = config.globalBg;
+            renderPageList();
+            loadPage(0);
+        };
+    </script>
+</body>
+</html>
+
