@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaland Játék Stúdió V9.4 ✨ (Mobile Optimized)</title>
+    <title>Kaland Játék Stúdió V9.5 ✨ (Drag & Drop Reordering)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -77,12 +77,11 @@
             background: #000; 
         }
         
-        /* Görgethető/Nagyítható háttér */
         .sim-bg-wrapper {
             position: absolute;
             inset: 0;
             z-index: 0;
-            overflow: auto; /* Lehetővé teszi a pásztázást ha a kép nagyobb */
+            overflow: auto; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -110,7 +109,7 @@
             flex-direction: column; 
             justify-content: flex-end; 
             padding: 0;
-            pointer-events: none; /* Átengedi az eseményeket a háttérnek ha nem a boxon vagyunk */
+            pointer-events: none; 
         }
         
         .sim-box { 
@@ -176,7 +175,6 @@
             border: 1px solid rgba(255,255,255,0.2);
         }
 
-        /* QR Scanner UI */
         .qr-scanner-overlay {
             position: absolute;
             inset: 0;
@@ -215,6 +213,9 @@
         .btn-copy:hover { background: rgba(16, 185, 129, 0.1); }
         .btn-delete { color: #ef4444; }
         .btn-delete:hover { background: rgba(239, 68, 68, 0.1); }
+        
+        .drag-handle { cursor: grab; color: #64748b; }
+        .drag-handle:active { cursor: grabbing; }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -225,8 +226,8 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V9.4</span> ✨</h1>
-                <p class="text-cyan-400 text-sm mt-1">Mobil-Optimalizált Élő Nézet</p>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V9.5</span> ✨</h1>
+                <p class="text-cyan-400 text-sm mt-1">Interaktív Oldalrendezés & Drag-and-Drop</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs">EXPORT</button>
@@ -297,7 +298,6 @@
                         </div>
                     </div>
 
-                    <!-- REJTVÉNY BEÁLLÍTÁSOK (QR, GPS, PASS) -->
                     <div id="qrArea" class="hidden border-t border-slate-700/50 pt-6 space-y-4">
                         <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">QR Beállítás</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -326,7 +326,6 @@
                 </div>
             </div>
 
-            <!-- SZIMULÁTOR -->
             <div class="w-full lg:w-auto flex justify-center">
                 <div class="sim-container">
                     <div id="sim-viewport">
@@ -337,13 +336,11 @@
                             <img id="sim-bg" src="" draggable="false">
                         </div>
                         
-                        <!-- Real QR Scanner UI -->
                         <div id="qr-scanner-ui" class="qr-scanner-overlay">
                             <div class="qr-reader-container"><div id="reader"></div></div>
                             <button onclick="closeQR()" class="sim-btn sim-btn-back w-full mt-4">MÉGSE</button>
                         </div>
 
-                        <!-- Eszköztár -->
                         <div id="inventory-view">
                             <h2 class="text-center text-cyan-400 font-bold mb-6 uppercase text-sm">🎒 Hátizsák</h2>
                             <div id="inv-list" class="inv-grid"></div>
@@ -394,7 +391,6 @@
         let currentIdx = -1;
         let saveTimeout;
 
-        // --- AI LOGIKA ---
         async function aiAction(type) {
             const prompt = type === 'continue' 
                 ? `Folytasd ezt a kalandot egy mondattal: "${document.getElementById('pageText').value}"`
@@ -424,7 +420,6 @@
             } catch(e) { return "Hiba."; }
         }
 
-        // --- NAGYÍTHATÓ HÁTTÉR ---
         function toggleBgZoom() {
             const bg = document.getElementById('sim-bg');
             bg.classList.toggle('fullscreen');
@@ -433,7 +428,6 @@
             icon.classList.toggle('fa-compress');
         }
 
-        // --- SZERKESZTŐ FUNKCIÓK ---
         function duplicatePage(i) {
             const copy = JSON.parse(JSON.stringify(config.storyPages[i]));
             config.storyPages.splice(i + 1, 0, copy);
@@ -444,7 +438,7 @@
             if (config.storyPages.length <= 1) return;
             if (confirm("Biztosan törlöd ezt az oldalt?")) {
                 config.storyPages.splice(i, 1);
-                if (currentIdx >= config.storyPages.length) currentIdx = config.storyPages.length - 1;
+                if (currentIdx >= i) currentIdx = Math.max(0, currentIdx - 1);
                 saveAndRefresh();
             }
         }
@@ -455,7 +449,6 @@
             if (currentIdx !== -1) loadPage(currentIdx);
         }
 
-        // --- QR & GPS ---
         function startQRScanner() {
             document.getElementById('qr-scanner-ui').style.display = 'flex';
             if (!gameState.html5QrCode) gameState.html5QrCode = new Html5Qrcode("reader");
@@ -484,7 +477,6 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // --- SZIMULÁTOR NÉZET ---
         function updateSimulator() {
             if(gameState.gpsWatch) navigator.geolocation.clearWatch(gameState.gpsWatch);
             const p = config.storyPages[gameState.simIdx];
@@ -568,7 +560,6 @@
         }
         function restartGame() { gameState.simIdx = 0; gameState.inventory = []; updateSimulator(); }
 
-        // --- SZERKESZTŐ LOGIKA ---
         function loadPage(i) {
             currentIdx = i; const p = config.storyPages[i];
             document.getElementById('editorPanel').classList.remove('hidden');
@@ -635,9 +626,12 @@
             config.storyPages.forEach((p, i) => {
                 const d = document.createElement('div'); d.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
                 d.innerHTML = `
-                    <span onclick="loadPage(${i})" class="flex-grow truncate text-[10px] font-bold uppercase tracking-tight cursor-pointer">
-                        #${i}: ${p.content ? p.content.substring(0, 15) : 'Üres'}...
-                    </span>
+                    <div class="flex items-center flex-grow overflow-hidden">
+                        <i class="fa fa-grip-lines drag-handle mr-3 cursor-grab"></i>
+                        <span onclick="loadPage(${i})" class="truncate text-[10px] font-bold uppercase tracking-tight cursor-pointer">
+                            #${i}: ${p.content ? p.content.substring(0, 15) : 'Üres'}...
+                        </span>
+                    </div>
                     <div class="flex gap-2 ml-2">
                         <button onclick="duplicatePage(${i})" class="action-btn-small btn-copy" title="Másolás"><i class="fa fa-copy"></i></button>
                         <button onclick="deletePage(${i})" class="action-btn-small btn-delete" title="Törlés"><i class="fa fa-trash"></i></button>
@@ -649,12 +643,24 @@
 
         function addChoiceItem() { config.storyPages[currentIdx].choices.push({text: "Új opció", target: 0}); renderChoices(); autoSave(); }
         function addPage() { config.storyPages.push({content: "Új oldal...", pageType: "story", choices: [], prevIdx: currentIdx}); loadPage(config.storyPages.length-1); }
-        function downloadConfig() { const b = new Blob([JSON.stringify(config)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download='kaland_V94_export.json'; a.click(); }
+        function downloadConfig() { const b = new Blob([JSON.stringify(config)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download='kaland_V95_export.json'; a.click(); }
         function handleFileUpload(e) { const f = e.target.files[0]; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); loadPage(0); }; r.readAsText(f); }
 
         window.onload = () => {
             document.getElementById('appTitle').value = config.appTitle;
             document.getElementById('globalBg').value = config.globalBg;
+            
+            new Sortable(document.getElementById('pageList'), {
+                animation: 150,
+                handle: '.drag-handle',
+                onEnd: function (evt) {
+                    const item = config.storyPages.splice(evt.oldIndex, 1)[0];
+                    config.storyPages.splice(evt.newIndex, 0, item);
+                    currentIdx = evt.newIndex;
+                    saveAndRefresh();
+                }
+            });
+            
             renderPageList(); loadPage(0);
         };
     </script>
