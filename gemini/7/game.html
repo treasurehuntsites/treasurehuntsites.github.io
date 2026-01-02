@@ -1,1 +1,457 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaland Játék Lejátszó ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Play', sans-serif; 
+            background-color: #020617; 
+            color: #f8fafc; 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
 
+        /* Játék Keret (Mobil szimuláció) */
+        .game-wrapper {
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            max-height: 900px;
+            background: #000;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        #viewport {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #bg-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.4);
+            z-index: 0;
+            transition: opacity 0.5s;
+        }
+
+        #content-layer {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .dialog-box {
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 2px solid #8b5cf6;
+            padding: 25px;
+            padding-top: 40px;
+            min-height: 30%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+        }
+
+        .avatar-img {
+            position: absolute;
+            top: -35px;
+            left: 20px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #8b5cf6;
+            background: #000;
+            object-fit: cover;
+            z-index: 20;
+            display: none;
+        }
+
+        /* Gombok és UI elemek */
+        .btn-action {
+            background: #8b5cf6;
+            color: white;
+            padding: 12px;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .btn-action:hover { background: #a855f7; transform: translateY(-1px); }
+        .btn-secondary { background: #334155; }
+
+        .bottom-nav {
+            height: 70px;
+            background: #0f172a;
+            border-top: 1px solid rgba(139, 92, 246, 0.3);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-icon { color: #64748b; font-size: 1.4rem; cursor: pointer; position: relative; }
+        .nav-icon.active { color: #8b5cf6; }
+        .nav-badge { position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; font-size: 9px; padding: 2px 6px; border-radius: 50%; font-weight: bold; }
+
+        /* Képernyők (QR, Inv, Start) */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: #0f172a;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        #start-screen { 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center; 
+            background: linear-gradient(to bottom, #0f172a, #020617);
+        }
+
+        .qr-overlay {
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+
+        .qr-scanner-frame {
+            width: 220px;
+            height: 220px;
+            border: 2px solid #22d3ee;
+            border-radius: 20px;
+            position: relative;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .qr-scanner-line {
+            position: absolute;
+            top: 0; width: 100%; height: 2px; background: #22d3ee;
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
+
+        .inv-card { background: #1e293b; border-radius: 12px; padding: 15px; text-align: center; border: 1px solid #334155; }
+
+        .gps-stat {
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid #22d3ee;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .input-dark {
+            background: #020617;
+            border: 1px solid #334155;
+            color: #22d3ee;
+            border-radius: 8px;
+            padding: 12px;
+            width: 100%;
+            outline: none;
+            text-align: center;
+        }
+
+        /* Animációk */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- START SCREEN -->
+        <div id="start-screen" class="overlay-screen">
+            <i class="fa-solid fa-compass-drafting text-6xl text-purple-500 mb-6"></i>
+            <h1 class="text-3xl font-bold mb-2">KALAND JÁTÉK</h1>
+            <p class="text-slate-400 text-sm mb-10">Töltsd be a .json fájlt a kezdéshez</p>
+            
+            <label class="btn-action cursor-pointer w-full">
+                JÁTÉK BETÖLTÉSE
+                <input type="file" id="game-file" class="hidden" accept=".json">
+            </label>
+        </div>
+
+        <!-- JÁTÉK TÉR -->
+        <div id="viewport" class="hidden">
+            <img id="bg-layer" src="">
+            
+            <!-- QR SCANNER OVERLAY -->
+            <div id="qr-screen" class="overlay-screen qr-overlay">
+                <div class="qr-scanner-frame"><div class="qr-scanner-line"></div></div>
+                <h3 class="text-cyan-400 font-bold mb-4">QR KÓD SZKENNELÉSE</h3>
+                <input type="text" id="qr-input" class="input-dark mb-4" placeholder="Kód beírása...">
+                <div class="flex gap-2 w-full px-4">
+                    <button onclick="submitQR()" class="btn-action">OK</button>
+                    <button onclick="hideQR()" class="btn-action btn-secondary">MÉGSE</button>
+                </div>
+            </div>
+
+            <!-- ESZKÖZTÁR OVERLAY -->
+            <div id="inventory-screen" class="overlay-screen hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-cyan-400">🎒 HÁTIZSÁK</h2>
+                    <button onclick="toggleInventory()" class="text-slate-400"><i class="fa fa-times text-2xl"></i></button>
+                </div>
+                <div id="inventory-list" class="grid grid-cols-2 gap-4"></div>
+                <div id="empty-inv" class="text-center py-20 text-slate-500 italic hidden">A táskád üres.</div>
+            </div>
+
+            <div id="content-layer">
+                <div class="dialog-box">
+                    <img id="avatar-img" class="avatar-img" src="">
+                    <div id="text-container" class="text-white text-[14px] leading-relaxed overflow-y-auto mb-6 flex-grow scroll-smooth">
+                        <img id="page-img" class="w-full rounded-lg mb-4 hidden border border-slate-800" src="">
+                        <div id="actual-text" class="fade-in"></div>
+                    </div>
+                    
+                    <!-- GPS MODUL -->
+                    <div id="gps-module" class="hidden gps-stat">
+                        <div class="text-[9px] uppercase tracking-widest opacity-50 mb-1">Cél távolsága</div>
+                        <div id="gps-dist" class="text-xl font-bold text-cyan-400">--- m</div>
+                    </div>
+
+                    <!-- AKCIÓ GOMBOK -->
+                    <div id="actions-container" class="flex flex-col gap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALSÓ NAVIGÁCIÓ -->
+        <div id="nav-bar" class="bottom-nav hidden">
+            <div class="nav-icon active"><i class="fa fa-house"></i></div>
+            <div class="nav-icon" onclick="toggleInventory()">
+                <i class="fa-solid fa-briefcase"></i>
+                <div id="inv-badge" class="nav-badge hidden">0</div>
+            </div>
+            <div class="nav-icon" onclick="location.reload()"><i class="fa-solid fa-power-off"></i></div>
+        </div>
+    </div>
+
+    <script>
+        let gameConfig = null;
+        let gameState = {
+            currentIdx: 0,
+            inventory: [],
+            gpsWatch: null
+        };
+
+        // Fájl betöltése
+        document.getElementById('game-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    gameConfig = JSON.parse(evt.target.result);
+                    startGame();
+                } catch(err) {
+                    alert("Hiba a fájl feldolgozásakor! Ellenőrizd a formátumot.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('viewport').classList.remove('hidden');
+            document.getElementById('nav-bar').classList.remove('hidden');
+            document.title = gameConfig.appTitle || "Kaland Játék";
+            renderPage();
+        }
+
+        function renderPage() {
+            if (gameState.gpsWatch) navigator.geolocation.clearWatch(gameState.gpsWatch);
+            
+            const p = gameConfig.storyPages[gameState.currentIdx];
+            if (!p) return;
+
+            // Háttér és kép
+            document.getElementById('bg-layer').src = gameConfig.globalBg || "";
+            const pageImg = document.getElementById('page-img');
+            if (p.pageImage) {
+                pageImg.src = p.pageImage;
+                pageImg.classList.remove('hidden');
+            } else {
+                pageImg.classList.add('hidden');
+            }
+
+            // Szöveg és Avatar
+            let text = p.content || "";
+            const avatarEl = document.getElementById('avatar-img');
+            avatarEl.style.display = 'none';
+
+            // Avatar detektálás (ha vannak avatarok a configban)
+            if (gameConfig.avatars) {
+                gameConfig.avatars.forEach(av => {
+                    if (text.includes(`§${av.id}`)) {
+                        avatarEl.src = av.url || "";
+                        avatarEl.style.display = av.url ? 'block' : 'none';
+                        avatarEl.style.borderColor = av.color || "#8b5cf6";
+                        text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color || '#fff'}; font-weight:bold;">${av.name}:</span>`);
+                    }
+                });
+            }
+            document.getElementById('actual-text').innerHTML = text;
+
+            // Akciók tisztítása
+            const actions = document.getElementById('actions-container');
+            actions.innerHTML = '';
+            document.getElementById('gps-module').classList.add('hidden');
+
+            // Gombok generálása típus szerint
+            if (p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => {
+                    const btn = document.createElement('div');
+                    btn.className = "btn-action";
+                    btn.textContent = c.text;
+                    btn.onclick = () => { gameState.currentIdx = parseInt(c.target); renderPage(); };
+                    actions.appendChild(btn);
+                });
+            } else if (p.pageType === 'qr') {
+                const btn = document.createElement('div');
+                btn.className = "btn-action bg-cyan-600";
+                btn.innerHTML = '<i class="fa fa-qrcode mr-2"></i> QR BEOLVASÁSA';
+                btn.onclick = showQR;
+                actions.appendChild(btn);
+            } else if (p.pageType === 'password') {
+                const inp = document.createElement('input');
+                inp.className = "input-dark mb-2";
+                inp.placeholder = "KÓD...";
+                const btn = document.createElement('div');
+                btn.className = "btn-action";
+                btn.textContent = "ELLENŐRZÉS";
+                btn.onclick = () => {
+                    if (inp.value.trim().toLowerCase() === (p.password || "").toLowerCase()) {
+                        gameState.currentIdx = parseInt(p.nextIdx) || gameState.currentIdx + 1;
+                        renderPage();
+                    } else {
+                        inp.style.borderColor = '#ef4444';
+                    }
+                };
+                actions.append(inp, btn);
+            } else if (p.pageType === 'gps') {
+                document.getElementById('gps-module').classList.remove('hidden');
+                initGPS(p);
+            } else {
+                // Sima tovább gomb
+                const btn = document.createElement('div');
+                btn.className = "btn-action";
+                btn.textContent = "TOVÁBB";
+                btn.onclick = () => { gameState.currentIdx = parseInt(p.nextIdx) || gameState.currentIdx + 1; renderPage(); };
+                actions.appendChild(btn);
+            }
+
+            // Vissza gomb hozzáadása (ha van definiálva vagy nem az első oldal)
+            if (gameState.currentIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== null && p.prevIdx !== "")) {
+                const bBack = document.createElement('div');
+                bBack.className = "btn-action btn-secondary mt-2";
+                bBack.innerHTML = '<i class="fa fa-chevron-left mr-2"></i> VISSZA';
+                bBack.onclick = () => {
+                    gameState.currentIdx = (p.prevIdx !== undefined && p.prevIdx !== null && p.prevIdx !== "") ? parseInt(p.prevIdx) : gameState.currentIdx - 1;
+                    renderPage();
+                };
+                actions.appendChild(bBack);
+            }
+        }
+
+        // --- QR LOGIKA ---
+        function showQR() { document.getElementById('qr-screen').style.display = 'flex'; }
+        function hideQR() { document.getElementById('qr-screen').style.display = 'none'; }
+        function submitQR() {
+            const val = document.getElementById('qr-input').value.trim().toUpperCase();
+            const p = gameConfig.storyPages[gameState.currentIdx];
+            if (val === (p.qrTargetCode || "").toUpperCase()) {
+                if (p.qrItemName) {
+                    gameState.inventory.push({ name: p.qrItemName, icon: p.qrItemIcon || '📦' });
+                    updateInvBadge();
+                }
+                hideQR();
+                gameState.currentIdx = parseInt(p.nextIdx) || gameState.currentIdx + 1;
+                renderPage();
+            } else {
+                document.getElementById('qr-input').style.borderColor = 'red';
+            }
+        }
+
+        // --- GPS LOGIKA ---
+        function initGPS(p) {
+            if (!navigator.geolocation) return;
+            gameState.gpsWatch = navigator.geolocation.watchPosition(pos => {
+                const dist = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                document.getElementById('gps-dist').textContent = `${Math.round(dist)} m`;
+                if (dist < 20) {
+                    navigator.geolocation.clearWatch(gameState.gpsWatch);
+                    gameState.currentIdx = parseInt(p.nextIdx) || gameState.currentIdx + 1;
+                    renderPage();
+                }
+            }, null, { enableHighAccuracy: true });
+        }
+
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const f1 = la1 * Math.PI/180, f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // --- ESZKÖZTÁR ---
+        function toggleInventory() {
+            const screen = document.getElementById('inventory-screen');
+            const list = document.getElementById('inventory-list');
+            const empty = document.getElementById('empty-inv');
+            list.innerHTML = '';
+            
+            if (gameState.inventory.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                gameState.inventory.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "inv-card fade-in";
+                    card.innerHTML = `<div class="text-3xl mb-2">${item.icon}</div><div class="text-[10px] font-bold uppercase">${item.name}</div>`;
+                    list.appendChild(card);
+                });
+            }
+            screen.classList.toggle('hidden');
+        }
+
+        function updateInvBadge() {
+            const badge = document.getElementById('inv-badge');
+            badge.textContent = gameState.inventory.length;
+            badge.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
