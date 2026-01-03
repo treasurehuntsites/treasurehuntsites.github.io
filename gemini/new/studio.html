@@ -60,6 +60,7 @@
         .sim-box { position: relative; background: rgba(0,0,0,0.94); border-top: 3px solid #8b5cf6; border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 35px; min-height: 220px; display: flex; flex-direction: column; }
         .sim-avatar { position: absolute; top: -40px; left: 10px; width: 65px; height: 65px; border-radius: 50%; border: 3px solid #8b5cf6; background: #000; z-index: 20; object-fit: cover; display: none; }
         .sim-btn { flex: 1; background: #8b5cf6; color: white; padding: 12px; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; border: none; }
+        .sim-btn-back { background: #334155; }
         .sim-bottom-bar { height: 65px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex; justify-content: space-around; align-items: center; }
 
         /* --- JÁTÉKOS MÓD STÍLUSOK --- */
@@ -74,6 +75,7 @@
         
         .p-action-btn { flex: 1; background: #8b5cf6; color: white; padding: 16px; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 1rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; border: none; }
         .p-action-btn:active { transform: scale(0.98); background: #a855f7; }
+        .p-btn-back { background: #334155; }
         
         .p-bottom-nav { height: 75px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
         .p-nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; transition: color 0.3s; }
@@ -366,7 +368,6 @@
             }
 
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
-            const navRow = document.createElement('div'); navRow.className = "flex gap-2 w-full";
             
             if (p.pageType === 'choice' && p.choices) {
                 const choiceCol = document.createElement('div'); choiceCol.className = "flex flex-col gap-2 w-full mb-2";
@@ -378,13 +379,18 @@
                 acts.appendChild(choiceCol);
             }
 
+            const navRow = document.createElement('div'); navRow.className = "flex gap-2 w-full";
+            
+            // Vissza gomb (Mindig megjelenik, ha nem az első oldal)
             if(simIdx > 0 || p.prevIdx) {
-                const back = document.createElement('div'); back.className = "sim-btn sim-btn-back"; back.innerHTML = '<i class="fa fa-arrow-left"></i>';
+                const back = document.createElement('div'); back.className = "sim-btn sim-btn-back"; back.innerHTML = 'VISSZA';
                 back.onclick = () => { simIdx = p.prevIdx ? parseInt(p.prevIdx) : simIdx - 1; updateSimulator(); };
                 navRow.appendChild(back);
             }
+
+            // Tovább gomb (Ha nem választós oldal)
             if (p.pageType !== 'choice') {
-                const next = document.createElement('div'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB <i class="fa fa-chevron-right ml-1"></i>';
+                const next = document.createElement('div'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB';
                 next.onclick = () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); };
                 navRow.appendChild(next);
             }
@@ -459,9 +465,28 @@
                     if (c.req && !pInventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return;
                     pAddBtn(c.text, () => { pSimIdx = parseInt(c.target); pUpdateUI(); });
                 });
-            } else {
-                pAddBtn("TOVÁBB", () => { pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; pUpdateUI(); }, "fa-chevron-right");
             }
+            
+            // Standard navigációs sor (Vissza és Tovább egymás mellett)
+            const navContainer = document.createElement('div');
+            navContainer.className = "flex gap-3 w-full";
+            
+            if(pSimIdx > 0 || p.prevIdx) {
+                const b = document.createElement('button'); b.className = "p-action-btn p-btn-back";
+                b.innerHTML = `VISSZA`;
+                b.onclick = () => { pSimIdx = p.prevIdx ? parseInt(p.prevIdx) : pSimIdx - 1; pUpdateUI(); };
+                navContainer.appendChild(b);
+            }
+            
+            if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') {
+                const b = document.createElement('button'); b.className = "p-action-btn";
+                b.innerHTML = `TOVÁBB`;
+                b.onclick = () => { pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; pUpdateUI(); };
+                navContainer.appendChild(b);
+            }
+            
+            if (navContainer.hasChildNodes()) container.appendChild(navContainer);
+            
             document.getElementById('p-scroll-area').scrollTop = 0;
         }
 
@@ -514,8 +539,6 @@
                 if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
                 else { pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); }
             } else if (target === 'map') {
-                // Ha van térkép link a jelenlegi GPS oldalon, nyissa meg azt.
-                // Ha nincs, de van globális link, nyissa meg azt.
                 if (p && p.pageType === 'gps' && p.mapLink) {
                     window.open(p.mapLink, '_blank');
                     document.getElementById('p-map-badge').classList.add('hidden');
@@ -656,6 +679,7 @@
         .avatar-frame { position: absolute; top: -40px; left: 10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #8b5cf6; background: #000; z-index: 20; object-fit: cover; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .action-btn { flex: 1; background: #8b5cf6; color: white; padding: 16px; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 1rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; border: none; }
         .action-btn:active { transform: scale(0.98); background: #a855f7; }
+        .btn-back { background: #334155; }
         .bottom-nav { height: 75px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; }
         .nav-item.active { color: #8b5cf6; }
@@ -783,7 +807,28 @@
                 }, null, {enableHighAccuracy:true});
             } else if(p.pageType === 'choice' && p.choices) {
                 p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }); });
-            } else { addBtn("TOVÁBB", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI(); }, "fa-chevron-right"); }
+            } 
+            
+            // Navigációs sor generálása
+            const navRow = document.createElement('div');
+            navRow.className = "flex gap-3 w-full";
+            
+            if(simIdx > 0 || p.prevIdx) {
+                const b = document.createElement('button'); b.className = "action-btn btn-back";
+                b.innerHTML = "VISSZA";
+                b.onclick = () => { simIdx = p.prevIdx ? parseInt(p.prevIdx) : simIdx - 1; updateUI(); };
+                navRow.appendChild(b);
+            }
+            
+            if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') {
+                const b = document.createElement('button'); b.className = "action-btn";
+                b.innerHTML = "TOVÁBB";
+                b.onclick = () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI(); };
+                navRow.appendChild(b);
+            }
+            
+            if (navRow.hasChildNodes()) container.appendChild(navRow);
+            
             document.getElementById('scroll-area').scrollTop = 0;
         }
         function addBtn(text, fn, icon = "") {
