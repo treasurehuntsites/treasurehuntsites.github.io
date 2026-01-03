@@ -62,7 +62,7 @@
         .sim-btn { flex: 1; background: #8b5cf6; color: white; padding: 12px; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; border: none; }
         .sim-bottom-bar { height: 65px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex; justify-content: space-around; align-items: center; }
 
-        /* --- JÁTÉKOS MÓD STÍLUSOK (PONTOS MÁSOLAT A KÉRT SABLONBÓL) --- */
+        /* --- JÁTÉKOS MÓD STÍLUSOK --- */
         #player-view { position: fixed; inset: 0; z-index: 4000; background: #000; display: none; flex-direction: column; }
         .p-game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
         #p-viewport { position: relative; flex-grow: 1; overflow: hidden; }
@@ -233,15 +233,13 @@
         </div>
     </div>
 
-    <!-- --- JÁTÉKOS NÉZET (PONTOS MÁSOLAT) --- -->
+    <!-- --- JÁTÉKOS NÉZET --- -->
     <div id="player-view">
-        <!-- QR LAYER -->
         <div id="p-qr-layer">
             <div id="p-qr-reader"></div>
-            <button onclick="pStopQR()" class="p-action-btn mt-6 max-w-xs">MÉGSE</button>
+            <button id="p-qr-cancel-btn" onclick="pStopQR()" class="p-action-btn mt-6">MÉGSE</button>
         </div>
 
-        <!-- ZOOM VIEWER -->
         <div id="p-zoom-viewer" onclick="this.style.display='none'">
             <img id="p-zoom-img" src="">
         </div>
@@ -344,7 +342,7 @@
             acts.appendChild(navRow);
         }
 
-        // --- JÁTÉKOS MÓD (PONTOS MÁSOLAT LOGIKA) ---
+        // --- JÁTÉKOS MÓD LOGIKA ---
         function pUpdateUI() {
             const p = config.storyPages[pSimIdx]; if(!p) return;
             pHandleReward(p);
@@ -396,18 +394,58 @@
             b.onclick = fn; document.getElementById('p-button-container').appendChild(b);
         }
 
+        // --- QR SZKENNER JAVÍTOTT LOGIKA ---
         function pStartQR() {
+            if (pQrScanner) return;
             document.getElementById('p-qr-layer').style.display = 'flex';
             pQrScanner = new Html5Qrcode("p-qr-reader");
             pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
                 const p = config.storyPages[pSimIdx];
-                if (decodedText.toUpperCase() === (p.qrCode || "").toUpperCase()) { pStopQR(); pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; pUpdateUI(); }
-            }).catch(() => { pStopQR(); });
+                if (decodedText.toUpperCase() === (p.qrCode || "").toUpperCase()) { 
+                    pStopQR(); 
+                    pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; 
+                    pUpdateUI(); 
+                }
+            }).catch((err) => { 
+                // Ha permission hiba van, akkor nem indítjuk el a stop metódust feleslegesen
+                console.warn("QR indítási hiba:", err);
+                document.getElementById('p-qr-layer').style.display = 'none';
+                pQrScanner = null;
+                // Felhasználóbarát hibaüzenet (alert helyett)
+                const textEl = document.getElementById('p-story-text');
+                const originalText = textEl.innerHTML;
+                textEl.innerHTML = `<span class="text-red-400">Hiba: A kamera nem elérhető vagy nincs engedélyezve.</span><br><br>` + originalText;
+            });
         }
 
         function pStopQR() {
-            if (pQrScanner) pQrScanner.stop().finally(() => { document.getElementById('p-qr-layer').style.display = 'none'; pQrScanner = null; });
-            else document.getElementById('p-qr-layer').style.display = 'none';
+            if (pQrScanner) {
+                // Ellenőrizzük, hogy valóban fut-e a szkenner, mielőtt leállítjuk
+                // A getState() segítségével elkerülhető a "scanner is not running" hiba
+                try {
+                    const state = pQrScanner.getState();
+                    if (state === 2 || state === 3) { // 2 = SCANNING, 3 = PAUSED
+                        pQrScanner.stop()
+                            .then(() => {
+                                document.getElementById('p-qr-layer').style.display = 'none';
+                                pQrScanner = null;
+                            })
+                            .catch((err) => {
+                                console.warn("Hiba a leállítás során:", err);
+                                document.getElementById('p-qr-layer').style.display = 'none';
+                                pQrScanner = null;
+                            });
+                    } else {
+                        document.getElementById('p-qr-layer').style.display = 'none';
+                        pQrScanner = null;
+                    }
+                } catch (e) {
+                    document.getElementById('p-qr-layer').style.display = 'none';
+                    pQrScanner = null;
+                }
+            } else {
+                document.getElementById('p-qr-layer').style.display = 'none';
+            }
         }
 
         function pHandleReward(p) {
