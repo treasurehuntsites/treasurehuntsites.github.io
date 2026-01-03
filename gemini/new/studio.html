@@ -151,6 +151,7 @@
                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Alapbeállítások</h3>
                             <input type="text" id="appTitle" class="input-style" placeholder="Kaland címe" oninput="autoSave()">
                             <input type="url" id="globalBg" class="input-style" placeholder="Globális Háttér URL" oninput="autoSave()">
+                            <input type="url" id="initialMapLink" class="input-style" placeholder="Játék alapértelmezett térkép linkje" oninput="autoSave()">
                         </div>
                         <div class="space-y-4">
                             <div class="flex justify-between items-center">
@@ -300,7 +301,8 @@
             appTitle: "A Város Legendája", 
             storyPages: [{ content: "Kezdődik a kaland!", pageType: "story" }], 
             avatars: [],
-            globalBg: ""
+            globalBg: "",
+            initialMapLink: ""
         };
         let currentIdx = -1, simIdx = 0, pSimIdx = 0, pInventory = [], saveTimeout, pQrScanner = null, isPlayerMode = false;
         let geoWatchId = null;
@@ -512,10 +514,13 @@
                 if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
                 else { pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); }
             } else if (target === 'map') {
-                // Ha van térkép link a jelenlegi GPS oldalon, nyissa meg és vegye le a jelzést
+                // Ha van térkép link a jelenlegi GPS oldalon, nyissa meg azt.
+                // Ha nincs, de van globális link, nyissa meg azt.
                 if (p && p.pageType === 'gps' && p.mapLink) {
                     window.open(p.mapLink, '_blank');
                     document.getElementById('p-map-badge').classList.add('hidden');
+                } else if (config.initialMapLink) {
+                    window.open(config.initialMapLink, '_blank');
                 } else {
                     inv.style.display = 'none'; 
                     navInv.classList.remove('active'); 
@@ -583,7 +588,9 @@
                     p.storyItemUrl = document.getElementById('storyItemUrl').value; 
                     p.pageImage = document.getElementById('pageImage').value;
                 } 
-                config.appTitle = document.getElementById('appTitle').value; config.globalBg = document.getElementById('globalBg').value; 
+                config.appTitle = document.getElementById('appTitle').value; 
+                config.globalBg = document.getElementById('globalBg').value; 
+                config.initialMapLink = document.getElementById('initialMapLink').value; 
                 localStorage.setItem('KALAND_STUDIO_V11', JSON.stringify(config)); 
                 renderPageList(); updateSimulator(); 
                 setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 500); 
@@ -805,6 +812,8 @@
                 if (p && p.pageType === 'gps' && p.mapLink) {
                     window.open(p.mapLink, '_blank');
                     document.getElementById('map-badge').classList.add('hidden');
+                } else if (config.initialMapLink) {
+                    window.open(config.initialMapLink, '_blank');
                 } else {
                     inv.style.display = 'none'; 
                     document.getElementById('nav-inv').classList.remove('active');
@@ -841,6 +850,7 @@
         window.onload = () => { 
             if(document.getElementById('appTitle')) document.getElementById('appTitle').value = config.appTitle || ""; 
             if(document.getElementById('globalBg')) document.getElementById('globalBg').value = config.globalBg || ""; 
+            if(document.getElementById('initialMapLink')) document.getElementById('initialMapLink').value = config.initialMapLink || ""; 
             
             const el = document.getElementById('pageList');
             Sortable.create(el, {
