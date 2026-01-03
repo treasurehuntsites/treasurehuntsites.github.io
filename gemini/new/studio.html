@@ -345,7 +345,7 @@
             document.getElementById('sim-actual-text').innerHTML = text;
             const img = document.getElementById('sim-page-img'); if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
             
-            // GPS szimuláció a stúdióban (Mindig engedi a továbbot egy gombbal teszteléshez)
+            // GPS szimuláció a stúdióban
             const gpsInfo = document.getElementById('sim-gps-info');
             if (p.pageType === 'gps') {
                 gpsInfo.classList.remove('hidden');
@@ -424,10 +424,11 @@
                     geoWatchId = navigator.geolocation.watchPosition((pos) => {
                         const d = getDistance(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLng));
                         distSpan.textContent = Math.round(d);
-                        if (d <= 20) { // 20 méteren belül
-                            if (container.innerHTML === "") { // Csak ha még nincs gomb
-                                pAddBtn("TOVÁBB (MEGÉRKEZTÉL!)", () => { pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; pUpdateUI(); }, "fa-chevron-right");
-                            }
+                        if (d <= 20) { // Automatikus ugrás ha megérkezett
+                            navigator.geolocation.clearWatch(geoWatchId);
+                            geoWatchId = null;
+                            pSimIdx = parseInt(p.nextIdx) || pSimIdx + 1; 
+                            pUpdateUI(); 
                         }
                     }, (err) => {
                         distSpan.textContent = "Hiba: engedélyezd a GPS-t!";
@@ -566,7 +567,7 @@
             config.storyPages.forEach((p, i) => { 
                 const d = document.createElement('div'); d.className = `page-item ${i === currentIdx ? 'selected' : ''}`; 
                 d.setAttribute('data-id', i);
-                d.innerHTML = `<div class="flex items-center overflow-hidden"><i class="fa fa-bars handle"></i><span onclick="loadPage(${i})" class="truncate text-xs font-bold cursor-pointer uppercase">#${i}: ${p.content ? p.content.substring(0,25).replace(/§\w/g, '') : '...'}</span></div><div class="flex shrink-0"><button onclick="duplicatePage(${i})" class="mr-2 text-emerald-400"><i class="fa fa-copy"></i></button><button onclick="deletePage(${i})" class="text-red-400"><i class="fa fa-trash"></i></button></div>`; 
+                d.innerHTML = `<div class="flex items-center overflow-hidden"><i class="fa fa-bars handle"><\/i><span onclick="loadPage(${i})" class="truncate text-xs font-bold cursor-pointer uppercase">#${i}: ${p.content ? p.content.substring(0,25).replace(/§\w/g, '') : '...'}<\/span><\/div><div class="flex shrink-0"><button onclick="duplicatePage(${i})" class="mr-2 text-emerald-400"><i class="fa fa-copy"><\/i><\/button><button onclick="deletePage(${i})" class="text-red-400"><i class="fa fa-trash"><\/i><\/button><\/div>`; 
                 l.appendChild(d); 
             }); 
         }
@@ -577,7 +578,7 @@
             const l = document.getElementById('avatarList'); l.innerHTML = ''; 
             config.avatars.forEach((av, i) => { 
                 const d = document.createElement('div'); d.className = "avatar-card"; 
-                d.innerHTML = `<input type="text" title="ID" class="input-style font-bold text-center text-[10px]" value="${av.id}" oninput="config.avatars[${i}].id=this.value;autoSave()"><input type="text" title="Név" class="input-style text-[10px]" value="${av.name}" oninput="config.avatars[${i}].name=this.value;autoSave()"><input type="url" title="Kép URL" class="input-style text-[10px]" placeholder="URL" value="${av.url || ''}" oninput="config.avatars[${i}].url=this.value;autoSave()"><input type="color" title="Szín" class="input-style p-1 h-8" value="${av.color}" oninput="config.avatars[${i}].color=this.value;autoSave()"><button onclick="config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-400 p-1"><i class="fa fa-trash"></i></button>`; 
+                d.innerHTML = `<input type="text" title="ID" class="input-style font-bold text-center text-[10px]" value="${av.id}" oninput="config.avatars[${i}].id=this.value;autoSave()"><input type="text" title="Név" class="input-style text-[10px]" value="${av.name}" oninput="config.avatars[${i}].name=this.value;autoSave()"><input type="url" title="Kép URL" class="input-style text-[10px]" placeholder="URL" value="${av.url || ''}" oninput="config.avatars[${i}].url=this.value;autoSave()"><input type="color" title="Szín" class="input-style p-1 h-8" value="${av.color}" oninput="config.avatars[${i}].color=this.value;autoSave()"><button onclick="config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-400 p-1"><i class="fa fa-trash"><\/i><\/button>`; 
                 l.appendChild(d); 
             }); 
         }
@@ -593,19 +594,19 @@
             document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password'); 
             document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps'); 
         }
-        function renderChoices() { const c = document.getElementById('choicesContainer'); c.innerHTML = ''; const p = config.storyPages[currentIdx]; if(!p.choices) return; p.choices.forEach((ch, i) => { const r = document.createElement('div'); r.className = "flex gap-2 items-center bg-slate-800/40 p-2 rounded"; r.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><input type="text" placeholder="Tárgy kell" class="input-style flex-1 text-[10px]" value="${ch.req || ''}" oninput="config.storyPages[${currentIdx}].choices[${i}].req=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()">X</button>`; c.appendChild(r); }); }
+        function renderChoices() { const c = document.getElementById('choicesContainer'); c.innerHTML = ''; const p = config.storyPages[currentIdx]; if(!p.choices) return; p.choices.forEach((ch, i) => { const r = document.createElement('div'); r.className = "flex gap-2 items-center bg-slate-800/40 p-2 rounded"; r.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><input type="text" placeholder="Tárgy kell" class="input-style flex-1 text-[10px]" value="${ch.req || ''}" oninput="config.storyPages[${currentIdx}].choices[${i}].req=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()">X<\/button>`; c.appendChild(r); }); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
         function closeImageZoom() { document.getElementById('p-zoom-viewer').style.display = 'none'; }
         function resetSim() { simIdx = 0; updateSimulator(); }
 
-        // --- LIVE HTML GENERÁLÁS (Bővítve GPS logikával) ---
+        // --- LIVE HTML GENERÁLÁS ---
         function downloadLiveHTML() {
             const htmlContent = `<!doctype html>
 <html lang="hu">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kaland Játék</title>
+    <title>Kaland Játék<\/title>
     <script src="https://cdn.tailwindcss.com"><\/script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://unpkg.com/html5-qrcode"><\/script>
@@ -638,42 +639,42 @@
         .manual-btn { background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-transform: uppercase; margin-top: 20px; border: none; cursor: pointer; }
         .gps-overlay { text-align: center; padding: 15px; background: #0f172a; border: 1px solid #8b5cf6; border-radius: 15px; margin-top: 15px; color: #22d3ee; font-weight: bold; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-    </style>
-</head>
+    <\/style>
+<\/head>
 <body>
     <div id="loading" class="loading-screen">
-        <div id="loading-text" class="text-purple-400 font-bold uppercase text-sm">Betöltés...</div>
+        <div id="loading-text" class="text-purple-400 font-bold uppercase text-sm">Betöltés...<\/div>
         <div id="manual-loader" class="hidden flex flex-col items-center">
-            <p class="text-xs text-slate-400 mb-4">Nem találtam automatikus játékfájlt.</p>
-            <button onclick="document.getElementById('manual-file').click()" class="manual-btn">Játék betöltése (.json)</button>
+            <p class="text-xs text-slate-400 mb-4">Nem találtam automatikus játékfájlt.<\/p>
+            <button onclick="document.getElementById('manual-file').click()" class="manual-btn">Játék betöltése (.json)<\/button>
             <input type="file" id="manual-file" class="hidden" accept=".json" onchange="handleManualLoad(event)">
-        </div>
-    </div>
-    <div id="qr-layer"><div id="qr-reader"></div><button onclick="stopQR()" class="action-btn mt-6 !w-auto px-12">MÉGSE</button></div>
-    <div id="zoom-viewer" onclick="this.style.display='none'"><img id="zoom-img" src=""></div>
+        <\/div>
+    <\/div>
+    <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR()" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
+    <div id="zoom-viewer" onclick="this.style.display='none'"><img id="zoom-img" src=""><\/div>
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
-            <div id="inventory-overlay"><h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák</h2><div id="item-list" class="item-grid"></div></div>
+            <div id="inventory-overlay"><h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák<\/h2><div id="item-list" class="item-grid"><\/div><\/div>
             <div id="content-layer">
                 <div class="dialog-box">
                     <img id="avatar-img" class="avatar-frame" src="">
                     <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow">
                         <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800" src="">
-                        <div id="story-text"></div>
-                        <div id="gps-status" class="gps-overlay hidden"><i class="fa fa-location-dot mr-2"></i> Távolság: <span id="dist-val">...</span>m</div>
-                    </div>
-                    <div id="button-container" class="mt-4 flex flex-col gap-3"></div>
-                </div>
-            </div>
-        </div>
+                        <div id="story-text"><\/div>
+                        <div id="gps-status" class="gps-overlay hidden"><i class="fa fa-location-dot mr-2"><\/i> Távolság: <span id="dist-val">...<\/span>m<\/div>
+                    <\/div>
+                    <div id="button-container" class="mt-4 flex flex-col gap-3"><\/div>
+                <\/div>
+            <\/div>
+        <\/div>
         <div class="bottom-nav">
-            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"></i></button>
-            <button id="nav-inv" class="nav-item" onclick="switchView('inv')"><i class="fa-solid fa-briefcase"></i><div id="inv-badge" class="badge hidden">0</div></button>
-            <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i></button>
-            <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"></i></button>
-        </div>
-    </div>
+            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"><\/i><\/button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv')"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
+            <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"><\/i><\/button>
+            <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
+        <\/div>
+    <\/div>
     <script>
         let config = null, simIdx = 0, inventory = [], qrScanner = null, geoId = null;
         async function loadGame() {
@@ -710,7 +711,7 @@
             setTimeout(() => { document.getElementById('bg-layer').src = p.pageBg || config.globalBg || ""; document.getElementById('bg-layer').style.opacity = 1; }, 200);
             let text = p.content || "";
             const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
-            config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':</span>'); } });
+            config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
             document.getElementById('story-text').innerHTML = text;
             const ill = document.getElementById('page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
             const container = document.getElementById('button-container'); container.innerHTML = '';
@@ -726,7 +727,12 @@
                 geoId = navigator.geolocation.watchPosition((pos) => {
                     const d = getD(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLng));
                     document.getElementById('dist-val').textContent = Math.round(d);
-                    if(d <= 20 && container.innerHTML === "") addBtn("TOVÁBB (MEGÉRKEZTÉL!)", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI(); }, "fa-chevron-right");
+                    if(d <= 20) {
+                        navigator.geolocation.clearWatch(geoId);
+                        geoId = null;
+                        simIdx = parseInt(p.nextIdx) || simIdx + 1; 
+                        updateUI(); 
+                    }
                 }, null, {enableHighAccuracy:true});
             } else if(p.pageType === 'choice' && p.choices) {
                 p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }); });
@@ -735,7 +741,7 @@
         }
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
-            b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"></i>' : '');
+            b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
             b.onclick = fn; document.getElementById('button-container').appendChild(b);
         }
         function startQR() {
@@ -760,8 +766,8 @@
             const list = document.getElementById('item-list'); list.innerHTML = '';
             inventory.forEach(item => {
                 const d = document.createElement('div'); d.className = "item-card";
-                let content = item.url ? '<img src="'+item.url+'"><div class="text-[10px] font-bold text-white uppercase">'+item.name+'</div>' : '<div class="text-4xl mb-2">'+item.icon+'</div><div class="text-[10px] font-bold text-white uppercase">'+item.name+'</div>';
-                if (!item.seen) content += '<div class="item-unread-dot"></div>';
+                let content = item.url ? '<img src="'+item.url+'"><div class="text-[10px] font-bold text-white uppercase">'+item.name+'<\/div>' : '<div class="text-4xl mb-2">'+item.icon+'<\/div><div class="text-[10px] font-bold text-white uppercase">'+item.name+'<\/div>';
+                if (!item.seen) content += '<div class="item-unread-dot"><\/div>';
                 d.innerHTML = content;
                 d.onclick = () => { if(item.url) { document.getElementById('zoom-img').src = item.url; document.getElementById('zoom-viewer').style.display = 'flex'; } item.seen = true; updateBadge(); renderInventory(); };
                 list.appendChild(d);
@@ -771,8 +777,8 @@
         function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map'); updateUI(); } }
         window.onload = loadGame;
     <\/script>
-</body>
-</html>`;
+<\/body>
+<\/html>`;
 
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
