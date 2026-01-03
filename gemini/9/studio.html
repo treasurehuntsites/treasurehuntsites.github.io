@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaland Játék Stúdió V10.6 ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Play', sans-serif; 
+            background-color: #0f172a; 
+            color: #f8fafc; 
+            overflow-x: hidden; 
+        }
+        
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(139, 92, 246, 0.3); 
+            border-radius: 1rem; 
+        }
+        
+        .input-style { 
+            background: #0f172a; 
+            color: #22d3ee; 
+            border: 1px solid #334155; 
+            border-radius: 0.5rem; 
+            padding: 0.6rem; 
+            outline: none; 
+            transition: 0.2s; 
+            width: 100%; 
+        }
+        .input-style:focus { 
+            border-color: #8b5cf6; 
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); 
+        }
+        
+        .page-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0.75rem; 
+            margin-bottom: 0.5rem; 
+            border-radius: 0.5rem; 
+            background: #1e293b; 
+            border: 1px solid transparent; 
+            transition: 0.2s; 
+        }
+        .page-item:hover { background: #334155; }
+        .page-item.selected { border-color: #22d3ee; background: #4c1d95; }
+        .handle { cursor: grab; padding-right: 15px; color: #64748b; }
+
+        /* Mobil Szimulátor */
+        .sim-container {
+            position: sticky;
+            top: 1rem;
+            width: 320px;
+            height: 600px;
+            background: #000;
+            border: 10px solid #1e293b;
+            border-radius: 2.5rem;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; transition: src 0.5s ease-in-out; }
+        
+        #sim-content { 
+            position: relative; 
+            z-index: 10; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+            padding: 0;
+        }
+        
+        .sim-box { 
+            position: relative;
+            background: rgba(0,0,0,0.94); 
+            border-top: 3px solid #8b5cf6; 
+            border-radius: 1.5rem 1.5rem 0 0; 
+            padding: 20px; 
+            padding-top: 35px;
+            min-height: 220px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+        }
+        
+        .sim-avatar { 
+            position: absolute; 
+            top: -40px; 
+            left: 10px; 
+            width: 65px; 
+            height: 65px; 
+            border-radius: 50%; 
+            border: 3px solid #8b5cf6; 
+            background: #000; 
+            z-index: 20; 
+            object-fit: cover; 
+            display: none; 
+        }
+
+        .sim-btn { 
+            flex: 1; 
+            background: #8b5cf6; 
+            color: white; 
+            padding: 14px; 
+            border-radius: 0.75rem; 
+            font-weight: 700; 
+            text-align: center; 
+            font-size: 0.95rem; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            transition: 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .sim-btn:hover { background: #a855f7; transform: translateY(-1px); }
+        .sim-btn-back { background: #334155; }
+        .sim-btn-back:hover { background: #475569; }
+        
+        .sim-bottom-bar { 
+            height: 65px; 
+            background: #0f172a; 
+            border-top: 1px solid rgba(139, 92, 246, 0.3); 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            z-index: 100; 
+        }
+        
+        .sim-menu-btn { color: #64748b; font-size: 1.3rem; cursor: pointer; border: none; background: transparent; position: relative; transition: color 0.3s; }
+        .sim-menu-btn.active { color: #8b5cf6; }
+        .badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 8px; padding: 2px 5px; border-radius: 50%; font-weight: bold; }
+
+        #sim-actual-text {
+            text-align: justify;
+            hyphens: auto;
+            padding: 0 5px;
+            font-size: 16px; 
+            font-weight: 700;
+            line-height: 1.6;
+        }
+
+        .gps-display-sim {
+            background: rgba(34, 211, 238, 0.15);
+            border: 1px solid #22d3ee;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        #save-indicator { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 0.6rem 1.2rem; border-radius: 2rem; font-size: 0.75rem; font-weight: bold; display: none; z-index: 1000; }
+        
+        #sim-inventory-view { position: absolute; inset: 0; background: #0f172a; z-index: 50; display: none; padding: 20px; padding-top: 40px; }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inv-card { background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .inv-card:hover { border-color: #8b5cf6; background: #334155; }
+        .inv-card img { width: 50px; height: 50px; object-fit: contain; margin: 0 auto 8px; }
+
+        /* Kép nagyító overlay */
+        #sim-zoom-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            cursor: pointer;
+        }
+        #sim-zoom-img {
+            max-width: 95%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .avatar-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 0.75rem;
+            display: grid;
+            grid-template-columns: 50px 1fr 50px auto;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div id="save-indicator"><i class="fa fa-sync-alt fa-spin mr-2"></i> MENTÉS...</div>
+
+    <div id="sim-zoom-overlay" onclick="closeImageZoom()">
+        <img id="sim-zoom-img" src="">
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V10.6</span> ✨</h1>
+                <p class="text-cyan-400 text-sm mt-1">Stabil verzió visszaállítva</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase">Export game.json</button>
+                <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase">Import</button>
+                <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-10">
+            <div class="flex-1 space-y-8">
+                <!-- GLOBÁLIS BEÁLLÍTÁSOK -->
+                <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Világ és Térkép</h3>
+                        <input type="text" id="appTitle" class="input-style" placeholder="Kaland címe" oninput="autoSave()">
+                        <input type="url" id="globalBg" class="input-style" placeholder="Globális Háttérkép URL" oninput="autoSave()">
+                        <input type="url" id="mapUrl" class="input-style" placeholder="GPS Térkép URL" oninput="autoSave()">
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Avatarok</h3>
+                            <button onclick="addAvatar()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ KARAKTER</button>
+                        </div>
+                        <div id="avatarList" class="space-y-2 max-h-40 overflow-y-auto pr-2"></div>
+                    </div>
+                </div>
+
+                <!-- OLDALAK LISTÁJA -->
+                <div class="glass-card p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Történetfolyam</h3>
+                        <button onclick="addPage()" class="bg-purple-600 px-4 py-2 rounded-lg text-[10px] font-bold">+ ÚJ OLDAL</button>
+                    </div>
+                    <div id="pageList" class="max-h-60 overflow-y-auto pr-2 space-y-1"></div>
+                </div>
+
+                <!-- SZERKESZTŐ PANEL -->
+                <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-cyan-400 font-bold uppercase text-[10px] tracking-widest">Oldal Szerkesztése</h3>
+                            <input type="url" id="pageImage" class="input-style w-1/2 text-xs py-1" placeholder="Oldal illusztráció URL" oninput="autoSave()">
+                        </div>
+                        <textarea id="pageText" rows="6" class="input-style text-base" placeholder="Szöveg... (Használd a §ID kódot)" oninput="autoSave()"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Típus</label>
+                            <select id="pageType" class="input-style text-xs" onchange="updateUI(); autoSave();">
+                                <option value="story">Leírás</option>
+                                <option value="choice">Választás</option>
+                                <option value="qr">QR Kód</option>
+                                <option value="gps">GPS Pont</option>
+                                <option value="password">Kódzár</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Vissza ID</label>
+                            <input type="number" id="prevIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Tovább ID</label>
+                            <input type="number" id="nextIdx" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Egyedi BG</label>
+                            <input type="url" id="pageBg" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] uppercase text-slate-500">Avatar</label>
+                            <input type="text" id="avatarSelector" class="input-style text-xs" oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <!-- JUTALOM MEZŐK -->
+                    <div id="rewardArea" class="border-t border-slate-700/50 pt-6 space-y-4">
+                        <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Oldal jutalma (bármely típusnál)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" id="storyItemName" class="input-style text-xs" placeholder="Tárgy neve" oninput="autoSave()">
+                            <input type="text" id="storyItemIcon" class="input-style text-xs" placeholder="Ikon (Emoji)" oninput="autoSave()">
+                            <input type="url" id="storyItemUrl" class="input-style text-xs" placeholder="Tárgy képe (URL)" oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <div id="gpsArea" class="hidden border-t border-slate-700/50 pt-6 space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="text" id="targetLat" class="input-style text-xs" placeholder="Szélesség (Lat)" oninput="autoSave()">
+                            <input type="text" id="targetLon" class="input-style text-xs" placeholder="Hosszúság (Lon)" oninput="autoSave()">
+                        </div>
+                    </div>
+
+                    <div id="qrArea" class="hidden border-t border-slate-700/50 pt-6 space-y-6">
+                        <input type="text" id="qrCode" class="input-style text-xs" placeholder="Várt QR kód tartalma" oninput="autoSave()">
+                    </div>
+
+                    <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-6 space-y-6">
+                        <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes válasz" oninput="autoSave()">
+                    </div>
+
+                    <div id="choiceArea" class="hidden border-t border-slate-700/50 pt-6">
+                        <div class="flex justify-between items-center mb-4">
+                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Választási Opciók</h3>
+                             <button onclick="addChoiceItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ GOMB</button>
+                        </div>
+                        <div id="choicesContainer" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SZIMULÁTOR -->
+            <div class="w-full lg:w-auto flex justify-center">
+                <div class="sim-container">
+                    <div id="sim-viewport">
+                        <img id="sim-bg" src="">
+                        
+                        <div id="qr-sim" class="qr-overlay-sim">
+                            <div class="qr-frame-sim"><div class="scan-line-sim"></div></div>
+                            <input type="text" id="sim-qr-input" class="input-style text-center mt-4 text-xs" placeholder="Kód...">
+                            <div class="flex gap-2 w-full mt-2">
+                                <button onclick="checkQRSim()" class="sim-btn w-full">OK</button>
+                                <button onclick="document.getElementById('qr-sim').style.display='none'" class="sim-btn sim-btn-back w-full">X</button>
+                            </div>
+                        </div>
+
+                        <div id="sim-inventory-view">
+                            <h2 class="text-center text-cyan-400 font-bold mb-6 uppercase text-sm">Hátizsák</h2>
+                            <div id="sim-inv-list" class="inv-grid"></div>
+                        </div>
+
+                        <div id="sim-content">
+                            <div class="sim-box">
+                                <img id="sim-avatar" class="sim-avatar" src="">
+                                <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
+                                    <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden border border-slate-800 shadow-xl" src="">
+                                    <div id="sim-gps-display" class="gps-display-sim">
+                                        <div class="text-[9px] uppercase opacity-60 font-bold text-cyan-400 mb-1 tracking-widest">Célpont távolsága</div>
+                                        <div id="gps-val-sim" class="text-2xl font-bold text-white">--- m</div>
+                                    </div>
+                                    <div id="sim-actual-text"></div>
+                                </div>
+                                <div id="sim-actions" class="mt-4 flex flex-col gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sim-bottom-bar">
+                        <button id="sim-nav-map" class="sim-menu-btn active" onclick="toggleSimView('map')"><i class="fa fa-map-marked-alt"></i></button>
+                        <button id="sim-nav-inv" class="sim-menu-btn" onclick="toggleSimView('inv')">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <div id="sim-inv-badge" class="badge hidden">0</div>
+                        </button>
+                        <button class="sim-menu-btn" onclick="resetSim()"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'KALAND_STUDIO_V10_6';
+        let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+            appTitle: "Kezdő Kaland",
+            globalBg: "https://images.unsplash.com/photo-1514924013411-cbf25faa35bb?auto=format&fit=crop&q=80",
+            avatars: [{ id: 'A', name: 'Hős', url: 'https://cdn-icons-png.flaticon.com/512/6833/6833605.png', color: '#60a5fa' }],
+            storyPages: [{ content: "Üdvözöllek! §A Kezdjük el.", pageType: "story", nextIdx: 1 }]
+        };
+
+        let currentIdx = -1;
+        let simIdx = 0;
+        let saveTimeout;
+        let simInv = [];
+        let gpsWatcher = null;
+
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const f1 = la1 * Math.PI/180, f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // --- SZIMULÁTOR ---
+        function updateSimulator() {
+            if (gpsWatcher) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
+            const p = config.storyPages[simIdx];
+            if(!p) return;
+
+            handleReward(p);
+
+            document.getElementById('sim-bg').src = p.pageBg || config.globalBg || "";
+            let text = p.content || "";
+            const avBox = document.getElementById('sim-avatar');
+            avBox.style.display = 'none';
+
+            config.avatars.forEach(av => {
+                if(text.includes(`§${av.id}`)) {
+                    avBox.src = av.url || "";
+                    avBox.style.display = av.url ? 'block' : 'none';
+                    avBox.style.borderColor = av.color;
+                    text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`);
+                }
+            });
+
+            document.getElementById('sim-actual-text').innerHTML = text;
+            const img = document.getElementById('sim-page-img');
+            if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
+
+            const gpsDisplay = document.getElementById('sim-gps-display');
+            gpsDisplay.style.display = p.pageType === 'gps' ? 'block' : 'none';
+
+            const acts = document.getElementById('sim-actions'); 
+            acts.innerHTML = '';
+            acts.className = (p.pageType === 'story' || p.pageType === 'gps') ? "mt-4 flex flex-row-reverse gap-2" : "mt-4 flex flex-col gap-2";
+
+            if (p.pageType === 'gps') {
+                if (navigator.geolocation) {
+                    gpsWatcher = navigator.geolocation.watchPosition(pos => {
+                        const dist = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                        document.getElementById('gps-val-sim').textContent = `${Math.round(dist)} m`;
+                        if (dist < 15) {
+                            navigator.geolocation.clearWatch(gpsWatcher);
+                            gpsWatcher = null;
+                            simIdx = parseInt(p.nextIdx) || simIdx + 1;
+                            updateSimulator();
+                        }
+                    }, null, { enableHighAccuracy: true });
+                }
+                addSimBtn("TOVÁBB", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); }, "fa-chevron-right");
+            } else if(p.pageType === 'qr') {
+                addSimBtn("QR BEOLVASÁSA", () => document.getElementById('qr-sim').style.display='flex', "fa-camera");
+            } else if(p.pageType === 'password') {
+                const inp = document.createElement('input'); inp.className = "input-style text-center py-2 text-xs mb-2"; inp.placeholder = "KÓD...";
+                const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = "NYITÁS";
+                b.onclick = () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); } else { inp.style.borderColor = 'red'; } };
+                acts.append(inp, b);
+            } else if(p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => addSimBtn(c.text, () => { simIdx = parseInt(c.target); updateSimulator(); }));
+            } else {
+                addSimBtn("TOVÁBB", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); }, "fa-chevron-right");
+            }
+
+            if(simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
+                const back = document.createElement('div'); 
+                back.className = "sim-btn sim-btn-back"; 
+                back.innerHTML = '<i class="fa fa-arrow-left mr-2"></i> VISSZA';
+                back.onclick = () => { simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : simIdx - 1; updateSimulator(); };
+                acts.appendChild(back);
+            }
+        }
+
+        function addSimBtn(text, fn, icon) {
+            const b = document.createElement('div');
+            b.className = "sim-btn";
+            b.innerHTML = `${text} ${icon ? `<i class="fa ${icon} ml-2 opacity-50 text-sm"></i>` : ''}`;
+            b.onclick = fn;
+            document.getElementById('sim-actions').appendChild(b);
+        }
+
+        function toggleSimView(target) {
+            const invView = document.getElementById('sim-inventory-view');
+            const mapBtn = document.getElementById('sim-nav-map');
+            const invBtn = document.getElementById('sim-nav-inv');
+            if (target === 'inv') {
+                if (invView.style.display === 'block') { invView.style.display = 'none'; invBtn.classList.remove('active'); mapBtn.classList.add('active'); }
+                else { renderInventory(); invView.style.display = 'block'; invBtn.classList.add('active'); mapBtn.classList.remove('active'); }
+            } else { invView.style.display = 'none'; invBtn.classList.remove('active'); mapBtn.classList.add('active'); }
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('sim-inv-list');
+            list.innerHTML = '';
+            simInv.forEach(item => {
+                const d = document.createElement('div'); d.className = "inv-card";
+                if(item.url) {
+                    d.innerHTML = `<img src="${item.url}"><div class="text-[9px] font-bold text-white uppercase">${item.name}</div>`;
+                    d.onclick = () => openImageZoom(item.url);
+                } else {
+                    d.innerHTML = `<div class="text-3xl mb-2">${item.icon}</div><div class="text-[9px] font-bold text-white uppercase">${item.name}</div>`;
+                }
+                list.appendChild(d);
+            });
+        }
+
+        function openImageZoom(url) {
+            const overlay = document.getElementById('sim-zoom-overlay');
+            document.getElementById('sim-zoom-img').src = url;
+            overlay.style.display = 'flex';
+            document.getElementById('sim-inv-badge').classList.add('hidden');
+        }
+
+        function closeImageZoom() { document.getElementById('sim-zoom-overlay').style.display = 'none'; }
+
+        function handleReward(page) {
+            let itemName = page.storyItemName;
+            let itemIcon = page.storyItemIcon;
+            let itemUrl = page.storyItemUrl;
+
+            if(itemName && !simInv.find(i => i.name === itemName)) {
+                simInv.push({ name: itemName, icon: itemIcon || '📦', url: itemUrl || '' });
+                updateInvBadge();
+            }
+        }
+
+        function checkQRSim() {
+            const val = document.getElementById('sim-qr-input').value.trim().toUpperCase();
+            const p = config.storyPages[simIdx];
+            if(val === (p.qrCode || "").toUpperCase()) {
+                document.getElementById('qr-sim').style.display = 'none';
+                simIdx = parseInt(p.nextIdx) || simIdx + 1;
+                updateSimulator();
+            } else { document.getElementById('sim-qr-input').style.borderColor = 'red'; }
+        }
+
+        function updateInvBadge() {
+            const b = document.getElementById('sim-inv-badge');
+            b.textContent = simInv.length;
+            b.classList.toggle('hidden', simInv.length === 0);
+        }
+
+        function resetSim() { 
+            simIdx = 0; simInv = []; updateInvBadge(); toggleSimView('map'); updateSimulator(); 
+        }
+
+        // --- SZERKESZTŐ ---
+        function loadPage(i) {
+            currentIdx = i; const p = config.storyPages[i];
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('pageText').value = p.content || "";
+            document.getElementById('pageImage').value = p.pageImage || "";
+            document.getElementById('prevIdx').value = p.prevIdx ?? "";
+            document.getElementById('nextIdx').value = p.nextIdx ?? "";
+            document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('avatarSelector').value = p.avatarSelector || "";
+            document.getElementById('qrCode').value = p.qrCode || "";
+            document.getElementById('targetLat').value = p.targetLat || "";
+            document.getElementById('targetLon').value = p.targetLon || "";
+            document.getElementById('correctPass').value = p.password || "";
+            document.getElementById('storyItemName').value = p.storyItemName || "";
+            document.getElementById('storyItemIcon').value = p.storyItemIcon || "";
+            document.getElementById('storyItemUrl').value = p.storyItemUrl || "";
+            updateUI(); renderChoices(); renderPageList(); simIdx = i; updateSimulator();
+        }
+
+        function autoSave() {
+            clearTimeout(saveTimeout);
+            document.getElementById('save-indicator').style.display = 'block';
+            saveTimeout = setTimeout(() => {
+                const p = config.storyPages[currentIdx];
+                if(p) {
+                    p.content = document.getElementById('pageText').value;
+                    p.pageImage = document.getElementById('pageImage').value;
+                    p.prevIdx = document.getElementById('prevIdx').value;
+                    p.nextIdx = document.getElementById('nextIdx').value;
+                    p.pageType = document.getElementById('pageType').value;
+                    p.pageBg = document.getElementById('pageBg').value;
+                    p.avatarSelector = document.getElementById('avatarSelector').value;
+                    p.qrCode = document.getElementById('qrCode').value;
+                    p.targetLat = document.getElementById('targetLat').value;
+                    p.targetLon = document.getElementById('targetLon').value;
+                    p.password = document.getElementById('correctPass').value;
+                    p.storyItemName = document.getElementById('storyItemName').value;
+                    p.storyItemIcon = document.getElementById('storyItemIcon').value;
+                    p.storyItemUrl = document.getElementById('storyItemUrl').value;
+                }
+                config.appTitle = document.getElementById('appTitle').value;
+                config.globalBg = document.getElementById('globalBg').value;
+                config.mapUrl = document.getElementById('mapUrl').value;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+                renderPageList(); updateSimulator();
+                setTimeout(() => document.getElementById('save-indicator').style.display = 'none', 500);
+            }, 1000);
+        }
+
+        function renderAvatarAdmin() {
+            const list = document.getElementById('avatarList'); list.innerHTML = '';
+            config.avatars.forEach((av, i) => {
+                const d = document.createElement('div'); d.className = "avatar-card";
+                d.innerHTML = `<input type="text" class="input-style text-center font-bold px-1" value="${av.id}" oninput="config.avatars[${i}].id=this.value;autoSave()"><input type="text" class="input-style text-xs" value="${av.name}" oninput="config.avatars[${i}].name=this.value;autoSave()"><input type="color" class="w-full h-8 bg-transparent" value="${av.color}" oninput="config.avatars[${i}].color=this.value;autoSave()"><button onclick="config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-400 p-1"><i class="fa fa-trash"></i></button><div class="col-span-4 mt-1"><input type="url" class="input-style text-[9px] py-1" value="${av.url}" placeholder="URL" oninput="config.avatars[${i}].url=this.value;autoSave()"></div>`;
+                list.appendChild(d);
+            });
+        }
+
+        function addAvatar() { config.avatars.push({id: 'X', name: 'Név', url: '', color: '#ffffff'}); renderAvatarAdmin(); autoSave(); }
+
+        function renderPageList() {
+            const list = document.getElementById('pageList'); list.innerHTML = '';
+            config.storyPages.forEach((p, i) => {
+                const d = document.createElement('div'); d.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                d.innerHTML = `<div class="flex items-center flex-grow overflow-hidden"><i class="fa fa-bars handle mr-3 opacity-30"></i><span onclick="loadPage(${i})" class="truncate text-xs font-bold uppercase cursor-pointer">#${i}: ${p.content ? p.content.substring(0, 20) : 'Üres'}...</span></div><div class="flex gap-2"><button onclick="duplicatePage(${i})" class="text-emerald-400 px-2"><i class="fa fa-copy"></i></button><button onclick="deletePage(${i})" class="text-red-400 px-2"><i class="fa fa-trash"></i></button></div>`;
+                list.appendChild(d);
+            });
+            new Sortable(list, { handle: '.handle', animation: 150, onEnd: (evt) => {
+                const item = config.storyPages.splice(evt.oldIndex, 1)[0];
+                config.storyPages.splice(evt.newIndex, 0, item);
+                autoSave();
+            }});
+        }
+
+        function updateUI() {
+            const t = document.getElementById('pageType').value;
+            document.getElementById('qrArea').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps');
+            document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password');
+            document.getElementById('choiceArea').classList.toggle('hidden', t !== 'choice');
+        }
+
+        function renderChoices() {
+            const container = document.getElementById('choicesContainer'); container.innerHTML = '';
+            const p = config.storyPages[currentIdx]; if(!p || !p.choices) return;
+            p.choices.forEach((c, i) => {
+                const row = document.createElement('div'); row.className = "flex gap-2";
+                row.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${c.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${c.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()"><i class="fa fa-times"></i></button>`;
+                container.appendChild(row);
+            });
+        }
+
+        function addChoiceItem() { config.storyPages[currentIdx].choices.push({text: 'Opció', target: 0}); renderChoices(); autoSave(); }
+        function addPage() { config.storyPages.push({content: "Új oldal...", pageType: "story", choices: [], inventory: []}); loadPage(config.storyPages.length-1); }
+        function duplicatePage(i) { config.storyPages.splice(i+1, 0, JSON.parse(JSON.stringify(config.storyPages[i]))); renderPageList(); autoSave(); }
+        function deletePage(i) { if(confirm("Biztosan törlöd?")) { config.storyPages.splice(i,1); currentIdx=-1; document.getElementById('editorPanel').classList.add('hidden'); renderPageList(); autoSave(); } }
+        
+        function downloadConfig() { 
+            const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'game.json'; a.click();
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => { 
+                try {
+                    config = JSON.parse(ev.target.result);
+                    renderAvatarAdmin(); renderPageList(); if(config.storyPages.length) loadPage(0);
+                } catch(e) { console.error("Hibás JSON"); }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = () => {
+            document.getElementById('appTitle').value = config.appTitle || "";
+            document.getElementById('globalBg').value = config.globalBg || "";
+            document.getElementById('mapUrl').value = config.mapUrl || "";
+            renderAvatarAdmin(); renderPageList(); if(config.storyPages && config.storyPages.length > 0) loadPage(0);
+        };
+    </script>
+</body>
+</html>
