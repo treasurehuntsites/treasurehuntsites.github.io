@@ -267,12 +267,12 @@
                         <div id="p-scroll-area" class="overflow-y-auto pr-1 flex-grow">
                             <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800 shadow-xl" src="">
                             <div id="p-story-text"></div>
-                            <div id="p-gps-info" class="hidden flex flex-col items-center gap-3">
-                                <div class="w-full text-center p-3 bg-slate-900 rounded-xl text-sm text-cyan-400 font-bold italic border border-cyan-800 animate-pulse">
+                            <div id="p-gps-info" class="hidden flex flex-col items-center gap-3 mt-4">
+                                <div class="w-full text-center p-3 bg-slate-900/80 rounded-xl text-sm text-cyan-400 font-bold italic border border-cyan-800/50 animate-pulse">
                                     <i class="fa fa-location-dot mr-2"></i> Távolság: <span id="p-distance-val">...</span> méter
                                 </div>
-                                <a id="p-map-btn" target="_blank" class="hidden w-full bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl font-bold text-center text-xs uppercase transition-colors border border-slate-600">
-                                    <i class="fa fa-map mr-2"></i> Megnyitás Térképen
+                                <a id="p-map-btn" target="_blank" class="hidden w-full bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-center text-xs uppercase transition-colors shadow-lg shadow-cyan-900/20">
+                                    <i class="fa fa-map-location-dot mr-2 text-base"></i> Útvonalterv / Térkép
                                 </a>
                             </div>
                         </div>
@@ -281,7 +281,10 @@
                 </div>
             </div>
             <div class="p-bottom-nav">
-                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map')"><i class="fa fa-map-marked-alt"></i></button>
+                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map')">
+                    <i class="fa fa-map-marked-alt"></i>
+                    <div id="p-map-badge" class="p-badge hidden">!</div>
+                </button>
                 <button id="p-nav-inv" class="p-nav-item" onclick="pSwitchView('inv')">
                     <i class="fa-solid fa-briefcase"></i>
                     <div id="p-inv-badge" class="p-badge hidden">0</div>
@@ -412,8 +415,11 @@
             const container = document.getElementById('p-button-container'); container.innerHTML = '';
             const gpsInfo = document.getElementById('p-gps-info');
             const mapBtn = document.getElementById('p-map-btn');
+            const mapBadge = document.getElementById('p-map-badge');
+
             gpsInfo.classList.add('hidden');
             mapBtn.classList.add('hidden');
+            mapBadge.classList.add('hidden');
 
             if (p.pageType === 'qr') {
                 pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
@@ -425,7 +431,11 @@
                 container.prepend(inp);
             } else if (p.pageType === 'gps') {
                 gpsInfo.classList.remove('hidden');
-                if (p.mapLink) { mapBtn.href = p.mapLink; mapBtn.classList.remove('hidden'); }
+                if (p.mapLink) { 
+                    mapBtn.href = p.mapLink; 
+                    mapBtn.classList.remove('hidden'); 
+                    mapBadge.classList.remove('hidden');
+                }
                 const distSpan = document.getElementById('p-distance-val');
                 distSpan.textContent = "...";
                 
@@ -496,10 +506,22 @@
             const inv = document.getElementById('p-inventory-overlay');
             const navInv = document.getElementById('p-nav-inv');
             const navMap = document.getElementById('p-nav-map');
+            const p = config.storyPages[pSimIdx];
+
             if (target === 'inv') {
                 if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
                 else { pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); }
-            } else { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
+            } else if (target === 'map') {
+                // Ha van térkép link a jelenlegi GPS oldalon, nyissa meg és vegye le a jelzést
+                if (p && p.pageType === 'gps' && p.mapLink) {
+                    window.open(p.mapLink, '_blank');
+                    document.getElementById('p-map-badge').classList.add('hidden');
+                } else {
+                    inv.style.display = 'none'; 
+                    navInv.classList.remove('active'); 
+                    navMap.classList.add('active');
+                }
+            }
         }
 
         function pRenderInventory() {
@@ -643,8 +665,8 @@
         #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; }
         .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .manual-btn { background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-transform: uppercase; margin-top: 20px; border: none; cursor: pointer; }
-        .gps-overlay { text-align: center; padding: 15px; background: #0f172a; border: 1px solid #8b5cf6; border-radius: 15px; margin-top: 15px; color: #22d3ee; font-weight: bold; animation: pulse 2s infinite; }
-        .map-btn { display: block; width: 100%; background: #1e293b; color: white; padding: 12px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; text-transform: uppercase; margin-top: 10px; border: 1px solid #334155; text-decoration: none; }
+        .gps-overlay { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; background: #0f172a; border: 1px solid #8b5cf6; border-radius: 15px; margin-top: 15px; color: #22d3ee; font-weight: bold; animation: pulse 2s infinite; }
+        .map-btn { display: block; width: 100%; background: #0891b2; color: white; padding: 12px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: center; text-transform: uppercase; border: none; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     <\/style>
 <\/head>
@@ -670,8 +692,8 @@
                         <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800" src="">
                         <div id="story-text"><\/div>
                         <div id="gps-status" class="gps-overlay hidden">
-                            <i class="fa fa-location-dot mr-2"><\/i> Távolság: <span id="dist-val">...<\/span>m
-                            <a id="ext-map-btn" target="_blank" class="map-btn hidden"><i class="fa fa-map mr-2"><\/i> Megnyitás Térképen<\/a>
+                            <div class="w-full text-center"><i class="fa fa-location-dot mr-2"><\/i> Távolság: <span id="dist-val">...<\/span>m<\/div>
+                            <a id="ext-map-btn" target="_blank" class="map-btn hidden"><i class="fa fa-map-location-dot mr-2"><\/i> Megnyitás Térképen<\/a>
                         <\/div>
                     <\/div>
                     <div id="button-container" class="mt-4 flex flex-col gap-3"><\/div>
@@ -679,8 +701,14 @@
             <\/div>
         <\/div>
         <div class="bottom-nav">
-            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"><\/i><\/button>
-            <button id="nav-inv" class="nav-item" onclick="switchView('inv')"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
+            <button id="nav-map" class="nav-item active" onclick="switchView('map')">
+                <i class="fa fa-map-marked-alt"><\/i>
+                <div id="map-badge" class="badge hidden">!<\/div>
+            <\/button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv')">
+                <i class="fa-solid fa-briefcase"><\/i>
+                <div id="inv-badge" class="badge hidden">0<\/div>
+            <\/button>
             <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"><\/i><\/button>
             <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
         <\/div>
@@ -727,6 +755,7 @@
             const container = document.getElementById('button-container'); container.innerHTML = '';
             const status = document.getElementById('gps-status'); status.classList.add('hidden');
             const extMap = document.getElementById('ext-map-btn'); extMap.classList.add('hidden');
+            const mapBadge = document.getElementById('map-badge'); mapBadge.classList.add('hidden');
             
             if (p.pageType === 'qr') { addBtn("QR BEOLVASÁSA", startQR, "fa-camera"); }
             else if(p.pageType === 'password') {
@@ -735,7 +764,11 @@
                 container.prepend(inp);
             } else if(p.pageType === 'gps') {
                 status.classList.remove('hidden');
-                if (p.mapLink) { extMap.href = p.mapLink; extMap.classList.remove('hidden'); }
+                if (p.mapLink) { 
+                    extMap.href = p.mapLink; 
+                    extMap.classList.remove('hidden'); 
+                    mapBadge.classList.remove('hidden');
+                }
                 geoId = navigator.geolocation.watchPosition((pos) => {
                     const d = getD(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLng));
                     document.getElementById('dist-val').textContent = Math.round(d);
@@ -764,10 +797,19 @@
         function updateBadge() { const b = document.getElementById('inv-badge'); const unread = inventory.filter(i => !i.seen).length; b.textContent = unread; b.classList.toggle('hidden', unread === 0); }
         function switchView(target) {
             const inv = document.getElementById('inventory-overlay');
+            const p = config.storyPages[simIdx];
             if (target === 'inv') {
                 if (inv.style.display === 'block') { inv.style.display = 'none'; document.getElementById('nav-inv').classList.remove('active'); }
                 else { renderInventory(); inv.style.display = 'block'; document.getElementById('nav-inv').classList.add('active'); }
-            } else { inv.style.display = 'none'; document.getElementById('nav-inv').classList.remove('active'); }
+            } else if (target === 'map') {
+                if (p && p.pageType === 'gps' && p.mapLink) {
+                    window.open(p.mapLink, '_blank');
+                    document.getElementById('map-badge').classList.add('hidden');
+                } else {
+                    inv.style.display = 'none'; 
+                    document.getElementById('nav-inv').classList.remove('active');
+                }
+            }
         }
         function renderInventory() {
             const list = document.getElementById('item-list'); list.innerHTML = '';
