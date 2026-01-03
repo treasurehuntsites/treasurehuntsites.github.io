@@ -27,7 +27,7 @@
             background: #000;
         }
 
-        /* Background Layer */
+        /* Háttér kép */
         #bg-layer { 
             position: absolute; 
             inset: 0; 
@@ -39,7 +39,7 @@
             transition: opacity 0.5s ease-in-out; 
         }
 
-        /* Content Layer */
+        /* Tartalmi réteg */
         #content-layer { 
             position: relative; 
             z-index: 10; 
@@ -51,7 +51,7 @@
             pointer-events: none;
         }
 
-        /* Dialog Box */
+        /* Párbeszéd ablak */
         .dialog-box { 
             pointer-events: auto;
             position: relative;
@@ -84,7 +84,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        /* Buttons */
+        /* Gombok */
         .btn-action { 
             flex: none; 
             background: #8b5cf6; 
@@ -103,11 +103,12 @@
             width: 100%;
             border: none;
             box-sizing: border-box;
+            font-family: inherit;
         }
         .btn-action:active { transform: scale(0.98); background: #a855f7; }
         .btn-back { background: #334155; margin-top: 8px; }
 
-        /* Bottom Navigation */
+        /* Alsó navigáció */
         .bottom-nav { 
             height: 75px; 
             background: #0f172a; 
@@ -115,11 +116,11 @@
             display: flex; 
             justify-content: space-around; 
             align-items: center; 
-            z-index: 100; 
+            z-index: 500; 
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        .nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; }
+        .nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; transition: color 0.3s; }
         .nav-item.active { color: #8b5cf6; }
 
         .badge { 
@@ -143,12 +144,12 @@
             margin-bottom: 15px;
         }
 
-        /* Inventory Overlay */
+        /* Hátizsák Overlay */
         #inventory-overlay { 
             position: absolute; 
             inset: 0; 
             background: #0f172a; 
-            z-index: 150; 
+            z-index: 400; 
             display: none; 
             padding: 25px; 
             padding-top: 50px; 
@@ -175,12 +176,12 @@
             box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
         }
 
-        /* QR & Image Zoom */
+        /* QR & Kép zoom */
         #qr-layer { 
             position: absolute; 
             inset: 0; 
             background: rgba(0,0,0,0.95); 
-            z-index: 200; 
+            z-index: 600; 
             display: none; 
             flex-direction: column; 
             align-items: center; 
@@ -234,9 +235,8 @@
 
     <div id="loading" class="loading-screen">
         <div id="loading-icon" class="w-12 h-12 border-4 border-slate-800 border-t-purple-500 rounded-full animate-spin mb-4"></div>
-        <div id="loading-msg" class="text-purple-400 font-bold uppercase tracking-widest text-sm">Betöltés...</div>
+        <div id="loading-msg" class="text-purple-400 font-bold uppercase tracking-widest text-sm">Játék keresése...</div>
         
-        <!-- Manuális betöltés felülete (Alapértelmezetten rejtett) -->
         <div id="manual-ui" class="hidden flex flex-col items-center">
             <p class="text-slate-400 text-xs mt-4 mb-2 max-w-xs">Nem találtam automatikus fájlt (game.json).</p>
             <button onclick="document.getElementById('file-input').click()" class="manual-load-btn">
@@ -287,60 +287,51 @@
                 <div id="inv-badge" class="badge hidden">0</div>
             </button>
             <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i></button>
+            <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"></i></button>
         </div>
     </div>
 
     <script>
         const STORAGE_KEY = 'KALAND_STUDIO_V10_6';
-        let config = null;
-        let simIdx = 0;
-        let inventory = [];
-        let gpsWatcher = null;
-        let scanner = null;
+        let config = null, simIdx = 0, inventory = [], gpsWatcher = null, scanner = null;
 
         async function loadGame() {
             try {
-                // Próbáljuk betölteni a game.json-t
+                // Relatív fetch./game.json
                 const response = await fetch('./game.json').catch(() => ({ ok: false }));
-                
                 if (response.ok) {
                     config = await response.json();
                     startWithConfig();
                 } else {
-                    // Ha nincs fájl, nézzük meg van-e mentett adat a Stúdióból
                     const local = localStorage.getItem(STORAGE_KEY);
                     if(local) {
                         config = JSON.parse(local);
                         startWithConfig();
                     } else {
-                        // Ha egyik sincs, mutassuk a manuális betöltőt
                         showManualUI();
                     }
                 }
             } catch (err) {
-                console.error("Hiba:", err);
+                console.error("Betöltési hiba:", err);
                 showManualUI();
             }
         }
 
         function showManualUI() {
             document.getElementById('loading-icon').classList.add('hidden');
-            document.getElementById('loading-msg').innerHTML = "<span class='text-purple-400'>Nincs betöltött kaland</span>";
+            document.getElementById('loading-msg').innerHTML = "<span class='text-purple-400'>Válassz egy kalandot</span>";
             document.getElementById('manual-ui').classList.remove('hidden');
         }
 
         function handleManualFile(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     config = JSON.parse(e.target.result);
                     startWithConfig();
-                } catch(err) {
-                    alert("A kiválasztott fájl nem érvényes játékadat!");
-                }
+                } catch(err) { alert("Érvénytelen JSON fájl!"); }
             };
             reader.readAsText(file);
         }
@@ -351,9 +342,8 @@
         }
 
         function initGame() {
-            simIdx = 0;
-            inventory = [];
-            updateUI();
+            document.title = config.appTitle || "Kaland";
+            simIdx = 0; inventory = []; updateUI();
         }
 
         function updateUI() {
@@ -432,11 +422,13 @@
         }
 
         function handleReward(p) {
-            if(p.storyItemName && !inventory.find(i => i.name === p.storyItemName)) {
+            // Studio naming: storyItemName
+            const n = p.storyItemName || p.rewardName;
+            if(n && !inventory.find(i => i.name === n)) {
                 inventory.push({ 
-                    name: p.storyItemName, 
-                    icon: p.storyItemIcon || '📦', 
-                    url: p.storyItemUrl || '',
+                    name: n, 
+                    icon: p.storyItemIcon || p.rewardIcon || '📦', 
+                    url: p.storyItemUrl || p.rewardUrl || '',
                     seen: false 
                 });
                 updateBadge();
@@ -460,13 +452,13 @@
                         stopQR();
                         goToIdx(parseInt(p.nextIdx) || simIdx + 1);
                     }
-                }).catch(() => { stopQR(); alert("Hiba a kamera elérésekor!"); });
+                }).catch(() => { stopQR(); alert("Kamera hiba!"); });
             }
         }
 
         function stopQR() {
             if (scanner && scanner.getState() === 2) {
-                scanner.stop().then(() => { document.getElementById('qr-layer').style.display = 'none'; });
+                scanner.stop().then(() => { document.getElementById('qr-layer').style.display = 'none'; }).catch(() => { document.getElementById('qr-layer').style.display = 'none'; });
             } else { document.getElementById('qr-layer').style.display = 'none'; }
         }
 
@@ -493,60 +485,51 @@
 
         function switchView(target) {
             const inv = document.getElementById('inventory-overlay');
-            const navMap = document.getElementById('nav-map');
             const navInv = document.getElementById('nav-inv');
             if (target === 'inv') {
                 if (inv.style.display === 'block') {
                     inv.style.display = 'none';
                     navInv.classList.remove('active');
-                    navMap.classList.add('active');
                 } else {
                     renderInventory();
                     inv.style.display = 'block';
                     navInv.classList.add('active');
-                    navMap.classList.remove('active');
                 }
             } else {
                 inv.style.display = 'none';
                 navInv.classList.remove('active');
-                navMap.classList.add('active');
             }
         }
 
         function renderInventory() {
             const list = document.getElementById('item-list');
             list.innerHTML = '';
-            inventory.forEach((item, idx) => {
+            inventory.forEach((item) => {
                 const d = document.createElement('div');
                 d.className = "inv-card";
-                if(!item.seen) {
-                    const dot = document.createElement('div');
-                    dot.className = "item-new-dot";
-                    d.appendChild(dot);
-                }
-                if(item.url) {
-                    d.innerHTML += `<img src="${item.url}"><div class="text-[10px] uppercase font-bold text-slate-300">${item.name}</div>`;
-                    d.onclick = () => {
-                        item.seen = true;
-                        updateBadge();
-                        renderInventory();
+                let inner = item.url ? `<img src="${item.url}"><div class="text-[10px] uppercase font-bold text-slate-300">${item.name}</div>` : `<div class="text-4xl mb-2">${item.icon}</div><div class="text-[10px] uppercase font-bold text-slate-300">${item.name}</div>`;
+                if(!item.seen) inner += `<div class="item-new-dot"></div>`;
+                d.innerHTML = inner;
+                d.onclick = () => {
+                    item.seen = true;
+                    updateBadge();
+                    renderInventory();
+                    if(item.url) {
                         document.getElementById('zoom-img').src = item.url;
                         document.getElementById('zoom-viewer').style.display = 'flex';
-                    };
-                } else {
-                    d.innerHTML += `<div class="text-4xl mb-2">${item.icon}</div><div class="text-[10px] uppercase font-bold text-slate-300">${item.name}</div>`;
-                    d.onclick = () => {
-                        item.seen = true;
-                        updateBadge();
-                        renderInventory();
-                    };
-                }
+                    }
+                };
                 list.appendChild(d);
             });
         }
 
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+            else document.exitFullscreen();
+        }
+
         function resetGame() {
-            if(confirm("Újrakezded a kalandot? Minden haladás elvész.")) {
+            if(confirm("Újrakezded a kalandot?")) {
                 initGame();
                 switchView('map');
             }
