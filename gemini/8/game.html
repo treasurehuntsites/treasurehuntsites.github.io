@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kaland Játék</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html { 
+            margin: 0; padding: 0; 
+            width: 100%; height: 100%; 
+            font-family: 'Play', sans-serif; 
+            background-color: #000; 
+            color: #f8fafc; 
+            overflow: hidden; 
+        }
+
+        /* Teljes képernyős szimulátor konténer */
+        .game-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: #000;
+        }
+
+        #viewport { position: relative; flex-grow: 1; overflow: hidden; }
+        #bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; transition: src 0.5s ease-in-out; }
+        
+        #content-layer { 
+            position: relative; 
+            z-index: 10; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; 
+        }
+        
+        .dialog-box { 
+            position: relative;
+            background: rgba(0,0,0,0.92); 
+            border-top: 3px solid #8b5cf6; 
+            border-radius: 1.5rem 1.5rem 0 0; 
+            padding: 20px; 
+            padding-top: 40px;
+            min-height: 250px; 
+            max-height: 70%;
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+        }
+        
+        .avatar-frame { 
+            position: absolute; 
+            top: -40px; 
+            left: 10px; 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            border: 3px solid #8b5cf6; 
+            background: #000; 
+            z-index: 20; 
+            object-fit: cover; 
+            display: none; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .action-btn { 
+            flex: 1; 
+            background: #8b5cf6; 
+            color: white; 
+            padding: 16px; 
+            border-radius: 0.75rem; 
+            font-weight: 700; 
+            text-align: center; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            transition: 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%;
+            border: none;
+        }
+        .action-btn:active { transform: scale(0.98); background: #a855f7; }
+        .action-btn-back { background: #334155; }
+        
+        .bottom-nav { 
+            height: 75px; 
+            background: #0f172a; 
+            border-top: 1px solid rgba(139, 92, 246, 0.3); 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            z-index: 100; 
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; transition: color 0.3s; }
+        .nav-item.active { color: #8b5cf6; }
+        .badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; font-weight: bold; }
+
+        #story-text {
+            text-align: justify;
+            hyphens: auto;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .gps-overlay {
+            background: rgba(34, 211, 238, 0.15);
+            border: 1px solid #22d3ee;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        /* Inventory View */
+        #inventory-overlay { 
+            position: absolute; 
+            inset: 0; 
+            background: #0f172a; 
+            z-index: 50; 
+            display: none; 
+            padding: 25px; 
+            padding-top: 50px; 
+            overflow-y: auto;
+        }
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .item-card { background: #1e293b; border: 1px solid #334155; border-radius: 1rem; padding: 15px; text-align: center; cursor: pointer; }
+        .item-card img { width: 60px; height: 60px; object-fit: contain; margin: 0 auto 10px; }
+
+        /* Zoom View */
+        #zoom-viewer {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; }
+
+        /* QR Scanner Sim */
+        .qr-sim-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 60; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+        .qr-scanner-frame { width: 220px; height: 220px; border: 3px solid #22d3ee; border-radius: 20px; position: relative; overflow: hidden; }
+        .scan-line { position: absolute; top: 0; width: 100%; height: 3px; background: #22d3ee; animation: scan-anim 2s linear infinite; }
+        @keyframes scan-anim { 0%, 100% { top: 0; } 50% { top: 100%; } }
+
+        .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(139, 92, 246, 0.2); border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .manual-btn {
+            background: #8b5cf6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 14px;
+            margin-top: 20px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="loading-screen">
+        <div id="loading-spinner" class="spinner mb-4"></div>
+        <div id="loading-text" class="text-purple-400 font-bold tracking-widest uppercase text-sm">Betöltés...</div>
+        <div id="manual-loader" class="hidden">
+            <p class="text-slate-400 text-xs mt-4 max-w-xs mx-auto mb-6">Úgy tűnik, nincs konfigurációs fájl a szerveren. Válaszd ki manuálisan a korábban mentett játékot!</p>
+            <button onclick="document.getElementById('manual-file').click()" class="manual-btn">
+                <i class="fa fa-file-import mr-2"></i> Játék betöltése
+            </button>
+            <input type="file" id="manual-file" class="hidden" accept=".json" onchange="handleManualLoad(event)">
+        </div>
+    </div>
+
+    <div id="zoom-viewer" onclick="this.style.display='none'">
+        <img id="zoom-img" src="">
+    </div>
+
+    <div class="game-wrapper">
+        <div id="viewport">
+            <img id="bg-layer" src="">
+            
+            <div id="qr-layer" class="qr-sim-overlay">
+                <div class="qr-scanner-frame"><div class="scan-line"></div></div>
+                <input type="text" id="qr-input" class="w-full mt-6 bg-slate-900 border border-slate-700 text-cyan-400 p-3 rounded-lg text-center" placeholder="Írd be a kódot...">
+                <div class="flex gap-3 w-full mt-4">
+                    <button onclick="checkQR()" class="action-btn">OK</button>
+                    <button onclick="document.getElementById('qr-layer').style.display='none'" class="action-btn action-btn-back">MÉGSE</button>
+                </div>
+            </div>
+
+            <div id="inventory-overlay">
+                <h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák</h2>
+                <div id="item-list" class="item-grid"></div>
+            </div>
+
+            <div id="content-layer">
+                <div class="dialog-box">
+                    <img id="avatar-img" class="avatar-frame" src="">
+                    <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
+                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800 shadow-2xl" src="">
+                        <div id="gps-box" class="gps-overlay">
+                            <div class="text-[10px] uppercase opacity-60 font-bold text-cyan-400 mb-1 tracking-widest">Célpont távolsága</div>
+                            <div id="gps-distance" class="text-3xl font-bold text-white">--- m</div>
+                        </div>
+                        <div id="story-text"></div>
+                    </div>
+                    <div id="button-container" class="mt-4 flex flex-col gap-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"></i></button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv')">
+                <i class="fa-solid fa-briefcase"></i>
+                <div id="inv-badge" class="badge hidden">0</div>
+            </button>
+            <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i></button>
+        </div>
+    </div>
+
+    <script>
+        let config = null;
+        let simIdx = 0;
+        let inventory = [];
+        let gpsWatcher = null;
+
+        // Távolság számítás
+        function calcDist(la1, lo1, la2, lo2) {
+            const R = 6371e3;
+            const f1 = la1 * Math.PI/180, f2 = la2 * Math.PI/180;
+            const df = (la2-la1) * Math.PI/180, dl = (lo2-lo1) * Math.PI/180;
+            const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // Játék betöltése game.json-ből
+        async function loadGame() {
+            try {
+                const response = await fetch('game.json');
+                if (!response.ok) throw new Error('game.json nem található');
+                config = await response.json();
+                initGame();
+                setTimeout(() => document.getElementById('loading').style.display = 'none', 800);
+            } catch (err) {
+                console.error("Betöltési hiba:", err);
+                
+                // Fallback: localStoragében (csak ha már volt ott valami korábban)
+                const localData = localStorage.getItem('KALAND_STUDIO_V10_4');
+                if (localData) {
+                    config = JSON.parse(localData);
+                    initGame();
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    // Ha nincs game.json és nincs local sem, megmutatjuk a manuális gombot
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    document.getElementById('loading-text').innerHTML = `<span class="text-red-400">HIÁNYZÓ KONFIGURÁCIÓ</span>`;
+                    document.getElementById('manual-loader').classList.remove('hidden');
+                }
+            }
+        }
+
+        // Manuális betöltés kezelése
+        function handleManualLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    config = JSON.parse(ev.target.result);
+                    initGame();
+                    document.getElementById('loading').style.display = 'none';
+                } catch (err) {
+                    alert("Hibás JSON fájl!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function initGame() {
+            document.title = config.appTitle || "Kaland Játék";
+            simIdx = 0;
+            inventory = [];
+            updateUI();
+        }
+
+        function updateUI() {
+            if (gpsWatcher) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
+            const p = config.storyPages[simIdx];
+            if(!p) return;
+
+            // Jutalmak kezelése
+            handleReward(p);
+
+            // Háttér
+            document.getElementById('bg-layer').src = p.pageBg || config.globalBg || "";
+            
+            // Szöveg és Avatar
+            let text = p.content || "";
+            const avImg = document.getElementById('avatar-img');
+            avImg.style.display = 'none';
+
+            config.avatars.forEach(av => {
+                if(text.includes(`§${av.id}`)) {
+                    avImg.src = av.url || "";
+                    avImg.style.display = av.url ? 'block' : 'none';
+                    avImg.style.borderColor = av.color;
+                    text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`);
+                }
+            });
+            document.getElementById('story-text').innerHTML = text;
+
+            // Illusztráció
+            const ill = document.getElementById('page-illustration');
+            if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } 
+            else { ill.classList.add('hidden'); }
+
+            // GPS panel
+            document.getElementById('gps-box').style.display = p.pageType === 'gps' ? 'block' : 'none';
+
+            // Gombok
+            const container = document.getElementById('button-container');
+            container.innerHTML = '';
+            
+            // Elrendezés: Story/GPS vízszintes, Choice függőleges
+            if(p.pageType === 'story' || p.pageType === 'gps') container.className = "mt-4 flex flex-row-reverse gap-3";
+            else container.className = "mt-4 flex flex-col gap-3";
+
+            if (p.pageType === 'gps') {
+                setupGPS(p);
+                addBtn("TOVÁBB", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI(); }, "fa-chevron-right");
+            } else if(p.pageType === 'qr') {
+                addBtn("QR BEOLVASÁSA", () => document.getElementById('qr-layer').style.display='flex', "fa-camera");
+            } else if(p.pageType === 'password') {
+                const inp = document.createElement('input'); 
+                inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-3 rounded-lg text-center mb-2"; 
+                inp.placeholder = "KÓD...";
+                addBtn("NYITÁS", () => {
+                    if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) {
+                        simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI();
+                    } else { inp.style.borderColor = 'red'; }
+                });
+                container.prepend(inp);
+            } else if(p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }));
+            } else {
+                addBtn("TOVÁBB", () => { simIdx = parseInt(p.nextIdx) || simIdx + 1; updateUI(); }, "fa-chevron-right", true);
+            }
+
+            // Visszalépés
+            if(simIdx > 0 || (p.prevIdx !== undefined && p.prevIdx !== "")) {
+                const backBtn = document.createElement('button');
+                backBtn.className = "action-btn action-btn-back";
+                backBtn.innerHTML = `<i class="fa fa-arrow-left mr-2"></i> VISSZA`;
+                backBtn.onclick = () => {
+                    simIdx = (p.prevIdx !== undefined && p.prevIdx !== "") ? parseInt(p.prevIdx) : simIdx - 1;
+                    updateUI();
+                };
+                container.appendChild(backBtn);
+            }
+            
+            document.getElementById('scroll-area').scrollTop = 0;
+        }
+
+        function addBtn(text, fn, icon = "", isPrimary = true) {
+            const b = document.createElement('button');
+            b.className = "action-btn";
+            b.innerHTML = `${text} ${icon ? `<i class="fa ${icon} ${isPrimary?'ml-2':'mr-2'} text-sm opacity-50"></i>` : ''}`;
+            b.onclick = fn;
+            document.getElementById('button-container').appendChild(b);
+        }
+
+        function setupGPS(p) {
+            if (navigator.geolocation) {
+                gpsWatcher = navigator.geolocation.watchPosition(pos => {
+                    const dist = calcDist(pos.coords.latitude, pos.coords.longitude, parseFloat(p.targetLat), parseFloat(p.targetLon));
+                    document.getElementById('gps-distance').textContent = `${Math.round(dist)} m`;
+                    if (dist < 15) {
+                        navigator.geolocation.clearWatch(gpsWatcher);
+                        gpsWatcher = null;
+                        simIdx = parseInt(p.nextIdx) || simIdx + 1;
+                        updateUI();
+                    }
+                }, null, { enableHighAccuracy: true });
+            }
+        }
+
+        function checkQR() {
+            const val = document.getElementById('qr-input').value.trim().toUpperCase();
+            const p = config.storyPages[simIdx];
+            if(val === (p.qrCode || "").toUpperCase()) {
+                document.getElementById('qr-layer').style.display = 'none';
+                simIdx = parseInt(p.nextIdx) || simIdx + 1;
+                updateUI();
+            } else {
+                document.getElementById('qr-input').style.borderColor = 'red';
+            }
+        }
+
+        function handleReward(p) {
+            let itemName = "", itemIcon = "", itemUrl = "";
+            if (p.pageType === 'story') { itemName = p.storyItemName; itemIcon = p.storyItemIcon; itemUrl = p.storyItemUrl; }
+            else if (p.pageType === 'qr') { itemName = p.qrItemName; itemIcon = p.qrItemIcon; itemUrl = p.qrItemUrl; }
+            else if (p.pageType === 'gps') { itemName = p.gpsItemName; itemIcon = p.gpsItemIcon; itemUrl = p.gpsItemUrl; }
+            else if (p.pageType === 'password') { itemName = p.passItemName; itemIcon = p.passItemIcon; itemUrl = p.passItemUrl; }
+
+            if(itemName && !inventory.find(i => i.name === itemName)) {
+                inventory.push({ name: itemName, icon: itemIcon || '📦', url: itemUrl || '' });
+                const badge = document.getElementById('inv-badge');
+                badge.textContent = inventory.length;
+                badge.classList.remove('hidden');
+            }
+        }
+
+        function switchView(target) {
+            const inv = document.getElementById('inventory-overlay');
+            const navMap = document.getElementById('nav-map');
+            const navInv = document.getElementById('nav-inv');
+
+            if (target === 'inv') {
+                if (inv.style.display === 'block') {
+                    inv.style.display = 'none';
+                    navInv.classList.remove('active');
+                    navMap.classList.add('active');
+                } else {
+                    renderInventory();
+                    inv.style.display = 'block';
+                    navInv.classList.add('active');
+                    navMap.classList.remove('active');
+                }
+            } else {
+                inv.style.display = 'none';
+                navInv.classList.remove('active');
+                navMap.classList.add('active');
+            }
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('item-list');
+            list.innerHTML = '';
+            inventory.forEach(item => {
+                const d = document.createElement('div'); 
+                d.className = "item-card";
+                if(item.url) {
+                    d.innerHTML = `<img src="${item.url}"><div class="text-[10px] font-bold text-white uppercase">${item.name}</div>`;
+                    d.onclick = () => {
+                        const zoom = document.getElementById('zoom-viewer');
+                        document.getElementById('zoom-img').src = item.url;
+                        zoom.style.display = 'flex';
+                    };
+                } else {
+                    d.innerHTML = `<div class="text-4xl mb-2">${item.icon}</div><div class="text-[10px] font-bold text-white uppercase">${item.name}</div>`;
+                }
+                list.appendChild(d);
+            });
+        }
+
+        function resetGame() {
+            if(confirm("Biztosan elölről kezded a kalandot?")) {
+                simIdx = 0;
+                inventory = [];
+                document.getElementById('inv-badge').classList.add('hidden');
+                switchView('map');
+                updateUI();
+            }
+        }
+
+        window.onload = loadGame;
+    </script>
+</body>
+</html>
