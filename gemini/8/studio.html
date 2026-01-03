@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaland Játék Stúdió V10.5 ✨</title>
+    <title>Kaland Játék Stúdió V10.6 ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -70,7 +70,7 @@
         }
 
         #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
-        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.4); z-index: 0; transition: src 0.5s ease-in-out; }
         
         #sim-content { 
             position: relative; 
@@ -97,8 +97,8 @@
         
         .sim-avatar { 
             position: absolute; 
-            top: -30px; 
-            left: 20px; 
+            top: -40px; 
+            left: 10px; 
             width: 65px; 
             height: 65px; 
             border-radius: 50%; 
@@ -117,7 +117,7 @@
             border-radius: 0.75rem; 
             font-weight: 700; 
             text-align: center; 
-            font-size: 0.95rem; /* Megnövelt gomb betűméret */
+            font-size: 0.95rem; 
             cursor: pointer; 
             text-transform: uppercase; 
             transition: 0.2s; 
@@ -148,7 +148,7 @@
             text-align: justify;
             hyphens: auto;
             padding: 0 5px;
-            font-size: 16px; /* Megnövelt szimulátor szövegméret */
+            font-size: 16px; 
             font-weight: 700;
             line-height: 1.6;
         }
@@ -165,21 +165,6 @@
 
         #save-indicator { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 0.6rem 1.2rem; border-radius: 2rem; font-size: 0.75rem; font-weight: bold; display: none; z-index: 1000; }
         
-        .avatar-card {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid #334155;
-            padding: 10px;
-            border-radius: 0.75rem;
-            display: grid;
-            grid-template-columns: 50px 1fr 50px auto;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .action-btn-small { padding: 4px 8px; border-radius: 4px; font-size: 10px; }
-        .btn-copy { color: #10b981; }
-        .btn-delete { color: #ef4444; }
-
         #sim-inventory-view { position: absolute; inset: 0; background: #0f172a; z-index: 50; display: none; padding: 20px; padding-top: 40px; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: #1e293b; border: 1px solid #334155; border-radius: 0.75rem; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
@@ -206,10 +191,16 @@
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
 
-        .qr-overlay-sim { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 60; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .qr-frame-sim { width: 180px; height: 180px; border: 2px solid #22d3ee; border-radius: 15px; position: relative; overflow: hidden; }
-        .scan-line-sim { position: absolute; top: 0; width: 100%; height: 2px; background: #22d3ee; animation: scan-move 2s linear infinite; }
-        @keyframes scan-move { 0%, 100% { top: 0; } 50% { top: 100%; } }
+        .avatar-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 0.75rem;
+            display: grid;
+            grid-template-columns: 50px 1fr 50px auto;
+            gap: 10px;
+            align-items: center;
+        }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -223,8 +214,8 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V10.5</span> ✨</h1>
-                <p class="text-cyan-400 text-sm mt-1">Optimalizált olvashatóság & Navigáció</p>
+                <h1 class="text-4xl font-bold uppercase tracking-tighter text-white">Stúdió <span class="text-purple-500">V10.6</span> ✨</h1>
+                <p class="text-cyan-400 text-sm mt-1">Interaktív Hátizsák & Értesítés Kezelő</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs">EXPORT</button>
@@ -338,8 +329,8 @@
                     </div>
 
                     <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-6 space-y-6">
-                        <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes válasz (Kód)" oninput="autoSave()">
-                        <textarea id="passHints" rows="2" class="input-style text-xs" placeholder="Tippek (soronként)..." oninput="autoSave()"></textarea>
+                        <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes válasz" oninput="autoSave()">
+                        <textarea id="passHints" rows="2" class="input-style text-xs" placeholder="Tippek..." oninput="autoSave()"></textarea>
                         <div class="space-y-4">
                             <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Nyitáskor kapott jutalom</h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -409,7 +400,7 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'KALAND_STUDIO_V10_4'; // Adatok megtartása
+        const STORAGE_KEY = 'KALAND_STUDIO_V10_6';
         let config = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
             appTitle: "A Város Elveszett Legendája",
             globalBg: "https://images.unsplash.com/photo-1514924013411-cbf25faa35bb?auto=format&fit=crop&q=80",
@@ -487,7 +478,7 @@
                 mainBtn = document.createElement('div'); mainBtn.className = "sim-btn"; mainBtn.innerHTML = '<i class="fa fa-camera mr-2"></i> QR BEOLVASÁSA';
                 mainBtn.onclick = () => document.getElementById('qr-sim').style.display='flex';
             } else if(p.pageType === 'password') {
-                const inp = document.createElement('input'); inp.className = "input-style text-center py-2 text-xs mb-2"; inp.placeholder = "ÍRD IDE A KÓDOT...";
+                const inp = document.createElement('input'); inp.className = "input-style text-center py-2 text-xs mb-2"; inp.placeholder = "KÓD...";
                 mainBtn = document.createElement('div'); mainBtn.className = "sim-btn"; mainBtn.textContent = "NYITÁS";
                 mainBtn.onclick = () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { handleReward(p); simIdx = parseInt(p.nextIdx) || simIdx + 1; updateSimulator(); } else { inp.style.borderColor = 'red'; } };
                 acts.append(inp, mainBtn);
@@ -555,6 +546,21 @@
             });
         }
 
+        // KÉP NAGYÍTÁS ÉS ÉRTESÍTÉS ELTÜNTETÉSE
+        function openImageZoom(url) {
+            const overlay = document.getElementById('sim-zoom-overlay');
+            const img = document.getElementById('sim-zoom-img');
+            img.src = url;
+            overlay.style.display = 'flex';
+            
+            // Ha megnyitunk egy képet, tüntessük el a piros jelzést
+            document.getElementById('sim-inv-badge').classList.add('hidden');
+        }
+
+        function closeImageZoom() {
+            document.getElementById('sim-zoom-overlay').style.display = 'none';
+        }
+
         function handleReward(page) {
             let itemName = "", itemIcon = "", itemUrl = "";
             if (page.pageType === 'story') { itemName = page.storyItemName; itemIcon = page.storyItemIcon; itemUrl = page.storyItemUrl; }
@@ -579,17 +585,6 @@
             } else {
                 document.getElementById('sim-qr-input').style.borderColor = 'red';
             }
-        }
-
-        function openImageZoom(url) {
-            const overlay = document.getElementById('sim-zoom-overlay');
-            const img = document.getElementById('sim-zoom-img');
-            img.src = url;
-            overlay.style.display = 'flex';
-        }
-
-        function closeImageZoom() {
-            document.getElementById('sim-zoom-overlay').style.display = 'none';
         }
 
         function updateInvBadge() {
@@ -677,7 +672,7 @@
             const list = document.getElementById('avatarList'); list.innerHTML = '';
             config.avatars.forEach((av, i) => {
                 const d = document.createElement('div'); d.className = "avatar-card";
-                d.innerHTML = `<input type="text" class="input-style text-center font-bold px-1" value="${av.id}" oninput="config.avatars[${i}].id=this.value;autoSave()"><input type="text" class="input-style text-xs" value="${av.name}" oninput="config.avatars[${i}].name=this.value;autoSave()"><input type="color" class="w-full h-8 bg-transparent" value="${av.color}" oninput="config.avatars[${i}].color=this.value;autoSave()"><button onclick="config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-400 p-1"><i class="fa fa-trash"></i></button><div class="col-span-4 mt-1"><input type="url" class="input-style text-[9px] py-1" value="${av.url}" placeholder="Avatar Kép URL" oninput="config.avatars[${i}].url=this.value;autoSave()"></div>`;
+                d.innerHTML = `<input type="text" class="input-style text-center font-bold px-1" value="${av.id}" oninput="config.avatars[${i}].id=this.value;autoSave()"><input type="text" class="input-style text-xs" value="${av.name}" oninput="config.avatars[${i}].name=this.value;autoSave()"><input type="color" class="w-full h-8 bg-transparent" value="${av.color}" oninput="config.avatars[${i}].color=this.value;autoSave()"><button onclick="config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-400 p-1"><i class="fa fa-trash"></i></button><div class="col-span-4 mt-1"><input type="url" class="input-style text-[9px] py-1" value="${av.url}" placeholder="Kép URL" oninput="config.avatars[${i}].url=this.value;autoSave()"></div>`;
                 list.appendChild(d);
             });
         }
