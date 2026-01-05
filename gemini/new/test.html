@@ -213,7 +213,7 @@
                         
                         <div id="rewardArea" class="border-t border-slate-700/50 pt-4 space-y-4">
                             <div class="flex justify-between items-center">
-                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak átadása)</h3>
+                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak kezelése)</h3>
                                 <button onclick="addRewardItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ TÁRGY</button>
                             </div>
                             <div id="rewardsContainer" class="space-y-3"></div>
@@ -245,7 +245,7 @@
                                 <div class="sim-box">
                                     <img id="sim-avatar" class="sim-avatar" src="">
                                     <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
-                                        <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden border border-slate-800" src="">
+                                        <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden" src="">
                                         <div id="sim-actual-text" style="font-size: 17px;"></div>
                                         <div id="sim-gps-info" class="hidden text-center p-2 bg-slate-800 rounded mt-2 text-xs text-cyan-400 font-bold italic border border-cyan-900/50">
                                             <i class="fa fa-location-dot mr-1"></i> Távolság: <span id="sim-distance">...</span>m
@@ -285,7 +285,7 @@
                     <div class="p-dialog-box">
                         <img id="p-avatar-img" class="p-avatar-frame" src="">
                         <div id="p-scroll-area" class="overflow-y-auto pr-1 flex-grow">
-                            <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800 shadow-xl" src="">
+                            <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden shadow-xl" src="">
                             <div id="p-story-text"></div>
                         </div>
                         <div id="p-button-container" class="mt-4 flex flex-col gap-3"></div>
@@ -317,22 +317,10 @@
         function pushNavState() { history.pushState({ navigation: true }, ""); }
 
         window.onpopstate = function(event) {
-            if (document.getElementById('p-zoom-viewer').style.display === 'flex') {
-                pCloseZoom(false);
-                return;
-            }
-            if (document.getElementById('p-qr-layer').style.display === 'flex') {
-                pStopQR(false); 
-                return;
-            }
-            if (document.getElementById('p-inventory-overlay').style.display === 'block') {
-                pSwitchView('map', false);
-                return;
-            }
-            if (isPlayerMode) {
-                toggleMainView(false);
-                return;
-            }
+            if (document.getElementById('p-zoom-viewer').style.display === 'flex') { pCloseZoom(false); return; }
+            if (document.getElementById('p-qr-layer').style.display === 'flex') { pStopQR(false); return; }
+            if (document.getElementById('p-inventory-overlay').style.display === 'block') { pSwitchView('map', false); return; }
+            if (isPlayerMode) { toggleMainView(false); return; }
         };
 
         function toggleMainView(shouldPush) {
@@ -379,7 +367,14 @@
         function deletePage(i) { deleteCandidate = i; document.getElementById('custom-modal').style.display = 'flex'; }
         function addAvatar() { config.avatars.push({id: 'A', name: 'Új Karakter', url: '', color: '#8b5cf6'}); renderAvatarAdmin(); autoSave(); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
-        function addRewardItem() { if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); renderRewards(); autoSave(); }
+        
+        function addRewardItem() { 
+            if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; 
+            config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); 
+            renderRewards(); 
+            autoSave(); 
+        }
+        
         function resetSim() { simIdx = 0; updateSimulator(); }
 
         function autoSave() { 
@@ -455,10 +450,10 @@
                 const div = document.createElement('div');
                 div.className = "grid grid-cols-1 md:grid-cols-4 gap-2 items-center bg-slate-800/30 p-2 rounded border border-slate-700/50";
                 div.innerHTML = `
-                    <input type="text" class="input-style text-xs" placeholder="Név" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
-                    <input type="text" class="input-style text-xs" placeholder="Ikon (pl. 🔑)" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Tárgy neve (kötelező)" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Ikon" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
                     <input type="url" class="input-style text-xs" placeholder="Kép URL" value="${item.url}" oninput="config.storyPages[${currentIdx}].rewards[${i}].url=this.value;autoSave()">
-                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">ELTÁVOLÍTÁS</button>
+                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">TÖRLÉS</button>
                 `;
                 container.appendChild(div);
             });
@@ -574,14 +569,20 @@
         }
 
         function pHandleReward(p) {
-            if (p.rewards && p.rewards.length > 0) {
-                p.rewards.forEach(reward => {
-                    if (reward.name && !pInventory.find(item => item.name === reward.name)) {
-                        pInventory.push({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false });
-                    }
-                });
-                pUpdateBadge();
+            // Updated logic: Backpack ONLY shows items defined on the current page
+            if (p.rewards) {
+                pInventory = p.rewards
+                    .filter(reward => reward.name && reward.name.trim() !== "")
+                    .map(reward => ({
+                        name: reward.name,
+                        icon: reward.icon || '📦',
+                        url: reward.url || '',
+                        seen: false
+                    }));
+            } else {
+                pInventory = [];
             }
+            pUpdateBadge();
         }
 
         function pUpdateBadge() {
@@ -611,7 +612,6 @@
             });
         }
 
-        // --- IMPROVED ZOOM LOGIC ---
         function pOpenZoom(url) { 
             pushNavState(); 
             pZoomScale = 1;
@@ -620,7 +620,6 @@
             i.style.transform = `scale(${pZoomScale})`; 
             v.style.display = 'flex'; 
 
-            // Tap to close logic
             let isMoving = false;
             v.ontouchstart = (e) => {
                 if (e.touches.length === 2) {
@@ -644,7 +643,6 @@
                 if (!isMoving && e.touches.length === 0) pCloseZoom(true);
             };
 
-            // Desktop click to close & wheel zoom
             v.onclick = () => { if(!isMoving) pCloseZoom(true); };
             v.onwheel = (e) => {
                 e.preventDefault();
@@ -716,7 +714,7 @@
                 <div class="dialog-box">
                     <img id="avatar-img" class="avatar-frame" src="">
                     <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow">
-                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800" src="">
+                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden" src="">
                         <div id="story-text"><\/div>
                     <\/div>
                     <div id="button-container" class="mt-4 flex flex-col gap-3"><\/div>
@@ -805,7 +803,24 @@
         }
         function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.toUpperCase() === (p.qrCode || "").toUpperCase()) { stopQR(true); simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }).catch(() => stopQR(true)); }
         function stopQR(man) { if (man) history.back(); if (qrScanner) { qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; }); } else { document.getElementById('qr-layer').style.display = 'none'; } }
-        function handleReward(p) { if (p.rewards && p.rewards.length > 0) { p.rewards.forEach(r => { if (r.name && !inventory.find(i => i.name === r.name)) { inventory.push({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false }); } }); updateBadge(); } }
+        
+        function handleReward(p) { 
+            // Updated: Backpack ONLY shows items defined on the CURRENT page
+            if (p.rewards) { 
+                inventory = p.rewards
+                    .filter(r => r.name && r.name.trim() !== "")
+                    .map(r => ({
+                        name: r.name,
+                        icon: r.icon || '📦',
+                        url: r.url || '',
+                        seen: false
+                    }));
+            } else {
+                inventory = [];
+            }
+            updateBadge(); 
+        }
+        
         function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
         function switchView(t, m) {
             const inv = document.getElementById('inventory-overlay');
