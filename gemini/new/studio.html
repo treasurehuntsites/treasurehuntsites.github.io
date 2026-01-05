@@ -90,8 +90,16 @@
         #p-qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #p-qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
         
-        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; }
-        #p-zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: grab; }
+        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; overflow: hidden; }
+        #p-zoom-img { 
+            max-width: 95%; 
+            max-height: 90%; 
+            object-fit: contain; 
+            border-radius: 8px; 
+            transition: transform 0.1s ease-out; 
+            cursor: zoom-out; 
+            user-select: none;
+        }
 
         .view-toggle-btn {
             position: fixed;
@@ -150,7 +158,7 @@
                     <p class="text-cyan-400 text-sm mt-1">Interaktív Kaland Szerkesztő</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button onclick="downloadLiveHTML()" class="bg-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-colors">Játék letöltése (.html)</button>
+                    <button id="btnDownloadLive" onclick="downloadLiveHTML()" class="bg-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-colors">Játék letöltése (.html)</button>
                     <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-600 transition-colors">Export game.json</button>
                     <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-purple-500 transition-colors">Import</button>
                     <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
@@ -188,7 +196,7 @@
                             <input type="url" id="pageImage" class="input-style text-xs" placeholder="Kép URL" oninput="autoSave()">
                             <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Szöveg..." oninput="autoSave()"></textarea>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             <select id="pageType" class="input-style text-xs" onchange="updateUI(); autoSave();">
                                 <option value="story">Leírás</option>
                                 <option value="choice">Választás</option>
@@ -198,17 +206,19 @@
                             </select>
                             <input type="number" id="prevIdx" class="input-style text-xs" placeholder="Vissza ID" oninput="autoSave()">
                             <input type="number" id="nextIdx" class="input-style text-xs" placeholder="Tovább ID" oninput="autoSave()">
+                            <input type="url" id="redirectUrl" class="input-style text-xs" placeholder="Átirányítás Link" oninput="autoSave()">
                             <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi háttér" oninput="autoSave()">
-                            <input type="text" id="qrCode" class="input-style text-xs" placeholder="QR Kód" oninput="autoSave()">
+                            <input type="text" id="qrCode" class="input-style text-xs" placeholder="QR Kód értéke" oninput="autoSave()">
                         </div>
+                        
                         <div id="rewardArea" class="border-t border-slate-700/50 pt-4 space-y-4">
-                            <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Jelenet Jutalom</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input type="text" id="storyItemName" class="input-style text-xs" placeholder="Név" oninput="autoSave()">
-                                <input type="text" id="storyItemIcon" class="input-style text-xs" placeholder="Ikon" oninput="autoSave()">
-                                <input type="url" id="storyItemUrl" class="input-style text-xs" placeholder="Kép URL" oninput="autoSave()">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak átadása)</h3>
+                                <button onclick="addRewardItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ TÁRGY</button>
                             </div>
+                            <div id="rewardsContainer" class="space-y-3"></div>
                         </div>
+
                         <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-4">
                             <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes megoldás" oninput="autoSave()">
                         </div>
@@ -235,7 +245,8 @@
                                 <div class="sim-box">
                                     <img id="sim-avatar" class="sim-avatar" src="">
                                     <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
-                                        <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden border border-slate-800" src="">
+                                        <!-- Removed border from simulator image -->
+                                        <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden" src="">
                                         <div id="sim-actual-text" style="font-size: 17px;"></div>
                                         <div id="sim-gps-info" class="hidden text-center p-2 bg-slate-800 rounded mt-2 text-xs text-cyan-400 font-bold italic border border-cyan-900/50">
                                             <i class="fa fa-location-dot mr-1"></i> Távolság: <span id="sim-distance">...</span>m
@@ -275,16 +286,9 @@
                     <div class="p-dialog-box">
                         <img id="p-avatar-img" class="p-avatar-frame" src="">
                         <div id="p-scroll-area" class="overflow-y-auto pr-1 flex-grow">
-                            <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800 shadow-xl" src="">
+                            <!-- Removed border from player view image -->
+                            <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden shadow-xl" src="">
                             <div id="p-story-text"></div>
-                            <div id="p-gps-info" class="hidden flex flex-col items-center gap-3 mt-4">
-                                <div class="w-full text-center p-3 bg-slate-900/80 rounded-xl text-sm text-cyan-400 font-bold italic border border-cyan-800/50 animate-pulse">
-                                    <i class="fa fa-location-dot mr-2"></i> Távolság: <span id="p-distance-val">...</span> méter
-                                </div>
-                                <a id="p-map-btn" target="_blank" class="hidden w-full bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-center text-xs uppercase transition-colors shadow-lg shadow-cyan-900/20">
-                                    <i class="fa fa-map-location-dot mr-2 text-base"></i> Útvonalterv / Térkép
-                                </a>
-                            </div>
                         </div>
                         <div id="p-button-container" class="mt-4 flex flex-col gap-3"></div>
                     </div>
@@ -300,24 +304,41 @@
     </div>
 
     <script>
-        // GLOBÁLIS ÁLLAPOT ÉS FÜGGVÉNYEK
         let config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V11')) || { 
             appTitle: "A Város Legendája", 
-            storyPages: [{ content: "Kezdődik a kaland!", pageType: "story" }], 
+            storyPages: [{ content: "Kezdődik a kaland!", pageType: "story", rewards: [] }], 
             avatars: [],
             globalBg: "",
             initialMapLink: ""
         };
         let currentIdx = -1, simIdx = 0, pSimIdx = 0, pInventory = [], saveTimeout, pQrScanner = null, isPlayerMode = false;
-        let geoWatchId = null;
         let deleteCandidate = null;
+        let pZoomScale = 1;
+        let pInitialDist = 0;
 
-        // --- GLOBAL FUNCTIONS (OUTSIDE ONLOAD) ---
         function pushNavState() { history.pushState({ navigation: true }, ""); }
+
+        window.onpopstate = function(event) {
+            if (document.getElementById('p-zoom-viewer').style.display === 'flex') {
+                pCloseZoom(false);
+                return;
+            }
+            if (document.getElementById('p-qr-layer').style.display === 'flex') {
+                pStopQR(false); 
+                return;
+            }
+            if (document.getElementById('p-inventory-overlay').style.display === 'block') {
+                pSwitchView('map', false);
+                return;
+            }
+            if (isPlayerMode) {
+                toggleMainView(false);
+                return;
+            }
+        };
 
         function toggleMainView(shouldPush) {
             isPlayerMode = !isPlayerMode;
-            if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
             const studio = document.getElementById('studio-view');
             const player = document.getElementById('player-view');
             const icon = document.getElementById('toggle-icon');
@@ -337,34 +358,30 @@
 
         function loadPage(i) { 
             currentIdx = i; const p = config.storyPages[i]; if(!p) return;
+            if (!p.rewards) p.rewards = [];
             document.getElementById('editorPanel').classList.remove('hidden'); 
             document.getElementById('pageText').value = p.content || ""; 
             document.getElementById('pageType').value = p.pageType || 'story'; 
             document.getElementById('nextIdx').value = p.nextIdx || ""; 
             document.getElementById('prevIdx').value = p.prevIdx || ""; 
+            document.getElementById('redirectUrl').value = p.redirectUrl || ""; 
             document.getElementById('pageBg').value = p.pageBg || ""; 
             document.getElementById('qrCode').value = p.qrCode || ""; 
             document.getElementById('correctPass').value = p.password || ""; 
             document.getElementById('targetLat').value = p.targetLat || ""; 
             document.getElementById('targetLng').value = p.targetLng || ""; 
             document.getElementById('mapLink').value = p.mapLink || ""; 
-            document.getElementById('storyItemName').value = p.storyItemName || ""; 
-            document.getElementById('storyItemIcon').value = p.storyItemIcon || ""; 
-            document.getElementById('storyItemUrl').value = p.storyItemUrl || ""; 
             document.getElementById('pageImage').value = p.pageImage || "";
-            updateUI(); renderChoices(); renderPageList(); simIdx = i; updateSimulator(); 
+            updateUI(); renderChoices(); renderRewards(); renderPageList(); 
+            simIdx = i; updateSimulator(); 
         }
 
-        function addPage() { config.storyPages.push({content: "Új jelenet...", pageType: "story"}); loadPage(config.storyPages.length-1); autoSave(); }
+        function addPage() { config.storyPages.push({content: "Új jelenet...", pageType: "story", rewards: []}); loadPage(config.storyPages.length-1); autoSave(); }
         function duplicatePage(i) { config.storyPages.splice(i+1, 0, JSON.parse(JSON.stringify(config.storyPages[i]))); renderPageList(); autoSave(); }
-        
-        function deletePage(i) {
-            deleteCandidate = i;
-            document.getElementById('custom-modal').style.display = 'flex';
-        }
-
+        function deletePage(i) { deleteCandidate = i; document.getElementById('custom-modal').style.display = 'flex'; }
         function addAvatar() { config.avatars.push({id: 'A', name: 'Új Karakter', url: '', color: '#8b5cf6'}); renderAvatarAdmin(); autoSave(); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
+        function addRewardItem() { if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); renderRewards(); autoSave(); }
         function resetSim() { simIdx = 0; updateSimulator(); }
 
         function autoSave() { 
@@ -376,15 +393,13 @@
                     p.pageType = document.getElementById('pageType').value; 
                     p.nextIdx = document.getElementById('nextIdx').value; 
                     p.prevIdx = document.getElementById('prevIdx').value; 
+                    p.redirectUrl = document.getElementById('redirectUrl').value; 
                     p.pageBg = document.getElementById('pageBg').value; 
                     p.qrCode = document.getElementById('qrCode').value; 
                     p.password = document.getElementById('correctPass').value; 
                     p.targetLat = document.getElementById('targetLat').value; 
                     p.targetLng = document.getElementById('targetLng').value; 
                     p.mapLink = document.getElementById('mapLink').value; 
-                    p.storyItemName = document.getElementById('storyItemName').value; 
-                    p.storyItemIcon = document.getElementById('storyItemIcon').value; 
-                    p.storyItemUrl = document.getElementById('storyItemUrl').value; 
                     p.pageImage = document.getElementById('pageImage').value;
                 } 
                 config.appTitle = document.getElementById('appTitle').value; 
@@ -420,6 +435,7 @@
             document.getElementById('choiceArea').classList.toggle('hidden', t !== 'choice'); 
             document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password'); 
             document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps'); 
+            document.getElementById('qrCode').classList.toggle('hidden', t !== 'qr');
         }
 
         function renderChoices() { 
@@ -430,6 +446,24 @@
                 r.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><input type="text" placeholder="Tárgy kell" class="input-style flex-1 text-[10px]" value="${ch.req || ''}" oninput="config.storyPages[${currentIdx}].choices[${i}].req=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()">X</button>`; 
                 c.appendChild(r); 
             }); 
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewardsContainer');
+            container.innerHTML = '';
+            const p = config.storyPages[currentIdx];
+            if (!p.rewards) p.rewards = [];
+            p.rewards.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-1 md:grid-cols-4 gap-2 items-center bg-slate-800/30 p-2 rounded border border-slate-700/50";
+                div.innerHTML = `
+                    <input type="text" class="input-style text-xs" placeholder="Név" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Ikon (pl. 🔑)" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
+                    <input type="url" class="input-style text-xs" placeholder="Kép URL" value="${item.url}" oninput="config.storyPages[${currentIdx}].rewards[${i}].url=this.value;autoSave()">
+                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">ELTÁVOLÍTÁS</button>
+                `;
+                container.appendChild(div);
+            });
         }
 
         function updateSimulator() {
@@ -446,8 +480,6 @@
             document.getElementById('sim-actual-text').innerHTML = text;
             const img = document.getElementById('sim-page-img'); 
             if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
-            document.getElementById('sim-gps-info').classList.toggle('hidden', p.pageType !== 'gps');
-
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
             if (p.pageType === 'choice' && p.choices) {
                 const choiceCol = document.createElement('div'); choiceCol.className = "flex flex-col gap-2 w-full mb-2";
@@ -466,19 +498,20 @@
             }
             if (p.pageType !== 'choice') {
                 const next = document.createElement('div'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB';
-                next.onclick = () => { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); };
+                next.onclick = () => { 
+                    if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); }
+                };
                 navRow.appendChild(next);
             }
             acts.appendChild(navRow);
         }
 
         function pUpdateUI() {
-            if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
             const p = config.storyPages[pSimIdx]; if(!p) return;
             pHandleReward(p);
             const bg = document.getElementById('p-bg-layer'); bg.style.opacity = 0;
             setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
-
             let text = p.content || "";
             const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
             config.avatars.forEach(av => {
@@ -490,12 +523,9 @@
             document.getElementById('p-story-text').innerHTML = text;
             const ill = document.getElementById('p-page-illustration');
             if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
-
             const container = document.getElementById('p-button-container'); container.innerHTML = '';
-            document.getElementById('p-gps-info').classList.add('hidden');
-            if (p.pageType === 'qr') {
-                pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
-            } else if (p.pageType === 'password') {
+            if (p.pageType === 'qr') pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
+            else if (p.pageType === 'password') {
                 const inp = document.createElement('input'); 
                 inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center mb-2"; inp.placeholder = "KÓD...";
                 pAddBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); } });
@@ -514,7 +544,10 @@
             }
             if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr') {
                 const b = document.createElement('button'); b.className = "p-action-btn"; b.innerHTML = `TOVÁBB`;
-                b.onclick = () => { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); };
+                b.onclick = () => { 
+                    if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
+                };
                 navRow.appendChild(b);
             }
             if (navRow.hasChildNodes()) container.appendChild(navRow);
@@ -543,8 +576,12 @@
         }
 
         function pHandleReward(p) {
-            if(p.storyItemName && !pInventory.find(item => item.name === p.storyItemName)) {
-                pInventory.push({ name: p.storyItemName, icon: p.storyItemIcon || '📦', url: p.storyItemUrl || '', seen: false });
+            if (p.rewards && p.rewards.length > 0) {
+                p.rewards.forEach(reward => {
+                    if (reward.name && !pInventory.find(item => item.name === reward.name)) {
+                        pInventory.push({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false });
+                    }
+                });
                 pUpdateBadge();
             }
         }
@@ -576,7 +613,54 @@
             });
         }
 
-        function pCloseZoom(manual) { if (manual) history.back(); document.getElementById('p-zoom-viewer').style.display = 'none'; }
+        // --- IMPROVED ZOOM LOGIC ---
+        function pOpenZoom(url) { 
+            pushNavState(); 
+            pZoomScale = 1;
+            const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
+            i.src = url; 
+            i.style.transform = `scale(${pZoomScale})`; 
+            v.style.display = 'flex'; 
+
+            // Tap to close logic
+            let isMoving = false;
+            v.ontouchstart = (e) => {
+                if (e.touches.length === 2) {
+                    pInitialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                }
+                isMoving = false;
+            };
+
+            v.ontouchmove = (e) => {
+                isMoving = true;
+                if (e.touches.length === 2 && pInitialDist > 0) {
+                    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                    const delta = dist / pInitialDist;
+                    pZoomScale = Math.min(Math.max(0.5, pZoomScale * delta), 5);
+                    i.style.transform = `scale(${pZoomScale})`;
+                    pInitialDist = dist;
+                }
+            };
+
+            v.ontouchend = (e) => {
+                if (!isMoving && e.touches.length === 0) pCloseZoom(true);
+            };
+
+            // Desktop click to close & wheel zoom
+            v.onclick = () => { if(!isMoving) pCloseZoom(true); };
+            v.onwheel = (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                pZoomScale = Math.min(Math.max(0.5, pZoomScale * delta), 5);
+                i.style.transform = `scale(${pZoomScale})`;
+            };
+        }
+
+        function pCloseZoom(manual) { 
+            if (manual) history.back(); 
+            document.getElementById('p-zoom-viewer').style.display = 'none'; 
+        }
+
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
         function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map', false); pUpdateUI(); }
 
@@ -584,45 +668,175 @@
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game.json'; a.click(); }
         
         function downloadLiveHTML() {
-            // Live HTML generation code simplified for example
-            const b = new Blob(["HTML Generation Placeholder"], { type: 'text/html' });
-            const url = URL.createObjectURL(b);
-            const a = document.createElement('a'); a.href = url; a.download = 'index.html'; a.click();
+            const htmlContent = `<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kaland Játék<\/title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://unpkg.com/html5-qrcode"><\/script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Play', sans-serif; background-color: #000; color: #f8fafc; overflow: hidden; }
+        .game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
+        #viewport { position: relative; flex-grow: 1; overflow: hidden; }
+        #bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s; }
+        #content-layer { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .dialog-box { position: relative; background: rgba(0,0,0,0.92); border-top: 3px solid #8b5cf6; border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 40px; min-height: 250px; max-height: 70%; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.5); }
+        .avatar-frame { position: absolute; top: -40px; left: 10px; width: 75px; height: 75px; border-radius: 50%; border: 3px solid #8b5cf6; background: #000; z-index: 20; object-fit: cover; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .action-btn { flex: 1; background: #8b5cf6; color: white; padding: 16px; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 1.25rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; border: none; }
+        .action-btn:active { transform: scale(0.98); background: #a855f7; }
+        .btn-back { background: #334155; }
+        .bottom-nav { height: 75px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.3); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { color: #64748b; font-size: 1.5rem; cursor: pointer; border: none; background: transparent; position: relative; }
+        .nav-item.active { color: #8b5cf6; }
+        .badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; font-weight: bold; }
+        #story-text { text-align: justify; hyphens: auto; font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 15px; }
+        #inventory-overlay { position: absolute; inset: 0; background: #0f172a; z-index: 50; display: none; padding: 25px; padding-top: 50px; overflow-y: auto; }
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .item-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 1rem; padding: 15px; text-align: center; cursor: pointer; }
+        .item-card img { width: 65px; height: 65px; object-fit: contain; margin: 0 auto 10px; }
+        .item-unread-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; }
+        #qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        #qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
+        #zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; overflow: hidden; }
+        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: zoom-out; user-select: none; }
+        .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    <\/style>
+<\/head>
+<body>
+    <div id="loading" class="loading-screen"><div id="loading-text" class="text-purple-400 font-bold uppercase text-sm">Betöltés...<\/div><\/div>
+    <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR(true)" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
+    <div id="zoom-viewer" onclick="closeZoom(true)"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
+    <div class="game-wrapper">
+        <div id="viewport">
+            <img id="bg-layer" src="">
+            <div id="inventory-overlay"><h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák<\/h2><div id="item-list" class="item-grid"><\/div><\/div>
+            <div id="content-layer">
+                <div class="dialog-box">
+                    <img id="avatar-img" class="avatar-frame" src="">
+                    <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow">
+                        <!-- Removed border from standalone image -->
+                        <img id="page-illustration" class="w-full rounded-xl mb-4 hidden" src="">
+                        <div id="story-text"><\/div>
+                    <\/div>
+                    <div id="button-container" class="mt-4 flex flex-col gap-3"><\/div>
+                <\/div>
+            <\/div>
+        <\/div>
+        <div class="bottom-nav">
+            <button id="nav-map" class="nav-item active" onclick="switchView('map', true)"><i class="fa fa-map-marked-alt"><\/i><div id="map-badge" class="badge hidden">!<\/div><\/button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv', true)"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
+            <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"><\/i><\/button>
+            <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
+        <\/div>
+    <\/div>
+    <script>
+        let config = null, simIdx = 0, inventory = [], qrScanner = null, liveScale = 1, initialDist = 0;
+        function pushNav() { history.pushState({ nav: true }, ""); }
+        window.onpopstate = () => {
+            if (document.getElementById('zoom-viewer').style.display === 'flex') { closeZoom(false); return; }
+            if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; }
+            if (document.getElementById('inventory-overlay').style.display === 'block') { switchView('map', false); return; }
+            pushNav();
+        };
+        pushNav();
+        async function loadGame() {
+            try {
+                const r = await fetch('game.json');
+                if (!r.ok) throw new Error();
+                config = await r.json();
+                initGame(); document.getElementById('loading').style.display = 'none';
+            } catch (err) { document.getElementById('loading-text').innerHTML = 'Várom a game.json fájlt...'; }
+        }
+        function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; inventory = []; updateUI(); }
+        function updateUI() {
+            const p = config.storyPages[simIdx]; if(!p) return;
+            handleReward(p); document.getElementById('bg-layer').style.opacity = 0;
+            setTimeout(() => { document.getElementById('bg-layer').src = p.pageBg || config.globalBg || ""; document.getElementById('bg-layer').style.opacity = 1; }, 200);
+            let text = p.content || ""; const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
+            config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
+            document.getElementById('story-text').innerHTML = text;
+            const ill = document.getElementById('page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
+            const container = document.getElementById('button-container'); container.innerHTML = '';
+            if (p.pageType === 'qr') { addBtn("QR BEOLVASÁSA", startQR, "fa-camera"); }
+            else if(p.pageType === 'password') {
+                const inp = document.createElement('input'); inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center mb-2"; inp.placeholder = "KÓD...";
+                addBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } });
+                container.prepend(inp);
+            } else if(p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }); });
+            } 
+            const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full";
+            if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) {
+                const b = document.createElement('button'); b.className = "action-btn btn-back"; b.innerHTML = "VISSZA";
+                b.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; updateUI(); };
+                navRow.appendChild(b);
+            }
+            if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr') {
+                const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = "TOVÁBB";
+                b.onclick = () => { 
+                    if(p.redirectUrl) { window.open(p.redirectUrl, '_blank'); } 
+                    else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); }
+                };
+                navRow.appendChild(b);
+            }
+            if (navRow.hasChildNodes()) container.appendChild(navRow);
+        }
+        function openZoom(url) { 
+            pushNav(); 
+            liveScale = 1;
+            const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
+            i.src = url; 
+            i.style.transform = "scale("+liveScale+")"; 
+            v.style.display = 'flex'; 
+
+            let isMove = false;
+            v.ontouchstart = (e) => { if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMove = false; };
+            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * del), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
+            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(true); };
+            v.onclick = () => { if(!isMove) closeZoom(true); };
+            v.onwheel = (e) => { e.preventDefault(); const d = e.deltaY > 0 ? 0.9 : 1.1; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; };
+        }
+        function closeZoom(man) { if (man) history.back(); document.getElementById('zoom-viewer').style.display = 'none'; }
+        function addBtn(text, fn, icon = "") {
+            const b = document.createElement('button'); b.className = "action-btn";
+            b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
+            b.onclick = fn; document.getElementById('button-container').appendChild(b);
+        }
+        function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.toUpperCase() === (p.qrCode || "").toUpperCase()) { stopQR(true); simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }).catch(() => stopQR(true)); }
+        function stopQR(man) { if (man) history.back(); if (qrScanner) { qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; }); } else { document.getElementById('qr-layer').style.display = 'none'; } }
+        function handleReward(p) { if (p.rewards && p.rewards.length > 0) { p.rewards.forEach(r => { if (r.name && !inventory.find(i => i.name === r.name)) { inventory.push({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false }); } }); updateBadge(); } }
+        function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
+        function switchView(t, m) {
+            const inv = document.getElementById('inventory-overlay');
+            if (t === 'inv') {
+                if (inv.style.display === 'block') { if (m) history.back(); inv.style.display = 'none'; }
+                else { if (m) pushNav(); renderInventory(); inv.style.display = 'block'; }
+            } else { if (inv.style.display === 'block' && m) history.back(); inv.style.display = 'none'; }
+        }
+        function renderInventory() { const l = document.getElementById('item-list'); l.innerHTML = ''; inventory.forEach(it => { const d = document.createElement('div'); d.className = "item-card"; d.innerHTML = it.url ? '<img src="'+it.url+'"><div class="text-[10px] uppercase font-bold">'+it.name+'<\/div>' : '<div class="text-4xl mb-2">'+it.icon+'<\/div><div class="text-[10px] font-bold uppercase">'+it.name+'<\/div>'; if (!it.seen) d.innerHTML += '<div class="item-unread-dot"><\/div>'; d.onclick = () => { if(it.url) openZoom(it.url); it.seen = true; updateBadge(); renderInventory(); }; l.appendChild(d); }); }
+        function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map', false); updateUI(); } }
+        window.onload = loadGame;
+    <\/script>
+<\/body>
+<\/html>`;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'index.html'; a.click(); URL.revokeObjectURL(url);
         }
 
-        // --- INITIALIZATION ---
         window.onload = () => { 
             document.getElementById('appTitle').value = config.appTitle || ""; 
             document.getElementById('globalBg').value = config.globalBg || ""; 
             document.getElementById('initialMapLink').value = config.initialMapLink || ""; 
-            
             const el = document.getElementById('pageList');
-            if (el) {
-                Sortable.create(el, {
-                    handle: '.handle', animation: 150,
-                    onEnd: () => {
-                        const items = Array.from(el.children);
-                        const oldPages = [...config.storyPages];
-                        const newPages = items.map(item => oldPages[parseInt(item.getAttribute('data-id'))]);
-                        config.storyPages = newPages;
-                        autoSave(); renderPageList(); 
-                    }
-                });
-            }
-
-            // MODAL ACTIONS
+            if (el) Sortable.create(el, { handle: '.handle', animation: 150, onEnd: () => { const items = Array.from(el.children); const oldPages = [...config.storyPages]; const newPages = items.map(item => oldPages[parseInt(item.getAttribute('data-id'))]); config.storyPages = newPages; autoSave(); renderPageList(); } });
             document.getElementById('modal-cancel').onclick = () => { document.getElementById('custom-modal').style.display = 'none'; deleteCandidate = null; };
-            document.getElementById('modal-confirm').onclick = () => {
-                if (deleteCandidate !== null) {
-                    config.storyPages.splice(deleteCandidate, 1);
-                    currentIdx = -1;
-                    document.getElementById('editorPanel').classList.add('hidden');
-                    document.getElementById('custom-modal').style.display = 'none';
-                    deleteCandidate = null;
-                    renderPageList(); autoSave();
-                }
-            };
-
+            document.getElementById('modal-confirm').onclick = () => { if (deleteCandidate !== null) { config.storyPages.splice(deleteCandidate, 1); currentIdx = -1; document.getElementById('editorPanel').classList.add('hidden'); document.getElementById('custom-modal').style.display = 'none'; deleteCandidate = null; renderPageList(); autoSave(); } };
             renderPageList(); renderAvatarAdmin(); 
             if(config.storyPages.length > 0) loadPage(0); 
         };
