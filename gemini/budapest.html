@@ -2,79 +2,108 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Mobil nézet beállítása: fix méret, nagyítás tiltása a splash screen élményhez -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- Apple (iOS) teljes képernyős mód beállítások -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Budapest">
+
     <title>Budapest – Átvezetés</title>
-    <!-- Tailwind CSS betöltése a gyors, reszponzív stílushoz -->
+    
+    <!-- Tailwind CSS betöltése -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Special Elite betöltése a titokzatos, írógép stílushoz -->
+    <!-- Google Fonts: Special Elite -->
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+    
     <style>
-        /* A fő animáció, 5 másodperc alatt beúszik, 5 másodperc alatt kiúszik (összesen 10 másodperc) */
+        /* Animáció: 5 másodperc be, 4 másodperc látható, 1 másodperc ki */
         @keyframes fadeInOut {
-            0% { opacity: 0; }
-            50% { opacity: 1; } /* 5 másodpercnél eléri a teljes láthatóságot */
-            90% { opacity: 0; } /* 9 másodpercnél elkezd eltűnni */
-            100% { opacity: 0; } /* 10 másodpercnél teljesen eltűnik */
+            0% { opacity: 0; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1); }
+            90% { opacity: 0; transform: scale(1.02); }
+            100% { opacity: 0; }
         }
 
-        /* Fekete háttér és teljes képernyős beállítások a mobil optimalizáláshoz */
         body {
             background-color: #000;
             margin: 0;
-            overflow: hidden; /* Ne legyen görgetősáv */
-            font-family: 'Special Elite', monospace; /* Az új, írógép stílusú betűtípus beállítása */
+            padding: 0;
+            /* Görgetés és "visszapattanó" effekt letiltása mobilon */
+            overflow: hidden;
+            overscroll-behavior: none;
+            
+            font-family: 'Special Elite', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Teljes képernyős magasság */
-            width: 100vw; /* Teljes képernyős szélesség */
+            height: 100vh;
+            width: 100vw;
+            /* iOS Safari 100vh hiba javítása */
+            height: -webkit-fill-available;
         }
 
-        /* A "Budapest" szöveg stílusa és az animáció alkalmazása */
+        html {
+            height: -webkit-fill-available;
+        }
+
         #budapest-text {
             color: #fff;
-            font-size: 10vw; /* Reszponzív betűméret */
+            /* Dinamikus betűméret: mobilon nagyobb arányban */
+            font-size: 15vw; 
             font-weight: 700;
             text-align: center;
-            animation: fadeInOut 10s forwards; /* Alkalmazzuk az animációt, 10 másodperc, forwards tartja az utolsó állapotot (opacity: 0) */
-            line-height: 1;
-            padding: 2rem;
+            animation: fadeInOut 10s ease-in-out forwards;
+            line-height: 1.2;
+            padding: 1rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
         }
 
-        /* Kisebb képernyőkhöz optimalizált betűméret */
+        /* Asztali nézet korrekciója */
         @media (min-width: 768px) {
             #budapest-text {
-                font-size: 5rem;
+                font-size: 6rem;
             }
+        }
+
+        /* Érintés elleni védelem (ne jelenjen meg kijelölés vagy menü hosszas nyomásra) */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
-<body>
+<body class="no-select">
 
-    <!-- A megjelenítendő szöveg -->
-    <div id="budapest-text" class="select-none">Budapest</div>
+    <div id="budapest-text">Budapest</div>
 
     <script type="text/javascript">
-        // JavaScript az átirányításhoz
-
-        // Az animáció teljes hossza 10 másodperc (10000 ms).
-        // Beállítunk egy 10,5 másodperces (10500 ms) késleltetést, hogy az átirányítás a szöveg teljes eltűnése után történjen meg.
+        // Átirányítási beállítások
         const delayInMilliseconds = 10500;
         const redirectUrl = "varoshaza.html";
 
-        /**
-         * Az oldalt átirányítja a megadott URL-re.
-         */
         function redirectToNextPage() {
-            // Logoljuk az átirányítást a konzolra
-            console.log(`Az átirányítás a következő oldalra történik: ${redirectUrl}`);
+            // Finom átmenet az átirányítás előtt (opcionális logolás)
+            console.log("Átirányítás...");
             window.location.href = redirectUrl;
         }
 
-        // Időzítő beállítása az átirányításhoz
+        // Amikor az oldal betöltött, elindul az időzítő
         window.onload = function() {
+            // Automatikus görgetés az elejére, hogy elrejtsük a címsort mobilon
+            window.scrollTo(0, 1);
+            
             setTimeout(redirectToNextPage, delayInMilliseconds);
         };
+
+        // Érintésre történő gyorsítás (ha a felhasználó nem akar várni)
+        document.body.addEventListener('click', function() {
+            // Opcionális: itt engedélyezhető a manuális továbblépés
+            // redirectToNextPage(); 
+        });
     </script>
 </body>
 </html>
