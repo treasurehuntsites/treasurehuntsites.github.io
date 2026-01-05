@@ -90,8 +90,16 @@
         #p-qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #p-qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
         
-        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; }
-        #p-zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: grab; }
+        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; overflow: hidden; }
+        #p-zoom-img { 
+            max-width: 95%; 
+            max-height: 90%; 
+            object-fit: contain; 
+            border-radius: 8px; 
+            transition: transform 0.1s ease-out; 
+            cursor: zoom-out; 
+            user-select: none;
+        }
 
         .view-toggle-btn {
             position: fixed;
@@ -150,7 +158,7 @@
                     <p class="text-cyan-400 text-sm mt-1">Interaktív Kaland Szerkesztő</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button onclick="downloadLiveHTML()" class="bg-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-colors">Játék letöltése (.html)</button>
+                    <button id="btnDownloadLive" onclick="downloadLiveHTML()" class="bg-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-colors">Játék letöltése (.html)</button>
                     <button onclick="downloadConfig()" class="bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-600 transition-colors">Export game.json</button>
                     <button onclick="document.getElementById('uploadInput').click()" class="bg-purple-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-purple-500 transition-colors">Import</button>
                     <input type="file" id="uploadInput" class="hidden" accept=".json" onchange="handleFileUpload(event)">
@@ -200,17 +208,17 @@
                             <input type="number" id="nextIdx" class="input-style text-xs" placeholder="Tovább ID" oninput="autoSave()">
                             <input type="url" id="redirectUrl" class="input-style text-xs" placeholder="Átirányítás Link" oninput="autoSave()">
                             <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi háttér" oninput="autoSave()">
-                            <!-- QR Code input with ID target for visibility toggling -->
                             <input type="text" id="qrCode" class="input-style text-xs" placeholder="QR Kód értéke" oninput="autoSave()">
                         </div>
+                        
                         <div id="rewardArea" class="border-t border-slate-700/50 pt-4 space-y-4">
-                            <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Jelenet Jutalom</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input type="text" id="storyItemName" class="input-style text-xs" placeholder="Név" oninput="autoSave()">
-                                <input type="text" id="storyItemIcon" class="input-style text-xs" placeholder="Ikon" oninput="autoSave()">
-                                <input type="url" id="storyItemUrl" class="input-style text-xs" placeholder="Kép URL" oninput="autoSave()">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak átadása)</h3>
+                                <button onclick="addRewardItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ TÁRGY</button>
                             </div>
+                            <div id="rewardsContainer" class="space-y-3"></div>
                         </div>
+
                         <div id="passwordArea" class="hidden border-t border-slate-700/50 pt-4">
                             <input type="text" id="correctPass" class="input-style text-sm" placeholder="Helyes megoldás" oninput="autoSave()">
                         </div>
@@ -279,14 +287,6 @@
                         <div id="p-scroll-area" class="overflow-y-auto pr-1 flex-grow">
                             <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden border border-slate-800 shadow-xl" src="">
                             <div id="p-story-text"></div>
-                            <div id="p-gps-info" class="hidden flex flex-col items-center gap-3 mt-4">
-                                <div class="w-full text-center p-3 bg-slate-900/80 rounded-xl text-sm text-cyan-400 font-bold italic border border-cyan-800/50 animate-pulse">
-                                    <i class="fa fa-location-dot mr-2"></i> Távolság: <span id="p-distance-val">...</span> méter
-                                </div>
-                                <a id="p-map-btn" target="_blank" class="hidden w-full bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-center text-xs uppercase transition-colors shadow-lg shadow-cyan-900/20">
-                                    <i class="fa fa-map-location-dot mr-2 text-base"></i> Útvonalterv / Térkép
-                                </a>
-                            </div>
                         </div>
                         <div id="p-button-container" class="mt-4 flex flex-col gap-3"></div>
                     </div>
@@ -302,24 +302,41 @@
     </div>
 
     <script>
-        // GLOBÁLIS ÁLLAPOT ÉS FÜGGVÉNYEK
         let config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V11')) || { 
             appTitle: "A Város Legendája", 
-            storyPages: [{ content: "Kezdődik a kaland!", pageType: "story" }], 
+            storyPages: [{ content: "Kezdődik a kaland!", pageType: "story", rewards: [] }], 
             avatars: [],
             globalBg: "",
             initialMapLink: ""
         };
         let currentIdx = -1, simIdx = 0, pSimIdx = 0, pInventory = [], saveTimeout, pQrScanner = null, isPlayerMode = false;
-        let geoWatchId = null;
         let deleteCandidate = null;
+        let pZoomScale = 1;
+        let pInitialDist = 0;
 
-        // --- GLOBAL FUNCTIONS ---
         function pushNavState() { history.pushState({ navigation: true }, ""); }
+
+        window.onpopstate = function(event) {
+            if (document.getElementById('p-zoom-viewer').style.display === 'flex') {
+                pCloseZoom(false);
+                return;
+            }
+            if (document.getElementById('p-qr-layer').style.display === 'flex') {
+                pStopQR(false); 
+                return;
+            }
+            if (document.getElementById('p-inventory-overlay').style.display === 'block') {
+                pSwitchView('map', false);
+                return;
+            }
+            if (isPlayerMode) {
+                toggleMainView(false);
+                return;
+            }
+        };
 
         function toggleMainView(shouldPush) {
             isPlayerMode = !isPlayerMode;
-            if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
             const studio = document.getElementById('studio-view');
             const player = document.getElementById('player-view');
             const icon = document.getElementById('toggle-icon');
@@ -339,6 +356,7 @@
 
         function loadPage(i) { 
             currentIdx = i; const p = config.storyPages[i]; if(!p) return;
+            if (!p.rewards) p.rewards = [];
             document.getElementById('editorPanel').classList.remove('hidden'); 
             document.getElementById('pageText').value = p.content || ""; 
             document.getElementById('pageType').value = p.pageType || 'story'; 
@@ -351,23 +369,17 @@
             document.getElementById('targetLat').value = p.targetLat || ""; 
             document.getElementById('targetLng').value = p.targetLng || ""; 
             document.getElementById('mapLink').value = p.mapLink || ""; 
-            document.getElementById('storyItemName').value = p.storyItemName || ""; 
-            document.getElementById('storyItemIcon').value = p.storyItemIcon || ""; 
-            document.getElementById('storyItemUrl').value = p.storyItemUrl || ""; 
             document.getElementById('pageImage').value = p.pageImage || "";
-            updateUI(); renderChoices(); renderPageList(); simIdx = i; updateSimulator(); 
+            updateUI(); renderChoices(); renderRewards(); renderPageList(); 
+            simIdx = i; updateSimulator(); 
         }
 
-        function addPage() { config.storyPages.push({content: "Új jelenet...", pageType: "story"}); loadPage(config.storyPages.length-1); autoSave(); }
+        function addPage() { config.storyPages.push({content: "Új jelenet...", pageType: "story", rewards: []}); loadPage(config.storyPages.length-1); autoSave(); }
         function duplicatePage(i) { config.storyPages.splice(i+1, 0, JSON.parse(JSON.stringify(config.storyPages[i]))); renderPageList(); autoSave(); }
-        
-        function deletePage(i) {
-            deleteCandidate = i;
-            document.getElementById('custom-modal').style.display = 'flex';
-        }
-
+        function deletePage(i) { deleteCandidate = i; document.getElementById('custom-modal').style.display = 'flex'; }
         function addAvatar() { config.avatars.push({id: 'A', name: 'Új Karakter', url: '', color: '#8b5cf6'}); renderAvatarAdmin(); autoSave(); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
+        function addRewardItem() { if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); renderRewards(); autoSave(); }
         function resetSim() { simIdx = 0; updateSimulator(); }
 
         function autoSave() { 
@@ -386,9 +398,6 @@
                     p.targetLat = document.getElementById('targetLat').value; 
                     p.targetLng = document.getElementById('targetLng').value; 
                     p.mapLink = document.getElementById('mapLink').value; 
-                    p.storyItemName = document.getElementById('storyItemName').value; 
-                    p.storyItemIcon = document.getElementById('storyItemIcon').value; 
-                    p.storyItemUrl = document.getElementById('storyItemUrl').value; 
                     p.pageImage = document.getElementById('pageImage').value;
                 } 
                 config.appTitle = document.getElementById('appTitle').value; 
@@ -424,7 +433,6 @@
             document.getElementById('choiceArea').classList.toggle('hidden', t !== 'choice'); 
             document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password'); 
             document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps'); 
-            // Only show QR Code input if the type is 'qr'
             document.getElementById('qrCode').classList.toggle('hidden', t !== 'qr');
         }
 
@@ -436,6 +444,24 @@
                 r.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><input type="text" placeholder="Tárgy kell" class="input-style flex-1 text-[10px]" value="${ch.req || ''}" oninput="config.storyPages[${currentIdx}].choices[${i}].req=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()">X</button>`; 
                 c.appendChild(r); 
             }); 
+        }
+
+        function renderRewards() {
+            const container = document.getElementById('rewardsContainer');
+            container.innerHTML = '';
+            const p = config.storyPages[currentIdx];
+            if (!p.rewards) p.rewards = [];
+            p.rewards.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-1 md:grid-cols-4 gap-2 items-center bg-slate-800/30 p-2 rounded border border-slate-700/50";
+                div.innerHTML = `
+                    <input type="text" class="input-style text-xs" placeholder="Név" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Ikon (pl. 🔑)" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
+                    <input type="url" class="input-style text-xs" placeholder="Kép URL" value="${item.url}" oninput="config.storyPages[${currentIdx}].rewards[${i}].url=this.value;autoSave()">
+                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">ELTÁVOLÍTÁS</button>
+                `;
+                container.appendChild(div);
+            });
         }
 
         function updateSimulator() {
@@ -452,8 +478,6 @@
             document.getElementById('sim-actual-text').innerHTML = text;
             const img = document.getElementById('sim-page-img'); 
             if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
-            document.getElementById('sim-gps-info').classList.toggle('hidden', p.pageType !== 'gps');
-
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
             if (p.pageType === 'choice' && p.choices) {
                 const choiceCol = document.createElement('div'); choiceCol.className = "flex flex-col gap-2 w-full mb-2";
@@ -473,12 +497,8 @@
             if (p.pageType !== 'choice') {
                 const next = document.createElement('div'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB';
                 next.onclick = () => { 
-                    if(p.redirectUrl) {
-                        window.open(p.redirectUrl, '_blank');
-                    } else {
-                        simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; 
-                        updateSimulator(); 
-                    }
+                    if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); }
                 };
                 navRow.appendChild(next);
             }
@@ -486,12 +506,10 @@
         }
 
         function pUpdateUI() {
-            if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
             const p = config.storyPages[pSimIdx]; if(!p) return;
             pHandleReward(p);
             const bg = document.getElementById('p-bg-layer'); bg.style.opacity = 0;
             setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
-
             let text = p.content || "";
             const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
             config.avatars.forEach(av => {
@@ -503,12 +521,9 @@
             document.getElementById('p-story-text').innerHTML = text;
             const ill = document.getElementById('p-page-illustration');
             if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
-
             const container = document.getElementById('p-button-container'); container.innerHTML = '';
-            document.getElementById('p-gps-info').classList.add('hidden');
-            if (p.pageType === 'qr') {
-                pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
-            } else if (p.pageType === 'password') {
+            if (p.pageType === 'qr') pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
+            else if (p.pageType === 'password') {
                 const inp = document.createElement('input'); 
                 inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center mb-2"; inp.placeholder = "KÓD...";
                 pAddBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); } });
@@ -528,12 +543,8 @@
             if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr') {
                 const b = document.createElement('button'); b.className = "p-action-btn"; b.innerHTML = `TOVÁBB`;
                 b.onclick = () => { 
-                    if(p.redirectUrl) {
-                        window.open(p.redirectUrl, '_blank');
-                    } else {
-                        pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; 
-                        pUpdateUI(); 
-                    }
+                    if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
                 };
                 navRow.appendChild(b);
             }
@@ -563,8 +574,12 @@
         }
 
         function pHandleReward(p) {
-            if(p.storyItemName && !pInventory.find(item => item.name === p.storyItemName)) {
-                pInventory.push({ name: p.storyItemName, icon: p.storyItemIcon || '📦', url: p.storyItemUrl || '', seen: false });
+            if (p.rewards && p.rewards.length > 0) {
+                p.rewards.forEach(reward => {
+                    if (reward.name && !pInventory.find(item => item.name === reward.name)) {
+                        pInventory.push({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false });
+                    }
+                });
                 pUpdateBadge();
             }
         }
@@ -596,7 +611,54 @@
             });
         }
 
-        function pCloseZoom(manual) { if (manual) history.back(); document.getElementById('p-zoom-viewer').style.display = 'none'; }
+        // --- IMPROVED ZOOM LOGIC ---
+        function pOpenZoom(url) { 
+            pushNavState(); 
+            pZoomScale = 1;
+            const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
+            i.src = url; 
+            i.style.transform = `scale(${pZoomScale})`; 
+            v.style.display = 'flex'; 
+
+            // Tap to close logic
+            let isMoving = false;
+            v.ontouchstart = (e) => {
+                if (e.touches.length === 2) {
+                    pInitialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                }
+                isMoving = false;
+            };
+
+            v.ontouchmove = (e) => {
+                isMoving = true;
+                if (e.touches.length === 2 && pInitialDist > 0) {
+                    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                    const delta = dist / pInitialDist;
+                    pZoomScale = Math.min(Math.max(0.5, pZoomScale * delta), 5);
+                    i.style.transform = `scale(${pZoomScale})`;
+                    pInitialDist = dist;
+                }
+            };
+
+            v.ontouchend = (e) => {
+                if (!isMoving && e.touches.length === 0) pCloseZoom(true);
+            };
+
+            // Desktop click to close & wheel zoom
+            v.onclick = () => { if(!isMoving) pCloseZoom(true); };
+            v.onwheel = (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                pZoomScale = Math.min(Math.max(0.5, pZoomScale * delta), 5);
+                i.style.transform = `scale(${pZoomScale})`;
+            };
+        }
+
+        function pCloseZoom(manual) { 
+            if (manual) history.back(); 
+            document.getElementById('p-zoom-viewer').style.display = 'none'; 
+        }
+
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
         function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map', false); pUpdateUI(); }
 
@@ -637,8 +699,8 @@
         .item-unread-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; }
         #qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
-        #zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; }
-        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: grab; }
+        #zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; overflow: hidden; }
+        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: zoom-out; user-select: none; }
         .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     <\/style>
 <\/head>
@@ -669,7 +731,7 @@
         <\/div>
     <\/div>
     <script>
-        let config = null, simIdx = 0, inventory = [], qrScanner = null;
+        let config = null, simIdx = 0, inventory = [], qrScanner = null, liveScale = 1, initialDist = 0;
         function pushNav() { history.pushState({ nav: true }, ""); }
         window.onpopstate = () => {
             if (document.getElementById('zoom-viewer').style.display === 'flex') { closeZoom(false); return; }
@@ -720,7 +782,21 @@
             }
             if (navRow.hasChildNodes()) container.appendChild(navRow);
         }
-        function openZoom(url) { pushNav(); const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); i.src = url; i.style.transform = 'scale(1)'; v.style.display = 'flex'; }
+        function openZoom(url) { 
+            pushNav(); 
+            liveScale = 1;
+            const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
+            i.src = url; 
+            i.style.transform = "scale("+liveScale+")"; 
+            v.style.display = 'flex'; 
+
+            let isMove = false;
+            v.ontouchstart = (e) => { if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMove = false; };
+            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * del), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
+            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(true); };
+            v.onclick = () => { if(!isMove) closeZoom(true); };
+            v.onwheel = (e) => { e.preventDefault(); const d = e.deltaY > 0 ? 0.9 : 1.1; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; };
+        }
         function closeZoom(man) { if (man) history.back(); document.getElementById('zoom-viewer').style.display = 'none'; }
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
@@ -729,7 +805,7 @@
         }
         function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.toUpperCase() === (p.qrCode || "").toUpperCase()) { stopQR(true); simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }).catch(() => stopQR(true)); }
         function stopQR(man) { if (man) history.back(); if (qrScanner) { qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; }); } else { document.getElementById('qr-layer').style.display = 'none'; } }
-        function handleReward(p) { if(p.storyItemName && !inventory.find(i => i.name === p.storyItemName)) { inventory.push({ name: p.storyItemName, icon: p.storyItemIcon || '📦', url: p.storyItemUrl || '', seen: false }); updateBadge(); } }
+        function handleReward(p) { if (p.rewards && p.rewards.length > 0) { p.rewards.forEach(r => { if (r.name && !inventory.find(i => i.name === r.name)) { inventory.push({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false }); } }); updateBadge(); } }
         function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
         function switchView(t, m) {
             const inv = document.getElementById('inventory-overlay');
@@ -750,43 +826,17 @@
             const a = document.createElement('a'); a.href = url; a.download = 'index.html'; a.click(); URL.revokeObjectURL(url);
         }
 
-        // --- INITIALIZATION ---
         window.onload = () => { 
             document.getElementById('appTitle').value = config.appTitle || ""; 
             document.getElementById('globalBg').value = config.globalBg || ""; 
             document.getElementById('initialMapLink').value = config.initialMapLink || ""; 
-            
             const el = document.getElementById('pageList');
-            if (el) {
-                Sortable.create(el, {
-                    handle: '.handle', animation: 150,
-                    onEnd: () => {
-                        const items = Array.from(el.children);
-                        const oldPages = [...config.storyPages];
-                        const newPages = items.map(item => oldPages[parseInt(item.getAttribute('data-id'))]);
-                        config.storyPages = newPages;
-                        autoSave(); renderPageList(); 
-                    }
-                });
-            }
-
-            // MODAL ACTIONS
+            if (el) Sortable.create(el, { handle: '.handle', animation: 150, onEnd: () => { const items = Array.from(el.children); const oldPages = [...config.storyPages]; const newPages = items.map(item => oldPages[parseInt(item.getAttribute('data-id'))]); config.storyPages = newPages; autoSave(); renderPageList(); } });
             document.getElementById('modal-cancel').onclick = () => { document.getElementById('custom-modal').style.display = 'none'; deleteCandidate = null; };
-            document.getElementById('modal-confirm').onclick = () => {
-                if (deleteCandidate !== null) {
-                    config.storyPages.splice(deleteCandidate, 1);
-                    currentIdx = -1;
-                    document.getElementById('editorPanel').classList.add('hidden');
-                    document.getElementById('custom-modal').style.display = 'none';
-                    deleteCandidate = null;
-                    renderPageList(); autoSave();
-                }
-            };
-
+            document.getElementById('modal-confirm').onclick = () => { if (deleteCandidate !== null) { config.storyPages.splice(deleteCandidate, 1); currentIdx = -1; document.getElementById('editorPanel').classList.add('hidden'); document.getElementById('custom-modal').style.display = 'none'; deleteCandidate = null; renderPageList(); autoSave(); } };
             renderPageList(); renderAvatarAdmin(); 
             if(config.storyPages.length > 0) loadPage(0); 
         };
     </script>
 </body>
 </html>
-
