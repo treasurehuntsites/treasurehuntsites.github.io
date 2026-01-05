@@ -213,7 +213,7 @@
                         
                         <div id="rewardArea" class="border-t border-slate-700/50 pt-4 space-y-4">
                             <div class="flex justify-between items-center">
-                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak átadása)</h3>
+                                <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Hátizsák (Tárgyak kezelése)</h3>
                                 <button onclick="addRewardItem()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ TÁRGY</button>
                             </div>
                             <div id="rewardsContainer" class="space-y-3"></div>
@@ -245,7 +245,6 @@
                                 <div class="sim-box">
                                     <img id="sim-avatar" class="sim-avatar" src="">
                                     <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
-                                        <!-- Removed border from simulator image -->
                                         <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden" src="">
                                         <div id="sim-actual-text" style="font-size: 17px;"></div>
                                         <div id="sim-gps-info" class="hidden text-center p-2 bg-slate-800 rounded mt-2 text-xs text-cyan-400 font-bold italic border border-cyan-900/50">
@@ -272,7 +271,7 @@
             <div id="p-qr-reader"></div>
             <button id="p-qr-cancel-btn" onclick="pStopQR(true)" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE</button>
         </div>
-        <div id="p-zoom-viewer" onclick="pCloseZoom(true)">
+        <div id="p-zoom-viewer" onclick="pCloseZoom()">
             <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
         </div>
         <div class="p-game-wrapper">
@@ -286,7 +285,6 @@
                     <div class="p-dialog-box">
                         <img id="p-avatar-img" class="p-avatar-frame" src="">
                         <div id="p-scroll-area" class="overflow-y-auto pr-1 flex-grow">
-                            <!-- Removed border from player view image -->
                             <img id="p-page-illustration" class="w-full rounded-xl mb-4 hidden shadow-xl" src="">
                             <div id="p-story-text"></div>
                         </div>
@@ -295,8 +293,8 @@
                 </div>
             </div>
             <div class="p-bottom-nav">
-                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map', true)"><i class="fa fa-map-marked-alt"></i></button>
-                <button id="p-nav-inv" class="p-nav-item" onclick="pSwitchView('inv', true)"><i class="fa-solid fa-briefcase"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
+                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map')"><i class="fa fa-map-marked-alt"></i></button>
+                <button id="p-nav-inv" class="p-nav-item" onclick="pSwitchView('inv')"><i class="fa-solid fa-briefcase"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
                 <button class="p-nav-item" onclick="pResetGame()"><i class="fa-solid fa-rotate-right"></i></button>
                 <button class="p-nav-item" onclick="pToggleFullscreen()"><i class="fa fa-expand"></i></button>
             </div>
@@ -319,22 +317,8 @@
         function pushNavState() { history.pushState({ navigation: true }, ""); }
 
         window.onpopstate = function(event) {
-            if (document.getElementById('p-zoom-viewer').style.display === 'flex') {
-                pCloseZoom(false);
-                return;
-            }
-            if (document.getElementById('p-qr-layer').style.display === 'flex') {
-                pStopQR(false); 
-                return;
-            }
-            if (document.getElementById('p-inventory-overlay').style.display === 'block') {
-                pSwitchView('map', false);
-                return;
-            }
-            if (isPlayerMode) {
-                toggleMainView(false);
-                return;
-            }
+            if (document.getElementById('p-qr-layer').style.display === 'flex') { pStopQR(false); return; }
+            if (isPlayerMode) { toggleMainView(false); return; }
         };
 
         function toggleMainView(shouldPush) {
@@ -381,7 +365,14 @@
         function deletePage(i) { deleteCandidate = i; document.getElementById('custom-modal').style.display = 'flex'; }
         function addAvatar() { config.avatars.push({id: 'A', name: 'Új Karakter', url: '', color: '#8b5cf6'}); renderAvatarAdmin(); autoSave(); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
-        function addRewardItem() { if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); renderRewards(); autoSave(); }
+        
+        function addRewardItem() { 
+            if(!config.storyPages[currentIdx].rewards) config.storyPages[currentIdx].rewards = []; 
+            config.storyPages[currentIdx].rewards.push({name: "", icon: "📦", url: ""}); 
+            renderRewards(); 
+            autoSave(); 
+        }
+        
         function resetSim() { simIdx = 0; updateSimulator(); }
 
         function autoSave() { 
@@ -457,10 +448,10 @@
                 const div = document.createElement('div');
                 div.className = "grid grid-cols-1 md:grid-cols-4 gap-2 items-center bg-slate-800/30 p-2 rounded border border-slate-700/50";
                 div.innerHTML = `
-                    <input type="text" class="input-style text-xs" placeholder="Név" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
-                    <input type="text" class="input-style text-xs" placeholder="Ikon (pl. 🔑)" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Tárgy neve (kötelező)" value="${item.name}" oninput="config.storyPages[${currentIdx}].rewards[${i}].name=this.value;autoSave()">
+                    <input type="text" class="input-style text-xs" placeholder="Ikon" value="${item.icon}" oninput="config.storyPages[${currentIdx}].rewards[${i}].icon=this.value;autoSave()">
                     <input type="url" class="input-style text-xs" placeholder="Kép URL" value="${item.url}" oninput="config.storyPages[${currentIdx}].rewards[${i}].url=this.value;autoSave()">
-                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">ELTÁVOLÍTÁS</button>
+                    <button onclick="config.storyPages[${currentIdx}].rewards.splice(${i},1);renderRewards();autoSave()" class="text-red-400 text-xs font-bold bg-red-900/20 px-2 py-1 rounded">TÖRLÉS</button>
                 `;
                 container.appendChild(div);
             });
@@ -565,7 +556,15 @@
             pQrScanner = new Html5Qrcode("p-qr-reader");
             pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
                 const p = config.storyPages[pSimIdx];
-                if (decodedText.toUpperCase() === (p.qrCode || "").toUpperCase()) { pStopQR(true); pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
+                if (decodedText.toUpperCase() === (p.qrCode || "").toUpperCase()) { 
+                    pStopQR(true); 
+                    if (p.redirectUrl && p.redirectUrl.trim() !== "") {
+                        window.open(p.redirectUrl, '_blank');
+                    } else {
+                        pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; 
+                        pUpdateUI(); 
+                    }
+                }
             }).catch(() => pStopQR(true));
         }
 
@@ -576,14 +575,19 @@
         }
 
         function pHandleReward(p) {
-            if (p.rewards && p.rewards.length > 0) {
-                p.rewards.forEach(reward => {
-                    if (reward.name && !pInventory.find(item => item.name === reward.name)) {
-                        pInventory.push({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false });
-                    }
-                });
-                pUpdateBadge();
+            if (p.rewards) {
+                pInventory = p.rewards
+                    .filter(reward => reward.name && reward.name.trim() !== "")
+                    .map(reward => ({
+                        name: reward.name,
+                        icon: reward.icon || '📦',
+                        url: reward.url || '',
+                        seen: false
+                    }));
+            } else {
+                pInventory = [];
             }
+            pUpdateBadge();
         }
 
         function pUpdateBadge() {
@@ -591,13 +595,15 @@
             b.textContent = unread; b.classList.toggle('hidden', unread === 0);
         }
 
-        function pSwitchView(target, manual) {
+        function pSwitchView(target) {
             const inv = document.getElementById('p-inventory-overlay'), navInv = document.getElementById('p-nav-inv'), navMap = document.getElementById('p-nav-map');
             if (target === 'inv') {
-                if (inv.style.display === 'block') { if (manual) history.back(); inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
-                else { if (manual) pushNavState(); pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); }
+                if (inv.style.display === 'block') {
+                    inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active');
+                } else {
+                    pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active');
+                }
             } else if (target === 'map') {
-                if (inv.style.display === 'block' && manual) history.back();
                 inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active');
             }
         }
@@ -613,16 +619,13 @@
             });
         }
 
-        // --- IMPROVED ZOOM LOGIC ---
         function pOpenZoom(url) { 
-            pushNavState(); 
             pZoomScale = 1;
             const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
             i.src = url; 
             i.style.transform = `scale(${pZoomScale})`; 
             v.style.display = 'flex'; 
 
-            // Tap to close logic
             let isMoving = false;
             v.ontouchstart = (e) => {
                 if (e.touches.length === 2) {
@@ -643,11 +646,10 @@
             };
 
             v.ontouchend = (e) => {
-                if (!isMoving && e.touches.length === 0) pCloseZoom(true);
+                if (!isMoving && e.touches.length === 0) pCloseZoom();
             };
 
-            // Desktop click to close & wheel zoom
-            v.onclick = () => { if(!isMoving) pCloseZoom(true); };
+            v.onclick = () => { if(!isMoving) pCloseZoom(); };
             v.onwheel = (e) => {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -656,13 +658,12 @@
             };
         }
 
-        function pCloseZoom(manual) { 
-            if (manual) history.back(); 
+        function pCloseZoom() { 
             document.getElementById('p-zoom-viewer').style.display = 'none'; 
         }
 
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map', false); pUpdateUI(); }
+        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map'); pUpdateUI(); }
 
         function handleFileUpload(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); renderPageList(); renderAvatarAdmin(); loadPage(0); }; r.readAsText(f); }
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game.json'; a.click(); }
@@ -709,7 +710,7 @@
 <body>
     <div id="loading" class="loading-screen"><div id="loading-text" class="text-purple-400 font-bold uppercase text-sm">Betöltés...<\/div><\/div>
     <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR(true)" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
-    <div id="zoom-viewer" onclick="closeZoom(true)"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
+    <div id="zoom-viewer" onclick="closeZoom()"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
@@ -718,7 +719,6 @@
                 <div class="dialog-box">
                     <img id="avatar-img" class="avatar-frame" src="">
                     <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow">
-                        <!-- Removed border from standalone image -->
                         <img id="page-illustration" class="w-full rounded-xl mb-4 hidden" src="">
                         <div id="story-text"><\/div>
                     <\/div>
@@ -727,8 +727,8 @@
             <\/div>
         <\/div>
         <div class="bottom-nav">
-            <button id="nav-map" class="nav-item active" onclick="switchView('map', true)"><i class="fa fa-map-marked-alt"><\/i><div id="map-badge" class="badge hidden">!<\/div><\/button>
-            <button id="nav-inv" class="nav-item" onclick="switchView('inv', true)"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
+            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"><\/i><div id="map-badge" class="badge hidden">!<\/div><\/button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv')"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
             <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"><\/i><\/button>
             <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
         <\/div>
@@ -737,9 +737,7 @@
         let config = null, simIdx = 0, inventory = [], qrScanner = null, liveScale = 1, initialDist = 0;
         function pushNav() { history.pushState({ nav: true }, ""); }
         window.onpopstate = () => {
-            if (document.getElementById('zoom-viewer').style.display === 'flex') { closeZoom(false); return; }
             if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; }
-            if (document.getElementById('inventory-overlay').style.display === 'block') { switchView('map', false); return; }
             pushNav();
         };
         pushNav();
@@ -786,7 +784,6 @@
             if (navRow.hasChildNodes()) container.appendChild(navRow);
         }
         function openZoom(url) { 
-            pushNav(); 
             liveScale = 1;
             const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
             i.src = url; 
@@ -795,31 +792,63 @@
 
             let isMove = false;
             v.ontouchstart = (e) => { if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMove = false; };
-            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * del), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
-            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(true); };
-            v.onclick = () => { if(!isMove) closeZoom(true); };
+            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
+            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(); };
+            v.onclick = () => { if(!isMove) closeZoom(); };
             v.onwheel = (e) => { e.preventDefault(); const d = e.deltaY > 0 ? 0.9 : 1.1; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; };
         }
-        function closeZoom(man) { if (man) history.back(); document.getElementById('zoom-viewer').style.display = 'none'; }
+        function closeZoom() { document.getElementById('zoom-viewer').style.display = 'none'; }
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
             b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
             b.onclick = fn; document.getElementById('button-container').appendChild(b);
         }
-        function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.toUpperCase() === (p.qrCode || "").toUpperCase()) { stopQR(true); simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }).catch(() => stopQR(true)); }
+        function startQR() { 
+            pushNav(); 
+            document.getElementById('qr-layer').style.display = 'flex'; 
+            qrScanner = new Html5Qrcode("qr-reader"); 
+            qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { 
+                const p = config.storyPages[simIdx]; 
+                if (t.toUpperCase() === (p.qrCode || "").toUpperCase()) { 
+                    stopQR(true); 
+                    if (p.redirectUrl && p.redirectUrl.trim() !== "") {
+                        window.open(p.redirectUrl, '_blank');
+                    } else {
+                        simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; 
+                        updateUI(); 
+                    }
+                } 
+            }).catch(() => stopQR(true)); 
+        }
         function stopQR(man) { if (man) history.back(); if (qrScanner) { qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; }); } else { document.getElementById('qr-layer').style.display = 'none'; } }
-        function handleReward(p) { if (p.rewards && p.rewards.length > 0) { p.rewards.forEach(r => { if (r.name && !inventory.find(i => i.name === r.name)) { inventory.push({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false }); } }); updateBadge(); } }
+        
+        function handleReward(p) { 
+            if (p.rewards) { 
+                inventory = p.rewards
+                    .filter(r => r.name && r.name.trim() !== "")
+                    .map(r => ({
+                        name: r.name,
+                        icon: r.icon || '📦',
+                        url: r.url || '',
+                        seen: false
+                    }));
+            } else {
+                inventory = [];
+            }
+            updateBadge(); 
+        }
+        
         function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
-        function switchView(t, m) {
+        function switchView(t) {
             const inv = document.getElementById('inventory-overlay');
             if (t === 'inv') {
-                if (inv.style.display === 'block') { if (m) history.back(); inv.style.display = 'none'; }
-                else { if (m) pushNav(); renderInventory(); inv.style.display = 'block'; }
-            } else { if (inv.style.display === 'block' && m) history.back(); inv.style.display = 'none'; }
+                if (inv.style.display === 'block') { inv.style.display = 'none'; }
+                else { renderInventory(); inv.style.display = 'block'; }
+            } else { inv.style.display = 'none'; }
         }
         function renderInventory() { const l = document.getElementById('item-list'); l.innerHTML = ''; inventory.forEach(it => { const d = document.createElement('div'); d.className = "item-card"; d.innerHTML = it.url ? '<img src="'+it.url+'"><div class="text-[10px] uppercase font-bold">'+it.name+'<\/div>' : '<div class="text-4xl mb-2">'+it.icon+'<\/div><div class="text-[10px] font-bold uppercase">'+it.name+'<\/div>'; if (!it.seen) d.innerHTML += '<div class="item-unread-dot"><\/div>'; d.onclick = () => { if(it.url) openZoom(it.url); it.seen = true; updateBadge(); renderInventory(); }; l.appendChild(d); }); }
         function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map', false); updateUI(); } }
+        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map'); updateUI(); } }
         window.onload = loadGame;
     <\/script>
 <\/body>
