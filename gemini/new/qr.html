@@ -558,8 +558,8 @@
             pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
                 const p = config.storyPages[pSimIdx];
                 if (decodedText.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { 
-                    // Successful scan -> Stop UI first, then navigate
-                    pStopQR(true, () => {
+                    // SUCCESS: Hide UI first WITHOUT history.back() to prevent closing app
+                    pStopQR(false, () => {
                         if (p.redirectUrl && p.redirectUrl.trim() !== "") {
                             window.open(p.redirectUrl, '_blank');
                         } else {
@@ -812,7 +812,8 @@
             qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { 
                 const p = config.storyPages[simIdx]; 
                 if (t.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { 
-                    stopQR(true, () => { 
+                    // SUCCESS: Hide UI WITHOUT manual history.back() to prevent closing app
+                    stopQR(false, () => { 
                         if (p.redirectUrl && p.redirectUrl.trim() !== "") { window.open(p.redirectUrl, '_blank'); } 
                         else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); }
                     }); 
