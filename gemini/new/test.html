@@ -271,7 +271,7 @@
             <div id="p-qr-reader"></div>
             <button id="p-qr-cancel-btn" onclick="pStopQR(true)" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE</button>
         </div>
-        <div id="p-zoom-viewer" onclick="pCloseZoom(true)">
+        <div id="p-zoom-viewer" onclick="pCloseZoom()">
             <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
         </div>
         <div class="p-game-wrapper">
@@ -293,8 +293,8 @@
                 </div>
             </div>
             <div class="p-bottom-nav">
-                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map', true)"><i class="fa fa-map-marked-alt"></i></button>
-                <button id="p-nav-inv" class="p-nav-item" onclick="pSwitchView('inv', true)"><i class="fa-solid fa-briefcase"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
+                <button id="p-nav-map" class="p-nav-item active" onclick="pSwitchView('map')"><i class="fa fa-map-marked-alt"></i></button>
+                <button id="p-nav-inv" class="p-nav-item" onclick="pSwitchView('inv')"><i class="fa-solid fa-briefcase"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
                 <button class="p-nav-item" onclick="pResetGame()"><i class="fa-solid fa-rotate-right"></i></button>
                 <button class="p-nav-item" onclick="pToggleFullscreen()"><i class="fa fa-expand"></i></button>
             </div>
@@ -317,9 +317,7 @@
         function pushNavState() { history.pushState({ navigation: true }, ""); }
 
         window.onpopstate = function(event) {
-            if (document.getElementById('p-zoom-viewer').style.display === 'flex') { pCloseZoom(false); return; }
             if (document.getElementById('p-qr-layer').style.display === 'flex') { pStopQR(false); return; }
-            if (document.getElementById('p-inventory-overlay').style.display === 'block') { pSwitchView('map', false); return; }
             if (isPlayerMode) { toggleMainView(false); return; }
         };
 
@@ -569,7 +567,6 @@
         }
 
         function pHandleReward(p) {
-            // Updated logic: Backpack ONLY shows items defined on the current page
             if (p.rewards) {
                 pInventory = p.rewards
                     .filter(reward => reward.name && reward.name.trim() !== "")
@@ -590,13 +587,15 @@
             b.textContent = unread; b.classList.toggle('hidden', unread === 0);
         }
 
-        function pSwitchView(target, manual) {
+        function pSwitchView(target) {
             const inv = document.getElementById('p-inventory-overlay'), navInv = document.getElementById('p-nav-inv'), navMap = document.getElementById('p-nav-map');
             if (target === 'inv') {
-                if (inv.style.display === 'block') { if (manual) history.back(); inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
-                else { if (manual) pushNavState(); pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); }
+                if (inv.style.display === 'block') {
+                    inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active');
+                } else {
+                    pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active');
+                }
             } else if (target === 'map') {
-                if (inv.style.display === 'block' && manual) history.back();
                 inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active');
             }
         }
@@ -613,7 +612,6 @@
         }
 
         function pOpenZoom(url) { 
-            pushNavState(); 
             pZoomScale = 1;
             const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
             i.src = url; 
@@ -640,10 +638,10 @@
             };
 
             v.ontouchend = (e) => {
-                if (!isMoving && e.touches.length === 0) pCloseZoom(true);
+                if (!isMoving && e.touches.length === 0) pCloseZoom();
             };
 
-            v.onclick = () => { if(!isMoving) pCloseZoom(true); };
+            v.onclick = () => { if(!isMoving) pCloseZoom(); };
             v.onwheel = (e) => {
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -652,13 +650,12 @@
             };
         }
 
-        function pCloseZoom(manual) { 
-            if (manual) history.back(); 
+        function pCloseZoom() { 
             document.getElementById('p-zoom-viewer').style.display = 'none'; 
         }
 
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map', false); pUpdateUI(); }
+        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); pSwitchView('map'); pUpdateUI(); }
 
         function handleFileUpload(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); renderPageList(); renderAvatarAdmin(); loadPage(0); }; r.readAsText(f); }
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game.json'; a.click(); }
@@ -705,7 +702,7 @@
 <body>
     <div id="loading" class="loading-screen"><div id="loading-text" class="text-purple-400 font-bold uppercase text-sm">Betöltés...<\/div><\/div>
     <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR(true)" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
-    <div id="zoom-viewer" onclick="closeZoom(true)"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
+    <div id="zoom-viewer" onclick="closeZoom()"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
@@ -722,8 +719,8 @@
             <\/div>
         <\/div>
         <div class="bottom-nav">
-            <button id="nav-map" class="nav-item active" onclick="switchView('map', true)"><i class="fa fa-map-marked-alt"><\/i><div id="map-badge" class="badge hidden">!<\/div><\/button>
-            <button id="nav-inv" class="nav-item" onclick="switchView('inv', true)"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
+            <button id="nav-map" class="nav-item active" onclick="switchView('map')"><i class="fa fa-map-marked-alt"><\/i><div id="map-badge" class="badge hidden">!<\/div><\/button>
+            <button id="nav-inv" class="nav-item" onclick="switchView('inv')"><i class="fa-solid fa-briefcase"><\/i><div id="inv-badge" class="badge hidden">0<\/div><\/button>
             <button class="nav-item" onclick="resetGame()"><i class="fa-solid fa-rotate-right"><\/i><\/button>
             <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
         <\/div>
@@ -732,9 +729,7 @@
         let config = null, simIdx = 0, inventory = [], qrScanner = null, liveScale = 1, initialDist = 0;
         function pushNav() { history.pushState({ nav: true }, ""); }
         window.onpopstate = () => {
-            if (document.getElementById('zoom-viewer').style.display === 'flex') { closeZoom(false); return; }
             if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; }
-            if (document.getElementById('inventory-overlay').style.display === 'block') { switchView('map', false); return; }
             pushNav();
         };
         pushNav();
@@ -781,7 +776,6 @@
             if (navRow.hasChildNodes()) container.appendChild(navRow);
         }
         function openZoom(url) { 
-            pushNav(); 
             liveScale = 1;
             const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
             i.src = url; 
@@ -790,12 +784,12 @@
 
             let isMove = false;
             v.ontouchstart = (e) => { if(e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMove = false; };
-            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * del), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
-            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(true); };
-            v.onclick = () => { if(!isMove) closeZoom(true); };
+            v.ontouchmove = (e) => { isMove = true; if(e.touches.length === 2 && initialDist > 0) { const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); const del = d / initialDist; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; initialDist = d; } };
+            v.ontouchend = (e) => { if(!isMove && e.touches.length === 0) closeZoom(); };
+            v.onclick = () => { if(!isMove) closeZoom(); };
             v.onwheel = (e) => { e.preventDefault(); const d = e.deltaY > 0 ? 0.9 : 1.1; liveScale = Math.min(Math.max(0.5, liveScale * d), 5); i.style.transform = "scale("+liveScale+")"; };
         }
-        function closeZoom(man) { if (man) history.back(); document.getElementById('zoom-viewer').style.display = 'none'; }
+        function closeZoom() { document.getElementById('zoom-viewer').style.display = 'none'; }
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
             b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
@@ -805,7 +799,6 @@
         function stopQR(man) { if (man) history.back(); if (qrScanner) { qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; }); } else { document.getElementById('qr-layer').style.display = 'none'; } }
         
         function handleReward(p) { 
-            // Updated: Backpack ONLY shows items defined on the CURRENT page
             if (p.rewards) { 
                 inventory = p.rewards
                     .filter(r => r.name && r.name.trim() !== "")
@@ -822,16 +815,16 @@
         }
         
         function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
-        function switchView(t, m) {
+        function switchView(t) {
             const inv = document.getElementById('inventory-overlay');
             if (t === 'inv') {
-                if (inv.style.display === 'block') { if (m) history.back(); inv.style.display = 'none'; }
-                else { if (m) pushNav(); renderInventory(); inv.style.display = 'block'; }
-            } else { if (inv.style.display === 'block' && m) history.back(); inv.style.display = 'none'; }
+                if (inv.style.display === 'block') { inv.style.display = 'none'; }
+                else { renderInventory(); inv.style.display = 'block'; }
+            } else { inv.style.display = 'none'; }
         }
         function renderInventory() { const l = document.getElementById('item-list'); l.innerHTML = ''; inventory.forEach(it => { const d = document.createElement('div'); d.className = "item-card"; d.innerHTML = it.url ? '<img src="'+it.url+'"><div class="text-[10px] uppercase font-bold">'+it.name+'<\/div>' : '<div class="text-4xl mb-2">'+it.icon+'<\/div><div class="text-[10px] font-bold uppercase">'+it.name+'<\/div>'; if (!it.seen) d.innerHTML += '<div class="item-unread-dot"><\/div>'; d.onclick = () => { if(it.url) openZoom(it.url); it.seen = true; updateBadge(); renderInventory(); }; l.appendChild(d); }); }
         function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map', false); updateUI(); } }
+        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; updateBadge(); switchView('map'); updateUI(); } }
         window.onload = loadGame;
     <\/script>
 <\/body>
