@@ -93,8 +93,8 @@
         #p-qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #p-qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
         
-        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; cursor: pointer; }
-        #p-zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; }
+        #p-zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; }
+        #p-zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: grab; }
 
         /* --- MÓD VÁLTÓ GOMB --- */
         .view-toggle-btn {
@@ -253,8 +253,8 @@
             <button id="p-qr-cancel-btn" onclick="pStopQR()" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE</button>
         </div>
 
-        <div id="p-zoom-viewer" onclick="this.style.display='none'">
-            <img id="p-zoom-img" src="">
+        <div id="p-zoom-viewer" onclick="pCloseZoom()">
+            <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
         </div>
 
         <div class="p-game-wrapper">
@@ -309,6 +309,10 @@
         let currentIdx = -1, simIdx = 0, pSimIdx = 0, pInventory = [], saveTimeout, pQrScanner = null, isPlayerMode = false;
         let geoWatchId = null;
 
+        // Pinch logic state
+        let pZoomScale = 1;
+        let pZoomInitialDist = -1;
+
         // --- HELYSZÍN SZÁMÍTÁS ---
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3; // Föld sugara méterben
@@ -346,6 +350,55 @@
                 text.textContent = 'Játék Mód';
                 updateSimulator();
             }
+        }
+
+        // --- PINCH TO ZOOM KEZELÉS ---
+        function initPinchZoom(elementId) {
+            const el = document.getElementById(elementId);
+            const container = el.parentElement;
+            let currentScale = 1;
+            let lastScale = 1;
+            let initialDist = -1;
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialDist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                }
+            });
+
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialDist > 0) {
+                    const currentDist = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    currentScale = Math.max(1, Math.min(5, lastScale * (currentDist / initialDist)));
+                    el.style.transform = `scale(${currentScale})`;
+                }
+            });
+
+            container.addEventListener('touchend', (e) => {
+                lastScale = currentScale;
+                initialDist = -1;
+            });
+        }
+
+        function pOpenZoom(url) {
+            const viewer = document.getElementById('p-zoom-viewer');
+            const img = document.getElementById('p-zoom-img');
+            img.src = url;
+            img.style.transform = 'scale(1)';
+            viewer.style.display = 'flex';
+            // Újraindítjuk a méretezést
+            pZoomScale = 1;
+            pZoomInitialDist = -1;
+        }
+
+        function pCloseZoom() {
+            document.getElementById('p-zoom-viewer').style.display = 'none';
         }
 
         // --- STÚDIÓ SZIMULÁTOR ---
@@ -560,7 +613,9 @@
                 if (!item.seen) content += `<div class="p-item-unread-dot"></div>`;
                 d.innerHTML = content;
                 d.onclick = () => {
-                    if(item.url) { document.getElementById('p-zoom-img').src = item.url; document.getElementById('p-zoom-viewer').style.display = 'flex'; }
+                    if(item.url) { 
+                        pOpenZoom(item.url);
+                    }
                     item.seen = true; pUpdateBadge(); pRenderInventory();
                 };
                 list.appendChild(d);
@@ -654,7 +709,6 @@
         }
         function renderChoices() { const c = document.getElementById('choicesContainer'); c.innerHTML = ''; const p = config.storyPages[currentIdx]; if(!p.choices) return; p.choices.forEach((ch, i) => { const r = document.createElement('div'); r.className = "flex gap-2 items-center bg-slate-800/40 p-2 rounded"; r.innerHTML = `<input type="text" class="input-style flex-1 text-xs" value="${ch.text}" oninput="config.storyPages[${currentIdx}].choices[${i}].text=this.value;autoSave()"><input type="number" class="input-style w-20 text-xs" value="${ch.target}" oninput="config.storyPages[${currentIdx}].choices[${i}].target=this.value;autoSave()"><input type="text" placeholder="Tárgy kell" class="input-style flex-1 text-[10px]" value="${ch.req || ''}" oninput="config.storyPages[${currentIdx}].choices[${i}].req=this.value;autoSave()"><button onclick="config.storyPages[${currentIdx}].choices.splice(${i},1);renderChoices();autoSave()">X</button>`; c.appendChild(r); }); }
         function addChoiceItem() { if(!config.storyPages[currentIdx].choices) config.storyPages[currentIdx].choices = []; config.storyPages[currentIdx].choices.push({text: "Új választás", target: 0, req: ""}); renderChoices(); autoSave(); }
-        function closeImageZoom() { document.getElementById('p-zoom-viewer').style.display = 'none'; }
         function resetSim() { simIdx = 0; updateSimulator(); }
 
         // --- LIVE HTML GENERÁLÁS ---
@@ -692,8 +746,8 @@
         .item-unread-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; }
         #qr-layer { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #qr-reader { width: 280px; height: 280px; border: 3px solid #22d3ee; border-radius: 20px; overflow: hidden; background: #000; }
-        #zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; cursor: pointer; }
-        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; }
+        #zoom-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; align-items: center; justify-content: center; touch-action: none; }
+        #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: grab; }
         .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .manual-btn { background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; text-transform: uppercase; margin-top: 20px; border: none; cursor: pointer; }
         .gps-overlay { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; background: #0f172a; border: 1px solid #8b5cf6; border-radius: 15px; margin-top: 15px; color: #22d3ee; font-weight: bold; animation: pulse 2s infinite; }
@@ -711,7 +765,7 @@
         <\/div>
     <\/div>
     <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR()" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
-    <div id="zoom-viewer" onclick="this.style.display='none'"><img id="zoom-img" src=""><\/div>
+    <div id="zoom-viewer" onclick="closeZoom()"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
@@ -746,6 +800,7 @@
     <\/div>
     <script>
         let config = null, simIdx = 0, inventory = [], qrScanner = null, geoId = null;
+        
         async function loadGame() {
             try {
                 const response = await fetch('game.json');
@@ -764,7 +819,12 @@
             reader.onload = (ev) => { config = JSON.parse(ev.target.result); initGame(); document.getElementById('loading').style.display = 'none'; };
             reader.readAsText(file);
         }
-        function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; inventory = []; updateUI(); }
+        function initGame() { 
+            document.title = config.appTitle || "Kaland Játék"; 
+            simIdx = 0; inventory = []; 
+            initPinchZoom('zoom-img');
+            updateUI(); 
+        }
         function getD(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
@@ -809,7 +869,6 @@
                 p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }); });
             } 
             
-            // Navigációs sor generálása
             const navRow = document.createElement('div');
             navRow.className = "flex gap-3 w-full";
             
@@ -828,9 +887,48 @@
             }
             
             if (navRow.hasChildNodes()) container.appendChild(navRow);
-            
             document.getElementById('scroll-area').scrollTop = 0;
         }
+
+        function initPinchZoom(elementId) {
+            const el = document.getElementById(elementId);
+            const container = el.parentElement;
+            let currentScale = 1;
+            let lastScale = 1;
+            let initialDist = -1;
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                }
+            });
+
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialDist > 0) {
+                    const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                    currentScale = Math.max(1, Math.min(5, lastScale * (currentDist / initialDist)));
+                    el.style.transform = "scale(" + currentScale + ")";
+                }
+            });
+
+            container.addEventListener('touchend', (e) => {
+                lastScale = currentScale;
+                initialDist = -1;
+            });
+        }
+
+        function openZoom(url) {
+            const viewer = document.getElementById('zoom-viewer');
+            const img = document.getElementById('zoom-img');
+            img.src = url;
+            img.style.transform = 'scale(1)';
+            viewer.style.display = 'flex';
+        }
+
+        function closeZoom() {
+            document.getElementById('zoom-viewer').style.display = 'none';
+        }
+
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
             b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
@@ -854,15 +952,9 @@
                 if (inv.style.display === 'block') { inv.style.display = 'none'; document.getElementById('nav-inv').classList.remove('active'); }
                 else { renderInventory(); inv.style.display = 'block'; document.getElementById('nav-inv').classList.add('active'); }
             } else if (target === 'map') {
-                if (p && p.pageType === 'gps' && p.mapLink) {
-                    window.open(p.mapLink, '_blank');
-                    document.getElementById('map-badge').classList.add('hidden');
-                } else if (config.initialMapLink) {
-                    window.open(config.initialMapLink, '_blank');
-                } else {
-                    inv.style.display = 'none'; 
-                    document.getElementById('nav-inv').classList.remove('active');
-                }
+                if (p && p.pageType === 'gps' && p.mapLink) { window.open(p.mapLink, '_blank'); document.getElementById('map-badge').classList.add('hidden'); }
+                else if (config.initialMapLink) { window.open(config.initialMapLink, '_blank'); }
+                else { inv.style.display = 'none'; document.getElementById('nav-inv').classList.remove('active'); }
             }
         }
         function renderInventory() {
@@ -872,7 +964,7 @@
                 let content = item.url ? '<img src="'+item.url+'"><div class="text-[10px] font-bold text-white uppercase">'+item.name+'<\/div>' : '<div class="text-4xl mb-2">'+item.icon+'<\/div><div class="text-[10px] font-bold text-white uppercase">'+item.name+'<\/div>';
                 if (!item.seen) content += '<div class="item-unread-dot"><\/div>';
                 d.innerHTML = content;
-                d.onclick = () => { if(item.url) { document.getElementById('zoom-img').src = item.url; document.getElementById('zoom-viewer').style.display = 'flex'; } item.seen = true; updateBadge(); renderInventory(); };
+                d.onclick = () => { if(item.url) { openZoom(item.url); } item.seen = true; updateBadge(); renderInventory(); };
                 list.appendChild(d);
             });
         }
@@ -897,6 +989,8 @@
             if(document.getElementById('globalBg')) document.getElementById('globalBg').value = config.globalBg || ""; 
             if(document.getElementById('initialMapLink')) document.getElementById('initialMapLink').value = config.initialMapLink || ""; 
             
+            initPinchZoom('p-zoom-img');
+
             const el = document.getElementById('pageList');
             Sortable.create(el, {
                 handle: '.handle',
