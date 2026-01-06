@@ -860,7 +860,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>${config.appTitle || "Kaland Játék"}<\/title>
+    <title>${config.appTitle || "Kaland Játék"}</title>
     <script src="https://cdn.tailwindcss.com"><\/script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://unpkg.com/html5-qrcode"><\/script>
@@ -905,7 +905,7 @@
         .pulse { animation: pulse-anim 1.5s infinite; }
         @keyframes pulse-anim { 0% { box-shadow: 0 0 0 0px rgba(76, 217, 100, 0.5); } 100% { box-shadow: 0 0 0 30px rgba(76, 217, 100, 0); } }
         #call-screen { position: absolute; inset: 0; z-index: 800; background: #000; display: none; }
-    <\/style>
+    </style>
 <\/head>
 <body>
     <div id="loading" class="loading-screen"><div id="loading-text" class="text-purple-400 font-bold uppercase text-sm mb-6">Betöltés...<\/div><\/div>
@@ -949,7 +949,7 @@
                     <div id="scroll-area" class="overflow-y-auto pr-1 flex-grow">
                         <img id="page-illustration" class="w-full rounded-xl mb-4 hidden shadow-xl" src="">
                         <div id="story-text"><\/div>
-                        <div id="gps-monitor" class="gps-monitor">
+                        <div id="gps-monitor" class="gps-monitor" style="display:none;">
                             <div class="text-[10px] text-cyan-500 uppercase font-bold tracking-widest mb-1">Célpont távolsága<\/div>
                             <div class="text-3xl font-bold text-white"><span id="live-dist">...<\/span> <span class="text-sm opacity-50">méter<\/span><\/div>
                             <div id="gps-hint" class="text-[10px] text-slate-400 mt-2 italic">Menj közelebb! (20m)<\/div>
@@ -970,56 +970,28 @@
     <audio id="voice-audio"><\/audio>
     <script>
         const config = ${JSON.stringify(config)};
-        let simIdx = 0, inventory = [], qrScanner = null, isStoppingQR = false, userPos = null, zoomActive = false;
-        let zoomScale = 1, initialDist = 0, currentHint = 0, sTimer = null;
-        function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; updateUI(); document.getElementById('loading').style.display = 'none'; }
-        function stopAudio() { 
-            const r = document.getElementById('ringtone-audio'); const v = document.getElementById('voice-audio');
-            r.pause(); r.currentTime = 0; v.pause(); v.currentTime = 0;
-        }
-        function answerCall() {
-            stopAudio(); document.getElementById('call-btns').style.display = 'none'; document.getElementById('call-status').style.display = 'block';
-            const v = document.getElementById('voice-audio'); const p = config.storyPages[simIdx];
-            v.src = p.audioUrl || ""; v.play().catch(e => endCall()); v.onended = endCall;
-        }
-        function endCall() {
-            stopAudio(); const p = config.storyPages[simIdx];
-            if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
-            else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); }
-        }
-        function updateUI() {
-            clearTimeout(sTimer); stopAudio();
-            const p = config.storyPages[simIdx]; if(!p) return; 
-            const splash = document.getElementById('splash-screen');
-            const call = document.getElementById('call-screen');
-            const layer = document.getElementById('content-layer');
-            const nav = document.querySelector('.bottom-nav');
-            
-            if (p.pageType === 'splash') {
-                splash.style.display = 'flex'; call.style.display = 'none'; layer.classList.add('hidden'); nav.style.display = 'none';
-                const st = document.getElementById('splash-text'); st.textContent = p.content || "";
-                st.style.animation = 'none'; void st.offsetWidth; st.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
-                sTimer = setTimeout(() => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }, 10500);
-            } else if (p.pageType === 'call') {
-                splash.style.display = 'none'; call.style.display = 'block'; layer.classList.add('hidden'); nav.style.display = 'none';
-                document.getElementById('call-name').textContent = p.content || "Ismeretlen";
-                document.getElementById('call-btns').style.display = 'flex';
-                document.getElementById('call-status').style.display = 'none';
-                const r = document.getElementById('ringtone-audio');
-                r.src = p.ringtoneUrl || "https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3";
-                r.play().catch(e => {});
-            } else {
-                splash.style.display = 'none'; call.style.display = 'none'; layer.classList.remove('hidden'); nav.style.display = 'flex';
-                const bg = document.getElementById('bg-layer'); bg.src = p.pageBg || config.globalBg || "";
-                let text = p.content || ""; 
-                const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
-                config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = 'block'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
-                document.getElementById('story-text').innerHTML = text;
-                const container = document.getElementById('button-container'); container.innerHTML = '';
-                addBtn("TOVÁBB", () => { simIdx++; updateUI(); });
-            }
-        }
-        function addBtn(text, fn) { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = text; b.onclick = fn; document.getElementById('button-container').appendChild(b); }
+        let simIdx = 0, inventory = [], qrScanner = null, isStoppingQR = false, userPos = null, zoomActive = false, lastAutoGps = -1, currentHint = 0, sTimer = null;
+        function getDist(lat1, lon1, lat2, lon2) { if (!lat1 || !lon1 || !lat2 || !lon2) return 999999; const R = 6371e3; const f1 = lat1 * Math.PI/180, f2 = lat2 * Math.PI/180; const df = (lat2-lat1) * Math.PI/180, dl = (lon2-lon1) * Math.PI/180; const a = Math.sin(df/2) * Math.sin(df/2) + Math.cos(f1) * Math.cos(f2) * Math.sin(dl/2) * Math.sin(dl/2); return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)))); }
+        if ("geolocation" in navigator) { navigator.geolocation.watchPosition((pos) => { userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }; updateGps(); }, null, { enableHighAccuracy: true }); }
+        function updateGps() { const p = config.storyPages[simIdx]; if (p && p.pageType === 'gps' && userPos) { const d = getDist(userPos.lat, userPos.lng, p.targetLat, p.targetLng); document.getElementById('live-dist').textContent = d; const h = document.getElementById('gps-hint'); if (d <= 20) { h.textContent = "Megérkeztél! Átirányítás..."; h.className = "text-[10px] text-emerald-400 mt-2 font-bold"; if (lastAutoGps !== simIdx) { lastAutoGps = simIdx; setTimeout(() => { if (p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }, 800); } } else { h.textContent = "Menj közelebb! (20m)"; h.className = "text-[10px] text-slate-400 mt-2 italic"; } } }
+        function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; inventory = []; updateUI(); document.getElementById('loading').style.display = 'none'; }
+        function stopAudio() { const r = document.getElementById('ringtone-audio'); const v = document.getElementById('voice-audio'); r.pause(); r.currentTime = 0; v.pause(); v.currentTime = 0; }
+        function answerCall() { stopAudio(); document.getElementById('call-btns').style.display = 'none'; document.getElementById('call-status').style.display = 'block'; const v = document.getElementById('voice-audio'); const p = config.storyPages[simIdx]; v.src = p.audioUrl || ""; v.play().catch(e => endCall()); v.onended = endCall; }
+        function endCall() { stopAudio(); const p = config.storyPages[simIdx]; if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }
+        function updateUI() { clearTimeout(sTimer); stopAudio(); const p = config.storyPages[simIdx]; if(!p) return; const splash = document.getElementById('splash-screen'); const call = document.getElementById('call-screen'); const layer = document.getElementById('content-layer'); const nav = document.querySelector('.bottom-nav'); const bg = document.getElementById('bg-layer'); splash.classList.add('hidden'); call.style.display = 'none'; layer.classList.remove('hidden'); nav.style.display = 'flex'; if (p.pageType === 'splash') { splash.classList.remove('hidden'); nav.style.display = 'none'; layer.classList.add('hidden'); const st = document.getElementById('splash-text'); st.textContent = p.content || ""; st.style.animation = 'none'; void st.offsetWidth; st.style.animation = 'fadeInOutSplash 10s ease-in-out forwards'; sTimer = setTimeout(() => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }, 10500); } else if (p.pageType === 'call') { splash.style.display = 'none'; call.style.display = 'block'; layer.classList.add('hidden'); nav.style.display = 'none'; document.getElementById('call-name').textContent = p.content || "Ismeretlen"; document.getElementById('call-btns').style.display = 'flex'; document.getElementById('call-status').style.display = 'none'; const r = document.getElementById('ringtone-audio'); r.src = p.ringtoneUrl || "https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3"; r.play().catch(e => {}); } else { handleReward(p); bg.style.opacity = 0; setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200); let text = p.content || ""; const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none'; config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } }); document.getElementById('story-text').innerHTML = text; const ill = document.getElementById('page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); } document.getElementById('gps-monitor').style.display = (p.pageType === 'gps' ? 'block' : 'none'); const container = document.getElementById('button-container'); container.innerHTML = ''; if(p.pageType === 'qr') addBtn("QR BEOLVASÁSA", startQR, "fa-camera"); else if(p.pageType === 'password') { if(p.hints) { const h = document.createElement('button'); h.className = "bg-transparent text-cyan-400 text-4xl mb-4 mx-auto block"; h.innerHTML = '<i class="fa-solid fa-circle-question"><\/i>'; h.onclick = () => openHintModal(p.hints); container.appendChild(h); } const inp = document.createElement('input'); inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center font-bold text-2xl mb-2"; inp.placeholder = "KÓD..."; container.appendChild(inp); addBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; currentHint = 0; updateUI(); } }); } else if(p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); currentHint = 0; updateUI(); }); }); } if(p.pageType === 'gps' && p.mapLink) { const m = document.createElement('button'); m.className = "action-btn bg-cyan-700 mb-2"; m.innerHTML = 'TÉRKÉP MEGNYITÁSA'; m.onclick = () => window.open(p.mapLink, '_blank'); container.appendChild(m); } const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full"; if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const b = document.createElement('button'); b.className = "action-btn btn-back"; b.innerHTML = "VISSZA"; b.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; currentHint = 0; updateUI(); }; navRow.appendChild(b); } if(p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = "TOVÁBB"; b.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; currentHint = 0; updateUI(); } }; navRow.appendChild(b); } if(navRow.hasChildNodes()) container.appendChild(navRow); } updateGps(); }
+        function addBtn(text, fn, icon) { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : ''); b.onclick = fn; document.getElementById('button-container').appendChild(b); }
+        function handleReward(p) { if (p.rewards && p.rewards.length > 0) { p.rewards.forEach(r => { if (r.name && !inventory.find(i => i.name === r.name)) { inventory.push({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false }); } }); } updateBadge(); }
+        function updateBadge() { const b = document.getElementById('inv-badge'), u = inventory.filter(i => !i.seen).length; b.textContent = u; b.classList.toggle('hidden', u === 0); }
+        function switchView(t) { const inv = document.getElementById('inventory-overlay'), nI = document.getElementById('nav-inv'), nM = document.getElementById('nav-map'); if (t === 'inv') { if (inv.style.display === 'block') { inv.style.display = 'none'; nI.classList.remove('active'); nM.classList.add('active'); } else { renderInv(); inv.style.display = 'block'; nI.classList.add('active'); nM.classList.remove('active'); } } else if (t === 'map') { if (config.initialMapLink) window.open(config.initialMapLink, '_blank'); inv.style.display = 'none'; nI.classList.remove('active'); nM.classList.add('active'); } }
+        function renderInv() { const list = document.getElementById('item-list'); list.innerHTML = ''; inventory.forEach(item => { const d = document.createElement('div'); d.className = "item-card"; d.innerHTML = item.url ? '<img src="'+item.url+'">' : '<div class="text-4xl mb-2">'+item.icon+'<\/div>'; d.innerHTML += '<div class="text-[10px] font-bold text-white uppercase">'+item.name+'<\/div>'; if(!item.seen) d.innerHTML += '<div class="item-unread-dot"><\/div>'; d.onclick = () => { if(item.url) openZoom(item.url); item.seen = true; updateBadge(); renderInv(); }; list.appendChild(d); }); }
+        function openZoom(url) { zoomActive = true; zoomScale = 1; const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); i.src = url; i.style.transform = 'scale(1)'; v.style.display = 'flex'; }
+        function closeZoom() { zoomActive = false; document.getElementById('zoom-viewer').style.display = 'none'; }
+        function openHintModal(hints) { const m = document.getElementById('hint-modal'); const conf = document.getElementById('hint-step-confirm'); const disp = document.getElementById('hint-display-area'); const btn = document.getElementById('hint-show-btn'); conf.classList.remove('hidden'); disp.classList.add('hidden'); m.style.display = 'flex'; btn.onclick = () => { const list = hints.split('\\n').filter(h => h.trim()); const text = list[Math.min(currentHint, list.length-1)]; document.getElementById('hint-content-text').textContent = text; conf.classList.add('hidden'); disp.classList.remove('hidden'); currentHint++; }; }
+        function closeHintModal() { document.getElementById('hint-modal').style.display = 'none'; }
+        function startQR() { document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { const p = config.storyPages[simIdx]; if (txt.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { stopQR(false, () => { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); }); } }).catch(() => stopQR(true)); }
+        function stopQR(manual, cb) { if (!qrScanner) { document.getElementById('qr-layer').style.display = 'none'; if(cb) cb(); return; } qrScanner.stop().finally(() => { document.getElementById('qr-layer').style.display = 'none'; qrScanner = null; if(cb) cb(); }); }
+        function resetGame() { if(confirm("Biztosan újrakezded?")) { simIdx = 0; inventory = []; updateUI(); switchView('map'); } }
+        function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
         window.onload = initGame;
     <\/script>
 <\/body>
