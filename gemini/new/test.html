@@ -344,7 +344,6 @@
         let lastAutoGpsIdx = -1; 
         let currentHintIdx = 0; 
 
-        // GPS Távolság számítás
         function getDistance(lat1, lon1, lat2, lon2) {
             if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
             const R = 6371e3;
@@ -598,6 +597,17 @@
             updateGpsDisplays();
         }
 
+        function pSwitchView(target, silent = false) {
+            const inv = document.getElementById('p-inventory-overlay'), navInv = document.getElementById('p-nav-inv'), navMap = document.getElementById('p-nav-map');
+            if (target === 'inv') { 
+                if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); } 
+                else { pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); } 
+            } else if (target === 'map') { 
+                if (!silent && config.initialMapLink) window.open(config.initialMapLink, '_blank');
+                inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); 
+            }
+        }
+
         function pUpdateUI() {
             const p = config.storyPages[pSimIdx]; if(!p) return;
             pHandleReward(p);
@@ -641,10 +651,6 @@
         function pStopQR(manual, callback) { if (manual) history.back(); if (isStoppingQR) return; const layer = document.getElementById('p-qr-layer'); if (!pQrScanner) { layer.style.display = 'none'; if(callback) callback(); return; } isStoppingQR = true; pQrScanner.stop().catch(() => {}).finally(() => { layer.style.display = 'none'; pQrScanner = null; isStoppingQR = false; if (callback) callback(); }); }
         function pHandleReward(p) { if (p.rewards) { pInventory = p.rewards.filter(reward => reward.name && reward.name.trim() !== "").map(reward => ({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false })); } else { pInventory = []; } pUpdateBadge(); }
         function pUpdateBadge() { const b = document.getElementById('p-inv-badge'), unread = pInventory.filter(i => !i.seen).length; b.textContent = unread; b.classList.toggle('hidden', unread === 0); }
-        function pSwitchView(target) {
-            const inv = document.getElementById('p-inventory-overlay'), navInv = document.getElementById('p-nav-inv'), navMap = document.getElementById('p-nav-map');
-            if (target === 'inv') { if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); } else { pRenderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); } } else if (target === 'map') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); }
-        }
 
         function pRenderInventory() {
             const list = document.getElementById('p-item-list'); list.innerHTML = '';
@@ -674,7 +680,7 @@
         }
 
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); lastAutoGpsIdx = -1; currentHintIdx = 0; pSwitchView('map'); pUpdateUI(); }
+        function pResetGame() { pSimIdx = 0; pInventory = []; pUpdateBadge(); lastAutoGpsIdx = -1; currentHintIdx = 0; pSwitchView('map', true); pUpdateUI(); }
 
         function handleFileUpload(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); renderPageList(); renderAvatarAdmin(); loadPage(0); }; r.readAsText(f); }
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game.json'; a.click(); }
@@ -718,8 +724,6 @@
         #zoom-img { max-width: 95%; max-height: 90%; object-fit: contain; border-radius: 8px; transition: transform 0.1s ease-out; cursor: zoom-out; user-select: none; }
         .loading-screen { position: fixed; inset: 0; background: #0f172a; z-index: 6000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
         .gps-monitor { display: none; text-align: center; padding: 1rem; background: rgba(15,23,42,0.8); border: 1px solid rgba(34,211,238,0.4); border-radius: 1.5rem; margin-top: 1rem; }
-        
-        /* Modal for Hints */
         #hint-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9998; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         .modal-box { background: #1e293b; border: 2px solid #8b5cf6; border-radius: 1.5rem; padding: 2rem; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
     <\/style>
@@ -728,7 +732,6 @@
     <div id="loading" class="loading-screen"><div id="loading-text" class="text-purple-400 font-bold uppercase text-sm mb-6">Betöltés...<\/div><\/div>
     <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR(true)" class="action-btn mt-6 !w-auto !flex-none px-12">MÉGSE<\/button><\/div>
     <div id="zoom-viewer" onclick="closeZoom(false)"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
-    
     <div id="hint-modal">
         <div class="modal-box">
             <div id="hint-step-confirm">
@@ -746,7 +749,6 @@
             <\/div>
         <\/div>
     <\/div>
-
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
@@ -778,25 +780,20 @@
         const config = ${JSON.stringify(config)};
         let simIdx = 0, inventory = [], qrScanner = null, isStoppingQR = false, userPos = null, zoomActive = false, lastAutoGps = -1;
         let zoomScale = 1, initialDist = 0, currentHint = 0;
-
         function pushNav() { history.pushState({ nav: true, zoom: true }, ""); }
         window.onpopstate = () => { if (zoomActive) { closeZoom(false); return; } if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; } };
-
         function closeHintModal() { document.getElementById('hint-modal').style.display = 'none'; }
         function openHintConfirm(hints) {
             const m = document.getElementById('hint-modal');
             const c = document.getElementById('hint-step-confirm');
             const d = document.getElementById('hint-display-area');
-            c.classList.remove('hidden'); d.classList.add('hidden');
-            m.style.display = 'flex';
+            c.classList.remove('hidden'); d.classList.add('hidden'); m.style.display = 'flex';
             document.getElementById('hint-show-btn').onclick = () => {
                 const ha = hints.split('\\n').filter(x => x.trim());
                 document.getElementById('hint-content-text').textContent = ha[Math.min(currentHint, ha.length-1)];
-                c.classList.add('hidden'); d.classList.remove('hidden');
-                currentHint++;
+                c.classList.add('hidden'); d.classList.remove('hidden'); currentHint++;
             };
         }
-
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
@@ -804,7 +801,6 @@
             const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
             return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
         }
-
         if("geolocation" in navigator) {
             navigator.geolocation.watchPosition(p => {
                 userPos = {lat: p.coords.latitude, lng: p.coords.longitude};
@@ -824,44 +820,36 @@
                 }
             }, null, {enableHighAccuracy: true});
         }
-
         function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; inventory = []; updateUI(); document.getElementById('loading').style.display = 'none'; }
-        
         function updateUI() {
             const p = config.storyPages[simIdx]; if(!p) return; 
             handleReward(p); 
             const bg = document.getElementById('bg-layer'); bg.style.opacity = 0;
             setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
-
             let text = p.content || ""; 
             const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
             config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
             document.getElementById('story-text').innerHTML = text;
-
             const ill = document.getElementById('page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
             document.getElementById('gps-monitor').style.display = p.pageType === 'gps' ? 'block' : 'none';
-            
             const container = document.getElementById('button-container'); container.innerHTML = '';
             if (p.pageType === 'qr') addBtn("QR BEOLVASÁSA", startQR, "fa-camera");
             else if(p.pageType === 'password') {
                 if (p.hints) {
-                    const hBtn = document.createElement('button'); hBtn.className = "block mx-auto mb-4 text-cyan-400 text-4xl hover:text-cyan-300 transition-colors border-none bg-transparent"; hBtn.innerHTML = '<i class="fa fa-circle-question"><\/i>';
+                    const hBtn = document.createElement('button'); hBtn.className = "block mx-auto mb-4 text-cyan-400 text-4xl hover:text-cyan-300 transition-colors border-none bg-transparent"; hBtn.innerHTML = '<i class="fa-solid fa-circle-question"><\/i>';
                     hBtn.onclick = () => openHintConfirm(p.hints);
                     container.appendChild(hBtn);
                 }
                 const inp = document.createElement('input'); inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center font-bold text-xl mb-2"; inp.placeholder = "KÓD...";
                 container.appendChild(inp);
-                
                 addBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } });
             } else if(p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); lastAutoGps = -1; currentHint = 0; updateUI(); }); }); } 
             if(p.pageType === 'gps' && p.mapLink) addBtn("TÉRKÉP MEGNYITÁSA", () => window.open(p.mapLink, '_blank'), "fa-map");
-
             const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full";
             if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const b = document.createElement('button'); b.className = "action-btn btn-back"; b.innerHTML = "VISSZA"; b.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; lastAutoGps = -1; currentHint = 0; updateUI(); }; navRow.appendChild(b); }
             if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = "TOVÁBB"; b.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } }; navRow.appendChild(b); }
             container.appendChild(navRow);
         }
-
         function openZoom(url) { 
             pushNav(); zoomActive = true; 
             const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
@@ -872,21 +860,22 @@
             v.ontouchend = () => { if (!isMoving) closeZoom(false); };
             v.onclick = () => { if(!isMoving) closeZoom(false); };
         }
-
         function closeZoom(manBack) { document.getElementById('zoom-viewer').style.display = 'none'; zoomActive = false; if(manBack) try { history.back(); } catch(e) {} }
         function addBtn(text, fn, icon = "") { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : ''); b.onclick = fn; document.getElementById('button-container').appendChild(b); }
         function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { stopQR(false, () => { if (p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } }); } }).catch(() => stopQR(true)); }
         function stopQR(manual, callback) { if (manual) history.back(); if (isStoppingQR) return; const layer = document.getElementById('qr-layer'); if (!qrScanner) { layer.style.display = 'none'; if(callback) callback(); return; } isStoppingQR = true; qrScanner.stop().catch(() => {}).finally(() => { layer.style.display = 'none'; qrScanner = null; isStoppingQR = false; if (callback) callback(); }); }
         function handleReward(p) { if (p.rewards) { inventory = p.rewards.filter(r => r.name && r.name.trim() !== "").map(r => ({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false })); } else { inventory = []; } updateBadge(); }
         function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
-        function switchView(t) { 
+        function switchView(t, silent = false) { 
             const inv = document.getElementById('inventory-overlay'), navInv = document.getElementById('nav-inv'), navMap = document.getElementById('nav-map');
             if (t === 'inv') { 
                 if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); } 
                 else { renderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); } 
-            } else { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); } 
+            } else if (t === 'map') { 
+                if (!silent && config.initialMapLink) window.open(config.initialMapLink, '_blank');
+                inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); 
+            } 
         }
-
         function renderInventory() { 
             const l = document.getElementById('item-list'); l.innerHTML = ''; 
             inventory.forEach(it => { 
@@ -897,9 +886,8 @@
                 l.appendChild(d); 
             }); 
         }
-
         function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; lastAutoGps = -1; currentHint = 0; updateBadge(); switchView('map'); updateUI(); } }
+        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; lastAutoGps = -1; currentHint = 0; updateBadge(); switchView('map', true); updateUI(); } }
         window.onload = initGame;
     <\/script>
 <\/body>
