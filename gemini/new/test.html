@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -39,6 +39,42 @@
         .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid transparent; transition: 0.2s; }
         .page-item.selected { border-color: #22d3ee; background: #4c1d95; }
         .handle { cursor: grab; padding-right: 15px; color: #64748b; font-size: 0.9rem; }
+
+        /* Splash Screen Animáció */
+        @keyframes fadeInOutSplash {
+            0% { opacity: 0; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1); }
+            90% { opacity: 0; transform: scale(1.02); }
+            100% { opacity: 0; }
+        }
+        .splash-text-anim {
+            font-family: 'Special Elite', cursive;
+            animation: fadeInOutSplash 10s ease-in-out forwards;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Phone UI */
+        .phone-ui {
+            background: linear-gradient(to bottom, #2c3e50, #000000);
+            height: 100%; width: 100%;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 15% 20px; box-sizing: border-box; text-align: center;
+            color: white; font-family: sans-serif;
+        }
+        .phone-btn {
+            width: 70px; height: 70px; border-radius: 50%; border: none;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+        .phone-btn.decline { background-color: #ff3b30; }
+        .phone-btn.accept { background-color: #4cd964; }
+        .phone-btn svg { width: 35px; height: 35px; fill: white; }
+        .pulse { animation: pulse-anim 1.5s infinite; }
+        @keyframes pulse-anim {
+            0% { box-shadow: 0 0 0 0px rgba(76, 217, 100, 0.5); }
+            100% { box-shadow: 0 0 0 30px rgba(76, 217, 100, 0); }
+        }
 
         .avatar-card {
             background: rgba(15, 23, 42, 0.5);
@@ -225,6 +261,8 @@
                                 <option value="qr">QR Kód</option>
                                 <option value="password">Kódzár</option>
                                 <option value="gps">GPS Pont</option>
+                                <option value="splash">Átvezetés (Splash)</option>
+                                <option value="call">Telefonhívás</option>
                             </select>
                             <input type="number" id="prevIdx" class="input-style text-xs" placeholder="Vissza ID" oninput="autoSave()">
                             <input type="number" id="nextIdx" class="input-style text-xs" placeholder="Tovább ID" oninput="autoSave()">
@@ -250,6 +288,9 @@
                             <input type="number" id="targetLng" step="any" class="input-style text-sm" placeholder="Lng (Hosszúság)" oninput="autoSave()">
                             <input type="url" id="mapLink" class="input-style text-sm" placeholder="Térkép Link (Segítség)" oninput="autoSave()">
                         </div>
+                        <div id="callArea" class="hidden border-t border-slate-700/50 pt-4 space-y-3">
+                            <input type="url" id="audioUrl" class="input-style text-sm" placeholder="Hang file linkje (Audio)" oninput="autoSave()">
+                        </div>
                         <div id="choiceArea" class="hidden border-t border-slate-700/50 pt-4">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-purple-400 font-bold uppercase text-[10px] tracking-widest">Opciók</h3>
@@ -265,7 +306,19 @@
                         <div id="sim-viewport">
                             <img id="sim-bg" src="">
                             <div id="sim-content">
-                                <div class="sim-box">
+                                <div id="sim-splash-overlay" class="absolute inset-0 bg-black z-50 hidden flex items-center justify-center">
+                                    <div id="sim-splash-text" class="text-white text-center p-4 splash-text-anim text-2xl"></div>
+                                </div>
+                                <div id="sim-call-overlay" class="absolute inset-0 z-50 hidden">
+                                    <div class="phone-ui">
+                                        <div><p class="text-[10px] uppercase tracking-widest opacity-60">Bejövő hívás</p><h1 id="sim-call-name" class="text-2xl">...</h1><p class="text-[10px]">Magyarország</p></div>
+                                        <div class="flex justify-around pb-10">
+                                            <div class="phone-btn decline"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z" transform="rotate(135 12 12)"/></svg></div>
+                                            <div class="phone-btn accept pulse"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="sim-main-box" class="sim-box">
                                     <img id="sim-avatar" class="sim-avatar" src="">
                                     <div id="sim-scroll" class="overflow-y-auto pr-1 flex-grow scroll-smooth">
                                         <img id="sim-page-img" class="w-full rounded-lg mb-4 hidden" src="">
@@ -300,6 +353,23 @@
         <div class="p-game-wrapper">
             <div id="p-viewport">
                 <img id="p-bg-layer" src="">
+                <div id="p-splash-screen" class="absolute inset-0 bg-black z-[1000] hidden flex items-center justify-center">
+                    <div id="p-splash-text" class="text-white text-center p-6 splash-text-anim text-4xl"></div>
+                </div>
+                <div id="p-call-screen" class="absolute inset-0 z-[1100] hidden">
+                    <!-- Overlay for interaction requirement -->
+                    <div id="p-call-init-overlay" class="absolute inset-0 bg-black/60 z-[1200] flex items-center justify-center cursor-pointer">
+                        <div class="text-white text-center animate-bounce"><i class="fa fa-phone-volume text-5xl mb-4"></i><br>KATTINTS A HÍVÁSHOZ</div>
+                    </div>
+                    <div class="phone-ui !h-full">
+                        <div class="mt-20"><p class="text-sm uppercase tracking-widest opacity-60">Bejövő hívás</p><h1 id="p-call-name" class="text-4xl mt-2">Ismeretlen</h1><p class="mt-2 opacity-50">Magyarország</p></div>
+                        <div id="p-call-status" class="hidden text-emerald-400 text-xl font-light mb-20">Hívás folyamatban...</div>
+                        <div id="p-call-btns" class="flex justify-around pb-20 w-full max-w-md mx-auto">
+                            <button onclick="pEndCall()" class="phone-btn decline"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z" transform="rotate(135 12 12)"/></svg></button>
+                            <button onclick="pAnswerCall()" class="phone-btn accept pulse"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/></svg></button>
+                        </div>
+                    </div>
+                </div>
                 <div id="p-inventory-overlay">
                     <h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák</h2>
                     <div id="p-item-list" class="p-item-grid"></div>
@@ -329,6 +399,10 @@
         </div>
     </div>
 
+    <!-- Hidden audio elements -->
+    <audio id="p-ringtone-audio" src="https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3" loop></audio>
+    <audio id="p-call-voice-audio"></audio>
+
     <script>
         let config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V11')) || { 
             appTitle: "A Város Legendája", 
@@ -343,6 +417,7 @@
         let userPos = null;
         let lastAutoGpsIdx = -1; 
         let currentHintIdx = 0; 
+        let splashTimer = null;
 
         function getDistance(lat1, lon1, lat2, lon2) {
             if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
@@ -441,6 +516,7 @@
                 icon.innerHTML = '<i class="fa fa-tools"></i>'; text.textContent = 'Stúdió Mód';
                 pSimIdx = 0; pInventory = []; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI();
             } else {
+                pStopAllAudio();
                 studio.style.display = 'block'; player.style.display = 'none';
                 icon.innerHTML = '<i class="fa fa-gamepad"></i>'; text.textContent = 'Játék Mód';
                 lastAutoGpsIdx = -1; updateSimulator();
@@ -464,6 +540,7 @@
             document.getElementById('targetLng').value = p.targetLng || ""; 
             document.getElementById('mapLink').value = p.mapLink || ""; 
             document.getElementById('pageImage').value = p.pageImage || "";
+            document.getElementById('audioUrl').value = p.audioUrl || "";
             updateUI(); renderChoices(); renderRewards(); renderPageList(); 
             simIdx = i; updateSimulator(); 
         }
@@ -494,6 +571,7 @@
                     p.targetLng = document.getElementById('targetLng').value; 
                     p.mapLink = document.getElementById('mapLink').value; 
                     p.pageImage = document.getElementById('pageImage').value;
+                    p.audioUrl = document.getElementById('audioUrl').value;
                 } 
                 config.appTitle = document.getElementById('appTitle').value; 
                 config.globalBg = document.getElementById('globalBg').value; 
@@ -529,6 +607,7 @@
             document.getElementById('passwordArea').classList.toggle('hidden', t !== 'password'); 
             document.getElementById('gpsArea').classList.toggle('hidden', t !== 'gps'); 
             document.getElementById('qrCode').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('callArea').classList.toggle('hidden', t !== 'call');
         }
 
         function renderChoices() { 
@@ -553,47 +632,75 @@
 
         function updateSimulator() {
             const p = config.storyPages[simIdx]; if(!p) return;
-            document.getElementById('sim-bg').src = p.pageBg || config.globalBg || "";
-            let text = p.content || "";
-            const avBox = document.getElementById('sim-avatar'); avBox.style.display = 'none';
-            config.avatars.forEach(av => { if(text.includes(`§${av.id}`)) { avBox.src = av.url || ""; avBox.style.display = 'block'; avBox.style.borderColor = av.color; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color};font-weight:700">${av.name}:</span>`); } });
-            document.getElementById('sim-actual-text').innerHTML = text;
-            const img = document.getElementById('sim-page-img'); if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
-            const gpsInfo = document.getElementById('sim-gps-info'); gpsInfo.classList.toggle('hidden', p.pageType !== 'gps');
-            const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
+            clearTimeout(splashTimer);
             
-            if (p.pageType === 'password') {
-                if (p.hints) {
-                    const hBtn = document.createElement('button'); 
-                    hBtn.className = "block mx-auto mb-2 text-cyan-400 text-xl hover:text-cyan-300 transition-colors border-none bg-transparent"; 
-                    hBtn.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
-                    hBtn.onclick = () => openHintConfirm(p.hints);
-                    acts.appendChild(hBtn);
-                }
-                const inp = document.createElement('input'); 
-                inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-2 rounded-lg text-center text-sm mb-2"; 
-                inp.placeholder = "KÓD...";
-                acts.appendChild(inp);
-                
-                const okBtn = document.createElement('button'); okBtn.className = "sim-btn mb-2"; okBtn.textContent = "NYITÁS";
-                okBtn.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); } };
-                acts.appendChild(okBtn);
-            }
+            const splashOverlay = document.getElementById('sim-splash-overlay');
+            const callOverlay = document.getElementById('sim-call-overlay');
+            const mainBox = document.getElementById('sim-main-box');
+            
+            splashOverlay.classList.add('hidden');
+            callOverlay.classList.add('hidden');
+            mainBox.classList.remove('hidden');
 
-            if (p.pageType === 'choice' && p.choices) {
-                const choiceCol = document.createElement('div'); choiceCol.className = "flex flex-col gap-2 w-full mb-2";
-                p.choices.forEach(c => { const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = c.text; b.onclick = () => { simIdx = parseInt(c.target); lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); }; choiceCol.appendChild(b); });
-                acts.appendChild(choiceCol);
+            if (p.pageType === 'splash') {
+                splashOverlay.classList.remove('hidden');
+                mainBox.classList.add('hidden');
+                const splashText = document.getElementById('sim-splash-text');
+                splashText.textContent = p.content || "";
+                splashText.style.animation = 'none';
+                void splashText.offsetWidth;
+                splashText.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
+                splashTimer = setTimeout(() => {
+                    if (p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateSimulator(); }
+                }, 10500);
+            } else if (p.pageType === 'call') {
+                callOverlay.classList.remove('hidden');
+                mainBox.classList.add('hidden');
+                document.getElementById('sim-call-name').textContent = p.content || "Ismeretlen";
+            } else {
+                document.getElementById('sim-bg').src = p.pageBg || config.globalBg || "";
+                let text = p.content || "";
+                const avBox = document.getElementById('sim-avatar'); avBox.style.display = 'none';
+                config.avatars.forEach(av => { if(text.includes(`§${av.id}`)) { avBox.src = av.url || ""; avBox.style.display = 'block'; avBox.style.borderColor = av.color; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color};font-weight:700">${av.name}:</span>`); } });
+                document.getElementById('sim-actual-text').innerHTML = text;
+                const img = document.getElementById('sim-page-img'); if(p.pageImage) { img.src = p.pageImage; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
+                const gpsInfo = document.getElementById('sim-gps-info'); gpsInfo.classList.toggle('hidden', p.pageType !== 'gps');
+                const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
+                
+                if (p.pageType === 'password') {
+                    if (p.hints) {
+                        const hBtn = document.createElement('button'); 
+                        hBtn.className = "block mx-auto mb-2 text-cyan-400 text-xl hover:text-cyan-300 transition-colors border-none bg-transparent"; 
+                        hBtn.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
+                        hBtn.onclick = () => openHintConfirm(p.hints);
+                        acts.appendChild(hBtn);
+                    }
+                    const inp = document.createElement('input'); 
+                    inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-2 rounded-lg text-center text-sm mb-2"; 
+                    inp.placeholder = "KÓD...";
+                    acts.appendChild(inp);
+                    
+                    const okBtn = document.createElement('button'); okBtn.className = "sim-btn mb-2"; okBtn.textContent = "NYITÁS";
+                    okBtn.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); } };
+                    acts.appendChild(okBtn);
+                }
+
+                if (p.pageType === 'choice' && p.choices) {
+                    const choiceCol = document.createElement('div'); choiceCol.className = "flex flex-col gap-2 w-full mb-2";
+                    p.choices.forEach(c => { const b = document.createElement('div'); b.className = "sim-btn"; b.textContent = c.text; b.onclick = () => { simIdx = parseInt(c.target); lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); }; choiceCol.appendChild(b); });
+                    acts.appendChild(choiceCol);
+                }
+                if (p.pageType === 'gps' && p.mapLink) {
+                    const mapBtn = document.createElement('button'); mapBtn.className = "sim-btn bg-cyan-600 mb-2 w-full"; mapBtn.innerHTML = '<i class="fa fa-map mr-2"></i>Térkép megnyitása';
+                    mapBtn.onclick = () => window.open(p.mapLink, '_blank');
+                    acts.appendChild(mapBtn);
+                }
+                const navRow = document.createElement('div'); navRow.className = "flex gap-2 w-full";
+                if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const back = document.createElement('div'); back.className = "sim-btn sim-btn-back"; back.innerHTML = 'VISSZA'; back.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); }; navRow.appendChild(back); }
+                if (p.pageType !== 'choice' && p.pageType !== 'password') { const next = document.createElement('button'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB'; if (p.pageType === 'gps') next.style.display = 'none'; next.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); } }; navRow.appendChild(next); }
+                acts.appendChild(navRow);
             }
-            if (p.pageType === 'gps' && p.mapLink) {
-                const mapBtn = document.createElement('button'); mapBtn.className = "sim-btn bg-cyan-600 mb-2 w-full"; mapBtn.innerHTML = '<i class="fa fa-map mr-2"></i>Térkép megnyitása';
-                mapBtn.onclick = () => window.open(p.mapLink, '_blank');
-                acts.appendChild(mapBtn);
-            }
-            const navRow = document.createElement('div'); navRow.className = "flex gap-2 w-full";
-            if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const back = document.createElement('div'); back.className = "sim-btn sim-btn-back"; back.innerHTML = 'VISSZA'; back.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); }; navRow.appendChild(back); }
-            if (p.pageType !== 'choice' && p.pageType !== 'password') { const next = document.createElement('button'); next.className = "sim-btn"; next.innerHTML = 'TOVÁBB'; if (p.pageType === 'gps') next.style.display = 'none'; next.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; updateSimulator(); } }; navRow.appendChild(next); }
-            acts.appendChild(navRow);
             updateGpsDisplays();
         }
 
@@ -608,41 +715,109 @@
             }
         }
 
+        function pStopAllAudio() {
+            const ring = document.getElementById('p-ringtone-audio');
+            const voice = document.getElementById('p-call-voice-audio');
+            ring.pause(); ring.currentTime = 0;
+            voice.pause(); voice.currentTime = 0;
+        }
+
+        function pInitCall() {
+            const p = config.storyPages[pSimIdx];
+            document.getElementById('p-call-init-overlay').style.display = 'none';
+            const ring = document.getElementById('p-ringtone-audio');
+            ring.play().catch(e => console.log("Audio play blocked"));
+        }
+
+        function pAnswerCall() {
+            const p = config.storyPages[pSimIdx];
+            pStopAllAudio();
+            document.getElementById('p-call-btns').style.display = 'none';
+            document.getElementById('p-call-status').style.display = 'block';
+            const voice = document.getElementById('p-call-voice-audio');
+            voice.src = p.audioUrl || "";
+            voice.play().catch(e => pEndCall());
+            voice.onended = pEndCall;
+        }
+
+        function pEndCall() {
+            pStopAllAudio();
+            const p = config.storyPages[pSimIdx];
+            if (p.redirectUrl) window.open(p.redirectUrl, '_blank');
+            else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
+        }
+
         function pUpdateUI() {
             const p = config.storyPages[pSimIdx]; if(!p) return;
-            pHandleReward(p);
-            const bg = document.getElementById('p-bg-layer'); bg.style.opacity = 0;
-            setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
-            let text = p.content || "";
-            const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
-            config.avatars.forEach(av => { if(text.includes(`§${av.id}`)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`); } });
-            document.getElementById('p-story-text').innerHTML = text;
-            const ill = document.getElementById('p-page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
-            document.getElementById('p-gps-monitor').classList.toggle('hidden', p.pageType !== 'gps');
-            const container = document.getElementById('p-button-container'); container.innerHTML = '';
+            clearTimeout(splashTimer);
+            pStopAllAudio();
+
+            const splashScreen = document.getElementById('p-splash-screen');
+            const callScreen = document.getElementById('p-call-screen');
+            const contentLayer = document.getElementById('p-content-layer');
+            const bottomNav = document.querySelector('.p-bottom-nav');
             
-            if (p.pageType === 'qr') pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
-            else if (p.pageType === 'password') {
-                if (p.hints) {
-                    const hBtn = document.createElement('button'); 
-                    hBtn.className = "block mx-auto mb-4 text-cyan-400 text-4xl hover:text-cyan-300 transition-colors border-none bg-transparent"; 
-                    hBtn.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
-                    hBtn.onclick = () => openHintConfirm(p.hints);
-                    container.appendChild(hBtn);
-                }
-                const inp = document.createElement('input'); 
-                inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center font-bold text-2xl mb-2"; 
-                inp.placeholder = "KÓD...";
-                container.appendChild(inp);
+            splashScreen.classList.add('hidden');
+            callScreen.classList.add('hidden');
+            contentLayer.classList.remove('hidden');
+            bottomNav.style.display = 'flex';
+
+            if (p.pageType === 'splash') {
+                splashScreen.classList.remove('hidden');
+                contentLayer.classList.add('hidden');
+                bottomNav.style.display = 'none';
+                const splashText = document.getElementById('p-splash-text');
+                splashText.textContent = p.content || "";
+                splashText.style.animation = 'none';
+                void splashText.offsetWidth;
+                splashText.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
+                splashTimer = setTimeout(() => {
+                    if (p.redirectUrl) window.open(p.redirectUrl, '_blank');
+                    else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
+                }, 10500);
+            } else if (p.pageType === 'call') {
+                callScreen.classList.remove('hidden');
+                contentLayer.classList.add('hidden');
+                bottomNav.style.display = 'none';
+                document.getElementById('p-call-name').textContent = p.content || "Ismeretlen";
+                document.getElementById('p-call-init-overlay').style.display = 'flex';
+                document.getElementById('p-call-btns').style.display = 'flex';
+                document.getElementById('p-call-status').style.display = 'none';
+                document.getElementById('p-call-init-overlay').onclick = pInitCall;
+            } else {
+                pHandleReward(p);
+                const bg = document.getElementById('p-bg-layer'); bg.style.opacity = 0;
+                setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
+                let text = p.content || "";
+                const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
+                config.avatars.forEach(av => { if(text.includes(`§${av.id}`)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`); } });
+                document.getElementById('p-story-text').innerHTML = text;
+                const ill = document.getElementById('p-page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
+                document.getElementById('p-gps-monitor').classList.toggle('hidden', p.pageType !== 'gps');
+                const container = document.getElementById('p-button-container'); container.innerHTML = '';
                 
-                pAddBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); } });
-            } else if (p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { if (c.req && !pInventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; pAddBtn(c.text, () => { pSimIdx = parseInt(c.target); lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); }); }); }
-            
-            if (p.pageType === 'gps' && p.mapLink) { const mBtn = document.createElement('button'); mBtn.className = "p-action-btn bg-cyan-700 mb-2"; mBtn.innerHTML = 'TÉRKÉP MEGNYITÁSA <i class="fa fa-map-location-dot ml-2 opacity-50"></i>'; mBtn.onclick = () => window.open(p.mapLink, '_blank'); container.appendChild(mBtn); }
-            const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full";
-            if(pSimIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const b = document.createElement('button'); b.className = "p-action-btn p-btn-back"; b.innerHTML = `VISSZA`; b.onclick = () => { pSimIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : pSimIdx - 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); }; navRow.appendChild(b); }
-            if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') { const b = document.createElement('button'); b.className = "p-action-btn"; b.innerHTML = `TOVÁBB`; b.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); } }; navRow.appendChild(b); }
-            if (navRow.hasChildNodes()) container.appendChild(navRow);
+                if (p.pageType === 'qr') pAddBtn("QR BEOLVASÁSA", pStartQR, "fa-camera");
+                else if (p.pageType === 'password') {
+                    if (p.hints) {
+                        const hBtn = document.createElement('button'); 
+                        hBtn.className = "block mx-auto mb-4 text-cyan-400 text-4xl hover:text-cyan-300 transition-colors border-none bg-transparent"; 
+                        hBtn.innerHTML = '<i class="fa-solid fa-circle-question"></i>';
+                        hBtn.onclick = () => openHintConfirm(p.hints);
+                        container.appendChild(hBtn);
+                    }
+                    const inp = document.createElement('input'); 
+                    inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center font-bold text-2xl mb-2"; 
+                    inp.placeholder = "KÓD...";
+                    container.appendChild(inp);
+                    pAddBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); } });
+                } else if (p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { if (c.req && !pInventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; pAddBtn(c.text, () => { pSimIdx = parseInt(c.target); lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); }); }); }
+                
+                if (p.pageType === 'gps' && p.mapLink) { const mBtn = document.createElement('button'); mBtn.className = "p-action-btn bg-cyan-700 mb-2"; mBtn.innerHTML = 'TÉRKÉP MEGNYITÁSA <i class="fa fa-map-location-dot ml-2 opacity-50"></i>'; mBtn.onclick = () => window.open(p.mapLink, '_blank'); container.appendChild(mBtn); }
+                const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full";
+                if(pSimIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const b = document.createElement('button'); b.className = "p-action-btn p-btn-back"; b.innerHTML = `VISSZA`; b.onclick = () => { pSimIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : pSimIdx - 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); }; navRow.appendChild(b); }
+                if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') { const b = document.createElement('button'); b.className = "p-action-btn"; b.innerHTML = `TOVÁBB`; b.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); } }; navRow.appendChild(b); }
+                if (navRow.hasChildNodes()) container.appendChild(navRow);
+            }
             updateGpsDisplays();
         }
 
@@ -695,7 +870,7 @@
     <script src="https://cdn.tailwindcss.com"><\/script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <script src="https://unpkg.com/html5-qrcode"><\/script>
-    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Play', sans-serif; background-color: #000; color: #f8fafc; overflow: hidden; }
         .game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
@@ -726,6 +901,18 @@
         .gps-monitor { display: none; text-align: center; padding: 1rem; background: rgba(15,23,42,0.8); border: 1px solid rgba(34,211,238,0.4); border-radius: 1.5rem; margin-top: 1rem; }
         #hint-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9998; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
         .modal-box { background: #1e293b; border: 2px solid #8b5cf6; border-radius: 1.5rem; padding: 2rem; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1); } 90% { opacity: 0; transform: scale(1.02); } 100% { opacity: 0; } }
+        .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.1em; }
+        #splash-screen { position: absolute; inset: 0; background: #000; z-index: 500; display: none; align-items: center; justify-content: center; }
+        .phone-ui { background: linear-gradient(to bottom, #2c3e50, #000000); height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 15% 20px; box-sizing: border-box; text-align: center; color: white; font-family: sans-serif; }
+        .phone-btn { width: 80px; height: 80px; border-radius: 50%; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .phone-btn.decline { background-color: #ff3b30; }
+        .phone-btn.accept { background-color: #4cd964; }
+        .phone-btn svg { width: 40px; height: 40px; fill: white; }
+        .pulse { animation: pulse-anim 1.5s infinite; }
+        @keyframes pulse-anim { 0% { box-shadow: 0 0 0 0px rgba(76, 217, 100, 0.5); } 100% { box-shadow: 0 0 0 30px rgba(76, 217, 100, 0); } }
+        #call-screen { position: absolute; inset: 0; z-index: 800; background: #000; display: none; }
+        .call-init-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; cursor: pointer; }
     <\/style>
 <\/head>
 <body>
@@ -752,6 +939,18 @@
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
+            <div id="splash-screen"><div id="splash-text" class="text-white text-center p-6 splash-text-anim text-4xl"><\/div><\/div>
+            <div id="call-screen">
+                <div id="call-init" class="call-init-overlay" onclick="initCall()"><i class="fa fa-phone-volume text-6xl mb-4 animate-bounce"><\/i><p>KATTINTS A HÍVÁSHOZ<\/p><\/div>
+                <div class="phone-ui">
+                    <div class="mt-20"><p class="text-sm uppercase tracking-widest opacity-60">Bejövő hívás<\/p><h1 id="call-name" class="text-4xl mt-2">Ismeretlen<\/h1><p class="mt-2 opacity-50">Magyarország<\/p><\/div>
+                    <div id="call-status" class="hidden text-emerald-400 text-xl font-light mb-20">Hívás folyamatban...<\/div>
+                    <div id="call-btns" class="flex justify-around pb-20 w-full max-w-md mx-auto">
+                        <button onclick="endCall()" class="phone-btn decline"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z" transform="rotate(135 12 12)"/></svg><\/button>
+                        <button onclick="answerCall()" class="phone-btn accept pulse"><svg viewBox="0 0 24 24"><path d="M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z"/><\/svg><\/button>
+                    <\/div>
+                <\/div>
+            <\/div>
             <div id="inventory-overlay"><h2 class="text-center text-cyan-400 font-bold mb-8 uppercase tracking-widest">Hátizsák<\/h2><div id="item-list" class="item-grid"><\/div><\/div>
             <div id="content-layer">
                 <div class="dialog-box">
@@ -776,118 +975,63 @@
             <button class="nav-item" onclick="toggleFullscreen()"><i class="fa fa-expand"><\/i><\/button>
         <\/div>
     <\/div>
+    <audio id="ringtone-audio" src="https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3" loop><\/audio>
+    <audio id="voice-audio"><\/audio>
     <script>
         const config = ${JSON.stringify(config)};
         let simIdx = 0, inventory = [], qrScanner = null, isStoppingQR = false, userPos = null, zoomActive = false, lastAutoGps = -1;
-        let zoomScale = 1, initialDist = 0, currentHint = 0;
+        let zoomScale = 1, initialDist = 0, currentHint = 0, sTimer = null;
         function pushNav() { history.pushState({ nav: true, zoom: true }, ""); }
         window.onpopstate = () => { if (zoomActive) { closeZoom(false); return; } if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; } };
-        function closeHintModal() { document.getElementById('hint-modal').style.display = 'none'; }
-        function openHintConfirm(hints) {
-            const m = document.getElementById('hint-modal');
-            const c = document.getElementById('hint-step-confirm');
-            const d = document.getElementById('hint-display-area');
-            c.classList.remove('hidden'); d.classList.add('hidden'); m.style.display = 'flex';
-            document.getElementById('hint-show-btn').onclick = () => {
-                const ha = hints.split('\\n').filter(x => x.trim());
-                document.getElementById('hint-content-text').textContent = ha[Math.min(currentHint, ha.length-1)];
-                c.classList.add('hidden'); d.classList.remove('hidden'); currentHint++;
-            };
-        }
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
-        }
-        if("geolocation" in navigator) {
-            navigator.geolocation.watchPosition(p => {
-                userPos = {lat: p.coords.latitude, lng: p.coords.longitude};
-                const cur = config.storyPages[simIdx];
-                if(cur?.pageType === 'gps' && userPos) {
-                    const d = getDistance(userPos.lat, userPos.lng, cur.targetLat, cur.targetLng);
-                    document.getElementById('live-dist').textContent = d;
-                    const hint = document.getElementById('gps-hint');
-                    if(d <= 20) {
-                        hint.textContent = "Megérkeztél! Átirányítás...";
-                        hint.className = "text-[10px] text-emerald-400 mt-2 font-bold";
-                        if(lastAutoGps !== simIdx) {
-                            lastAutoGps = simIdx;
-                            setTimeout(() => { if(cur.redirectUrl) window.open(cur.redirectUrl, '_blank'); else { simIdx = (cur.nextIdx !== "" && cur.nextIdx !== undefined) ? parseInt(cur.nextIdx) : simIdx + 1; updateUI(); } }, 800);
-                        }
-                    } else { hint.textContent = "Menj közelebb! (20m)"; hint.className = "text-[10px] text-slate-400 mt-2 italic"; }
-                }
-            }, null, {enableHighAccuracy: true});
-        }
         function initGame() { document.title = config.appTitle || "Kaland Játék"; simIdx = 0; inventory = []; updateUI(); document.getElementById('loading').style.display = 'none'; }
+        function stopAudio() { 
+            const r = document.getElementById('ringtone-audio'); const v = document.getElementById('voice-audio');
+            r.pause(); r.currentTime = 0; v.pause(); v.currentTime = 0;
+        }
+        function initCall() { document.getElementById('call-init').style.display = 'none'; document.getElementById('ringtone-audio').play().catch(e => {}); }
+        function answerCall() {
+            stopAudio(); document.getElementById('call-btns').style.display = 'none'; document.getElementById('call-status').style.display = 'block';
+            const v = document.getElementById('voice-audio'); const p = config.storyPages[simIdx];
+            v.src = p.audioUrl || ""; v.play().catch(e => endCall()); v.onended = endCall;
+        }
+        function endCall() {
+            stopAudio(); const p = config.storyPages[simIdx];
+            if(p.redirectUrl) window.open(p.redirectUrl, '_blank');
+            else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); }
+        }
         function updateUI() {
+            clearTimeout(sTimer); stopAudio();
             const p = config.storyPages[simIdx]; if(!p) return; 
-            handleReward(p); 
-            const bg = document.getElementById('bg-layer'); bg.style.opacity = 0;
-            setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
-            let text = p.content || ""; 
-            const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
-            config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = av.url ? 'block' : 'none'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
-            document.getElementById('story-text').innerHTML = text;
-            const ill = document.getElementById('page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
-            document.getElementById('gps-monitor').style.display = p.pageType === 'gps' ? 'block' : 'none';
-            const container = document.getElementById('button-container'); container.innerHTML = '';
-            if (p.pageType === 'qr') addBtn("QR BEOLVASÁSA", startQR, "fa-camera");
-            else if(p.pageType === 'password') {
-                if (p.hints) {
-                    const hBtn = document.createElement('button'); hBtn.className = "block mx-auto mb-4 text-cyan-400 text-4xl hover:text-cyan-300 transition-colors border-none bg-transparent"; hBtn.innerHTML = '<i class="fa-solid fa-circle-question"><\/i>';
-                    hBtn.onclick = () => openHintConfirm(p.hints);
-                    container.appendChild(hBtn);
-                }
-                const inp = document.createElement('input'); inp.className = "w-full bg-slate-900 border border-slate-700 text-cyan-400 p-4 rounded-lg text-center font-bold text-xl mb-2"; inp.placeholder = "KÓD...";
-                container.appendChild(inp);
-                addBtn("NYITÁS", () => { if(inp.value.trim().toLowerCase() == (p.password||"").toLowerCase()) { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } });
-            } else if(p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { if (c.req && !inventory.find(i => i.name.toLowerCase() === c.req.toLowerCase())) return; addBtn(c.text, () => { simIdx = parseInt(c.target); lastAutoGps = -1; currentHint = 0; updateUI(); }); }); } 
-            if(p.pageType === 'gps' && p.mapLink) addBtn("TÉRKÉP MEGNYITÁSA", () => window.open(p.mapLink, '_blank'), "fa-map");
-            const navRow = document.createElement('div'); navRow.className = "flex gap-3 w-full";
-            if(simIdx > 0 || (p.prevIdx !== "" && p.prevIdx !== undefined)) { const b = document.createElement('button'); b.className = "action-btn btn-back"; b.innerHTML = "VISSZA"; b.onclick = () => { simIdx = (p.prevIdx !== "" && p.prevIdx !== undefined) ? parseInt(p.prevIdx) : simIdx - 1; lastAutoGps = -1; currentHint = 0; updateUI(); }; navRow.appendChild(b); }
-            if (p.pageType !== 'choice' && p.pageType !== 'password' && p.pageType !== 'qr' && p.pageType !== 'gps') { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = "TOVÁBB"; b.onclick = () => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } }; navRow.appendChild(b); }
-            container.appendChild(navRow);
+            const splash = document.getElementById('splash-screen');
+            const call = document.getElementById('call-screen');
+            const layer = document.getElementById('content-layer');
+            const nav = document.querySelector('.bottom-nav');
+            
+            if (p.pageType === 'splash') {
+                splash.style.display = 'flex'; call.style.display = 'none'; layer.classList.add('hidden'); nav.style.display = 'none';
+                const st = document.getElementById('splash-text'); st.textContent = p.content || "";
+                st.style.animation = 'none'; void st.offsetWidth; st.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
+                sTimer = setTimeout(() => { if(p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; updateUI(); } }, 10500);
+            } else if (p.pageType === 'call') {
+                splash.style.display = 'none'; call.style.display = 'block'; layer.classList.add('hidden'); nav.style.display = 'none';
+                document.getElementById('call-name').textContent = p.content || "Ismeretlen";
+                document.getElementById('call-init').style.display = 'flex';
+                document.getElementById('call-btns').style.display = 'flex';
+                document.getElementById('call-status').style.display = 'none';
+            } else {
+                splash.style.display = 'none'; call.style.display = 'none'; layer.classList.remove('hidden'); nav.style.display = 'flex';
+                const bg = document.getElementById('bg-layer'); bg.style.opacity = 0;
+                setTimeout(() => { bg.src = p.pageBg || config.globalBg || ""; bg.style.opacity = 1; }, 200);
+                let text = p.content || ""; 
+                const avImg = document.getElementById('avatar-img'); avImg.style.display = 'none';
+                config.avatars.forEach(av => { if(text.includes('§'+av.id)) { avImg.src = av.url || ""; avImg.style.display = 'block'; avImg.style.borderColor = av.color; text = text.replace(new RegExp('§'+av.id, 'g'), '<span style="color:'+av.color+'">'+av.name+':<\/span>'); } });
+                document.getElementById('story-text').innerHTML = text;
+                const container = document.getElementById('button-container'); container.innerHTML = '';
+                if(p.pageType === 'choice' && p.choices) { p.choices.forEach(c => { addBtn(c.text, () => { simIdx = parseInt(c.target); updateUI(); }); }); } 
+                else { addBtn("TOVÁBB", () => { simIdx++; updateUI(); }); }
+            }
         }
-        function openZoom(url) { 
-            pushNav(); zoomActive = true; 
-            const v = document.getElementById('zoom-viewer'), i = document.getElementById('zoom-img'); 
-            i.src = url; zoomScale = 1; i.style.transform = "scale("+zoomScale+")"; v.style.display = 'flex'; 
-            let isMoving = false;
-            v.ontouchstart = (e) => { if (e.touches.length === 2) initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMoving = false; };
-            v.ontouchmove = (e) => { isMoving = true; if (e.touches.length === 2 && initialDist > 0) { const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); zoomScale = Math.min(Math.max(0.5, zoomScale * (dist / initialDist)), 5); i.style.transform = "scale("+zoomScale+")"; initialDist = dist; } };
-            v.ontouchend = () => { if (!isMoving) closeZoom(false); };
-            v.onclick = () => { if(!isMoving) closeZoom(false); };
-        }
-        function closeZoom(manBack) { document.getElementById('zoom-viewer').style.display = 'none'; zoomActive = false; if(manBack) try { history.back(); } catch(e) {} }
-        function addBtn(text, fn, icon = "") { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : ''); b.onclick = fn; document.getElementById('button-container').appendChild(b); }
-        function startQR() { pushNav(); document.getElementById('qr-layer').style.display = 'flex'; qrScanner = new Html5Qrcode("qr-reader"); qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (t) => { const p = config.storyPages[simIdx]; if (t.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { stopQR(false, () => { if (p.redirectUrl) window.open(p.redirectUrl, '_blank'); else { simIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : simIdx + 1; lastAutoGps = -1; currentHint = 0; updateUI(); } }); } }).catch(() => stopQR(true)); }
-        function stopQR(manual, callback) { if (manual) history.back(); if (isStoppingQR) return; const layer = document.getElementById('qr-layer'); if (!qrScanner) { layer.style.display = 'none'; if(callback) callback(); return; } isStoppingQR = true; qrScanner.stop().catch(() => {}).finally(() => { layer.style.display = 'none'; qrScanner = null; isStoppingQR = false; if (callback) callback(); }); }
-        function handleReward(p) { if (p.rewards) { inventory = p.rewards.filter(r => r.name && r.name.trim() !== "").map(r => ({ name: r.name, icon: r.icon || '📦', url: r.url || '', seen: false })); } else { inventory = []; } updateBadge(); }
-        function updateBadge() { const b = document.getElementById('inv-badge'), un = inventory.filter(i => !i.seen).length; b.textContent = un; b.classList.toggle('hidden', un === 0); }
-        function switchView(t, silent = false) { 
-            const inv = document.getElementById('inventory-overlay'), navInv = document.getElementById('nav-inv'), navMap = document.getElementById('nav-map');
-            if (t === 'inv') { 
-                if (inv.style.display === 'block') { inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); } 
-                else { renderInventory(); inv.style.display = 'block'; navInv.classList.add('active'); navMap.classList.remove('active'); } 
-            } else if (t === 'map') { 
-                if (!silent && config.initialMapLink) window.open(config.initialMapLink, '_blank');
-                inv.style.display = 'none'; navInv.classList.remove('active'); navMap.classList.add('active'); 
-            } 
-        }
-        function renderInventory() { 
-            const l = document.getElementById('item-list'); l.innerHTML = ''; 
-            inventory.forEach(it => { 
-                const d = document.createElement('div'); d.className = "item-card"; 
-                d.innerHTML = it.url ? '<img src="'+it.url+'"><div class="text-[10px] uppercase font-bold">'+it.name+'<\/div>' : '<div class="text-4xl mb-2">'+it.icon+'<\/div><div class="text-[10px] font-bold uppercase">'+it.name+'<\/div>'; 
-                if (!it.seen) d.innerHTML += '<div class="item-unread-dot"><\/div>'; 
-                d.onclick = () => { if(it.url) openZoom(it.url); it.seen = true; updateBadge(); renderInventory(); }; 
-                l.appendChild(d); 
-            }); 
-        }
-        function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-        function resetGame() { if(confirm("Újrakezded?")) { simIdx = 0; inventory = []; lastAutoGps = -1; currentHint = 0; updateBadge(); switchView('map', true); updateUI(); } }
+        function addBtn(text, fn) { const b = document.createElement('button'); b.className = "action-btn"; b.innerHTML = text; b.onclick = fn; document.getElementById('button-container').appendChild(b); }
         window.onload = initGame;
     <\/script>
 <\/body>
