@@ -272,7 +272,7 @@
             <button id="p-qr-cancel-btn" onclick="pStopQR(true)" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE</button>
         </div>
         <div id="p-zoom-viewer" onclick="pCloseZoom(true)">
-            <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
+            <img id="p-zoom-img" src="">
         </div>
         <div class="p-game-wrapper">
             <div id="p-viewport">
@@ -313,7 +313,7 @@
         let deleteCandidate = null;
         let pZoomScale = 1, pInitialDist = 0, isStoppingQR = false;
 
-        function pushNavState() { history.pushState({ navigation: true }, ""); }
+        function pushNavState() { history.pushState({ navigation: true, zoom: true }, ""); }
 
         window.onpopstate = function(event) {
             // Priority list for popstate (physical back button)
@@ -558,7 +558,6 @@
             pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
                 const p = config.storyPages[pSimIdx];
                 if (decodedText.trim().toUpperCase() === (p.qrCode || "").trim().toUpperCase()) { 
-                    // SUCCESS: Hide UI WITHOUT manual history.back() to prevent closing app
                     pStopQR(false, () => { 
                         if (p.redirectUrl && p.redirectUrl.trim() !== "") { window.open(p.redirectUrl, '_blank'); } 
                         else { pSimIdx = (p.nextIdx !== "" && p.nextIdx !== undefined) ? parseInt(p.nextIdx) : pSimIdx + 1; pUpdateUI(); }
@@ -627,7 +626,7 @@
         }
 
         function pOpenZoom(url) { 
-            pushNavState(); // Allow back button to close zoom
+            pushNavState();
             pZoomScale = 1;
             const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
             i.src = url; 
@@ -658,8 +657,10 @@
         }
 
         function pCloseZoom(manual) { 
-            if (manual) history.back();
+            // Vizuális azonnali elrejtés, hogy ne érződjön akadásnak
             document.getElementById('p-zoom-viewer').style.display = 'none'; 
+            // Csak akkor lépünk vissza az előzményekben, ha manuális bezárás történt (kattintás)
+            if (manual) history.back();
         }
 
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
@@ -714,7 +715,7 @@
         <input type="file" id="manual-upload" class="hidden" accept=".json" onchange="handleManualImport(event)">
     <\/div>
     <div id="qr-layer"><div id="qr-reader"><\/div><button onclick="stopQR(true)" class="action-btn mt-6 !w-auto px-12">MÉGSE<\/button><\/div>
-    <div id="zoom-viewer" onclick="closeZoom(true)"><img id="zoom-img" src="" onclick="event.stopPropagation()"><\/div>
+    <div id="zoom-viewer" onclick="closeZoom(true)"><img id="zoom-img" src=""><\/div>
     <div class="game-wrapper">
         <div id="viewport">
             <img id="bg-layer" src="">
@@ -739,7 +740,7 @@
     <\/div>
     <script>
         let config = null, simIdx = 0, inventory = [], qrScanner = null, liveScale = 1, initialDist = 0, isStoppingQR = false;
-        function pushNav() { history.pushState({ nav: true }, ""); }
+        function pushNav() { history.pushState({ nav: true, zoom: true }, ""); }
         window.onpopstate = () => {
             if (document.getElementById('zoom-viewer').style.display === 'flex') { closeZoom(false); return; }
             if (document.getElementById('qr-layer').style.display === 'flex') { stopQR(false); return; }
@@ -817,7 +818,10 @@
             v.ontouchend = () => { if(!move) closeZoom(true); };
             v.onclick = () => { if(!move) closeZoom(true); };
         }
-        function closeZoom(man) { if(man) history.back(); document.getElementById('zoom-viewer').style.display = 'none'; }
+        function closeZoom(man) { 
+            document.getElementById('zoom-viewer').style.display = 'none'; 
+            if(man) history.back(); 
+        }
         function addBtn(text, fn, icon = "") {
             const b = document.createElement('button'); b.className = "action-btn";
             b.innerHTML = text + (icon ? ' <i class="fa '+icon+' ml-2 opacity-50"><\/i>' : '');
