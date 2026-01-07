@@ -825,6 +825,42 @@
         function pStopQR() { if(pQrScanner) pQrScanner.stop().finally(() => { document.getElementById('p-qr-layer').style.display = 'none'; }); else document.getElementById('p-qr-layer').style.display = 'none'; }
 
         // --- EXPORT ---
+        function downloadLiveHTML() {
+            const currentConfig = JSON.stringify(config);
+            let source = document.documentElement.outerHTML;
+            
+            // Konfiguráció beágyazása
+            const configRegex = /let config = JSON\.parse\(localStorage\.getItem\('KALAND_STUDIO_V11_1'\)\) \|\| \{[\s\S]*?\};/;
+            source = source.replace(configRegex, `let config = ${currentConfig};`);
+            
+            // Indítási logika hozzáadása a letöltött fájlhoz
+            const trigger = `
+            <script>
+            window.addEventListener('load', () => {
+                // Automatikus indítás játék módban a letöltött fájlban
+                if (typeof isPlayerMode !== 'undefined') {
+                    isPlayerMode = false; // reset
+                    toggleMainView(true);
+                    // Eltávolítjuk a szerkesztő elemeket a tiszta élményért
+                    const studio = document.getElementById('studio-view');
+                    const toggle = document.getElementById('main-view-toggle');
+                    const saveInd = document.getElementById('save-indicator');
+                    if(studio) studio.remove();
+                    if(toggle) toggle.remove();
+                    if(saveInd) saveInd.remove();
+                }
+            });
+            <\/script>`;
+            
+            source = source.replace('</body>', trigger + '</body>');
+            
+            const blob = new Blob([source], {type: 'text/html'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = (config.appTitle || 'kaland_jatek') + '.html';
+            a.click();
+        }
+
         function downloadConfig() { const b = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'game.json'; a.click(); }
         function handleFileUpload(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); renderPageList(); renderAvatarAdmin(); loadPage(0); }; r.readAsText(f); }
 
