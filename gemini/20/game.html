@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Új Kaland</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; background-color: #000; overflow: hidden; position: fixed; inset: 0; }
+        .p-game-wrapper { width: 100%; height: 100dvh; display: flex; flex-direction: column; position: relative; background: #000; }
+        #p-viewport { position: relative; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #p-bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        #p-content-layer { position: relative; z-index: 10; flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.92); border-top: 3px solid #8b5cf6; border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 40px; max-height: 85%; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.5); overflow: hidden; }
+        #p-scroll-area { overflow-y: auto; flex-grow: 1; margin-bottom: 10px; }
+        .p-action-btn { flex-shrink: 0; background: #8b5cf6; color: white; padding: 16px; border-radius: 0.75rem; font-weight: 700; font-size: 1.25rem; width: 100%; border: none; cursor: pointer; }
+        #file-loader { position: fixed; inset: 0; z-index: 9000; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="file-loader">
+        <h1 class="text-white text-3xl font-bold mb-6">KALAND JÁTÉK</h1>
+        <button onclick="document.getElementById('ml').click()" class="bg-purple-600 p-4 rounded-xl text-white font-bold">JÁTÉK BETÖLTÉSE (.json)</button>
+        <input type="file" id="ml" class="hidden" accept=".json" onchange="hL(event)">
+    </div>
+    <div class="p-game-wrapper">
+        <div id="p-viewport">
+            <img id="p-bg-layer" src="">
+            <div id="p-content-layer">
+                <div class="p-dialog-box">
+                    <div id="p-scroll-area"><div id="p-story-text" class="text-white text-xl font-bold"></div></div>
+                    <div id="p-button-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let config = null; let pSimIdx = 0;
+        async function init() { try { const r = await fetch('game.json'); if(r.ok) { config = await r.json(); document.getElementById('file-loader').style.display='none'; start(); } } catch(e){} }
+        function hL(e) { const f = e.target.files[0]; const r = new FileReader(); r.onload = (ev) => { config = JSON.parse(ev.target.result); document.getElementById('file-loader').style.display='none'; start(); }; r.readAsText(f); }
+        function start() { update(); }
+        function update() {
+            const p = config.storyPages[pSimIdx]; if(!p) return;
+            document.getElementById('p-bg-layer').src = p.pageBg || config.globalBg || "";
+            document.getElementById('p-story-text').innerHTML = p.content || "";
+            const container = document.getElementById('p-button-container'); container.innerHTML = '';
+            const b = document.createElement('button'); b.className = "p-action-btn"; b.textContent = "TOVÁBB";
+            b.onclick = () => { pSimIdx++; update(); }; container.appendChild(b);
+        }
+        init();
+    </script>
+</body>
+</html>
