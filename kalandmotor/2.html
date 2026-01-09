@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kalandmotor | Interaktív Történetmesélés</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #22d3ee;
+            --bg-dark: #020617;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --primary: #0891b2;
+        }
+
+        body {
+            font-family: 'Play', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .special-font { font-family: 'Special Elite', cursive; }
+        .logo-glow { text-shadow: 0 0 15px rgba(34, 211, 238, 0.6); }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(34, 211, 238, 0.5);
+            filter: brightness(1.1);
+        }
+
+        .input-style { 
+            background: #0f172a; 
+            color: var(--accent); 
+            border: 1px solid #1e293b; 
+            border-radius: 0.75rem; 
+            padding: 0.75rem; 
+            outline: none; 
+            transition: 0.3s; 
+            width: 100%; 
+        }
+        .input-style:focus { border-color: var(--accent); box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+
+        /* Nézetek */
+        .app-view { display: none; min-height: 100vh; }
+        .app-view.active { display: block; }
+
+        /* Szimulátor UI */
+        .sim-container { 
+            width: 300px; height: 580px; background: #000; 
+            border: 8px solid #1e293b; border-radius: 2.5rem; 
+            overflow: hidden; position: sticky; top: 120px;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Scanline effekt */
+        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+        .scan-effect::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: rgba(34, 211, 238, 0.05); animation: scanline 6s linear infinite; pointer-events: none; z-index: 100;
+        }
+
+        /* Listázási stílusok */
+        .handle { cursor: grab; padding-right: 15px; color: #475569; }
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.75rem; background: #0f172a; border: 1px solid #1e293b; }
+        .page-item.selected { border-color: var(--accent); background: rgba(34, 211, 238, 0.1); }
+
+        #save-indicator { position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 0.6rem 1.2rem; border-radius: 2rem; font-size: 0.75rem; font-weight: bold; z-index: 10000; display: none; }
+        #notification-box { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid var(--accent); color: white; padding: 0.8rem 1.5rem; border-radius: 1rem; font-size: 0.9rem; display: none; z-index: 10001; }
+    </style>
+</head>
+<body class="scan-effect">
+    <div id="save-indicator"><i class="fa fa-sync-alt fa-spin mr-2"></i> FELHŐ SZINKRONIZÁLÁSA...</div>
+    <div id="notification-box"></div>
+
+    <!-- Navigáció -->
+    <nav class="fixed w-full z-[100] px-4 md:px-6 py-4 glass-card rounded-none border-x-0 border-t-0 bg-opacity-90">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2 group cursor-pointer" onclick="switchToView('home')">
+                <i class="fa-solid fa-compass text-cyan-400 text-xl md:text-2xl group-hover:rotate-[360deg] transition-transform duration-1000"></i>
+                <span class="text-lg md:text-2xl font-bold tracking-tighter text-cyan-400 logo-glow uppercase">Kalandmotor</span>
+            </div>
+            
+            <div class="flex items-center gap-2 md:gap-6">
+                <div id="auth-nav-guest" class="flex items-center gap-2 md:gap-4">
+                    <button onclick="openModal('login')" class="px-3 py-2 text-slate-300 hover:text-white transition uppercase text-[10px] font-bold tracking-widest">Belépés</button>
+                    <button onclick="openModal('register')" class="hidden sm:block btn-primary px-4 py-2 rounded-lg text-white text-[10px] font-bold tracking-widest">Csatlakozás</button>
+                </div>
+
+                <div id="auth-nav-user" class="hidden flex items-center gap-3 border-l border-white/10 pl-2 md:pl-6">
+                    <div class="text-right hidden xs:block">
+                        <span id="user-display-name" class="text-cyan-400 font-bold block leading-none text-[10px] md:text-xs text-nowrap"></span>
+                        <span class="text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest text-nowrap">Kalandmester</span>
+                    </div>
+                    <button onclick="logout()" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-red-400 transition border border-white/5">
+                        <i class="fa-solid fa-power-off text-sm md:text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- NÉZETEK -->
+    
+    <!-- 1. FŐOLDAL -->
+    <div id="view-home" class="app-view active pt-32 px-4 pb-20">
+        <section class="max-w-7xl mx-auto text-center py-12">
+            <h1 class="text-4xl md:text-8xl font-bold mb-8 tracking-tighter uppercase leading-tight">
+                Építsd fel a <br>
+                <span class="text-cyan-400 special-font logo-glow">Történetedet</span>
+            </h1>
+            <p class="text-slate-400 text-sm md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+                A <strong>Kalandmotor</strong> segítségével kódolás nélkül hozhatsz létre interaktív világokat.
+            </p>
+            <div class="flex justify-center">
+                <button onclick="checkAuthAndStudio()" class="btn-primary px-10 py-5 rounded-2xl text-[10px] md:text-xs font-bold tracking-widest uppercase flex items-center">
+                    <i class="fa-solid fa-play mr-3"></i> Stúdió indítása
+                </button>
+            </div>
+        </section>
+
+        <!-- Könyvtár Szekció -->
+        <section id="library" class="max-w-7xl mx-auto py-24 border-t border-white/5">
+            <div class="flex justify-between items-center mb-12">
+                <h2 class="text-2xl font-bold uppercase tracking-tighter">Kalandok <span class="text-cyan-400">Könyvtára</span></h2>
+                <button onclick="loadPublicGames()" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-cyan-400 transition"><i class="fa fa-sync mr-2"></i>Frissítés</button>
+            </div>
+            <div id="public-games-list" class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                <!-- Dinamikus tartalom -->
+            </div>
+        </section>
+
+        <!-- Dashboard Szekció -->
+        <section id="dashboard" class="max-w-7xl mx-auto py-12 hidden border-t border-cyan-500/20">
+            <h2 class="text-2xl font-bold uppercase mb-8 tracking-tighter text-white">Saját <span class="text-cyan-400">Világok</span></h2>
+            <div id="user-games-list" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <button onclick="createNewGame()" class="border-2 border-dashed border-slate-800 rounded-2xl p-12 flex flex-col items-center justify-center hover:bg-cyan-400/5 hover:border-cyan-500/40 transition group text-center min-h-[200px]">
+                    <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center mb-4 group-hover:bg-cyan-500 group-hover:text-black transition duration-500 shadow-xl">
+                        <i class="fa-solid fa-plus text-xl"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-500 group-hover:text-white uppercase tracking-widest transition">Új Projekt Indítása</span>
+                </button>
+                <!-- Felhasználó projektjei -->
+            </div>
+        </section>
+    </div>
+
+    <!-- 2. STÚDIÓ NÉZET -->
+    <div id="view-studio" class="app-view pt-32 px-4 pb-20 bg-slate-950/50">
+        <div class="max-w-[1400px] mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+                <div class="flex items-center gap-6">
+                    <button onclick="switchToView('home')" class="w-12 h-12 glass-card flex items-center justify-center hover:bg-slate-800 transition">
+                        <i class="fa fa-chevron-left"></i>
+                    </button>
+                    <div>
+                        <h2 id="studio-game-title" class="text-3xl font-black uppercase text-white tracking-tight">Új Projekt</h2>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Élő szinkronizálás aktív</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveToCloud(true)" class="btn-primary px-8 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Publikálás</button>
+                    <button onclick="launchPreview()" class="bg-slate-800 border border-white/10 px-8 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-700 transition">Tesztelés</button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+                <div class="lg:col-span-8 space-y-8">
+                    <!-- Projekt Konfiguráció -->
+                    <div class="glass-card p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-4">
+                            <h4 class="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em]">Alapbeállítások</h4>
+                            <input type="text" id="appTitle" class="input-style font-bold" placeholder="A kaland neve" oninput="autoSave()">
+                            <input type="url" id="globalBg" class="input-style text-xs" placeholder="Globális Háttérkép URL" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h4 class="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em]">Avatarok</h4>
+                                <button onclick="addAvatar()" class="text-cyan-400 text-[10px] font-bold uppercase tracking-widest hover:underline">+ Új</button>
+                            </div>
+                            <div id="avatarList" class="space-y-2 max-h-32 overflow-y-auto pr-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Jelenetek -->
+                    <div class="glass-card p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em]">Sztori Jelenetek</h4>
+                            <button onclick="addPage()" class="btn-primary px-4 py-2 rounded-lg text-[9px] font-bold uppercase">+ Jelenet</button>
+                        </div>
+                        <div id="pageList" class="max-h-64 overflow-y-auto pr-2"></div>
+                    </div>
+
+                    <!-- Szerkesztő Panel -->
+                    <div id="editorPanel" class="glass-card p-10 space-y-8 hidden border-t-4 border-t-cyan-500 shadow-2xl">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xl font-bold uppercase text-white">Szerkesztés: #<span id="current-page-id-display">0</span></h3>
+                            <button onclick="deletePage()" class="text-red-500 text-xs font-bold uppercase hover:underline">Jelenet törlése</button>
+                        </div>
+                        <textarea id="pageText" rows="6" class="input-style text-lg leading-relaxed" placeholder="Írd ide a történetet..." oninput="autoSave()"></textarea>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="text-[9px] uppercase font-bold text-slate-500 block mb-2 tracking-widest">Típus</label>
+                                <select id="pageType" class="input-style text-xs" onchange="handleTypeChange()">
+                                    <option value="story">Leírás</option>
+                                    <option value="choice">Választás</option>
+                                    <option value="qr">QR Kód</option>
+                                    <option value="password">Számkód</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[9px] uppercase font-bold text-slate-500 block mb-2 tracking-widest">Következő ID (Story esetén)</label>
+                                <input type="number" id="nextIdx" class="input-style text-xs" oninput="autoSave()">
+                            </div>
+                            <div>
+                                <label class="text-[9px] uppercase font-bold text-slate-500 block mb-2 tracking-widest">Egyedi Háttér</label>
+                                <input type="url" id="pageBg" class="input-style text-xs" placeholder="URL" oninput="autoSave()">
+                            </div>
+                        </div>
+
+                        <div id="sub-editors" class="space-y-6 pt-4 border-t border-white/5">
+                            <div id="choice-editor-section" class="hidden space-y-4">
+                                <div class="flex justify-between">
+                                    <h4 class="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.2em]">Döntési Lehetőségek</h4>
+                                    <button onclick="addChoice()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ GOMB</button>
+                                </div>
+                                <div id="choices-container" class="space-y-3"></div>
+                            </div>
+                            <div id="password-editor-section" class="hidden">
+                                <label class="text-[9px] uppercase font-bold text-slate-500 block mb-2 tracking-widest">Helyes Megoldás / Kód</label>
+                                <input type="text" id="pagePassword" class="input-style text-sm" placeholder="Pl: 1234" oninput="autoSave()">
+                            </div>
+                            <div id="qr-editor-section" class="hidden">
+                                <label class="text-[9px] uppercase font-bold text-slate-500 block mb-2 tracking-widest">QR Kód Tartalma</label>
+                                <input type="text" id="pageQrCode" class="input-style text-sm" placeholder="Pl: TITOK_QR" oninput="autoSave()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Szimulátor -->
+                <div class="lg:col-span-4 flex justify-center">
+                    <div class="sim-container">
+                        <div id="sim-viewport" class="relative h-full flex flex-col justify-end bg-slate-900">
+                            <img id="sim-bg-img" src="" class="absolute inset-0 w-full h-full object-cover opacity-50 transition-opacity duration-500">
+                            <div class="relative z-10 p-6 bg-slate-950/90 border-t border-cyan-500/50 rounded-t-[2rem] min-h-[250px] flex flex-col">
+                                <div id="sim-text" class="text-xs font-bold leading-relaxed mb-6 text-slate-200"></div>
+                                <div id="sim-actions" class="mt-auto flex flex-col gap-2"></div>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-1 bg-slate-800 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. JÁTÉKOS NÉZET -->
+    <div id="view-player" class="app-view bg-black">
+        <div id="p-qr-layer" class="fixed inset-0 z-[1000] hidden bg-black/95 items-center justify-center p-6 flex-col">
+            <div id="p-qr-reader" class="w-full max-w-sm aspect-square border-4 border-cyan-500 rounded-3xl overflow-hidden mb-8"></div>
+            <button onclick="pStopQR()" class="btn-primary px-12 py-4 rounded-2xl text-xs font-bold uppercase tracking-widest">Kilépés</button>
+        </div>
+
+        <div class="relative h-full w-full flex flex-col justify-end">
+            <img id="p-bg" src="" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000">
+            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent"></div>
+            
+            <div id="p-content" class="relative z-10 p-10 md:p-20 max-w-5xl mx-auto w-full">
+                <div id="p-text" class="text-3xl md:text-5xl font-bold leading-tight mb-16 text-white drop-shadow-2xl"></div>
+                <div id="p-password-area" class="hidden mb-12 max-w-md">
+                    <input type="text" id="p-pass-input" class="w-full bg-white/10 border-2 border-white/20 rounded-2xl p-6 text-2xl text-white outline-none focus:border-cyan-500 text-center mb-4" placeholder="Kód...">
+                    <button onclick="pVerifyPassword()" class="btn-primary w-full py-5 rounded-2xl font-bold uppercase tracking-widest">Ellenőrzés</button>
+                </div>
+                <div id="p-actions" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
+
+            <!-- Alsó vezérlő -->
+            <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black to-transparent flex justify-around items-center px-10 z-20">
+                <button onclick="switchToView('home')" class="text-slate-500 hover:text-white transition text-xl p-4"><i class="fa fa-times"></i></button>
+                <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_15px_#22d3ee]"></div>
+                <button class="text-slate-500 hover:text-white transition text-xl p-4"><i class="fa fa-briefcase"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modális ablakok -->
+    <div id="auth-modal" class="fixed inset-0 z-[1000] hidden items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
+        <div class="glass-card w-full max-w-md p-10 relative border-cyan-500/30">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-slate-500 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div id="modal-login" class="hidden">
+                <h2 class="text-2xl font-bold text-white uppercase text-center mb-8 tracking-tighter">Belépés</h2>
+                <form onsubmit="handleAuth(event, 'login')" class="space-y-4">
+                    <input type="email" id="login-email" placeholder="Email cím" required class="input-style">
+                    <input type="password" id="login-pass" placeholder="Jelszó" required class="input-style">
+                    <button type="submit" class="w-full btn-primary py-4 rounded-xl font-bold text-xs uppercase text-white">Rendszer betöltése</button>
+                </form>
+                <button onclick="handleGoogleSignIn()" class="w-full mt-4 bg-white text-black py-4 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-3 hover:bg-slate-200 transition">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" alt="G"> Google fiókkal
+                </button>
+                <p class="mt-8 text-center text-[10px] text-slate-500 uppercase tracking-widest">Nincs még fiókod? <button onclick="openModal('register')" class="text-cyan-400 font-bold hover:underline">Csatlakozz</button></p>
+            </div>
+            <div id="modal-register" class="hidden">
+                <h2 class="text-2xl font-bold text-white uppercase text-center mb-8 tracking-tighter">Csatlakozás</h2>
+                <form onsubmit="handleAuth(event, 'register')" class="space-y-4">
+                    <input type="text" id="reg-name" placeholder="Kalandmester Neved" required class="input-style">
+                    <input type="email" id="reg-email" placeholder="Email cím" required class="input-style">
+                    <input type="password" id="reg-pass" placeholder="Válassz jelszót" required class="input-style">
+                    <button type="submit" class="w-full btn-primary py-4 rounded-xl font-bold text-xs uppercase text-white">Fiók létrehozása</button>
+                </form>
+                <p class="mt-8 text-center text-[10px] text-slate-500 uppercase tracking-widest">Már tag vagy? <button onclick="openModal('login')" class="text-cyan-400 font-bold hover:underline">Belépés</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Rendszer -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, updateProfile, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, getDocs, onSnapshot, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-platform';
+        const firebaseConfig = {
+            apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618",
+            authDomain: "kalandmotor.firebaseapp.com",
+            projectId: "kalandmotor",
+            storageBucket: "kalandmotor.firebasestorage.app",
+            messagingSenderId: "108860908140",
+            appId: "1:108860908140:web:5fbec83f4ae7b51487ee49"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+        let activeProjectID = null;
+        let unsubscribeUserGames = null;
+
+        // AUTH INITIALIZATION
+        const initAuth = async () => {
+            try {
+                // RULE 3: Auth Before Queries - await authentication
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (tokenErr) {
+                        // Ha a custom token hiba (mismatch), megpróbáljuk az anonimot csendben
+                        console.warn("Custom token mismatch, próbálkozás névtelenül...");
+                        await tryAnonymousAuth();
+                    }
+                } else {
+                    await tryAnonymousAuth();
+                }
+            } catch (err) {
+                console.error("Hitelesítés sikertelen:", err);
+                handleAuthError(err);
+            }
+        };
+
+        // Külön függvény az anonim bejelentkezéshez, hogy elkerüljük az admin korlátozások miatti összeomlást
+        const tryAnonymousAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                if (err.code === 'auth/admin-restricted-operation') {
+                    console.warn("Firebase: Névtelen bejelentkezés le van tiltva.");
+                } else {
+                    throw err;
+                }
+            }
+        };
+
+        const handleAuthError = (err) => {
+            if (err.code === 'auth/admin-restricted-operation') {
+                showNotification("A felhő funkciók korlátozottak ebben a nézetben.");
+            } else {
+                showNotification("Szerver hiba történt a belépéskor.");
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            updateNavUI();
+            // Csak akkor töltjük be a mentéseket, ha nem anonim vagy sikeres volt az auth
+            if (user && !user.isAnonymous) {
+                document.getElementById('dashboard').classList.remove('hidden');
+                listenToUserGames();
+            } else {
+                document.getElementById('dashboard').classList.add('hidden');
+                if (unsubscribeUserGames) unsubscribeUserGames();
+            }
+        });
+
+        function updateNavUI() {
+            const guest = document.getElementById('auth-nav-guest');
+            const userNav = document.getElementById('auth-nav-user');
+            if (currentUser && !currentUser.isAnonymous) {
+                guest.classList.add('hidden');
+                userNav.classList.remove('hidden');
+                document.getElementById('user-display-name').textContent = (currentUser.displayName || currentUser.email || "Mester").toUpperCase();
+            } else {
+                guest.classList.remove('hidden');
+                userNav.classList.add('hidden');
+            }
+        }
+
+        window.showNotification = (text) => {
+            const box = document.getElementById('notification-box');
+            if (!box) return;
+            box.textContent = text;
+            box.style.display = 'block';
+            setTimeout(() => { if(box) box.style.display = 'none'; }, 4000);
+        };
+
+        window.closeModal = () => {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-modal').classList.remove('flex');
+        };
+
+        window.openModal = (type) => {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-modal').classList.add('flex');
+            document.getElementById('modal-login').classList.toggle('hidden', type !== 'login');
+            document.getElementById('modal-register').classList.toggle('hidden', type !== 'register');
+        };
+
+        window.handleAuth = async (e, mode) => {
+            e.preventDefault();
+            const email = document.getElementById(mode + '-email').value;
+            const pass = document.getElementById(mode + '-pass').value;
+            try {
+                if (mode === 'login') {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                    showNotification("Sikeres belépés!");
+                } else {
+                    const name = document.getElementById('reg-name').value;
+                    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                    await updateProfile(cred.user, { displayName: name });
+                    showNotification("Üdvözlünk, Kalandmester!");
+                }
+                closeModal();
+            } catch (err) { showNotification("Hiba: " + err.message); }
+        };
+
+        window.handleGoogleSignIn = async () => {
+            try {
+                await signInWithPopup(auth, provider);
+                closeModal();
+                showNotification("Belépve Google fiókkal!");
+            } catch (err) { showNotification("Google belépési hiba."); }
+        };
+
+        window.logout = async () => { 
+            await signOut(auth); 
+            try { await tryAnonymousAuth(); } catch (e) {}
+            showNotification("Kijelentkezve."); 
+            switchToView('home'); 
+        };
+
+        window.loadPublicGames = async () => {
+            const list = document.getElementById('public-games-list');
+            // Biztonsági ellenőrzés auth állapotra
+            if (!auth.currentUser) {
+                list.innerHTML = '<p class="col-span-full text-center text-slate-600 italic">Jelentkezz be a könyvtár eléréséhez.</p>';
+                return;
+            }
+            list.innerHTML = '<p class="col-span-full text-center text-slate-500 animate-pulse">Könyvtár szinkronizálása...</p>';
+            try {
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'games'));
+                const snap = await getDocs(q);
+                list.innerHTML = '';
+                if (snap.empty) {
+                    list.innerHTML = '<p class="col-span-full text-center text-slate-600 italic">A könyvtár jelenleg üres.</p>';
+                }
+                snap.forEach(docSnap => {
+                    list.appendChild(createGameCard(docSnap.id, docSnap.data(), true));
+                });
+            } catch (err) { 
+                console.error("Hiba a könyvtár betöltésekor:", err);
+                list.innerHTML = '<p class="col-span-full text-center text-red-400 italic">Hiba a könyvtár betöltésekor.</p>';
+            }
+        };
+
+        function listenToUserGames() {
+            if (!currentUser || currentUser.isAnonymous) return;
+            const q = query(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'games'));
+            unsubscribeUserGames = onSnapshot(q, (snap) => {
+                const list = document.getElementById('user-games-list');
+                const addButton = list.querySelector('button');
+                list.innerHTML = '';
+                list.appendChild(addButton);
+                snap.forEach(docSnap => {
+                    list.appendChild(createGameCard(docSnap.id, docSnap.data(), false));
+                });
+            }, (err) => console.error("Snapshot hiba:", err));
+        }
+
+        function createGameCard(id, data, isPublic) {
+            const card = document.createElement('div');
+            card.className = "glass-card p-6 flex flex-col justify-between group hover:border-cyan-500/50 transition-all min-h-[200px]";
+            card.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-white uppercase tracking-tight mb-2 truncate">${data.title || "Névtelen Világ"}</h3>
+                    <p class="text-[9px] text-slate-500 uppercase tracking-widest mb-6">Szerző: ${data.authorName || "Ismeretlen"}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="playGame('${id}', ${isPublic})" class="flex-grow btn-primary py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest">Indítás</button>
+                    ${!isPublic ? `<button onclick="editGame('${id}')" class="px-4 py-2 bg-slate-800 rounded-lg text-xs hover:bg-slate-700 transition"><i class="fa fa-pen"></i></button>` : ''}
+                </div>
+            `;
+            return card;
+        }
+
+        window.createNewGame = () => {
+            if (!currentUser || currentUser.isAnonymous) { openModal('login'); return; }
+            window.config = {
+                title: "Új Kaland",
+                pages: [{ content: "Kezdődik a történet...", type: "story", choices: [] }],
+                avatars: [],
+                globalBg: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000"
+            };
+            activeProjectID = null;
+            switchToView('studio');
+            loadStudioPage(0);
+            refreshStudioGlobalUI();
+        };
+
+        window.editGame = async (id) => {
+            if (!currentUser || currentUser.isAnonymous) return;
+            const docSnap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'games', id));
+            if (docSnap.exists()) {
+                window.config = docSnap.data().config;
+                activeProjectID = id;
+                switchToView('studio');
+                refreshStudioGlobalUI();
+                loadStudioPage(0);
+            }
+        };
+
+        window.playGame = async (id, isPublic) => {
+            if (!currentUser) return;
+            const path = isPublic 
+                ? doc(db, 'artifacts', appId, 'public', 'data', 'games', id)
+                : doc(db, 'artifacts', appId, 'users', currentUser.uid, 'games', id);
+            const docSnap = await getDoc(path);
+            if (docSnap.exists()) {
+                window.config = docSnap.data().config;
+                switchToView('player');
+                pSimIdx = 0;
+                pUpdateUI();
+            }
+        };
+
+        window.saveToCloud = async (publish = false) => {
+            if (!currentUser || currentUser.isAnonymous) {
+                showNotification("A mentéshez jelentkezz be!");
+                return;
+            }
+            document.getElementById('save-indicator').style.display = 'block';
+            const payload = {
+                title: window.config.title,
+                authorName: currentUser.displayName || currentUser.email,
+                authorId: currentUser.uid,
+                config: window.config,
+                updatedAt: serverTimestamp()
+            };
+            try {
+                if (activeProjectID) {
+                    await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'games', activeProjectID), payload, { merge: true });
+                } else {
+                    const newDoc = await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'games'), payload);
+                    activeProjectID = newDoc.id;
+                }
+                if (publish) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', activeProjectID), payload, { merge: true });
+                    showNotification("Világod publikálva!");
+                } else {
+                    showNotification("Projekt elmentve.");
+                }
+            } catch (err) { 
+                console.error("Mentési hiba:", err); 
+                showNotification("Mentési hiba történt.");
+            } finally {
+                setTimeout(() => {
+                    const indicator = document.getElementById('save-indicator');
+                    if(indicator) indicator.style.display = 'none';
+                }, 1000);
+            }
+        };
+
+        window.deletePage = () => {
+            if (window.config.pages.length <= 1) return;
+            window.config.pages.splice(currentStudioIdx, 1);
+            loadStudioPage(0);
+            autoSave();
+        };
+
+        const startApp = async () => {
+            await initAuth();
+            loadPublicGames();
+        };
+        startApp();
+    </script>
+
+    <script>
+        // STUDIO & JÁTÉK MOTOR LOGIKA
+        let currentStudioIdx = 0;
+        let pSimIdx = 0;
+        let saveTimeout = null;
+        let pQrScanner = null;
+
+        function switchToView(viewId) {
+            document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            if (viewId === 'player') document.body.classList.add('overflow-hidden');
+            else document.body.classList.remove('overflow-hidden');
+        }
+
+        function checkAuthAndStudio() {
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard && dashboard.classList.contains('hidden')) openModal('login');
+            else dashboard.scrollIntoView({behavior: 'smooth'});
+        }
+
+        // --- SZERKESZTŐ LOGIKA ---
+        function refreshStudioGlobalUI() {
+            document.getElementById('appTitle').value = window.config.title || "";
+            document.getElementById('globalBg').value = window.config.globalBg || "";
+            document.getElementById('studio-game-title').textContent = window.config.title || "Új Projekt";
+            renderPageList();
+            renderAvatarAdmin();
+        }
+
+        function loadStudioPage(idx) {
+            currentStudioIdx = idx;
+            const p = window.config.pages[idx];
+            if (!p) return;
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('current-page-id-display').textContent = idx;
+            document.getElementById('pageText').value = p.content || "";
+            document.getElementById('pageType').value = p.type || "story";
+            document.getElementById('nextIdx').value = p.nextIdx || "";
+            document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('pagePassword').value = p.password || "";
+            document.getElementById('pageQrCode').value = p.qrCode || "";
+            handleTypeChange(false);
+            renderPageList();
+            updateSimulator();
+        }
+
+        function addPage() {
+            window.config.pages.push({ content: "Új jelenet...", type: "story", choices: [] });
+            loadStudioPage(window.config.pages.length - 1);
+            autoSave();
+        }
+
+        function handleTypeChange(shouldSave = true) {
+            const type = document.getElementById('pageType').value;
+            document.getElementById('choice-editor-section').classList.toggle('hidden', type !== 'choice');
+            document.getElementById('password-editor-section').classList.toggle('hidden', type !== 'password');
+            document.getElementById('qr-editor-section').classList.toggle('hidden', type !== 'qr');
+            if (type === 'choice') renderChoiceEditor();
+            if (shouldSave) autoSave();
+        }
+
+        function autoSave() {
+            clearTimeout(saveTimeout);
+            const indicator = document.getElementById('save-indicator');
+            if(indicator) indicator.style.display = 'block';
+            saveTimeout = setTimeout(() => {
+                const p = window.config.pages[currentStudioIdx];
+                if (p) {
+                    p.content = document.getElementById('pageText').value;
+                    p.type = document.getElementById('pageType').value;
+                    p.nextIdx = document.getElementById('nextIdx').value;
+                    p.pageBg = document.getElementById('pageBg').value;
+                    p.password = document.getElementById('pagePassword').value;
+                    p.qrCode = document.getElementById('pageQrCode').value;
+                }
+                window.config.title = document.getElementById('appTitle').value;
+                window.config.globalBg = document.getElementById('globalBg').value;
+                document.getElementById('studio-game-title').textContent = window.config.title;
+                updateSimulator();
+                renderPageList();
+                if(indicator) indicator.style.display = 'none';
+            }, 1000);
+        }
+
+        function renderPageList() {
+            const list = document.getElementById('pageList');
+            list.innerHTML = '';
+            window.config.pages.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = `page-item ${i === currentStudioIdx ? 'selected' : ''}`;
+                item.innerHTML = `<div class="flex items-center overflow-hidden"><i class="fa fa-bars handle"></i><span onclick="loadStudioPage(${i})" class="truncate text-xs font-bold cursor-pointer uppercase tracking-tight">#${i}: ${p.content ? p.content.substring(0,30) : '...'}</span></div><div class="text-[8px] text-slate-600 font-bold uppercase">${p.type}</div>`;
+                list.appendChild(item);
+            });
+            if (!list.sortable) {
+                list.sortable = Sortable.create(list, { 
+                    handle: '.handle', animation: 150, 
+                    onEnd: (evt) => {
+                        const arr = window.config.pages;
+                        arr.splice(evt.newIndex, 0, arr.splice(evt.oldIndex, 1)[0]);
+                        loadStudioPage(evt.newIndex);
+                        autoSave();
+                    } 
+                });
+            }
+        }
+
+        function addAvatar() {
+            if (!window.config.avatars) window.config.avatars = [];
+            window.config.avatars.push({ id: 'A', name: 'Új Karakter', url: '' });
+            renderAvatarAdmin();
+            autoSave();
+        }
+
+        function renderAvatarAdmin() {
+            const list = document.getElementById('avatarList');
+            list.innerHTML = '';
+            (window.config.avatars || []).forEach((av, i) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-slate-900 p-2 rounded-lg border border-white/5";
+                div.innerHTML = `<input type="text" value="${av.id}" class="w-8 bg-black text-[10px] text-center rounded border border-white/10" oninput="window.config.avatars[${i}].id=this.value;autoSave()"><input type="text" value="${av.name}" class="flex-grow bg-black text-[10px] px-2 rounded border border-white/10" oninput="window.config.avatars[${i}].name=this.value;autoSave()"><button onclick="window.config.avatars.splice(${i},1);renderAvatarAdmin();autoSave()" class="text-red-500 text-xs"><i class="fa fa-trash"></i></button>`;
+                list.appendChild(div);
+            });
+        }
+
+        function addChoice() {
+            const p = window.config.pages[currentStudioIdx];
+            if (!p.choices) p.choices = [];
+            p.choices.push({ text: "Új lehetőség", target: 0 });
+            renderChoiceEditor();
+            autoSave();
+        }
+
+        function renderChoiceEditor() {
+            const p = window.config.pages[currentStudioIdx];
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            (p.choices || []).forEach((c, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2";
+                div.innerHTML = `<input type="text" value="${c.text}" class="input-style !py-2 !text-xs flex-grow" oninput="window.config.pages[${currentStudioIdx}].choices[${idx}].text=this.value;autoSave()"><input type="number" value="${c.target}" class="input-style !py-2 !text-xs w-16" placeholder="ID" oninput="window.config.pages[${currentStudioIdx}].choices[${idx}].target=this.value;autoSave()"><button onclick="window.config.pages[${currentStudioIdx}].choices.splice(${idx},1);renderChoiceEditor();autoSave()" class="text-red-500"><i class="fa fa-trash"></i></button>`;
+                container.appendChild(div);
+            });
+        }
+
+        function updateSimulator() {
+            const p = window.config.pages[currentStudioIdx];
+            if (!p) return;
+            const bg = document.getElementById('sim-bg-img');
+            if(bg) bg.src = p.pageBg || window.config.globalBg || "";
+            let text = p.content || "";
+            (window.config.avatars || []).forEach(av => {
+                const regex = new RegExp(`§${av.id}`, 'g');
+                text = text.replace(regex, `<span class="text-cyan-400 font-bold">${av.name}:</span>`);
+            });
+            const textEl = document.getElementById('sim-text');
+            if(textEl) textEl.innerHTML = text;
+            const acts = document.getElementById('sim-actions');
+            if(!acts) return;
+            acts.innerHTML = '';
+            if (p.type === 'choice' && p.choices) {
+                p.choices.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full bg-cyan-900/40 border border-cyan-500/30 text-white p-2 rounded-lg text-[10px] font-bold text-left";
+                    btn.textContent = c.text;
+                    acts.appendChild(btn);
+                });
+            } else {
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-cyan-600 border border-cyan-400 text-white p-2 rounded-lg text-[10px] font-bold";
+                btn.textContent = "Tovább";
+                acts.appendChild(btn);
+            }
+        }
+
+        function pUpdateUI() {
+            const p = window.config.pages[pSimIdx];
+            if (!p) return;
+            const bg = document.getElementById('p-bg');
+            if(bg) {
+                bg.style.opacity = 0;
+                setTimeout(() => {
+                    bg.src = p.pageBg || window.config.globalBg || "";
+                    bg.style.opacity = 1;
+                }, 300);
+            }
+            let text = p.content || "";
+            (window.config.avatars || []).forEach(av => {
+                const regex = new RegExp(`§${av.id}`, 'g');
+                text = text.replace(regex, `<span class="text-cyan-400 font-bold">${av.name}:</span>`);
+            });
+            const pText = document.getElementById('p-text');
+            if(pText) pText.innerHTML = text;
+            const acts = document.getElementById('p-actions');
+            const passArea = document.getElementById('p-password-area');
+            if(!acts || !passArea) return;
+            acts.innerHTML = '';
+            passArea.classList.add('hidden');
+            if (p.type === 'choice') {
+                (p.choices || []).forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white p-8 rounded-3xl font-bold text-xl uppercase transition active:scale-95 text-left";
+                    btn.textContent = c.text;
+                    btn.onclick = () => { pSimIdx = parseInt(c.target); pUpdateUI(); };
+                    acts.appendChild(btn);
+                });
+            } else if (p.type === 'password') {
+                passArea.classList.remove('hidden');
+                document.getElementById('p-pass-input').value = "";
+            } else if (p.type === 'qr') {
+                const btn = document.createElement('button');
+                btn.className = "btn-primary w-full py-6 rounded-3xl font-bold text-xl uppercase col-span-full";
+                btn.textContent = "QR Kód Beolvasása";
+                btn.onclick = pStartQR;
+                acts.appendChild(btn);
+            } else {
+                const btn = document.createElement('button');
+                btn.className = "bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white p-8 rounded-3xl font-bold text-xl uppercase transition active:scale-95 text-center col-span-full";
+                btn.textContent = "Tovább";
+                btn.onclick = () => { 
+                    if (p.nextIdx !== "" && p.nextIdx !== null && p.nextIdx !== undefined) pSimIdx = parseInt(p.nextIdx);
+                    else pSimIdx++; 
+                    pUpdateUI(); 
+                };
+                acts.appendChild(btn);
+            }
+        }
+
+        function pVerifyPassword() {
+            const p = window.config.pages[pSimIdx];
+            const input = document.getElementById('p-pass-input');
+            if(!input) return;
+            if (input.value.trim().toLowerCase() === (p.password || "").toLowerCase()) {
+                if (p.nextIdx !== "" && p.nextIdx !== null) pSimIdx = parseInt(p.nextIdx);
+                else pSimIdx++;
+                pUpdateUI();
+            } else {
+                window.showNotification("Hibás kód!");
+            }
+        }
+
+        function pStartQR() {
+            const layer = document.getElementById('p-qr-layer');
+            if(!layer) return;
+            layer.classList.remove('hidden');
+            layer.classList.add('flex');
+            pQrScanner = new Html5Qrcode("p-qr-reader");
+            pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => {
+                const p = window.config.pages[pSimIdx];
+                if (decodedText.trim().toLowerCase() === (p.qrCode || "").toLowerCase()) {
+                    pStopQR();
+                    if (p.nextIdx !== "" && p.nextIdx !== null) pSimIdx = parseInt(p.nextIdx);
+                    else pSimIdx++;
+                    pUpdateUI();
+                }
+            }).catch(err => {
+                window.showNotification("Hiba a kamera indításakor.");
+                pStopQR();
+            });
+        }
+
+        function pStopQR() {
+            const layer = document.getElementById('p-qr-layer');
+            if(!layer) return;
+            layer.classList.add('hidden');
+            layer.classList.remove('flex');
+            if (pQrScanner) pQrScanner.stop().finally(() => pQrScanner = null);
+        }
+
+        function launchPreview() {
+            switchToView('player');
+            pSimIdx = 0;
+            pUpdateUI();
+        }
+    </script>
+</body>
+</html>
