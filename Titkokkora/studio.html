@@ -352,7 +352,7 @@
             <button id="p-qr-cancel-btn" onclick="pStopQR(true)" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE</button>
         </div>
         <div id="p-zoom-viewer" onclick="pCloseZoom(true)">
-            <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
+            <img id="p-zoom-img" src="" onclick="event.stopPropagation(); pCloseZoom(true)">
         </div>
         <div class="p-game-wrapper">
             <div id="p-viewport">
@@ -602,7 +602,6 @@
                     p.pageImage = document.getElementById('pageImage').value;
                     p.audioUrl = document.getElementById('audioUrl').value;
                     p.ringtoneUrl = document.getElementById('ringtoneUrl').value;
-                    // Note: hiddenItems is already updated via its specific toggle function
                 } 
                 config.appTitle = document.getElementById('appTitle').value; 
                 config.globalBg = document.getElementById('globalBg').value; 
@@ -860,14 +859,8 @@
             if (p.rewards) { 
                 p.rewards.forEach(reward => {
                     if (reward.name && reward.name.trim() !== "") {
-                        // Avoid adding duplicates if the same item is re-encountered
                         if (!pInventory.find(i => i.name === reward.name)) {
-                            pInventory.push({ 
-                                name: reward.name, 
-                                icon: reward.icon || '📦', 
-                                url: reward.url || '', 
-                                seen: false 
-                            });
+                            pInventory.push({ name: reward.name, icon: reward.icon || '📦', url: reward.url || '', seen: false });
                         }
                     }
                 });
@@ -879,10 +872,8 @@
             const p = config.storyPages[pSimIdx];
             if (!p) return;
             const hidden = p.hiddenItems || [];
-            const b = document.getElementById('p-inv-badge'), 
-                  unread = pInventory.filter(i => !i.seen && !hidden.includes(i.name)).length; 
-            b.textContent = unread; 
-            b.classList.toggle('hidden', unread === 0); 
+            const b = document.getElementById('p-inv-badge'), unread = pInventory.filter(i => !i.seen && !hidden.includes(i.name)).length; 
+            b.textContent = unread; b.classList.toggle('hidden', unread === 0); 
         }
 
         function pRenderInventory() {
@@ -891,9 +882,7 @@
             const hidden = (p && p.hiddenItems) ? p.hiddenItems : [];
 
             pInventory.forEach(item => {
-                // Only render if it's not hidden on the current page
                 if (hidden.includes(item.name)) return;
-
                 const d = document.createElement('div'); d.className = "p-item-card"; 
                 d.innerHTML = item.url ? `<img src="${item.url}"><div class="text-[10px] font-bold text-white uppercase">${item.name}</div>` : `<div class="text-4xl mb-2">${item.icon}</div><div class="text-[10px] font-bold text-white uppercase">${item.name}</div>`;
                 if (!item.seen) d.innerHTML += `<div class="p-item-unread-dot"></div>`;
@@ -903,20 +892,22 @@
         }
 
         function pOpenZoom(url) { 
-            isZooming = true; pushNavState(); pZoomScale = 1;
+            isZooming = true; 
+            if(isPlayerMode) pushNavState();
+            pZoomScale = 1;
             const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
             i.src = url; i.style.transform = `scale(${pZoomScale})`; v.style.display = 'flex'; 
             let isMoving = false;
             v.ontouchstart = (e) => { if (e.touches.length === 2) pInitialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMoving = false; };
             v.ontouchmove = (e) => { isMoving = true; if (e.touches.length === 2 && pInitialDist > 0) { const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); pZoomScale = Math.min(Math.max(0.5, pZoomScale * (dist / pInitialDist)), 5); i.style.transform = `scale(${pZoomScale})`; pInitialDist = dist; } };
-            v.ontouchend = () => { if (!isMoving) pCloseZoom(false); };
-            v.onclick = () => { if(!isMoving) pCloseZoom(false); };
+            v.ontouchend = () => { if (!isMoving) pCloseZoom(!isPlayerMode); };
+            v.onclick = () => { if(!isMoving) pCloseZoom(!isPlayerMode); };
         }
 
-        function pCloseZoom(manualBack) { 
+        function pCloseZoom(forceLocal) { 
             isZooming = false;
             document.getElementById('p-zoom-viewer').style.display = 'none'; 
-            if (manualBack) { try { history.back(); } catch(e) {} }
+            if (!forceLocal) { try { history.back(); } catch(e) {} }
         }
 
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
@@ -980,7 +971,7 @@
         <button id="p-qr-cancel-btn" onclick="pStopQR(true)" class="p-action-btn mt-6 !w-auto !flex-none px-12">MÉGSE<\/button>
     <\/div>
     <div id="p-zoom-viewer" onclick="pCloseZoom(true)">
-        <img id="p-zoom-img" src="" onclick="event.stopPropagation()">
+        <img id="p-zoom-img" src="" onclick="event.stopPropagation(); pCloseZoom(true)">
     <\/div>
     <div id="hint-modal">
         <div class="modal-box">
@@ -1092,6 +1083,27 @@
                     }
                 }
             }
+        }
+
+        function pushNavState() { history.pushState({ navigation: true, zoom: true }, ""); }
+
+        function pOpenZoom(url) { 
+            isZooming = true; 
+            pushNavState();
+            pZoomScale = 1;
+            const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); 
+            i.src = url; i.style.transform = 'scale(' + pZoomScale + ')'; v.style.display = 'flex'; 
+            let isMoving = false;
+            v.ontouchstart = (e) => { if (e.touches.length === 2) pInitialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); isMoving = false; };
+            v.ontouchmove = (e) => { isMoving = true; if (e.touches.length === 2 && pInitialDist > 0) { const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); pZoomScale = Math.min(Math.max(0.5, pZoomScale * (dist / pInitialDist)), 5); i.style.transform = 'scale(' + pZoomScale + ')'; pInitialDist = dist; } };
+            v.ontouchend = () => { if (!isMoving) pCloseZoom(false); };
+            v.onclick = () => { if(!isMoving) pCloseZoom(false); };
+        }
+
+        function pCloseZoom(forceLocal) { 
+            isZooming = false;
+            document.getElementById('p-zoom-viewer').style.display = 'none'; 
+            if (!forceLocal) { try { history.back(); } catch(e) {} }
         }
 
         function pUpdateUI() {
@@ -1216,8 +1228,6 @@
             }); 
         }
 
-        function pOpenZoom(url) { isZooming = true; const v = document.getElementById('p-zoom-viewer'), i = document.getElementById('p-zoom-img'); i.src = url; v.style.display = 'flex'; }
-        function pCloseZoom() { isZooming = false; document.getElementById('p-zoom-viewer').style.display = 'none'; }
         function pToggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
         function pResetGame() { pSimIdx = 0; pInventory = []; lastAutoGpsIdx = -1; currentHintIdx = 0; pUpdateUI(); }
         function closeHintModal() { document.getElementById('hint-modal').style.display = 'none'; }
@@ -1283,11 +1293,7 @@
         }
 
         function simSwitchToInv() {
-            const p = config.storyPages[simIdx];
-            const hidden = p.hiddenItems || [];
-            // In simulation, we just show everything for simplicity or follow rules?
-            // Let's follow player rules for accurate simulation.
-            pRenderInventory(); // Reuse player render for simulation view
+            pRenderInventory();
             document.getElementById('p-inventory-overlay').style.display = 'block';
         }
 
