@@ -418,11 +418,11 @@
     <audio id="p-call-voice-audio"></audio>
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js';
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, query } from 'https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Firebase Configuration
+        // Személyes projekt adatok (Csak fallback-ként)
         const userFirebaseConfig = {
             apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618",
             authDomain: "kalandmotor.firebaseapp.com",
@@ -432,6 +432,7 @@
             appId: "1:108860908140:web:5fbec83f4ae7b51487ee49"
         };
 
+        // Adatok beszerzése a környezetből vagy fallback
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-v13';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFirebaseConfig;
         
@@ -445,7 +446,7 @@
         let isPublishing = false;
         let deleteCandidate = null;
 
-        // Global State & Initial Data
+        // Globális állapot betöltése a memóriából/storage-ból
         window.config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V13')) || {
             appTitle: "A Város Legendája",
             globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
@@ -463,40 +464,51 @@
         let splashTimer = null;
         let lastAutoGpsIdx = -1;
 
-        // --- AUTH ---
+        // Hitelesítés inicializálása környezeti token alapján
         const initAuth = async () => {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
-            } else {
-                await signInAnonymously(auth);
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch (e) {
+                    console.error("Egyedi token hiba:", e);
+                }
             }
         };
 
+        // Bejelentkezési állapot figyelő (Rule 3)
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             const loginBtn = document.getElementById('login-btn');
             const userInfo = document.getElementById('user-info');
+            
             if (user && !user.isAnonymous) {
                 loginBtn.classList.add('hidden');
                 userInfo.classList.remove('hidden');
                 document.getElementById('user-name').textContent = user.displayName;
                 document.getElementById('user-photo').src = user.photoURL;
                 await loadFromCloud();
+                window.initCommunitySync();
             } else {
                 loginBtn.classList.remove('hidden');
                 userInfo.classList.add('hidden');
             }
-            if (user) window.initCommunitySync();
         });
 
-        // Global function attachments to fix GitHub onclick issues
-        window.login = () => signInWithPopup(auth, provider).catch(err => window.showToast("Belépési hiba!", "error"));
-        window.logout = () => signOut(auth);
+        // Google bejelentkezés indítása
+        window.login = () => signInWithPopup(auth, provider).catch(err => {
+            console.error("Belépési hiba:", err);
+            window.showToast("Google belépési hiba!", "error");
+        });
+
+        window.logout = () => signOut(auth).then(() => {
+            currentUser = null;
+            window.showToast("Kijelentkezve.");
+        });
         
         document.getElementById('login-btn').onclick = window.login;
         document.getElementById('logout-btn-trigger').onclick = window.logout;
 
-        // --- CLOUD ---
+        // Adatok mentése a felhőbe (Rule 1: /artifacts/{appId}/users/{userId}/...)
         async function saveToCloud() {
             if (!currentUser || currentUser.isAnonymous || isSyncing) return;
             isSyncing = true;
@@ -507,8 +519,9 @@
                     configData: JSON.parse(JSON.stringify(window.config)),
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
-            } catch (err) { console.error(err); }
-            finally { 
+            } catch (err) { 
+                console.error("Mentési hiba:", err); 
+            } finally { 
                 setTimeout(() => {
                     document.getElementById('save-indicator').style.display = 'none';
                     isSyncing = false;
@@ -517,7 +530,7 @@
         }
 
         async function loadFromCloud() {
-            if (!currentUser) return;
+            if (!currentUser || currentUser.isAnonymous) return;
             try {
                 const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'data', 'userConfig');
                 const snap = await getDoc(userDocRef);
@@ -526,18 +539,22 @@
                     localStorage.setItem('KALAND_STUDIO_V13', JSON.stringify(window.config));
                     window.refreshUI();
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error("Betöltési hiba:", err); 
+            }
         }
 
+        // Publikálás a közösségnek (Rule 1: /artifacts/{appId}/public/data/...)
         window.publishGame = async () => {
             if (!currentUser || currentUser.isAnonymous) {
-                window.showToast("Játék publikálásához jelentkezz be!", "error");
+                window.showToast("Publikáláshoz jelentkezz be Google-fiókkal!", "error");
                 return;
             }
             isPublishing = true;
             const btn = document.getElementById('publish-btn');
+            const originalText = btn.textContent;
             btn.textContent = "PUBLIKÁLÁS...";
-            btn.classList.add('opacity-50');
+            btn.classList.add('opacity-50', 'pointer-events-none');
 
             const gameId = window.config.cloudId || self.crypto.randomUUID();
             window.config.cloudId = gameId;
@@ -556,25 +573,36 @@
                 window.showToast("Játék sikeresen publikálva!");
                 saveToCloud();
             } catch (err) { 
-                window.showToast("Hiba a publikálás során!", "error");
+                console.error("PUBLISH ERROR:", err.code, err.message);
+                if (err.code === 'permission-denied') {
+                    window.showToast("Nincs írási jogosultságod! Ellenőrizd a Firestore szabályokat.", "error");
+                } else {
+                    window.showToast("Publikálási hiba történt!", "error");
+                }
             } finally {
                 isPublishing = false;
-                btn.textContent = "Mentés a Felhőbe";
-                btn.classList.remove('opacity-50');
+                btn.textContent = originalText;
+                btn.classList.remove('opacity-50', 'pointer-events-none');
             }
         };
 
+        // Közösségi lista szinkronizálása valós időben
         window.initCommunitySync = () => {
+            if (!currentUser || currentUser.isAnonymous) return;
             const col = collection(db, 'artifacts', appId, 'public', 'data', 'publishedGames');
             onSnapshot(col, (snap) => {
                 const list = document.getElementById('community-game-list');
                 list.innerHTML = '';
                 snap.docs.forEach(docSnap => {
                     const data = docSnap.data();
+                    const isAuthor = currentUser && (data.authorId === currentUser.uid);
                     const card = document.createElement('div');
                     card.className = "glass-card p-6 flex flex-col gap-4 border border-slate-700 hover:border-purple-500 transition-all";
                     card.innerHTML = `
-                        <img src="${data.background || ''}" class="w-full h-32 object-cover rounded-xl" onerror="this.src='https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0'">
+                        <div class="relative">
+                            <img src="${data.background || ''}" class="w-full h-32 object-cover rounded-xl" onerror="this.src='https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0'">
+                            ${isAuthor ? `<button onclick="deletePublishedGame('${docSnap.id}')" class="absolute top-2 right-2 bg-red-600/80 p-2 rounded-lg hover:bg-red-500 transition-all"><i class="fa fa-trash text-white"></i></button>` : ''}
+                        </div>
                         <div>
                             <h3 class="font-bold text-lg text-white">${data.title}</h3>
                             <div class="flex items-center gap-2 mt-2">
@@ -586,7 +614,23 @@
                     `;
                     list.appendChild(card);
                 });
+            }, (err) => {
+                console.error("Community Snapshot Error:", err);
             });
+        };
+
+        window.deletePublishedGame = async (gameId) => {
+            if (!currentUser || currentUser.isAnonymous) return;
+            if (!confirm("Biztosan törölni akarod ezt a publikált játékot?")) return;
+            
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gameId);
+                await deleteDoc(docRef);
+                window.showToast("Publikált játék törölve.");
+            } catch (err) {
+                console.error("Törlési hiba:", err);
+                window.showToast("Hiba a törlés során! Nincs jogosultságod.", "error");
+            }
         };
 
         window.loadPublicGame = async (id) => {
@@ -595,12 +639,12 @@
             if (snap.exists()) {
                 window.config = snap.data().config;
                 window.refreshUI();
-                window.showToast("Játék betöltve!");
+                window.showToast("Kaland betöltve!");
                 window.switchView('studio');
             }
         };
 
-        // --- STUDIO LOGIC ---
+        // --- STÚDIÓ LOGIKA ---
         window.refreshUI = () => {
             document.getElementById('appTitle').value = window.config.appTitle || "";
             document.getElementById('globalBg').value = window.config.globalBg || "";
@@ -891,7 +935,7 @@
             document.getElementById('main-view-toggle').style.display = v === 'studio' ? 'flex' : 'none';
         };
 
-        // --- PLAYER MODE ---
+        // --- JÁTÉKOS MÓD ---
         window.togglePlayerMode = () => {
             const pv = document.getElementById('player-view');
             const sv = document.getElementById('studio-view');
@@ -1120,7 +1164,7 @@
             setTimeout(() => t.style.display = 'none', 3000);
         };
 
-        // GPS logic
+        // GPS távolság számítás (Ha a jelenet típusa 'gps')
         function getDistance(lat1, lon1, lat2, lon2) {
             if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
             const R = 6371e3;
@@ -1148,7 +1192,7 @@
             }, null, { enableHighAccuracy: true });
         }
 
-        // --- INITIALIZE ---
+        // --- INICIALIZÁLÁS ---
         initAuth();
         const listEl = document.getElementById('pageList');
         Sortable.create(listEl, {
