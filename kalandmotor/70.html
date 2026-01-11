@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Kaland Játék Stúdió V13.2 ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            height: 100dvh;
+            font-family: 'Play', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #studio-view, #community-view { height: 100%; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; }
+        @media (min-width: 768px) { #studio-view, #community-view { padding: 2.5rem; } }
+        
+        #community-view { display: none; }
+        
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; }
+
+        .input-style { background: #0f172a; color: var(--secondary); border: 1px solid #334155; border-radius: 0.5rem; padding: 0.6rem; outline: none; transition: 0.2s; width: 100%; font-size: 0.875rem; }
+        .input-style:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+        
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid transparent; transition: 0.2s; cursor: pointer; user-select: none; }
+        .page-item:hover { background: #2d3748; }
+        .page-item.selected { border-color: var(--secondary); background: #4c1d95; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+        .handle { cursor: grab; padding: 5px 15px 5px 5px; color: #64748b; font-size: 0.9rem; }
+
+        /* SIMULATOR */
+        .sim-container { position: sticky; top: 0; width: 320px; height: 600px; background: #000; border: 10px solid #1e293b; border-radius: 2.5rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s; opacity: 0.6; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sim-box { position: relative; background: rgba(0,0,0,0.92); border-top: 3px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 35px; min-height: 220px; display: flex; flex-direction: column; }
+        .sim-avatar { position: absolute; top: -40px; left: 10px; width: 65px; height: 65px; border-radius: 50%; border: 3px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; }
+
+        /* PLAYER VIEW OVERLAYS */
+        #p-splash-screen, #p-call-screen { position: absolute; inset: 0; z-index: 5000; background: #000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+        .phone-ui { background: linear-gradient(to bottom, #1e293b, #000); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-around; padding: 20% 20px; box-sizing: border-box; text-align: center; }
+        .phone-btn { width: 75px; height: 75px; border-radius: 50%; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .phone-btn.decline { background: #ef4444; }
+        .phone-btn.accept { background: #10b981; }
+        .pulse { animation: pulse-anim 1.5s infinite; }
+        @keyframes pulse-anim { 0% { box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.6); } 100% { box-shadow: 0 0 0 30px rgba(16, 185, 129, 0); } }
+
+        /* PLAYER VIEW */
+        #player-view { position: fixed; inset: 0; z-index: 9000; background: #000; display: none; flex-direction: column; height: 100dvh; }
+        .p-game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
+        #p-viewport { position: relative; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #p-bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s ease-in-out; }
+        #p-content-layer { position: relative; z-index: 10; margin-top: auto; width: 100%; display: flex; flex-direction: column; }
+
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.92); border-top: 4px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 25px; padding-top: 45px; min-height: 280px; max-height: 80dvh; display: flex; flex-direction: column; box-shadow: 0 -15px 35px rgba(0,0,0,0.7); }
+        .p-avatar-frame { position: absolute; top: -45px; left: 20px; width: 85px; height: 85px; border-radius: 50%; border: 4px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        #p-story-text { text-align: justify; hyphens: auto; font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 15px; color: #f8fafc; }
+        .p-action-btn { flex: 1; background: var(--primary); color: white; padding: 16px; border-radius: 0.85rem; font-weight: 700; text-align: center; font-size: 1.05rem; cursor: pointer; text-transform: uppercase; transition: 0.1s; display: flex; align-items: center; justify-content: center; border: none; }
+        .p-action-btn:active { transform: scale(0.98); brightness: 0.9; }
+        .p-btn-secondary { background: #334155; }
+
+        .p-bottom-nav { height: 80px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.4); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .p-nav-item { color: #94a3b8; font-size: 1.6rem; cursor: pointer; border: none; background: transparent; position: relative; width: 25%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: color 0.2s; }
+        .p-nav-item.active { color: var(--primary); }
+        .p-badge { position: absolute; top: 15px; right: 25%; background: #ef4444; color: white; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: bold; border: 2px solid #0f172a; }
+
+        @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.9); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+        .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.2em; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: #1e293b; border: 2px solid var(--primary); border-radius: 1.5rem; padding: 2rem; max-width: 400px; width: 95%; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="save-indicator" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-2 rounded-full font-bold text-xs z-[10000] hidden">
+        <i class="fa fa-sync-alt fa-spin mr-2"></i> MENTÉS...
+    </div>
+
+    <!-- HINT MODAL -->
+    <div id="hint-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="hint-confirm-view">
+                <h3 class="text-xl font-bold mb-4 uppercase text-cyan-400">Segítség kérése</h3>
+                <p class="text-slate-400 mb-8">Biztosan látni akarod a következő segítséget?</p>
+                <div class="flex gap-4">
+                    <button onclick="closeHintModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-600">Mégse</button>
+                    <button id="hint-show-btn" class="flex-1 py-3 bg-purple-600 rounded-xl font-bold text-xs uppercase hover:bg-purple-500">Igen, kérem</button>
+                </div>
+            </div>
+            <div id="hint-display-view" class="hidden">
+                <h3 class="text-xl font-bold mb-4 uppercase text-purple-400">Útmutatás</h3>
+                <p id="hint-text" class="text-white text-lg font-bold mb-8 italic"></p>
+                <button onclick="closeHintModal()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold text-xs uppercase hover:bg-cyan-500">Értem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-box border-red-500/50">
+            <div id="confirm-icon-box" class="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i id="confirm-icon" class="fa fa-trash-can"></i>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold mb-2">Biztosan törlöd?</h2>
+            <p id="confirm-desc" class="text-slate-400 text-sm mb-8">Ez a művelet nem vonható vissza.</p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Mégse</button>
+                <button id="confirm-action-btn" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-xs uppercase">Végrehajtás</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDIO -->
+    <div id="studio-view">
+        <div class="max-w-7xl mx-auto">
+            <header class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-5xl font-bold uppercase text-white">Stúdió <span class="text-purple-500">V13.2</span> ✨</h1>
+                    <p class="text-cyan-400 text-xs font-bold uppercase">Minden oldaltípus • GPS • Cloud</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 md:gap-3">
+                    <button onclick="switchView('community')" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Közösség</button>
+                    <button onclick="newGame()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase">Új játék</button>
+                    <button onclick="togglePlayerMode()" class="bg-purple-600 text-white px-5 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg"><i class="fa fa-play mr-2"></i> Teszt</button>
+                    <button id="login-btn" class="bg-white text-black px-5 py-2 rounded-full font-bold text-xs">Belépés</button>
+                    <div id="user-info" class="hidden flex items-center gap-3 bg-slate-800 p-1 pr-4 rounded-full border border-slate-700">
+                        <img id="user-photo" src="" class="w-8 h-8 rounded-full">
+                        <span id="user-name" class="text-xs font-bold"></span>
+                    </div>
+                    <button id="save-btn" onclick="saveGame()" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase">Mentés</button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="glass-card p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Alapbeállítások</label>
+                            <input type="text" id="appTitle" class="input-style" placeholder="Cím" oninput="autoSave()">
+                            <input type="url" id="globalBg" class="input-style" placeholder="Háttér URL" oninput="autoSave()">
+                            <input type="url" id="initialMapLink" class="input-style" placeholder="Főtérkép Link" oninput="autoSave()">
+                        </div>
+                        <div class="space-y-3">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Avatarok</label>
+                            <div id="avatarList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+                            <button onclick="addAvatar()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ AVATAR</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <label class="text-purple-400 font-bold uppercase text-[10px]">Jelenetek</label>
+                        <div id="pageList" class="mt-4 max-h-60 overflow-y-auto pr-2"></div>
+                        <button onclick="addPage()" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold">+ ÚJ OLDAL</button>
+                    </div>
+
+                    <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                        <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                            <h2 class="text-2xl font-bold text-white">Szerkesztés: <span id="editing-page-id" class="text-purple-500">#0</span></h2>
+                            <select id="pageType" class="input-style !w-44" onchange="updateUI(); autoSave();">
+                                <option value="story">Leírás</option>
+                                <option value="choice">Választás</option>
+                                <option value="password">Kódzár</option>
+                                <option value="qr">QR Kód</option>
+                                <option value="gps">GPS Pont</option>
+                                <option value="splash">Átvezetés</option>
+                                <option value="call">Hívás</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Történet szövege</label>
+                                <div id="avatarQuickSelect" class="flex gap-2"></div>
+                            </div>
+                            <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Szöveg..." oninput="autoSave()"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="url" id="pageImage" class="input-style text-xs" placeholder="Kép URL (illusztráció)" oninput="autoSave()">
+                            <input type="url" id="pageBg" class="input-style text-xs" placeholder="Egyedi Háttér URL" oninput="autoSave()">
+                        </div>
+
+                        <!-- PASSWORD / GPS / CALL / QR SPECIFIC INPUTS -->
+                        <div id="passwordInputs" class="hidden space-y-3">
+                            <input type="text" id="passwordVal" class="input-style" placeholder="Helyes jelszó" oninput="autoSave()">
+                            <textarea id="pageHints" class="input-style text-xs" placeholder="Súgók (soronként)" oninput="autoSave()"></textarea>
+                        </div>
+
+                        <div id="gpsInputs" class="hidden grid grid-cols-2 gap-4">
+                            <input type="number" id="targetLat" step="any" class="input-style" placeholder="Szélesség" oninput="autoSave()">
+                            <input type="number" id="targetLng" step="any" class="input-style" placeholder="Hosszúság" oninput="autoSave()">
+                        </div>
+
+                        <div id="qrInputs" class="hidden">
+                            <input type="text" id="qrCodeVal" class="input-style" placeholder="QR Kód szöveges értéke" oninput="autoSave()">
+                        </div>
+
+                        <div id="callInputs" class="hidden grid grid-cols-2 gap-4">
+                            <input type="url" id="ringtoneUrl" class="input-style text-xs" placeholder="Csengőhang URL" oninput="autoSave()">
+                            <input type="url" id="voiceUrl" class="input-style text-xs" placeholder="Hangfelvétel URL" oninput="autoSave()">
+                        </div>
+
+                        <!-- Choice Editor -->
+                        <div id="choiceEditor" class="hidden space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Választási lehetőségek</label>
+                            <div id="choiceList" class="space-y-2"></div>
+                            <button onclick="addChoice()" class="text-cyan-400 text-[10px] font-bold">+ ÚJ LEHETŐSÉG</button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700">
+                            <input type="number" id="prevIdx" class="input-style" placeholder="Előző oldal #" oninput="autoSave()">
+                            <input type="number" id="nextIdx" class="input-style" placeholder="Következő oldal #" oninput="autoSave()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIMULATOR -->
+                <div class="lg:col-span-4 hidden lg:flex justify-center">
+                    <div class="sim-container">
+                        <div id="sim-viewport">
+                            <img id="sim-bg" src="">
+                            <div id="sim-content">
+                                <div class="sim-box">
+                                    <img id="sim-avatar" class="sim-avatar" src="">
+                                    <div id="sim-scroll" class="overflow-y-auto flex-grow">
+                                        <div id="sim-actual-text" style="font-size: 16px; font-weight: 700;"></div>
+                                    </div>
+                                    <div id="sim-actions" class="mt-4 flex gap-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMUNITY (REMAINING SAME AS V13.2) -->
+    <div id="community-view">
+        <div class="max-w-7xl mx-auto pb-20">
+            <header class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-5xl font-bold uppercase text-white">Portál 🌐</h1>
+                    <p class="text-emerald-400 text-xs font-bold uppercase">Fedezd fel a közösség kalandjait</p>
+                </div>
+                <button onclick="switchView('studio')" class="bg-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-xs uppercase">Vissza a Stúdióba</button>
+            </header>
+            <div id="community-game-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div id="player-view">
+        <div id="p-qr-layer" class="hidden absolute inset-0 bg-black z-[10000] flex flex-col items-center justify-center">
+            <div id="p-qr-reader" class="w-64 h-64 border-2 border-cyan-400 rounded-3xl overflow-hidden"></div>
+            <button onclick="pStopQR()" class="mt-8 bg-red-600 text-white px-10 py-4 rounded-xl font-bold uppercase">Mégse</button>
+        </div>
+
+        <div id="p-splash-screen">
+            <div id="p-splash-text" class="text-white text-center p-10 splash-text-anim text-4xl"></div>
+        </div>
+
+        <div id="p-call-screen">
+            <div class="phone-ui">
+                <div>
+                    <p class="text-xs uppercase tracking-widest opacity-60">Bejövő hívás</p>
+                    <h1 id="p-call-name" class="text-4xl font-bold mt-4 text-white">Ismeretlen</h1>
+                </div>
+                <div class="flex justify-around pb-10 w-full">
+                    <button onclick="pEndCall()" class="phone-btn decline"><i class="fa fa-phone-slash text-white text-3xl"></i></button>
+                    <button onclick="pAnswerCall()" class="phone-btn accept pulse"><i class="fa fa-phone text-white text-3xl"></i></button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-game-wrapper">
+            <div id="p-viewport">
+                <img id="p-bg-layer" src="" class="absolute inset-0 w-full h-full object-cover">
+                <div id="p-inventory-overlay" onclick="document.getElementById('p-inventory-overlay').style.display='none'" class="absolute inset-0 bg-slate-950 z-[150] p-8 hidden overflow-y-auto">
+                    <h2 class="text-center text-cyan-400 font-bold mb-10 uppercase text-2xl">Hátizsák</h2>
+                    <div id="p-item-list" class="p-item-grid grid grid-cols-2 gap-4"></div>
+                </div>
+
+                <div id="p-content-layer">
+                    <div class="p-dialog-box">
+                        <img id="p-avatar-img" class="p-avatar-frame" src="">
+                        <div id="p-scroll-area" class="overflow-y-auto flex-grow mb-4">
+                            <img id="p-page-illustration" class="w-full rounded-2xl mb-6 hidden" src="">
+                            <div id="p-story-text"></div>
+                            <div id="p-gps-monitor" class="hidden text-center p-6 bg-slate-900/80 rounded-3xl mt-4 border border-cyan-500/40">
+                                <div class="text-4xl font-bold text-white"><span id="p-distance-val">...</span> m</div>
+                            </div>
+                        </div>
+                        <div id="p-button-container" class="flex flex-col gap-3"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-bottom-nav">
+                <button class="p-nav-item active" onclick="if(window.config.initialMapLink) window.open(window.config.initialMapLink,'_blank')">
+                    <i class="fa fa-map-marked-alt text-2xl"></i>
+                </button>
+                <button class="p-nav-item" onclick="pToggleInventory()">
+                    <i class="fa fa-briefcase text-2xl"></i>
+                    <div id="p-inv-badge" class="p-badge hidden">0</div>
+                </button>
+                <button class="p-nav-item" onclick="pResetGame()">
+                    <i class="fa fa-rotate-right text-2xl"></i>
+                </button>
+                <button class="p-nav-item" onclick="toggleFullScreen()">
+                    <i class="fa fa-expand text-2xl"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="p-ringtone-audio" loop></audio>
+    <audio id="p-call-voice-audio"></audio>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const userFallbackConfig = { apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618", authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFallbackConfig;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-v13';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        const defaultConfig = {
+            appTitle: "A Város Titka",
+            globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
+            avatars: [{ id: 'A', name: 'Mesélő', url: '', color: '#8b5cf6' }],
+            storyPages: [{ id: self.crypto.randomUUID(), content: "Üdvözöllek! §A", pageType: "story" }]
+        };
+
+        window.config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V13')) || defaultConfig;
+        let currentIdx = 0, pSimIdx = 0, pInventory = [], pQrScanner = null, splashTimer = null, userPos = null, lastAutoGpsIdx = -1, currentUser = null, currentHintIdx = 0;
+
+        // HELPER: Stabil ID alapú navigáció
+        const getPageIdxById = (id) => id ? window.config.storyPages.findIndex(p => p.id === id) : -1;
+        const getPageIdByIdx = (idx) => (idx !== "" && window.config.storyPages[idx]) ? window.config.storyPages[idx].id : null;
+
+        // GPS Logika
+        function getDistance(lat1, lon1, lat2, lon2) {
+            if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
+        }
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition((pos) => {
+                userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                updateGpsDisplays();
+            }, null, { enableHighAccuracy: true });
+        }
+
+        function updateGpsDisplays() {
+            const pP = window.config.storyPages[pSimIdx];
+            if (pP && pP.pageType === 'gps' && userPos) {
+                const dist = getDistance(userPos.lat, userPos.lng, pP.targetLat, pP.targetLng);
+                const el = document.getElementById('p-distance-val');
+                if (el) el.textContent = dist;
+                if (dist <= 20 && lastAutoGpsIdx !== pSimIdx) {
+                    lastAutoGpsIdx = pSimIdx;
+                    setTimeout(() => {
+                        pSimIdx = getPageIdxById(pP.nextPageId) !== -1 ? getPageIdxById(pP.nextPageId) : pSimIdx + 1;
+                        window.pUpdateUI();
+                    }, 1200);
+                }
+            }
+        }
+
+        // --- STÚDIÓ FUNKCIÓK ---
+        window.refreshUI = () => {
+            document.getElementById('appTitle').value = window.config.appTitle;
+            window.renderPageList();
+            window.renderAvatarAdmin();
+            window.loadPage(0);
+        };
+
+        window.loadPage = (i) => {
+            currentIdx = i; const p = window.config.storyPages[i]; if (!p) return;
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('editing-page-id').textContent = `#${i}`;
+            document.getElementById('pageText').value = p.content || "";
+            document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('pageImage').value = p.pageImage || "";
+            document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('passwordVal').value = p.password || "";
+            document.getElementById('pageHints').value = p.hints || "";
+            document.getElementById('targetLat').value = p.targetLat || "";
+            document.getElementById('targetLng').value = p.targetLng || "";
+            document.getElementById('qrCodeVal').value = p.qrCode || "";
+            document.getElementById('ringtoneUrl').value = p.ringtoneUrl || "";
+            document.getElementById('voiceUrl').value = p.voiceUrl || "";
+            
+            const nIdx = getPageIdxById(p.nextPageId);
+            const prIdx = getPageIdxById(p.prevPageId);
+            document.getElementById('nextIdx').value = nIdx !== -1 ? nIdx : "";
+            document.getElementById('prevIdx').value = prIdx !== -1 ? prIdx : "";
+
+            window.updateUI();
+            window.updateSimulator();
+            window.renderPageList();
+        };
+
+        window.updateUI = () => {
+            const t = document.getElementById('pageType').value;
+            document.getElementById('passwordInputs').classList.toggle('hidden', t !== 'password');
+            document.getElementById('gpsInputs').classList.toggle('hidden', t !== 'gps');
+            document.getElementById('qrInputs').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('callInputs').classList.toggle('hidden', t !== 'call');
+            document.getElementById('choiceEditor').classList.toggle('hidden', t !== 'choice');
+            if (t === 'choice') window.renderChoiceEditor();
+        };
+
+        window.autoSave = () => {
+            const p = window.config.storyPages[currentIdx];
+            if (p) {
+                p.content = document.getElementById('pageText').value;
+                p.pageType = document.getElementById('pageType').value;
+                p.pageImage = document.getElementById('pageImage').value;
+                p.pageBg = document.getElementById('pageBg').value;
+                p.password = document.getElementById('passwordVal').value;
+                p.hints = document.getElementById('pageHints').value;
+                p.targetLat = document.getElementById('targetLat').value;
+                p.targetLng = document.getElementById('targetLng').value;
+                p.qrCode = document.getElementById('qrCodeVal').value;
+                p.ringtoneUrl = document.getElementById('ringtoneUrl').value;
+                p.voiceUrl = document.getElementById('voiceUrl').value;
+                p.nextPageId = getPageIdByIdx(document.getElementById('nextIdx').value);
+                p.prevPageId = getPageIdByIdx(document.getElementById('prevIdx').value);
+            }
+            window.config.appTitle = document.getElementById('appTitle').value;
+            window.config.globalBg = document.getElementById('globalBg').value;
+            localStorage.setItem('KALAND_STUDIO_V13', JSON.stringify(window.config));
+            window.updateSimulator();
+        };
+
+        // --- PLAYER LOGIKA (V11.0 Funkcionalitás visszaállítása) ---
+        window.pUpdateUI = () => {
+            const p = window.config.storyPages[pSimIdx]; if (!p) return;
+            clearTimeout(splashTimer);
+            pStopAllAudio();
+            
+            document.getElementById('p-splash-screen').style.display = 'none';
+            document.getElementById('p-call-screen').style.display = 'none';
+            document.getElementById('p-content-layer').style.display = 'flex';
+
+            // SPLASH LOGIKA
+            if (p.pageType === 'splash') {
+                document.getElementById('p-splash-screen').style.display = 'flex';
+                document.getElementById('p-content-layer').style.display = 'none';
+                const splashText = document.getElementById('p-splash-text');
+                splashText.textContent = p.content || "";
+                splashText.style.animation = 'none';
+                void splashText.offsetWidth;
+                splashText.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
+                splashTimer = setTimeout(() => {
+                    pSimIdx = getPageIdxById(p.nextPageId) !== -1 ? getPageIdxById(p.nextPageId) : pSimIdx + 1;
+                    window.pUpdateUI();
+                }, 10500);
+                return;
+            }
+
+            // CALL LOGIKA
+            if (p.pageType === 'call') {
+                document.getElementById('p-call-screen').style.display = 'flex';
+                document.getElementById('p-content-layer').style.display = 'none';
+                document.getElementById('p-call-name').textContent = p.content || "Ismeretlen";
+                const ring = document.getElementById('p-ringtone-audio');
+                ring.src = p.ringtoneUrl || "https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3";
+                ring.play().catch(() => {});
+                return;
+            }
+
+            // SZOKÁSOS JELENET
+            document.getElementById('p-bg-layer').src = p.pageBg || window.config.globalBg || "";
+            let text = p.content || "";
+            const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
+            window.config.avatars.forEach(av => {
+                if (text.includes(`§${av.id}`)) {
+                    avImg.src = av.url || "";
+                    avImg.style.display = av.url ? 'block' : 'none';
+                    avImg.style.borderColor = av.color;
+                    text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`);
+                }
+            });
+            document.getElementById('p-story-text').innerHTML = text;
+            const ill = document.getElementById('p-page-illustration');
+            if (p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
+            
+            document.getElementById('p-gps-monitor').classList.toggle('hidden', p.pageType !== 'gps');
+            const btnCont = document.getElementById('p-button-container'); btnCont.innerHTML = '';
+
+            // PASSWORD INTERFACE + HINTS
+            if (p.pageType === 'password') {
+                if (p.hints) {
+                    const hBtn = document.createElement('button');
+                    hBtn.className = "text-cyan-400 text-3xl mb-4 mx-auto";
+                    hBtn.innerHTML = '<i class="fa fa-circle-question"></i>';
+                    hBtn.onclick = () => window.openHintModal(p.hints);
+                    btnCont.appendChild(hBtn);
+                }
+                const inp = document.createElement('input');
+                inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4";
+                inp.placeholder = "KÓD...";
+                btnCont.appendChild(inp);
+                const subBtn = document.createElement('button');
+                subBtn.className = "p-action-btn";
+                subBtn.textContent = "NYITÁS";
+                subBtn.onclick = () => {
+                    if (inp.value.trim().toLowerCase() === (p.password || "").toLowerCase()) {
+                        currentHintIdx = 0;
+                        pSimIdx = getPageIdxById(p.nextPageId) !== -1 ? getPageIdxById(p.nextPageId) : pSimIdx + 1;
+                        window.pUpdateUI();
+                    }
+                }
+                btnCont.appendChild(subBtn);
+            } else if (p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => {
+                    const cb = document.createElement('button');
+                    cb.className = "p-action-btn";
+                    cb.textContent = c.text;
+                    cb.onclick = () => {
+                        const targetIdx = getPageIdxById(c.targetId);
+                        pSimIdx = targetIdx !== -1 ? targetIdx : pSimIdx;
+                        window.pUpdateUI();
+                    };
+                    btnCont.appendChild(cb);
+                });
+            } else if (p.pageType === 'qr') {
+                const qrBtn = document.createElement('button');
+                qrBtn.className = "p-action-btn";
+                qrBtn.textContent = "BEOLVASÁS";
+                qrBtn.onclick = window.pStartQR;
+                btnCont.appendChild(qrBtn);
+            }
+
+            // NAVIGÁCIÓS SOR
+            const navRow = document.createElement('div');
+            navRow.className = "flex gap-4 w-full mt-2";
+            const bBack = document.createElement('button');
+            bBack.className = "p-action-btn p-btn-secondary";
+            bBack.textContent = "Vissza";
+            bBack.onclick = () => {
+                const prevIdx = getPageIdxById(p.prevPageId);
+                pSimIdx = prevIdx !== -1 ? prevIdx : Math.max(0, pSimIdx - 1);
+                window.pUpdateUI();
+            };
+            navRow.appendChild(bBack);
+
+            if (p.pageType !== 'password' && p.pageType !== 'choice' && p.pageType !== 'qr' && p.pageType !== 'gps') {
+                const bNext = document.createElement('button');
+                bNext.className = "p-action-btn";
+                bNext.textContent = "Tovább";
+                bNext.onclick = () => {
+                    const nextIdx = getPageIdxById(p.nextPageId);
+                    pSimIdx = nextIdx !== -1 ? nextIdx : pSimIdx + 1;
+                    window.pUpdateUI();
+                };
+                navRow.appendChild(bNext);
+            }
+            btnCont.appendChild(navRow);
+        };
+
+        // --- HINT MODAL ---
+        window.openHintModal = (hints) => {
+            const list = hints.split('\n').filter(h => h.trim());
+            const currentText = list[Math.min(currentHintIdx, list.length - 1)];
+            document.getElementById('hint-text').textContent = currentText;
+            document.getElementById('hint-confirm-view').classList.remove('hidden');
+            document.getElementById('hint-display-view').classList.add('hidden');
+            document.getElementById('hint-modal').style.display = 'flex';
+            
+            document.getElementById('hint-show-btn').onclick = () => {
+                document.getElementById('hint-confirm-view').classList.add('hidden');
+                document.getElementById('hint-display-view').classList.remove('hidden');
+                currentHintIdx++;
+            };
+        };
+        window.closeHintModal = () => document.getElementById('hint-modal').style.display = 'none';
+
+        // --- CALL LOGIKA ---
+        window.pAnswerCall = () => {
+            const p = window.config.storyPages[pSimIdx];
+            document.getElementById('p-ringtone-audio').pause();
+            const voice = document.getElementById('p-call-voice-audio');
+            voice.src = p.voiceUrl || "";
+            voice.play().catch(() => window.pEndCall());
+            voice.onended = window.pEndCall;
+        };
+        window.pEndCall = () => {
+            pStopAllAudio();
+            const p = window.config.storyPages[pSimIdx];
+            const nextIdx = getPageIdxById(p.nextPageId);
+            pSimIdx = nextIdx !== -1 ? nextIdx : pSimIdx + 1;
+            window.pUpdateUI();
+        };
+        function pStopAllAudio() {
+            document.getElementById('p-ringtone-audio').pause();
+            document.getElementById('p-call-voice-audio').pause();
+        }
+
+        // --- EGYÉB SEGÉDFÜGGVÉNYEK ---
+        window.pStartQR = () => {
+            document.getElementById('p-qr-layer').style.display='flex';
+            pQrScanner = new Html5Qrcode("p-qr-reader");
+            pQrScanner.start({facingMode:"environment"}, {fps:10,qrbox:250}, t => {
+                const p = window.config.storyPages[pSimIdx];
+                if (t.trim().toUpperCase() === (p.qrCode || "").toUpperCase()) {
+                    window.pStopQR();
+                    const nextIdx = getPageIdxById(p.nextPageId);
+                    pSimIdx = nextIdx !== -1 ? nextIdx : pSimIdx + 1;
+                    window.pUpdateUI();
+                }
+            });
+        };
+        window.pStopQR = () => { if(pQrScanner) pQrScanner.stop().finally(() => document.getElementById('p-qr-layer').style.display='none'); };
+        window.pResetGame = () => { pSimIdx = 0; currentHintIdx = 0; pInventory = []; window.pUpdateUI(); };
+        window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+        window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; };
+
+        // --- STUDIO UI RENDERING ---
+        window.renderPageList = () => {
+            const l = document.getElementById('pageList'); l.innerHTML = '';
+            window.config.storyPages.forEach((p, i) => {
+                const d = document.createElement('div');
+                d.className = `page-item ${i === currentIdx ? 'selected' : ''}`;
+                d.innerHTML = `<div class="flex items-center gap-2 flex-grow overflow-hidden pr-2">
+                    <i class="fa fa-bars handle"></i>
+                    <span class="truncate font-bold text-sm">#${i}: ${p.content ? p.content.substring(0,30).replace(/§\w/g, '') : '...'}</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="event.stopPropagation(); window.duplicatePage(${i})" class="text-cyan-400 hover:scale-110"><i class="fa fa-copy"></i></button>
+                    <button onclick="event.stopPropagation(); window.deletePage(${i})" class="text-red-400 hover:scale-110"><i class="fa fa-trash"></i></button>
+                </div>`;
+                d.onclick = () => window.loadPage(i);
+                l.appendChild(d);
+            });
+        };
+
+        window.renderAvatarAdmin = () => {
+            const l = document.getElementById('avatarList'); l.innerHTML = '';
+            window.config.avatars.forEach((av, i) => {
+                const d = document.createElement('div');
+                d.className = "flex gap-2 mb-2 items-center bg-slate-800/50 p-2 rounded-lg";
+                d.innerHTML = `<input type="text" class="input-style !w-12 text-center" value="${av.id}" oninput="window.config.avatars[${i}].id=this.value.toUpperCase();window.autoSave()">
+                <input type="text" class="input-style flex-1" value="${av.name}" oninput="window.config.avatars[${i}].name=this.value;window.autoSave()">
+                <input type="color" class="w-8 h-8 rounded-full border-2 border-slate-600 bg-transparent" value="${av.color}" oninput="window.config.avatars[${i}].color=this.value;window.autoSave()">
+                <button onclick="window.config.avatars.splice(${i},1);window.renderAvatarAdmin();window.autoSave()" class="text-red-500"><i class="fa fa-times"></i></button>`;
+                l.appendChild(d);
+            });
+        };
+
+        window.renderChoiceEditor = () => {
+            const p = window.config.storyPages[currentIdx];
+            const l = document.getElementById('choiceList'); l.innerHTML = '';
+            if (p.choices) {
+                p.choices.forEach((c, i) => {
+                    const targetIdx = getPageIdxById(c.targetId);
+                    const d = document.createElement('div');
+                    d.className = "flex gap-2 items-center";
+                    d.innerHTML = `<input type="text" class="input-style flex-1" value="${c.text}" oninput="window.config.storyPages[currentIdx].choices[${i}].text=this.value;window.autoSave()">
+                    <input type="number" class="input-style !w-20" value="${targetIdx !== -1 ? targetIdx : ''}" placeholder="Cél #" oninput="window.config.storyPages[currentIdx].choices[${i}].targetId=getPageIdByIdx(this.value);window.autoSave()">
+                    <button onclick="window.config.storyPages[currentIdx].choices.splice(${i},1);window.renderChoiceEditor();window.autoSave()" class="text-red-500"><i class="fa fa-times"></i></button>`;
+                    l.appendChild(d);
+                });
+            }
+        };
+
+        window.updateSimulator = () => {
+            const p = window.config.storyPages[currentIdx]; if (!p) return;
+            document.getElementById('sim-bg').src = p.pageBg || window.config.globalBg || "";
+            let text = p.content || ""; const av = document.getElementById('sim-avatar'); av.style.display = 'none';
+            window.config.avatars.forEach(a => {
+                if (text.includes(`§${a.id}`)) {
+                    av.src = a.url || ""; av.style.display = a.url ? 'block' : 'none'; av.style.borderColor = a.color;
+                    text = text.replace(new RegExp(`§${a.id}`, 'g'), `<span style="color:${a.color}">${a.name}:</span>`);
+                }
+            });
+            document.getElementById('sim-actual-text').innerHTML = text;
+            const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
+            const nextIdx = getPageIdxById(p.nextPageId);
+            const prIdx = getPageIdxById(p.prevPageId);
+            
+            const btnRow = document.createElement('div'); btnRow.className = "flex gap-2 w-full";
+            const bBack = document.createElement('button'); bBack.className = "p-action-btn p-btn-secondary py-2 text-xs"; bBack.textContent = "Vissza";
+            bBack.onclick = () => window.loadPage(prIdx !== -1 ? prIdx : Math.max(0, currentIdx-1));
+            const bNext = document.createElement('button'); bNext.className = "p-action-btn py-2 text-xs"; bNext.textContent = "Tovább";
+            bNext.onclick = () => window.loadPage(nextIdx !== -1 ? nextIdx : currentIdx+1);
+            
+            btnRow.append(bBack, bNext);
+            acts.appendChild(btnRow);
+        };
+
+        window.addPage = () => { window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "Új oldal...", pageType: "story" }); window.refreshUI(); window.autoSave(); };
+        window.duplicatePage = (i) => { const clone = JSON.parse(JSON.stringify(window.config.storyPages[i])); clone.id = self.crypto.randomUUID(); window.config.storyPages.splice(i+1, 0, clone); window.refreshUI(); window.autoSave(); };
+        window.deletePage = (i) => { window.config.storyPages.splice(i, 1); window.refreshUI(); window.autoSave(); };
+        window.addChoice = () => { const p = window.config.storyPages[currentIdx]; if(!p.choices) p.choices = []; p.choices.push({text: "Új opció", targetId: null}); window.renderChoiceEditor(); };
+        window.addAvatar = () => { window.config.avatars.push({id:'X', name:'Új', color:'#ffffff'}); window.renderAvatarAdmin(); };
+        
+        window.togglePlayerMode = () => {
+            const pv = document.getElementById('player-view');
+            if (pv.style.display !== 'flex') {
+                pv.style.display = 'flex';
+                pSimIdx = 0;
+                window.pUpdateUI();
+            } else { pv.style.display = 'none'; pStopAllAudio(); }
+        };
+
+        window.switchView = (v) => {
+            document.getElementById('studio-view').style.display = v === 'studio' ? 'block' : 'none';
+            document.getElementById('community-view').style.display = v === 'community' ? 'block' : 'none';
+        };
+
+        // FIREBASE AUTH (V13.2 Logic)
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            if (user && !user.isAnonymous) {
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-name').textContent = user.displayName;
+                document.getElementById('user-photo').src = user.photoURL;
+            } else {
+                document.getElementById('login-btn').classList.remove('hidden');
+                document.getElementById('user-info').classList.add('hidden');
+            }
+        });
+
+        window.login = () => signInWithPopup(auth, provider);
+        document.getElementById('login-btn').onclick = window.login;
+
+        window.saveGame = async () => {
+            if (!currentUser || currentUser.isAnonymous) { alert("A mentéshez bejelentkezés szükséges!"); return; }
+            const ind = document.getElementById('save-indicator');
+            ind.classList.remove('hidden');
+            try {
+                const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saves', 'latest');
+                await setDoc(ref, { config: window.config, updatedAt: new Date().toISOString() });
+            } catch (e) { console.error(e); }
+            setTimeout(() => ind.classList.add('hidden'), 1000);
+        };
+
+        window.onload = () => {
+            window.refreshUI();
+            new Sortable(document.getElementById('pageList'), { handle: '.handle', animation: 150, onEnd: () => { window.autoSave(); window.renderPageList(); } });
+        };
+        initAuth();
+    </script>
+</body>
+</html>
