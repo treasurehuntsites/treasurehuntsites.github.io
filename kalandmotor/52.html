@@ -244,12 +244,15 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        const firebaseConfig = { apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618", authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        // Konfigurációs logika: Prioritás a környezeti változóknak
+        const userFallbackConfig = { apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618", authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : userFallbackConfig;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-v13';
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-v13';
 
         window.config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V13')) || {
             appTitle: "A Város Titka",
@@ -298,14 +301,23 @@
 
         const initAuth = async () => {
             try {
+                // Megpróbáljuk a környezeti tokent használni
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    await signInAnonymously(auth);
+                    // Ha nincs token, megpróbáljuk a névtelen bejelentkezést, de hibakezeléssel
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.warn("Anonymous auth restricted or failed, proceeding unauthenticated.");
+                    }
                 }
             } catch (err) {
-                console.error("Auth mismatch, falling back to anonymous:", err);
-                await signInAnonymously(auth);
+                console.error("Auth Mismatch Error:", err.code);
+                // Utolsó mentsvár: névtelen bejelentkezés ha a custom token nem stimmel
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {}
             }
         };
 
