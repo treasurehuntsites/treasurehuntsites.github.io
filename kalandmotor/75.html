@@ -88,6 +88,13 @@
         @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.9); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
         .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.2em; }
 
+        /* INVENTORY STYLES */
+        #p-inventory-overlay { position: absolute; inset: 0; background: #0f172a; z-index: 150; display: none; padding: 30px; padding-top: 70px; overflow-y: auto; }
+        .p-item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .p-item-card { background: #1e293b; border: 2px solid #334155; border-radius: 1.25rem; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .p-item-card img { width: 80px; height: 80px; object-fit: contain; }
+        .p-item-name { font-weight: bold; font-size: 14px; color: var(--secondary); }
+
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: center; justify-content: center; }
     </style>
 </head>
@@ -199,6 +206,7 @@
                                 <div id="avatarQuickSelect" class="flex gap-2 items-center flex-wrap"></div>
                             </div>
                             <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Szöveg..." oninput="autoSave()"></textarea>
+                            <p class="text-[9px] text-slate-500 font-bold">Tipp: [ITEM:Név|URL] a tárgy szerzéshez.</p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -311,9 +319,9 @@
             <div id="p-viewport">
                 <img id="p-bg-layer" src="" class="absolute inset-0 w-full h-full object-cover">
                 
-                <div id="p-inventory-overlay" onclick="this.style.display='none'">
+                <div id="p-inventory-overlay" onclick="pToggleInventory()">
                     <h2 class="text-center text-cyan-400 font-bold mb-10 uppercase text-2xl">Hátizsák</h2>
-                    <div id="p-item-list" class="p-item-grid grid grid-cols-2 gap-4"></div>
+                    <div id="p-item-list" class="p-item-grid"></div>
                 </div>
 
                 <div id="p-content-layer">
@@ -574,7 +582,7 @@
             window.renderPageList();
         };
 
-        // --- PLAYER ---
+        // --- PLAYER & INVENTORY LOGIC ---
         window.pUpdateUI = () => {
             const p = window.config.storyPages[pSimIdx]; if (!p) return;
             clearTimeout(splashTimer); pStopAllAudio();
@@ -582,11 +590,25 @@
             document.getElementById('p-call-screen').classList.add('hidden');
             document.getElementById('p-content-layer').classList.remove('hidden');
 
+            // --- INVENTORY ITEM DETECTION ---
+            // Syntax: [ITEM:Name|ImageURL]
+            let rawContent = p.content || "";
+            const itemMatch = rawContent.match(/\[ITEM:([^|]+)\|([^\]]+)\]/);
+            if (itemMatch) {
+                const itemName = itemMatch[1];
+                const itemImg = itemMatch[2];
+                if (!pInventory.find(i => i.name === itemName)) {
+                    pInventory.push({ name: itemName, img: itemImg });
+                    pRenderInventory();
+                }
+                rawContent = rawContent.replace(itemMatch[0], ""); // Remove tag from visible text
+            }
+
             if (p.pageType === 'splash') {
                 document.getElementById('p-splash-screen').classList.remove('hidden');
                 document.getElementById('p-content-layer').classList.add('hidden');
                 const st = document.getElementById('p-splash-text');
-                st.textContent = p.content || ""; st.style.animation = 'none'; void st.offsetWidth; st.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
+                st.textContent = rawContent; st.style.animation = 'none'; void st.offsetWidth; st.style.animation = 'fadeInOutSplash 10s ease-in-out forwards';
                 splashTimer = setTimeout(() => {
                     const nextIdx = getPageIdxById(p.nextPageId);
                     pSimIdx = nextIdx !== null ? nextIdx : pSimIdx + 1;
@@ -598,7 +620,7 @@
             if (p.pageType === 'call') {
                 document.getElementById('p-call-screen').classList.remove('hidden');
                 document.getElementById('p-content-layer').classList.add('hidden');
-                document.getElementById('p-call-name').textContent = p.content || "Ismeretlen";
+                document.getElementById('p-call-name').textContent = rawContent || "Ismeretlen";
                 const ring = document.getElementById('p-ringtone-audio');
                 ring.src = p.ringtoneUrl || "https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3";
                 ring.play().catch(() => {});
@@ -606,8 +628,17 @@
             }
 
             document.getElementById('p-bg-layer').src = p.pageBg || window.config.globalBg || "";
-            let text = p.content || ""; const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
-            window.config.avatars.forEach(av => { if (text.includes(`§${av.id}`)) { avImg.src = av.url || ""; avImg.style.display = 'block'; avImg.style.borderColor = av.color; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`); } });
+            let text = rawContent; 
+            const avImg = document.getElementById('p-avatar-img'); 
+            avImg.style.display = 'none';
+            window.config.avatars.forEach(av => { 
+                if (text.includes(`§${av.id}`)) { 
+                    avImg.src = av.url || ""; 
+                    avImg.style.display = 'block'; 
+                    avImg.style.borderColor = av.color; 
+                    text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`); 
+                } 
+            });
             document.getElementById('p-story-text').innerHTML = text;
             const ill = document.getElementById('p-page-illustration'); if(p.pageImage) { ill.src = p.pageImage; ill.classList.remove('hidden'); } else { ill.classList.add('hidden'); }
             document.getElementById('p-gps-monitor').classList.toggle('hidden', p.pageType !== 'gps');
@@ -642,6 +673,34 @@
             }
             bc.appendChild(nr);
             updateGpsDisplays();
+        };
+
+        window.pRenderInventory = () => {
+            const list = document.getElementById('p-item-list');
+            const badge = document.getElementById('p-inv-badge');
+            list.innerHTML = '';
+            
+            pInventory.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'p-item-card';
+                card.innerHTML = `
+                    <img src="${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/32/32339.png'">
+                    <span class="p-item-name">${item.name}</span>
+                `;
+                list.appendChild(card);
+            });
+
+            if (pInventory.length > 0) {
+                badge.textContent = pInventory.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        };
+
+        window.pToggleInventory = () => { 
+            const inv = document.getElementById('p-inventory-overlay'); 
+            inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; 
         };
 
         window.pAnswerCall = () => {
@@ -747,8 +806,7 @@
             });
         };
 
-        window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; };
-        window.pResetGame = () => { pSimIdx = 0; pInventory = []; window.pUpdateUI(); };
+        window.pResetGame = () => { pSimIdx = 0; pInventory = []; pRenderInventory(); window.pUpdateUI(); };
         window.pStartQR = () => { document.getElementById('p-qr-layer').style.display='flex'; pQrScanner = new Html5Qrcode("p-qr-reader"); pQrScanner.start({facingMode:"environment"}, {fps:10,qrbox:250}, t=>{ const p=window.config.storyPages[pSimIdx]; if(t.trim().toUpperCase()===(p.qrCode||"").toUpperCase()){ window.pStopQR(); const nextIdx = getPageIdxById(p.nextPageId); pSimIdx = nextIdx !== null ? nextIdx : pSimIdx + 1; window.pUpdateUI(); } }); };
         window.pStopQR = () => { if(pQrScanner) pQrScanner.stop().finally(()=>{ document.getElementById('p-qr-layer').style.display='none'; pQrScanner=null; }); };
         window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
