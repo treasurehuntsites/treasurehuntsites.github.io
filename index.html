@@ -293,6 +293,7 @@
                                     <div id="sim-scroll" class="overflow-y-auto flex-grow">
                                         <div id="sim-actual-text" style="font-size: 16px; font-weight: 700;"></div>
                                         <div id="sim-gps-monitor" class="hidden text-center p-3 bg-slate-900 rounded-xl mt-4 border border-cyan-500/30">
+                                            <div class="text-[8px] text-cyan-500 font-bold uppercase mb-1">Célpont távolsága</div>
                                             <div class="text-[9px] text-cyan-500 font-bold">Távolság: <span id="sim-distance-val">...</span> m</div>
                                         </div>
                                     </div>
@@ -450,7 +451,9 @@
                             <img id="p-page-illustration" class="w-full rounded-2xl mb-6 hidden" src="">
                             <div id="p-story-text"></div>
                             <div id="p-gps-monitor" class="hidden text-center p-6 bg-slate-900/80 rounded-3xl mt-4 border border-cyan-500/40">
-                                <div class="text-4xl font-bold text-white"><span id="p-distance-val">...</span> m</div>
+                                <div class="text-[10px] text-cyan-400 font-bold uppercase mb-2">Célpont távolsága</div>
+                                <div class="text-4xl font-bold text-white mb-4"><span id="p-distance-val">...</span> m</div>
+                                <button id="p-gps-map-btn" class="w-full py-3 bg-cyan-600/20 border border-cyan-500 text-cyan-400 rounded-xl font-bold text-[10px] uppercase hidden">Térkép megnyitása</button>
                             </div>
                         </div>
                         <div id="p-button-container" class="flex flex-col"></div>
@@ -458,7 +461,10 @@
                 </div>
             </div>
             <div class="p-bottom-nav">
-                <button class="p-nav-item active" onclick="if(window.config.initialMapLink) window.open(window.config.initialMapLink,'_blank')"><i class="fa fa-map-marked-alt text-2xl"></i></button>
+                <button id="p-nav-map-btn" class="p-nav-item active" onclick="pOpenMap()">
+                    <i class="fa fa-map-marked-alt text-2xl"></i>
+                    <div id="p-map-badge" class="p-badge hidden">!</div>
+                </button>
                 <button class="p-nav-item" onclick="pToggleInventory()"><i class="fa fa-briefcase text-2xl"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
                 <button class="p-nav-item" onclick="pResetGame()"><i class="fa fa-rotate-right text-2xl"></i></button>
                 <button class="p-nav-item" onclick="toggleFullScreen()"><i class="fa fa-expand text-2xl"></i></button>
@@ -499,6 +505,10 @@
         let zoomScale = 1, zoomPosX = 0, zoomPosY = 0;
         let startDist = 0, startX = 0, startY = 0, isZooming = false;
         let sortableInstance = null;
+        
+        // Dynamic map state
+        window.pActiveMap = window.config.initialMapLink;
+        window.pMapSeen = true;
 
         const initAuth = async () => {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -512,7 +522,6 @@
             currentUser = user;
             const isLoggedIn = user && !user.isAnonymous;
             
-            // Ha be van lépve, elrejtjük a telefonos bejelentkezés gombot
             const phoneLogin = document.getElementById('phone-login-layer');
             if (phoneLogin) phoneLogin.classList.toggle('hidden', isLoggedIn);
 
@@ -539,14 +548,13 @@
             document.getElementById('community-view').style.display = v === 'community' ? 'block' : 'none';
             if(v==='community') window.initCommunitySync();
             if(v==='studio') window.refreshUI();
-            // Pushing state to prevent closing app on hardware back
             history.pushState({view: v}, "");
         };
 
-        // Hardware back button protection
         window.onpopstate = function(event) {
             if (document.getElementById('player-view').style.display === 'flex') {
                 window.pTriggerExitConfirm();
+                history.pushState({view: 'player'}, "");
             } else if (document.getElementById('studio-view').style.display === 'block') {
                 window.switchView('community');
             } else {
@@ -778,10 +786,33 @@
             document.getElementById('p-splash-screen').classList.add('hidden');
             document.getElementById('p-call-screen').classList.add('hidden');
             document.getElementById('p-content-layer').classList.remove('hidden');
-            if (document.getElementById('p-gps-monitor')) document.getElementById('p-gps-monitor').classList.toggle('hidden', p.pageType !== 'gps');
+            
+            const gpsMonitor = document.getElementById('p-gps-monitor');
+            if (gpsMonitor) {
+                const isGps = p.pageType === 'gps';
+                gpsMonitor.classList.toggle('hidden', !isGps);
+                if (isGps) {
+                    const mapBtn = document.getElementById('p-gps-map-btn');
+                    if (p.targetUrl) {
+                        mapBtn.classList.remove('hidden');
+                        mapBtn.onclick = () => window.pOpenMap();
+                    } else {
+                        mapBtn.classList.add('hidden');
+                    }
+                }
+            }
+
+            // Update Dynamic Map logic
+            const currentMapLink = p.targetUrl || window.config.initialMapLink;
+            if (currentMapLink && currentMapLink !== window.pActiveMap) {
+                window.pActiveMap = currentMapLink;
+                window.pMapSeen = false;
+            }
+
             if (window.pLastPageId !== p.id) { pHintIdx = 0; window.pLastPageId = p.id; }
             if(p.rewards) p.rewards.forEach(r => { if(r.name && !pInventory.find(i=>i.name===r.name)) pInventory.push({...r, seen: false}); });
             window.pUpdateBadge();
+            
             if (p.pageType === 'splash') {
                 document.getElementById('p-splash-screen').classList.remove('hidden'); document.getElementById('p-splash-text').textContent = p.content || "";
                 splashTimer = setTimeout(() => { pSimIdx = window.getPageIdxById(p.nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); }, 10500); return;
@@ -827,7 +858,10 @@
             }
             const nr = document.createElement('div'); nr.className = "p-nav-row";
             const bB = document.createElement('button'); bB.className = "p-action-btn btn-secondary"; bB.textContent = "Vissza";
-            bB.onclick = window.pTriggerExitConfirm;
+            bB.onclick = () => {
+                pSimIdx = window.getPageIdxById(p.prevPageId) ?? Math.max(0, pSimIdx - 1);
+                window.pUpdateUI();
+            };
             nr.append(bB);
             if (!['password','choice','qr','gps'].includes(p.pageType)) {
                 const bN = document.createElement('button'); bN.className = "p-action-btn"; bN.textContent = "Tovább"; bN.onclick = () => { pSimIdx = window.getPageIdxById(p.nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); }; nr.append(bN);
@@ -865,7 +899,22 @@
         };
 
         window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; if(inv.style.display === 'block') window.pRenderInventory(); };
-        window.pUpdateBadge = () => { const unread = pInventory.filter(i=>!i.seen).length; document.getElementById('p-inv-badge').textContent = unread; document.getElementById('p-inv-badge').classList.toggle('hidden', unread === 0); };
+        
+        window.pOpenMap = () => {
+            window.pMapSeen = true;
+            window.pUpdateBadge();
+            if (window.pActiveMap) window.open(window.pActiveMap, '_blank');
+        };
+
+        window.pUpdateBadge = () => {
+            const unreadItems = pInventory.filter(i=>!i.seen).length;
+            document.getElementById('p-inv-badge').textContent = unreadItems;
+            document.getElementById('p-inv-badge').classList.toggle('hidden', unreadItems === 0);
+            
+            // Map badge
+            document.getElementById('p-map-badge').classList.toggle('hidden', window.pMapSeen);
+        };
+
         window.pRenderInventory = () => {
             const list = document.getElementById('p-item-list'); list.innerHTML = '';
             pInventory.forEach(item => {
