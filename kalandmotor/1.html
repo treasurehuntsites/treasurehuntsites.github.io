@@ -107,6 +107,7 @@
         <i class="fa fa-sync-alt fa-spin mr-2"></i> MENTÉS...
     </div>
 
+    <!-- MEGERŐSÍTŐ MODAL -->
     <div id="confirm-modal" class="modal-overlay">
         <div class="glass-card p-8 max-sm w-full mx-4 text-center border-red-500/50">
             <div id="confirm-icon-box" class="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
@@ -117,6 +118,25 @@
             <div class="flex gap-4">
                 <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-600 transition-all">Mégse</button>
                 <button id="confirm-action-btn" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-xs uppercase hover:bg-red-500 shadow-lg shadow-red-600/20 transition-all">Végrehajtás</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SÚGÓ MODAL -->
+    <div id="hint-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-w-sm w-full mx-4 text-center">
+            <div id="hint-confirm-view">
+                <h3 class="text-xl font-bold mb-4 uppercase text-cyan-400">Segítség kérése</h3>
+                <p class="text-slate-400 mb-8 text-sm">Biztosan látni akarod a következő segítséget?</p>
+                <div class="flex gap-4">
+                    <button onclick="closeHintModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Mégse</button>
+                    <button id="hint-show-btn" class="flex-1 py-3 bg-purple-600 rounded-xl font-bold text-xs uppercase">Igen, kérem</button>
+                </div>
+            </div>
+            <div id="hint-display-view" class="hidden">
+                <h3 class="text-xl font-bold mb-4 uppercase text-purple-400">Útmutatás</h3>
+                <p id="hint-text" class="text-white text-lg font-bold mb-8 italic"></p>
+                <button onclick="closeHintModal()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold text-xs uppercase">Értem</button>
             </div>
         </div>
     </div>
@@ -217,7 +237,7 @@
 
                         <div id="passwordInputs" class="hidden space-y-3">
                             <input type="text" id="passwordVal" class="input-style" placeholder="Helyes jelszó" oninput="autoSave()">
-                            <textarea id="pageHints" class="input-style text-xs" placeholder="Súgók" oninput="autoSave()"></textarea>
+                            <textarea id="pageHints" class="input-style text-xs" placeholder="Súgók (soronként egy)" oninput="autoSave()"></textarea>
                         </div>
                         <div id="qrInputs" class="hidden">
                             <input type="text" id="qrCodeVal" class="input-style" placeholder="QR kód" oninput="autoSave()">
@@ -372,7 +392,6 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Trükkösebb megadás a GitHub Secret Scanning kikerüléséhez
         const _k = ["AIzaSy", "CfVce17Yye6jyvpSSoW6jlh3ei7T0N618"].join('');
         const userFallbackConfig = { apiKey: _k, authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
         
@@ -389,7 +408,7 @@
             globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
             initialMapLink: "",
             avatars: [{ id: 'A', name: 'Mesélő', url: '', color: '#8b5cf6' }],
-            storyPages: [{ id: self.crypto.randomUUID(), content: "Üdvözöllek! §A", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "" }]
+            storyPages: [{ id: self.crypto.randomUUID(), content: "Üdvözöllek! §A", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "", hints: "" }]
         };
 
         window.config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V13')) || defaultConfig;
@@ -610,6 +629,7 @@
             if (p.pageType === 'gps') updateGpsDisplays();
         };
 
+        // --- PLAYER UI ---
         window.pUpdateUI = () => {
             const p = window.config.storyPages[pSimIdx]; if (!p) return;
             pStopAllAudio(); if(splashTimer) clearTimeout(splashTimer);
@@ -650,6 +670,14 @@
             } else ill.classList.add('hidden');
 
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
+            
+            // SÚGÓ GOMB HOZZÁADÁSA, HA VANNAK SÚGÓK
+            if (p.hints && p.hints.trim() !== "") {
+                const hb = document.createElement('button'); hb.className = "p-action-btn !bg-cyan-600 mb-2"; hb.innerHTML = '<i class="fa fa-lightbulb mr-2"></i> Segítség';
+                hb.onclick = () => window.openHintModal();
+                bc.appendChild(hb);
+            }
+
             if (p.pageType === 'password') {
                 const inp = document.createElement('input'); inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4"; inp.placeholder = "KÓD..."; bc.appendChild(inp);
                 const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "NYITÁS";
@@ -672,6 +700,23 @@
             bc.appendChild(nr); updateGpsDisplays();
         };
 
+        // --- SÚGÓ RENDSZER ---
+        window.openHintModal = () => {
+            const p = window.config.storyPages[pSimIdx];
+            if (!p.hints) return;
+            document.getElementById('hint-confirm-view').classList.remove('hidden');
+            document.getElementById('hint-display-view').classList.add('hidden');
+            document.getElementById('hint-modal').style.display = 'flex';
+            
+            document.getElementById('hint-show-btn').onclick = () => {
+                document.getElementById('hint-confirm-view').classList.add('hidden');
+                document.getElementById('hint-display-view').classList.remove('hidden');
+                document.getElementById('hint-text').textContent = p.hints;
+            };
+        };
+        window.closeHintModal = () => document.getElementById('hint-modal').style.display = 'none';
+
+        // --- INVENTORY ---
         window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; if(inv.style.display === 'block') window.pRenderInventory(); };
         window.pUpdateBadge = () => { const unread = pInventory.filter(i=>!i.seen).length; document.getElementById('p-inv-badge').textContent = unread; document.getElementById('p-inv-badge').classList.toggle('hidden', unread === 0); };
         
@@ -689,6 +734,7 @@
             });
         };
 
+        // --- GPS ---
         function getDistance(lat1, lon1, lat2, lon2) {
             if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
             const R = 6371e3; const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
@@ -714,6 +760,7 @@
             }
         }
 
+        // --- UTILS ---
         window.publishGame = async () => { if(!currentUser || currentUser.isAnonymous){alert("Bejelentkezés kell!"); return;} const gid = window.config.cloudId || self.crypto.randomUUID(); window.config.cloudId = gid; await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gid), { title: window.config.appTitle, author: currentUser.displayName, authorId: currentUser.uid, config: window.config, updatedAt: new Date().toISOString() }); alert("Publikálva!"); };
         window.loadAndPlayPublicGame = async (id) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); if(snap.exists()){ window.config = snap.data().config; window.togglePlayerMode(); } };
         window.loadAndEditPublicGame = async (id) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); if(snap.exists()){ window.config = snap.data().config; window.switchView('studio'); } };
@@ -733,7 +780,7 @@
         window.pResetGame = () => { pSimIdx = 0; pInventory = []; lastAutoGpsIdx = -1; window.pUpdateBadge(); window.pUpdateUI(); };
         window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
         window.copyPage = (i) => { const c = JSON.parse(JSON.stringify(window.config.storyPages[i])); c.id = self.crypto.randomUUID(); window.config.storyPages.push(c); window.autoSave(); };
-        window.addPage = () => { window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "Új...", pageType: "story", rewards: [], hiddenItems: [] }); window.autoSave(); };
+        window.addPage = () => { window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "Új...", pageType: "story", rewards: [], hiddenItems: [], hints: "" }); window.autoSave(); };
         window.addAvatar = () => { window.config.avatars.push({ id: 'X', name: 'Új', url: '', color: '#fff' }); window.renderAvatarAdmin(); };
         window.addReward = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.rewards) p.rewards=[]; p.rewards.push({name:'Tárgy', icon:'📦'}); window.renderRewardsEditor(); window.autoSave(); };
         window.addChoice = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.choices) p.choices=[]; p.choices.push({text:'Opció', targetId:null}); window.renderChoiceEditor(); window.autoSave(); };
