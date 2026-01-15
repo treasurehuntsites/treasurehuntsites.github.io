@@ -313,15 +313,11 @@
             <header class="mb-12 flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div class="flex items-center gap-4">
                     <div class="logo-svg">
-                        <svg viewBox="0 0 100 100" class="w-12 h-12 md:w-16 md:h-16 fill-purple-500">
-                            <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="none" class="text-purple-400/30" />
-                            <circle cx="50" cy="50" r="10" fill="var(--primary)" />
-                            <circle cx="50" cy="50" r="5" fill="white" />
-                        </svg>
+                        <img src="https://treasurehuntsites.github.io/kalandmotor/logo.png" class="w-12 h-12 md:w-16 md:h-16 object-contain">
                     </div>
                     <div>
                         <h1 class="text-2xl md:text-5xl font-bold uppercase text-white tracking-tighter text-left">Kalandmotor</h1>
-                        <p class="text-emerald-400 text-[8px] md:text-xs font-bold uppercase text-left">Digitális élményalkotó Stúdió</p>
+                        <p class="text-emerald-400 text-[8px] md:text-xs font-bold uppercase text-left">Szabadtéri szabadulószoba készítő</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
@@ -372,10 +368,6 @@
                                 <h4 class="text-emerald-400 font-bold text-sm uppercase mb-1 text-left">Dinamikus Tárgyrendszer</h4>
                                 <p class="text-xs text-slate-300 text-left">Tárgyakat gyűjthetsz a hátizsákodba, amik új utakat nyitnak meg.</p>
                             </div>
-                        </div>
-
-                        <div class="flex justify-start">
-                            <button onclick="window.login()" class="px-10 py-4 bg-purple-600 rounded-2xl font-bold text-sm uppercase shadow-xl hover:scale-105 transition-transform">Kezdj bele most</button>
                         </div>
                     </div>
                 </div>
@@ -493,7 +485,7 @@
         const defaultConfig = {
             appTitle: "A Város Titka",
             globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
-            initialMapLink: "",
+            initialMapLink: "https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac",
             avatars: [{ id: 'A', name: 'Mesélő', url: '', color: '#8b5cf6' }],
             storyPages: [{ id: self.crypto.randomUUID(), content: "Üdvözöllek! §A", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "", hints: "" }]
         };
@@ -736,13 +728,23 @@
 
         window.renderVisibilityToggles = () => {
             const container = document.getElementById('visibilityToggles'); container.innerHTML = ''; const items = new Set();
-            window.config.storyPages.forEach(p => { if(p.rewards) p.rewards.forEach(r => { if(r.name) items.add(r.name); }); });
-            const p = window.config.storyPages[window.currentIdx]; if(!p.hiddenItems) p.hiddenItems = [];
+            // Csak az aktuális vagy korábbi oldalakon létrehozott tárgyakat gyűjtjük össze
+            window.config.storyPages.slice(0, window.currentIdx + 1).forEach(p => { 
+                if(p.rewards) p.rewards.forEach(r => { if(r.name) items.add(r.name); }); 
+            });
+            const p = window.config.storyPages[window.currentIdx]; 
+            if(!p.hiddenItems) p.hiddenItems = [];
+            
             Array.from(items).forEach(name => {
                 const hide = p.hiddenItems.includes(name);
                 const btn = document.createElement('button'); btn.className = `px-2 py-1 rounded-full text-[9px] font-bold border ${hide ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-emerald-500/20 border-emerald-500 text-emerald-500'}`;
                 btn.innerHTML = `<i class="fa ${hide ? 'fa-eye-slash' : 'fa-eye'} mr-1"></i> ${name}`;
-                btn.onclick = () => { if(hide) p.hiddenItems = p.hiddenItems.filter(n => n !== name); else p.hiddenItems.push(name); window.autoSave(); window.renderVisibilityToggles(); };
+                btn.onclick = () => { 
+                    if(hide) p.hiddenItems = p.hiddenItems.filter(n => n !== name); 
+                    else p.hiddenItems.push(name); 
+                    window.autoSave(); 
+                    window.renderVisibilityToggles(); 
+                };
                 container.appendChild(btn);
             });
         };
@@ -802,7 +804,6 @@
                 }
             }
 
-            // Update Dynamic Map logic
             const currentMapLink = p.targetUrl || window.config.initialMapLink;
             if (currentMapLink && currentMapLink !== window.pActiveMap) {
                 window.pActiveMap = currentMapLink;
@@ -810,7 +811,22 @@
             }
 
             if (window.pLastPageId !== p.id) { pHintIdx = 0; window.pLastPageId = p.id; }
-            if(p.rewards) p.rewards.forEach(r => { if(r.name && !pInventory.find(i=>i.name===r.name)) pInventory.push({...r, seen: false}); });
+
+            // TÁRGYAK MEGSZERZÉSE ÉS ELREJTÉSE LOGIKA JAVÍTÁSA
+            const hiddenOnThisPage = p.hiddenItems || [];
+            if(p.rewards) {
+                p.rewards.forEach(r => { 
+                    if (!r.name) return;
+                    const isHidden = hiddenOnThisPage.some(h => h.trim().toLowerCase() === r.name.trim().toLowerCase());
+                    const alreadyOwned = pInventory.some(i => i.name.trim().toLowerCase() === r.name.trim().toLowerCase());
+                    
+                    // Csak akkor adjuk hozzá, ha nincs elrejtve ÉS még nincs meg
+                    if (!isHidden && !alreadyOwned) {
+                        pInventory.push({...r, seen: false}); 
+                    }
+                });
+            }
+            
             window.pUpdateBadge();
             
             if (p.pageType === 'splash') {
@@ -838,8 +854,8 @@
             if(p.pageImage){ 
                 ill.src = p.pageImage; 
                 ill.classList.remove('hidden'); 
-                ill.onclick = null; 
-                ill.style.cursor = 'default';
+                ill.onclick = () => window.pOpenZoom(p.pageImage); 
+                ill.style.cursor = 'zoom-in';
             } else ill.classList.add('hidden');
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
             if (p.hints && p.hints.trim() !== "") {
@@ -898,7 +914,11 @@
             el.addEventListener('touchend', () => { isZooming = false; });
         };
 
-        window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; if(inv.style.display === 'block') window.pRenderInventory(); };
+        window.pToggleInventory = () => { 
+            const inv = document.getElementById('p-inventory-overlay'); 
+            inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; 
+            if(inv.style.display === 'block') window.pRenderInventory(); 
+        };
         
         window.pOpenMap = () => {
             window.pMapSeen = true;
@@ -907,19 +927,47 @@
         };
 
         window.pUpdateBadge = () => {
-            const unreadItems = pInventory.filter(i=>!i.seen).length;
+            const p = window.config.storyPages[pSimIdx];
+            const hiddenOnThisPage = p?.hiddenItems || [];
+            
+            // Csak azokat számoljuk értesítésnek, amik nincsenek elrejtve az adott oldalon
+            const unreadItems = pInventory.filter(i => 
+                !i.seen && !hiddenOnThisPage.some(h => h.trim().toLowerCase() === i.name.trim().toLowerCase())
+            ).length;
+            
             document.getElementById('p-inv-badge').textContent = unreadItems;
             document.getElementById('p-inv-badge').classList.toggle('hidden', unreadItems === 0);
-            
-            // Map badge
             document.getElementById('p-map-badge').classList.toggle('hidden', window.pMapSeen);
         };
 
         window.pRenderInventory = () => {
+            const p = window.config.storyPages[pSimIdx];
+            const hiddenOnThisPage = p?.hiddenItems || [];
             const list = document.getElementById('p-item-list'); list.innerHTML = '';
+            
             pInventory.forEach(item => {
-                const card = document.createElement('div'); card.className = 'p-item-card'; card.onclick = () => { item.seen = true; window.pUpdateBadge(); window.pRenderInventory(); };
-                if (item.url) { const img = document.createElement('img'); img.src = item.url; img.onclick = (e) => { e.stopPropagation(); item.seen = true; window.pUpdateBadge(); window.pOpenZoom(item.url); window.pRenderInventory(); }; card.appendChild(img); } else { card.innerHTML += `<div class="text-4xl text-left">${item.icon}</div>`; }
+                // Ha az adott tárgy el van rejtve ezen az oldalon, nem rajzoljuk ki
+                const isHidden = hiddenOnThisPage.some(h => h.trim().toLowerCase() === item.name.trim().toLowerCase());
+                if (isHidden) return;
+
+                const card = document.createElement('div'); 
+                card.className = 'p-item-card'; 
+                card.onclick = () => { item.seen = true; window.pUpdateBadge(); window.pRenderInventory(); };
+                
+                if (item.url) { 
+                    const img = document.createElement('img'); 
+                    img.src = item.url; 
+                    img.onclick = (e) => { 
+                        e.stopPropagation(); 
+                        item.seen = true; 
+                        window.pUpdateBadge(); 
+                        window.pOpenZoom(item.url); 
+                        window.pRenderInventory(); 
+                    }; 
+                    card.appendChild(img); 
+                } else { 
+                    card.innerHTML += `<div class="text-4xl text-left">${item.icon}</div><div class="text-[9px] mt-2 text-slate-400 font-bold uppercase">${item.name}</div>`; 
+                }
                 list.appendChild(card);
             });
         };
