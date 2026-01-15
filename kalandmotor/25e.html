@@ -793,7 +793,7 @@
             window.config.avatars.forEach(a => { if (text.includes(`§${a.id}`)) { av.src = a.url || ""; av.style.display = 'block'; text = text.replace(new RegExp(`§${a.id}`, 'g'), `<span style="color:${a.color}">${a.name}:</span>`); } });
             document.getElementById('sim-actual-text').innerHTML = text;
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
-            if (p.hints && p.hints.trim() !== "") {
+            if (p.hints && p.hints.trim() !== "" && p.pageType !== 'qr') {
                 const hb = document.createElement('button'); hb.className = "w-9 h-9 rounded-full border-2 border-purple-500 text-purple-500 mx-auto mb-3 flex items-center justify-center text-sm font-bold transition-all"; hb.innerHTML = '<i class="fa fa-question"></i>'; hb.onclick = () => { alert("Súgó: " + p.hints.split('\n')[0]); }; acts.appendChild(hb);
             }
             const row = document.createElement('div'); row.className="flex gap-2";
@@ -876,9 +876,12 @@
                 ill.style.cursor = 'zoom-in';
             } else ill.classList.add('hidden');
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
-            if (p.hints && p.hints.trim() !== "") {
+            
+            // MÓDOSÍTÁS: QR kód oldalon nem jelenítjük meg a kérdőjel ikont
+            if (p.hints && p.hints.trim() !== "" && p.pageType !== 'qr') {
                 const hintBtn = document.createElement('button'); hintBtn.id = 'p-hint-btn'; hintBtn.innerHTML = '<i class="fa fa-question"></i>'; hintBtn.onclick = window.openHintModal; bc.appendChild(hintBtn);
             }
+            
             if (p.pageType === 'password') {
                 const inp = document.createElement('input'); inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4"; inp.placeholder = "KÓD..."; bc.appendChild(inp);
                 const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "NYITÁS"; sb.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { pSimIdx = window.getPageIdxById(p.nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); } }; bc.appendChild(sb);
