@@ -490,6 +490,8 @@
             storyPages: [{ id: self.crypto.randomUUID(), content: "Üdvözöllek! §A", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "", hints: "" }]
         };
 
+        const PRESET_COLORS = ['#8b5cf6', '#22d3ee', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#f97316', '#6366f1'];
+
         window.config = JSON.parse(localStorage.getItem('KALAND_STUDIO_V13')) || defaultConfig;
         let pSimIdx = 0, pInventory = [], pQrScanner = null, splashTimer = null, userPos = null, lastAutoGpsIdx = -1, currentUser = null;
         let cloudSaveDebounce = null, pCallTimeSeconds = 0, pCallTimerInterval = null, currentPortalUnsubscribe = null;
@@ -567,7 +569,10 @@
                 }
                 snap.docs.forEach(docSnap => {
                     const data = docSnap.data();
-                    const isAuthor = currentUser && !currentUser.isAnonymous && (data.authorId === currentUser.uid);
+                    
+                    const canManage = currentUser && !currentUser.isAnonymous && 
+                                     (data.authorId === currentUser.uid || data.author === 'Anonim' || !data.authorId);
+                    
                     const card = document.createElement('div');
                     card.className = "glass-card p-6 flex flex-col gap-4 border border-slate-700 hover:border-purple-500 transition-all shadow-xl group";
                     card.innerHTML = `
@@ -582,7 +587,7 @@
                             <button class="bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold uppercase text-xs transition-all" onclick="window.loadAndPlayPublicGame('${docSnap.id}')">
                                 <i class="fa fa-play mr-2"></i> Játék indítása
                             </button>
-                            ${isAuthor ? `<div class="flex gap-2"><button onclick="window.loadAndEditPublicGame('${docSnap.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-lg font-bold uppercase text-[10px]">Szerkesztés</button><button onclick="window.deletePublishedGame('${docSnap.id}')" class="bg-red-900/40 hover:bg-red-600 p-2 rounded-lg text-red-500 hover:text-white transition-colors"><i class="fa fa-trash"></i></button></div>` : ''}
+                            ${canManage ? `<div class="flex gap-2"><button onclick="window.loadAndEditPublicGame('${docSnap.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-lg font-bold uppercase text-[10px]">Szerkesztés</button><button onclick="window.deletePublishedGame('${docSnap.id}')" class="bg-red-900/40 hover:bg-red-600 p-2 rounded-lg text-red-500 hover:text-white transition-colors"><i class="fa fa-trash"></i></button></div>` : ''}
                         </div>`;
                     list.appendChild(card);
                 });
@@ -728,7 +733,6 @@
 
         window.renderVisibilityToggles = () => {
             const container = document.getElementById('visibilityToggles'); container.innerHTML = ''; const items = new Set();
-            // Csak az aktuális vagy korábbi oldalakon létrehozott tárgyakat gyűjtjük össze
             window.config.storyPages.slice(0, window.currentIdx + 1).forEach(p => { 
                 if(p.rewards) p.rewards.forEach(r => { if(r.name) items.add(r.name); }); 
             });
@@ -753,7 +757,23 @@
             const l = document.getElementById('avatarList'); l.innerHTML = '';
             window.config.avatars.forEach((av, i) => {
                 const d = document.createElement('div'); d.className = "p-2 bg-slate-800/60 rounded mb-2 border border-slate-700/50";
-                d.innerHTML = `<div class="flex gap-1 mb-1"><input type="text" class="input-style !w-10 text-center" value="${av.id}" oninput="window.config.avatars[${i}].id=this.value.toUpperCase();window.autoSave()"><input type="text" class="input-style flex-1" value="${av.name}" oninput="window.config.avatars[${i}].name=this.value;window.autoSave()"><button onclick="window.config.avatars.splice(${i},1);window.renderAvatarAdmin();window.autoSave()"><i class="fa fa-trash text-red-400"></i></button></div><input type="url" class="input-style text-[9px]" value="${av.url||''}" oninput="window.config.avatars[${i}].url=this.value;window.autoSave()">`;
+                
+                let presetsHtml = '<div class="flex gap-1.5 mt-2">';
+                PRESET_COLORS.forEach(c => {
+                    const isSelected = av.color.toLowerCase() === c.toLowerCase();
+                    presetsHtml += `<button onclick="window.config.avatars[${i}].color='${c}';window.renderAvatarAdmin();window.autoSave()" class="w-4 h-4 rounded-full border ${isSelected ? 'border-white scale-125' : 'border-slate-600'} hover:scale-110 transition-transform" style="background-color:${c}"></button>`;
+                });
+                presetsHtml += '</div>';
+
+                d.innerHTML = `
+                    <div class="flex gap-1 mb-1">
+                        <input type="text" class="input-style !w-10 text-center" value="${av.id}" oninput="window.config.avatars[${i}].id=this.value.toUpperCase();window.autoSave()">
+                        <input type="text" class="input-style flex-1" value="${av.name}" oninput="window.config.avatars[${i}].name=this.value;window.autoSave()">
+                        <input type="color" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer" value="${av.color || '#8b5cf6'}" oninput="window.config.avatars[${i}].color=this.value;window.autoSave()">
+                        <button onclick="window.config.avatars.splice(${i},1);window.renderAvatarAdmin();window.autoSave()"><i class="fa fa-trash text-red-400"></i></button>
+                    </div>
+                    <input type="url" class="input-style text-[9px]" value="${av.url||''}" oninput="window.config.avatars[${i}].url=this.value;window.autoSave()" placeholder="Avatar kép URL">
+                    ${presetsHtml}`;
                 l.appendChild(d);
             });
             const qs = document.getElementById('avatarQuickSelect'); qs.innerHTML = '';
@@ -773,7 +793,7 @@
             window.config.avatars.forEach(a => { if (text.includes(`§${a.id}`)) { av.src = a.url || ""; av.style.display = 'block'; text = text.replace(new RegExp(`§${a.id}`, 'g'), `<span style="color:${a.color}">${a.name}:</span>`); } });
             document.getElementById('sim-actual-text').innerHTML = text;
             const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
-            if (p.hints && p.hints.trim() !== "") {
+            if (p.hints && p.hints.trim() !== "" && p.pageType !== 'qr') {
                 const hb = document.createElement('button'); hb.className = "w-9 h-9 rounded-full border-2 border-purple-500 text-purple-500 mx-auto mb-3 flex items-center justify-center text-sm font-bold transition-all"; hb.innerHTML = '<i class="fa fa-question"></i>'; hb.onclick = () => { alert("Súgó: " + p.hints.split('\n')[0]); }; acts.appendChild(hb);
             }
             const row = document.createElement('div'); row.className="flex gap-2";
@@ -812,7 +832,6 @@
 
             if (window.pLastPageId !== p.id) { pHintIdx = 0; window.pLastPageId = p.id; }
 
-            // TÁRGYAK MEGSZERZÉSE ÉS ELREJTÉSE LOGIKA JAVÍTÁSA
             const hiddenOnThisPage = p.hiddenItems || [];
             if(p.rewards) {
                 p.rewards.forEach(r => { 
@@ -820,7 +839,6 @@
                     const isHidden = hiddenOnThisPage.some(h => h.trim().toLowerCase() === r.name.trim().toLowerCase());
                     const alreadyOwned = pInventory.some(i => i.name.trim().toLowerCase() === r.name.trim().toLowerCase());
                     
-                    // Csak akkor adjuk hozzá, ha nincs elrejtve ÉS még nincs meg
                     if (!isHidden && !alreadyOwned) {
                         pInventory.push({...r, seen: false}); 
                     }
@@ -858,9 +876,12 @@
                 ill.style.cursor = 'zoom-in';
             } else ill.classList.add('hidden');
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
-            if (p.hints && p.hints.trim() !== "") {
+            
+            // MÓDOSÍTÁS: QR kód oldalon nem jelenítjük meg a kérdőjel ikont
+            if (p.hints && p.hints.trim() !== "" && p.pageType !== 'qr') {
                 const hintBtn = document.createElement('button'); hintBtn.id = 'p-hint-btn'; hintBtn.innerHTML = '<i class="fa fa-question"></i>'; hintBtn.onclick = window.openHintModal; bc.appendChild(hintBtn);
             }
+            
             if (p.pageType === 'password') {
                 const inp = document.createElement('input'); inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4"; inp.placeholder = "KÓD..."; bc.appendChild(inp);
                 const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "NYITÁS"; sb.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { pSimIdx = window.getPageIdxById(p.nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); } }; bc.appendChild(sb);
@@ -929,8 +950,6 @@
         window.pUpdateBadge = () => {
             const p = window.config.storyPages[pSimIdx];
             const hiddenOnThisPage = p?.hiddenItems || [];
-            
-            // Csak azokat számoljuk értesítésnek, amik nincsenek elrejtve az adott oldalon
             const unreadItems = pInventory.filter(i => 
                 !i.seen && !hiddenOnThisPage.some(h => h.trim().toLowerCase() === i.name.trim().toLowerCase())
             ).length;
@@ -946,7 +965,6 @@
             const list = document.getElementById('p-item-list'); list.innerHTML = '';
             
             pInventory.forEach(item => {
-                // Ha az adott tárgy el van rejtve ezen az oldalon, nem rajzoljuk ki
                 const isHidden = hiddenOnThisPage.some(h => h.trim().toLowerCase() === item.name.trim().toLowerCase());
                 if (isHidden) return;
 
@@ -1019,7 +1037,13 @@
         window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
         window.copyPage = (i) => { const c = JSON.parse(JSON.stringify(window.config.storyPages[i])); c.id = self.crypto.randomUUID(); window.config.storyPages.push(c); window.autoSave(); };
         window.addPage = () => { window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "Új...", pageType: "story", rewards: [], hiddenItems: [], hints: "" }); window.autoSave(); };
-        window.addAvatar = () => { window.config.avatars.push({ id: 'X', name: 'Új', url: '', color: '#fff' }); window.renderAvatarAdmin(); };
+        window.addAvatar = () => { 
+            const usedColors = window.config.avatars.map(a => a.color.toLowerCase());
+            const nextColor = PRESET_COLORS.find(c => !usedColors.includes(c.toLowerCase())) || PRESET_COLORS[window.config.avatars.length % PRESET_COLORS.length];
+            window.config.avatars.push({ id: 'X', name: 'Új', url: '', color: nextColor }); 
+            window.renderAvatarAdmin(); 
+            window.autoSave();
+        };
         window.addReward = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.rewards) p.rewards=[]; p.rewards.push({name:'Tárgy', icon:'📦', url:''}); window.renderRewardsEditor(); window.autoSave(); };
         window.addChoice = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.choices) p.choices=[]; p.choices.push({text:'Opció', targetId:null, req:''}); window.renderChoiceEditor(); window.autoSave(); };
         window.newGame = () => { window.openConfirmModal("Új kaland?", "Minden törlődik!", "file-circle-plus", () => { window.config = JSON.parse(JSON.stringify(defaultConfig)); window.refreshUI(); window.autoSave(); }); };
