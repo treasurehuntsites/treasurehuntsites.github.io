@@ -531,6 +531,13 @@
             }
             
             window.initCommunitySync();
+
+            // Ellenőrizzük a URL paramétereket az azonnali indításhoz
+            const urlParams = new URLSearchParams(window.location.search);
+            const directGameId = urlParams.get('gameId');
+            if (directGameId) {
+                window.loadAndPlayPublicGame(directGameId);
+            }
         });
 
         window.login = () => signInWithPopup(auth, provider);
@@ -580,7 +587,12 @@
                             <img src="${data.config?.globalBg || 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?q=80&w=600'}" class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-500">
                         </div>
                         <div>
-                            <h3 class="font-bold text-xl text-white truncate mb-1 text-left">${data.title}</h3>
+                            <div class="flex justify-between items-start gap-2">
+                                <h3 class="font-bold text-xl text-white truncate mb-1 text-left flex-1">${data.title}</h3>
+                                <button onclick="window.shareGame('${docSnap.id}')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1" title="Játék megosztása">
+                                    <i class="fa fa-share-nodes"></i>
+                                </button>
+                            </div>
                             <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-left">Készítő: ${data.author || 'Anonim'}</p>
                         </div>
                         <div class="flex flex-col gap-2 mt-auto">
@@ -595,6 +607,28 @@
                 console.error("Snapshot error:", error); 
                 list.innerHTML = '<div class="lg:col-span-3 text-center py-10 text-red-400 font-bold uppercase text-[10px] tracking-widest">Hiba a betöltéskor. Próbáld meg később.</div>';
             });
+        };
+
+        window.shareGame = (id) => {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?gameId=${id}`;
+            const el = document.createElement('textarea');
+            el.value = shareUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            const indicator = document.getElementById('save-indicator');
+            const originalContent = indicator.innerHTML;
+            indicator.innerHTML = '<i class="fa fa-check mr-2"></i> LINK MÁSOLVA!';
+            indicator.classList.remove('hidden', 'bg-emerald-500');
+            indicator.classList.add('bg-blue-600');
+            setTimeout(() => {
+                indicator.classList.add('hidden');
+                indicator.innerHTML = originalContent;
+                indicator.classList.remove('bg-blue-600');
+                indicator.classList.add('bg-emerald-500');
+            }, 2000);
         };
 
         window.saveGame = async () => {
@@ -877,7 +911,6 @@
             } else ill.classList.add('hidden');
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
             
-            // MÓDOSÍTÁS: QR kód oldalon nem jelenítjük meg a kérdőjel ikont
             if (p.hints && p.hints.trim() !== "" && p.pageType !== 'qr') {
                 const hintBtn = document.createElement('button'); hintBtn.id = 'p-hint-btn'; hintBtn.innerHTML = '<i class="fa fa-question"></i>'; hintBtn.onclick = window.openHintModal; bc.appendChild(hintBtn);
             }
