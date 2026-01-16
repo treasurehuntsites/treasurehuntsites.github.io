@@ -839,7 +839,12 @@
 
         window.pUpdateUI = () => {
             if (!window.config || !window.config.storyPages) return;
-            const p = window.config.storyPages[pSimIdx]; if (!p) return;
+            const p = window.config.storyPages[pSimIdx]; 
+            if (!p) {
+                console.warn("Nincs ilyen oldal index:", pSimIdx);
+                pSimIdx = 0;
+                return;
+            }
             pStopAllAudio(); if(splashTimer) clearTimeout(splashTimer);
             document.getElementById('p-splash-screen').classList.add('hidden');
             document.getElementById('p-call-screen').classList.add('hidden');
@@ -1000,7 +1005,8 @@
         };
 
         window.pUpdateBadge = () => {
-            const p = window.config?.storyPages?.[pSimIdx];
+            if (!window.config || !window.config.storyPages) return;
+            const p = window.config.storyPages[pSimIdx];
             if (!p) return;
             const hiddenOnThisPage = p.hiddenItems || [];
             const unreadItems = pInventory.filter(i => 
@@ -1064,6 +1070,12 @@
         window.loadAndPlayPublicGame = async (id) => { 
             if (!id) return;
             pCurrentGameId = id;
+            
+            // UI Visszajelzés a betöltésről
+            const indicator = document.getElementById('save-indicator');
+            indicator.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> JÁTÉK BETÖLTÉSE...';
+            indicator.classList.remove('hidden');
+
             try {
                 const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); 
                 if(snap.exists()){ 
@@ -1071,10 +1083,13 @@
                     window.config = gameData.config || defaultConfig; 
                     
                     // JÁTÉKMENET ELLENŐRZÉSE
+                    let hasProgress = false;
                     if (currentUser && !currentUser.isAnonymous) {
                         const progSnap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'gameProgress', id));
                         if (progSnap.exists()) {
+                            hasProgress = true;
                             const data = progSnap.data();
+                            indicator.classList.add('hidden');
                             window.openConfirmModal(
                                 "Folytatás?",
                                 "Úgy tűnik, már elkezdted ezt a kalandot. Ott folytatod, ahol abbahagytad?",
@@ -1089,17 +1104,22 @@
                                     window.togglePlayerMode(true);
                                 }
                             );
-                            return;
                         }
                     }
                     
-                    window.pResetGame();
-                    window.togglePlayerMode(true); 
+                    if (!hasProgress) {
+                        indicator.classList.add('hidden');
+                        window.pResetGame();
+                        window.togglePlayerMode(true); 
+                    }
                 } else {
+                    indicator.classList.add('hidden');
                     alert("A játék nem található!");
                 }
             } catch (err) {
+                indicator.classList.add('hidden');
                 console.error("Hiba a játék indításakor:", err);
+                alert("Hiba történt a betöltés során. Ellenőrizd az internetkapcsolatot!");
             }
         };
 
@@ -1124,6 +1144,7 @@
         function pStopAllAudio(){ document.getElementById('p-ringtone-audio').pause(); document.getElementById('p-call-voice-audio').pause(); }
         
         window.openConfirmModal = (title, desc, icon, onConfirm, onCancel) => { 
+            const modal = document.getElementById('confirm-modal');
             document.getElementById('confirm-title').textContent = title; 
             document.getElementById('confirm-desc').textContent = desc; 
             document.getElementById('confirm-icon').className = `fa fa-${icon}`; 
@@ -1150,22 +1171,24 @@
                 newCancelBtn.onclick = () => { window.closeConfirmModal(); };
             }
             
-            document.getElementById('confirm-modal').style.display = 'flex'; 
+            modal.style.display = 'flex'; 
         };
         
         window.closeConfirmModal = () => document.getElementById('confirm-modal').style.display = 'none';
         
         window.togglePlayerMode = (force) => { 
-            const v=document.getElementById('player-view'); 
-            const shouldShow = (force !== undefined) ? force : v.style.display !== 'flex';
+            const v = document.getElementById('player-view'); 
+            const shouldShow = (force !== undefined) ? force : (v.style.display !== 'flex');
             
             if(shouldShow){ 
-                v.style.display='flex'; 
+                v.style.display = 'flex'; 
+                // Inicializálás ha kell
+                if (!window.config || !window.config.storyPages) window.config = defaultConfig;
                 window.pUpdateBadge(); 
                 window.pUpdateUI(); 
                 history.pushState({view: 'player'}, ""); 
             } else { 
-                v.style.display='none'; 
+                v.style.display = 'none'; 
                 pStopAllAudio(); 
                 history.pushState({view: 'community'}, ""); 
             } 
@@ -1175,8 +1198,8 @@
             pSimIdx = 0; 
             pInventory = []; 
             lastAutoGpsIdx = -1; 
-            window.pUpdateBadge(); 
-            window.pUpdateUI(); 
+            if (window.pUpdateBadge) window.pUpdateBadge(); 
+            if (window.pUpdateUI) window.pUpdateUI(); 
         };
 
         window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
