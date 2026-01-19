@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner to Sheets</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+        #status { padding: 15px; margin-top: 20px; border-radius: 8px; font-weight: bold; }
+        .waiting { background-color: #e8f0fe; color: #1967d2; }
+        .sending { background-color: #fef7e0; color: #b06000; }
+        .success { background-color: #e6f4ea; color: #137333; }
+        .error { background-color: #fce8e6; color: #c5221f; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>QR Kód Olvasó</h2>
+    <div id="reader"></div>
+    <div id="status" class="waiting">Várakozás beolvasásra...</div>
+</div>
+
+<script>
+    // A Te egyedi Google Script URL-ed
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbwwIPSmnD6PHWmhiXJaywlntw7WTqMuB8OoQkrwuewsIo12a3JkEqMZL9sBqC5aZ-MQ/exec";
+
+    function onScanSuccess(decodedText) {
+        // Megállítjuk a scannert, hogy ne küldjön duplán
+        html5QrcodeScanner.clear();
+        
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerText = "Adatok küldése a táblázatba...";
+        statusDiv.className = "sending";
+
+        const now = new Date();
+        const timestamp = now.getFullYear() + "." + (now.getMonth()+1) + "." + now.getDate() + " " + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+
+        const payload = {
+            qrData: decodedText,
+            timestamp: timestamp
+        };
+
+        // Küldés a Google Táblázatba
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Google Apps Scriptnél ez szükséges
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
+            statusDiv.innerText = "SIKER! Mentve: " + decodedText;
+            statusDiv.className = "success";
+            
+            // 3 másodperc múlva újraindítjuk, hogy lehessen következőt scannelni
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        })
+        .catch(err => {
+            statusDiv.innerText = "Hiba történt a küldés során!";
+            statusDiv.className = "error";
+            console.error(err);
+        });
+    }
+
+    // Scanner elindítása
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", { fps: 10, qrbox: {width: 250, height: 250} }
+    );
+    html5QrcodeScanner.render(onScanSuccess);
+</script>
+
+</body>
+</html>
