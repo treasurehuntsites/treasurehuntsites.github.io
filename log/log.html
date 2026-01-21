@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <title>Kalandmotor - Eseménynapló Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; }
+        .log-card { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(139, 92, 246, 0.3); }
+        tr:hover { background: rgba(139, 92, 246, 0.05); }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-purple-400"><i class="fa fa-clipboard-list mr-3"></i>Eseménynapló</h1>
+                <p class="text-slate-500 text-xs uppercase mt-1">Játékosok aktivitásának kezelése</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="clear-all-btn" class="bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all border border-red-500/30">
+                    <i class="fa fa-trash-sweep mr-2"></i> Összes törlése
+                </button>
+                <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all">
+                    <i class="fa fa-sync-alt mr-2"></i> Frissítés
+                </button>
+            </div>
+        </div>
+
+        <div class="log-card rounded-2xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-purple-900/40 text-purple-200 text-xs uppercase tracking-widest">
+                            <th class="p-4">Időpont</th>
+                            <th class="p-4">Játék címe</th>
+                            <th class="p-4">Esemény</th>
+                            <th class="p-4">Állapot / Kód</th>
+                            <th class="p-4 text-right">Művelet</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body">
+                        <tr>
+                            <td colspan="5" class="p-10 text-center text-slate-500 italic">Betöltés...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, writeBatch } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const _k = ["AIzaSy", "CfVce17Yye6jyvpSSoW6jlh3ei7T0N618"].join('');
+        const firebaseConfig = { apiKey: _k, authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        const appId = 'kalandmotor-v13';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const logCollection = collection(db, 'artifacts', appId, 'logs');
+
+        // EGYEDI TÖRLÉS FUNKCIÓ
+        window.deleteLog = async (id) => {
+            if (confirm("Biztosan törlöd ezt a bejegyzést?")) {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'logs', id));
+                } catch (e) { alert("Hiba a törlés során!"); }
+            }
+        };
+
+        // ÖSSZES TÖRLÉSE FUNKCIÓ
+        document.getElementById('clear-all-btn').onclick = async () => {
+            if (confirm("FIGYELEM! Biztosan törölni akarod az ÖSSZES naplóbejegyzést? Ez nem vonható vissza.")) {
+                try {
+                    const snapshot = await getDocs(logCollection);
+                    const batch = writeBatch(db);
+                    snapshot.docs.forEach((d) => batch.delete(d.ref));
+                    await batch.commit();
+                    alert("A napló kiürítve.");
+                } catch (e) { alert("Hiba a csoportos törlés során!"); }
+            }
+        };
+
+        const logBody = document.getElementById('log-table-body');
+        const q = query(logCollection, orderBy('timestamp', 'desc'));
+
+        onSnapshot(q, (snap) => {
+            logBody.innerHTML = '';
+            if (snap.empty) {
+                logBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-500">Nincs még rögzített adat.</td></tr>';
+                return;
+            }
+
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                const date = data.timestamp ? data.timestamp.toDate().toLocaleString('hu-HU') : 'Most...';
+                const statusColor = data.status === "SIKERES" ? "text-emerald-400" : (data.status === "HIBÁS" ? "text-red-400" : "text-slate-400");
+
+                const tr = document.createElement('tr');
+                tr.className = "border-t border-slate-700/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4 text-xs text-slate-400">${date}</td>
+                    <td class="p-4 font-bold text-sm text-purple-200">${data.gameTitle}</td>
+                    <td class="p-4"><span class="bg-slate-800 border border-slate-700 px-2 py-1 rounded text-[10px] uppercase text-slate-300">${data.event}</span></td>
+                    <td class="p-4 font-bold text-sm ${statusColor}">${data.status}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="deleteLog('${id}')" class="text-slate-500 hover:text-red-500 p-2 transition-colors" title="Törlés">
+                            <i class="fa fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                logBody.appendChild(tr);
+            });
+        });
+    </script>
+</body>
+</html>
