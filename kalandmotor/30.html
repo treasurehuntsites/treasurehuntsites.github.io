@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Adventure Engine - Game Studio V15.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@300;400;500&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            height: 100dvh;
+            font-family: 'Play', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #studio-view, #community-view { height: 100%; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; }
+        @media (min-width: 768px) { #studio-view, #community-view { padding: 2.5rem; } }
+        
+        #studio-view { display: none; }
+        #community-view { display: block; }
+        
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; }
+
+        .input-style { background: #0f172a; color: var(--secondary); border: 1px solid #334155; border-radius: 0.5rem; padding: 0.6rem; outline: none; transition: 0.2s; width: 100%; font-size: 0.875rem; }
+        .input-style:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+        
+        .filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; border: 1px solid #334155; transition: 0.2s; cursor: pointer; background: rgba(30, 41, 59, 0.5); }
+        .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .tag-pill { background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.3); color: var(--secondary); padding: 2px 8px; border-radius: 4px; font-size: 9px; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #10b981; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid transparent; transition: 0.2s; cursor: pointer; user-select: none; }
+        .page-item:hover { background: #2d3748; }
+        .page-item.selected { border-color: var(--secondary); background: #4c1d95; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+        .handle { cursor: grab; padding: 5px 15px 5px 5px; color: #64748b; font-size: 0.9rem; }
+
+        .sim-container { position: sticky; top: 0; width: 320px; height: 600px; background: #000; border: 10px solid #1e293b; border-radius: 2.5rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s; opacity: 0.6; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sim-box { position: relative; background: rgba(0,0,0,0.92); border-top: 3px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 35px; min-height: 220px; display: flex; flex-direction: column; }
+        .sim-avatar { position: absolute; top: -40px; left: 10px; width: 65px; height: 65px; border-radius: 50%; border: 3px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; }
+        .sim-btn { background: var(--primary); color: white; padding: 10px; border-radius: 0.5rem; font-weight: 700; text-align: center; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; width: 100%; border: none; }
+        .sim-btn-secondary, .btn-secondary { background: #334155 !important; }
+
+        #player-view { position: fixed; inset: 0; z-index: 9000; background: #000; display: none; flex-direction: column; height: 100dvh; }
+        .p-game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
+        #p-viewport { position: relative; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #p-bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s ease-in-out; }
+        #p-content-layer { position: relative; z-index: 10; margin-top: auto; width: 100%; display: flex; flex-direction: column; }
+
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.92); border-top: 4px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 25px; padding-top: 45px; min-height: 280px; max-height: 80dvh; display: flex; flex-direction: column; box-shadow: 0 -15px 35px rgba(0,0,0,0.7); }
+        .p-avatar-frame { position: absolute; top: -45px; left: 20px; width: 85px; height: 85px; border-radius: 50%; border: 4px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; }
+        
+        #p-hint-btn { align-self: center; margin-bottom: 12px; width: 36px; height: 36px; background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: 0.2s; z-index: 50; }
+        #p-story-text { text-align: justify; hyphens: auto; font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 15px; color: #f8fafc; }
+        #p-button-container { display: flex; flex-direction: column; gap: 12px; width: 100%; position: relative; }
+        
+        .p-nav-row { display: flex !important; flex-direction: row !important; gap: 10px; width: 100%; margin-top: 10px; }
+        .p-action-btn { flex: 1; background: var(--primary); color: white; padding: 16px; border-radius: 0.85rem; font-weight: 700; text-align: center; font-size: 1.05rem; cursor: pointer; text-transform: uppercase; transition: 0.1s; display: flex; align-items: center; justify-content: center; border: none; }
+        
+        .p-bottom-nav { height: 80px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.4); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .p-nav-item { color: #94a3b8; font-size: 1.6rem; cursor: pointer; border: none; background: transparent; position: relative; width: 25%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .p-nav-item.active { color: var(--primary); }
+        .p-badge { position: absolute; top: 15px; right: 25%; background: #ef4444; color: white; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: bold; border: 2px solid #0f172a; }
+
+        #p-inventory-overlay { position: absolute; inset: 0; background: #0f172a; z-index: 150; display: none; overflow-y: auto; }
+        .p-item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .p-item-card { background: #1e293b; border: 2px solid #334155; border-radius: 1.25rem; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; position: relative; }
+        .p-item-card img { width: 100%; height: auto; object-fit: contain; cursor: zoom-in; max-height: 100px; }
+
+        .phone-ui { background: radial-gradient(circle at top, #2c3e50, #000); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 15% 20px 10% 20px; box-sizing: border-box; text-align: center; color: white; }
+        .p-call-status { color: #bdc3c7; font-size: 0.9rem; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; }
+        .p-call-name { font-size: 2.8rem; font-weight: 300; margin-top: 10px; }
+        .p-call-controls-wrapper { display: flex; justify-content: space-around; align-items: flex-end; width: 100%; height: 350px; margin-bottom: 20px; }
+        .slide-container-v { position: relative; width: 76px; height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; }
+        .slide-handle-v { width: 64px; height: 64px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; cursor: grab; transition: transform 0.1s linear; touch-action: none; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .slide-handle-v.accept { background: #2ecc71; }
+        .slide-handle-v.decline { background: #e74c3c; }
+        .pulse-soft { animation: pulse-soft-anim 2s infinite; }
+        @keyframes pulse-soft-anim { 0% { box-shadow: 0 0 0 0px rgba(46, 204, 113, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0px rgba(46, 204, 113, 0); } }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: center; justify-content: center; }
+        #p-zoomed-img { max-width: 95%; max-height: 95%; object-fit: contain; transition: transform 0.05s ease-out; touch-action: none; user-select: none; }
+        
+        .hero-gradient { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(34, 211, 238, 0.05) 100%); }
+        .feature-card { border-left: 3px solid var(--primary); transition: 0.3s; }
+        .feature-card:hover { transform: translateX(5px); background: rgba(255,255,255,0.03); }
+        @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.9); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+        .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.2em; }
+    </style>
+</head>
+<body>
+
+    <div id="save-indicator" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-2 rounded-full font-bold text-xs z-[10000] hidden">
+        <i class="fa fa-sync-alt fa-spin mr-2"></i> SAVING...
+    </div>
+
+    <!-- CONFIRMATION MODAL -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-sm w-full mx-4 text-center border-red-500/50">
+            <div class="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i id="confirm-icon" class="fa fa-trash-can"></i>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold mb-2">Are you sure?</h2>
+            <p id="confirm-desc" class="text-slate-400 text-sm mb-8">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Cancel</button>
+                <button id="confirm-action-btn" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-600/20">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HINT MODAL -->
+    <div id="hint-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-w-sm w-full mx-4 text-center">
+            <div id="hint-confirm-view">
+                <h3 class="text-xl font-bold mb-4 uppercase text-cyan-400">Request Help</h3>
+                <p class="text-slate-400 mb-8 text-sm">Are you sure you want to see the next hint?</p>
+                <div class="flex gap-4">
+                    <button onclick="closeHintModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Cancel</button>
+                    <button id="hint-show-btn" class="flex-1 py-3 bg-purple-600 rounded-xl font-bold text-xs uppercase">Yes, please</button>
+                </div>
+            </div>
+            <div id="hint-display-view" class="hidden">
+                <h3 class="text-xl font-bold mb-4 uppercase text-purple-400">Guidance</h3>
+                <p id="hint-text" class="text-white text-lg font-bold mb-8 italic"></p>
+                <button onclick="closeHintModal()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold text-xs uppercase">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDIO VIEW -->
+    <div id="studio-view">
+        <div class="max-w-7xl mx-auto flex justify-between items-center pt-4 px-4 md:px-0 mb-6">
+            <button onclick="switchView('community')" class="bg-slate-800 text-slate-300 px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase border border-slate-700 hover:border-purple-500 transition-all">Back to Home</button>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
+                    <span class="text-[9px] uppercase font-bold text-slate-400">Public visibility</span>
+                    <label class="switch">
+                        <input type="checkbox" id="isPublicToggle" onchange="autoSave()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="user-info-studio" class="flex items-center gap-2 bg-slate-800 p-1 rounded-full border border-slate-700">
+                    <img id="user-photo-studio" src="" class="w-8 h-8 rounded-full">
+                    <button onclick="window.logout()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors">
+                        <i class="fa fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto">
+            <header class="mb-10 flex flex-col md:flex-row justify-center items-center gap-4">
+                <button onclick="togglePlayerMode()" class="bg-purple-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg w-full md:w-auto"><i class="fa fa-play mr-2"></i> Start Test</button>
+                <button id="publish-btn" onclick="publishGame()" class="bg-emerald-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg w-full md:w-auto">Publish</button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="glass-card p-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Basic Settings</label>
+                            <button onclick="newGame()" class="w-8 h-8 bg-slate-700 text-white rounded-lg flex items-center justify-center hover:bg-slate-600 transition-all shadow-lg border border-slate-600">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <input type="text" id="appTitle" class="input-style" placeholder="Adventure Title" oninput="autoSave()">
+                                <input type="text" id="appTags" class="input-style" placeholder="Tags (mystery, adventure, escape, etc.)" oninput="autoSave()">
+                                <input type="url" id="globalBg" class="input-style" placeholder="Global Background URL" oninput="autoSave()">
+                                <input type="url" id="initialMapLink" class="input-style" placeholder="Main Map Link" oninput="autoSave()">
+                                
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.importGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase">Import JSON</button>
+                                    <button onclick="window.exportGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase">Export JSON</button>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-slate-500 font-bold uppercase text-[9px]">Avatars</label>
+                                    <button onclick="addAvatar()" class="text-cyan-400 text-[9px] font-bold">+ NEW</button>
+                                </div>
+                                <div id="avatarList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <label class="text-purple-400 font-bold uppercase text-[10px]">Scenes</label>
+                        <div id="pageList" class="mt-4 max-h-60 overflow-y-auto pr-2"></div>
+                        <button onclick="addPage()" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold">+ NEW PAGE</button>
+                    </div>
+
+                    <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                        <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                            <div class="flex flex-col">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Editing</label>
+                                <h2 class="text-xl font-bold text-white"><span id="editing-page-id" class="text-purple-500">#0</span></h2>
+                            </div>
+                            <select id="pageType" class="input-style !w-44" onchange="updateUI(); autoSave();">
+                                <option value="story">Description</option>
+                                <option value="choice">Choice</option>
+                                <option value="password">Passcode</option>
+                                <option value="qr">QR Code</option>
+                                <option value="gps">GPS Point</option>
+                                <option value="splash">Transition</option>
+                                <option value="call">Call</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Story Text</label>
+                                <div id="avatarQuickSelect" class="flex gap-2 items-center flex-wrap"></div>
+                            </div>
+                            <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Text..." oninput="autoSave()"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="url" id="pageImage" class="input-style text-xs" placeholder="Image URL (illustration)" oninput="autoSave()">
+                            <input type="url" id="pageBg" class="input-style text-xs" placeholder="Custom Background URL" oninput="autoSave()">
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-slate-700">
+                            <div class="flex justify-between items-center">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Item Acquisition</label>
+                                <button onclick="addReward()" class="text-cyan-400 text-[10px] font-bold">+ NEW ITEM</button>
+                            </div>
+                            <div id="rewardsList" class="space-y-3"></div>
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Hide Items</label>
+                            <div id="visibilityToggles" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div id="passwordInputs" class="hidden space-y-3">
+                            <input type="text" id="passwordVal" class="input-style" placeholder="Correct passcode" oninput="autoSave()">
+                            <textarea id="pageHints" class="input-style text-xs" placeholder="Hints (one per line)" oninput="autoSave()"></textarea>
+                        </div>
+                        <div id="qrInputs" class="hidden">
+                            <input type="text" id="qrCodeVal" class="input-style" placeholder="QR code value" oninput="autoSave()">
+                        </div>
+                        <div id="callInputs" class="hidden grid grid-cols-2 gap-4">
+                            <input type="url" id="ringtoneUrl" class="input-style text-xs" placeholder="Ringtone URL" oninput="autoSave()">
+                            <input type="url" id="voiceUrl" class="input-style text-xs" placeholder="Voice Clip URL" oninput="autoSave()">
+                        </div>
+                        <div id="gpsInputs" class="hidden grid grid-cols-1 gap-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="targetLat" step="any" class="input-style" placeholder="Lat" oninput="autoSave()">
+                                <input type="number" id="targetLng" step="any" class="input-style" placeholder="Lng" oninput="autoSave()">
+                            </div>
+                            <input type="url" id="targetUrl" class="input-style text-xs" placeholder="Link for GPS" oninput="autoSave()">
+                        </div>
+                        <div id="choiceEditor" class="hidden space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Choice Options</label>
+                            <div id="choiceList" class="space-y-2"></div>
+                            <button onclick="addChoice()" class="text-cyan-400 text-[10px] font-bold">+ NEW OPTION</button>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-700 space-y-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="prevIdx" class="input-style" placeholder="Previous page #" oninput="autoSave()">
+                                <input type="number" id="nextIdx" class="input-style" placeholder="Next page #" oninput="autoSave()">
+                            </div>
+                            <input type="url" id="externalUrl" class="input-style text-xs" placeholder="External link" oninput="autoSave()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 hidden lg:flex justify-center">
+                    <div class="sim-container">
+                        <div id="sim-viewport">
+                            <img id="sim-bg" src="">
+                            <div id="sim-content">
+                                <div class="sim-box">
+                                    <img id="sim-avatar" class="sim-avatar" src="">
+                                    <div id="sim-scroll" class="overflow-y-auto flex-grow">
+                                        <div id="sim-actual-text" style="font-size: 16px; font-weight: 700;"></div>
+                                        <div id="sim-gps-monitor" class="hidden text-center p-3 bg-slate-900 rounded-xl mt-4 border border-cyan-500/30">
+                                            <div class="text-[8px] text-cyan-500 font-bold uppercase mb-1">Target Distance</div>
+                                            <div class="text-[9px] text-cyan-500 font-bold">Distance: <span id="sim-distance-val">...</span> m</div>
+                                        </div>
+                                    </div>
+                                    <div id="sim-actions" class="mt-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMUNITY VIEW -->
+    <div id="community-view">
+        <div class="max-w-7xl mx-auto pb-20">
+            <header class="mb-12 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4 text-left">
+                    <img src="https://treasurehuntsites.github.io/kalandmotor/logo.png" class="w-12 h-12 md:w-16 md:h-16 object-contain">
+                    <div>
+                        <h1 class="text-2xl md:text-5xl font-bold uppercase text-white tracking-tighter">Adventure Engine</h1>
+                        <p class="text-emerald-400 text-[8px] md:text-xs font-bold uppercase">Outdoor Escape Room Builder</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="community-studio-btn" onclick="switchView('studio')" class="hidden bg-purple-600 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg">Studio</button>
+                    <div id="community-user-info" class="hidden flex items-center gap-2 bg-slate-800 p-1 rounded-full border border-slate-700">
+                        <img id="community-user-photo" src="" class="w-8 h-8 rounded-full">
+                        <button onclick="window.logout()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors"><i class="fa fa-sign-out-alt"></i></button>
+                    </div>
+                </div>
+            </header>
+
+            <section class="glass-card mb-12 overflow-hidden hero-gradient">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 md:p-12 items-center">
+                    <div class="flex flex-col items-center md:order-last">
+                        <div id="phone-login-layer" class="mb-6 w-56 md:w-64">
+                            <button id="hero-login-btn" onclick="window.login()" class="w-full bg-purple-600 text-white py-4 rounded-xl font-bold text-xs uppercase shadow-xl hover:brightness-110 active:scale-105 transition-all border border-purple-400/30">Login</button>
+                        </div>
+
+                        <div class="relative w-56 h-[420px] md:w-64 md:h-[500px] bg-black border-[8px] border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden">
+                            <div class="absolute inset-x-0 top-0 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                            <img src="https://treasurehuntsites.github.io/titkokkora/Img/konyvtar.jpg" class="w-full h-full object-cover opacity-60">
+                            
+                            <div class="absolute inset-0 flex flex-col justify-end p-6 bg-gradient-to-t from-black via-black/20 to-transparent">
+                                <div class="w-10 h-10 rounded-full border-2 border-purple-500 mb-4 bg-slate-900"></div>
+                                <div class="h-3 w-3/4 bg-purple-500/40 rounded mb-2"></div>
+                                <div class="h-3 w-full bg-slate-700 rounded mb-6"></div>
+                                <div class="h-8 w-full bg-purple-600 rounded-lg"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-left">
+                        <h2 class="text-2xl md:text-4xl font-bold mb-6 text-white leading-tight">Create your own <span class="text-purple-500">city adventure</span> without coding!</h2>
+                        <p class="text-slate-400 text-base md:text-lg mb-8">Adventure Engine is a platform where anyone can create interactive, smartphone-playable stories in minutes. Whether it's for team building, urban investigation, or outdoor treasure hunting.</p>
+                        
+                        <div class="space-y-4 mb-8">
+                            <div class="feature-card p-3 glass-card bg-white/5">
+                                <h4 class="text-cyan-400 font-bold text-sm uppercase mb-1">GPS-Based Stations</h4>
+                                <p class="text-xs text-slate-300">Players must reach specific coordinates to continue the story.</p>
+                            </div>
+                            <div class="feature-card p-3 glass-card bg-white/5">
+                                <h4 class="text-purple-400 font-bold text-sm uppercase mb-1">Interactive Codebreaking</h4>
+                                <p class="text-xs text-slate-300">Scan QR codes or solve passwords on-site.</p>
+                            </div>
+                            <div class="feature-card p-3 glass-card bg-white/5">
+                                <h4 class="text-emerald-400 font-bold text-sm uppercase mb-1">Dynamic Item System</h4>
+                                <p class="text-xs text-slate-300">Collect items in your backpack to unlock new paths.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="glass-card p-6 mb-12 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex flex-col gap-3 w-full md:w-auto text-left">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sort adventures by</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="sort-date" onclick="setSort('date')" class="filter-chip active">Date (Newest)</button>
+                        <button id="sort-creator" onclick="setSort('creator')" class="filter-chip">Creator Rank</button>
+                        <button onclick="window.open('https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac', '_blank')" class="filter-chip border-emerald-500/50 text-emerald-400">
+                            <i class="fa fa-location-arrow mr-1"></i> Distance
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 w-full md:w-auto md:items-end">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Filter by category</label>
+                    <div id="tag-filter-container" class="flex flex-wrap gap-2 justify-end">
+                        <button onclick="setTagFilter(null)" class="filter-chip active">All</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="community-game-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="col-span-full text-center py-20 text-slate-500">
+                    <i class="fa fa-spinner fa-spin text-3xl mb-4 text-purple-500"></i>
+                    <p class="uppercase font-bold text-xs tracking-widest">Loading adventures...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLAYER VIEW -->
+    <div id="player-view">
+        <div id="p-qr-layer" class="hidden absolute inset-0 bg-black z-[10000] flex flex-col items-center justify-center">
+            <div id="p-qr-reader" class="w-64 h-64 border-2 border-cyan-400 rounded-3xl overflow-hidden"></div>
+            <button onclick="pStopQR()" class="mt-8 bg-red-600 text-white px-10 py-4 rounded-xl font-bold uppercase">Cancel</button>
+        </div>
+        <div id="p-splash-screen" class="absolute inset-0 bg-black z-[5000] hidden flex items-center justify-center">
+            <div id="p-splash-text" class="text-white text-center p-10 splash-text-anim text-4xl"></div>
+        </div>
+        <div id="p-call-screen" class="absolute inset-0 z-[5500] hidden">
+            <div class="phone-ui">
+                <div class="flex flex-col items-center pt-10">
+                    <p id="p-call-status" class="p-call-status">INCOMING CALL</p>
+                    <h1 id="p-call-name" class="p-call-name">Unknown</h1>
+                    <div id="p-call-timer" class="p-call-timer text-xl mt-4 hidden">00:00</div>
+                </div>
+                <div id="p-call-controls" class="p-call-controls-wrapper">
+                    <div class="slide-container-v"><div class="slide-handle-v decline" id="p-handle-decline"><i class="fa fa-phone" style="transform: rotate(135deg);"></i></div></div>
+                    <div class="slide-container-v"><div class="slide-handle-v accept pulse-soft" id="p-handle-accept"><i class="fa fa-phone"></i></div></div>
+                </div>
+                <div id="p-active-ui-buttons" class="hidden w-full flex flex-col items-center gap-10 pb-10">
+                    <div class="flex gap-10">
+                         <div class="flex flex-col items-center gap-2 opacity-60"><i class="fa fa-microphone-slash text-2xl"></i><span class="text-[9px] uppercase">Mute</span></div>
+                         <div class="flex flex-col items-center gap-2 opacity-60"><i class="fa fa-volume-up text-2xl"></i><span class="text-[9px] uppercase">Speaker</span></div>
+                    </div>
+                    <button onclick="pEndCall()" class="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
+                        <i class="fa fa-phone text-white text-3xl" style="transform: rotate(135deg);"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="p-image-zoom" class="modal-overlay" onclick="window.pCloseZoom()">
+            <img id="p-zoomed-img" src="">
+        </div>
+
+        <div class="p-game-wrapper">
+            <div id="p-viewport">
+                <img id="p-bg-layer" src="" class="absolute inset-0 w-full h-full object-cover">
+                <div id="p-inventory-overlay" onclick="pToggleInventory()">
+                    <div class="max-w-xl mx-auto h-full bg-slate-900/40" onclick="event.stopPropagation()">
+                        <h2 class="text-center text-cyan-400 font-bold uppercase text-xs opacity-60 pt-6 mb-4 tracking-widest">Backpack</h2>
+                        <div id="p-item-list" class="p-item-grid pb-20"></div>
+                    </div>
+                </div>
+                <div id="p-content-layer">
+                    <div class="p-dialog-box">
+                        <img id="p-avatar-img" class="p-avatar-frame" src="">
+                        <div id="p-scroll-area" class="overflow-y-auto flex-grow mb-4">
+                            <img id="p-page-illustration" class="w-full rounded-2xl mb-6 hidden" src="">
+                            <div id="p-story-text"></div>
+                            <div id="p-gps-monitor" class="hidden text-center p-6 bg-slate-900/80 rounded-3xl mt-4 border border-cyan-500/40">
+                                <div class="text-[10px] text-cyan-400 font-bold uppercase mb-2">Target Distance</div>
+                                <div class="text-4xl font-bold text-white mb-4"><span id="p-distance-val">...</span> m</div>
+                                <button id="p-gps-map-btn" class="w-full py-3 bg-cyan-600/20 border border-cyan-500 text-cyan-400 rounded-xl font-bold text-[10px] uppercase hidden">Open Map</button>
+                            </div>
+                        </div>
+                        <div id="p-button-container" class="flex flex-col"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-bottom-nav">
+                <button id="p-nav-map-btn" class="p-nav-item active" onclick="pOpenMap()">
+                    <i class="fa fa-map-marked-alt text-2xl"></i>
+                    <div id="p-map-badge" class="p-badge hidden">!</div>
+                </button>
+                <button class="p-nav-item" onclick="pToggleInventory()"><i class="fa fa-briefcase text-2xl"></i><div id="p-inv-badge" class="p-badge hidden">0</div></button>
+                <button class="p-nav-item" onclick="pResetGame()"><i class="fa fa-rotate-right text-2xl"></i></button>
+                <button class="p-nav-item" onclick="toggleFullScreen()"><i class="fa fa-expand text-2xl"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="p-ringtone-audio" loop></audio>
+    <audio id="p-call-voice-audio"></audio>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const fbCfg = { apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618", authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fbCfg;
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'kalandmotor-v15-independent';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        const defaultConfig = {
+            appTitle: "The Forgotten Path",
+            appTags: "mystery, adventure",
+            globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
+            initialMapLink: "https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac",
+            isPublic: true,
+            avatars: [{ id: 'A', name: 'Narrator', url: '', color: '#8b5cf6' }],
+            storyPages: [{ id: self.crypto.randomUUID(), content: "Welcome! §A", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "", hints: "" }]
+        };
+
+        const PRESET_COLORS = ['#8b5cf6', '#22d3ee', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#f97316', '#6366f1'];
+
+        window.config = JSON.parse(localStorage.getItem('KALAND_V15')) || defaultConfig;
+        let pSimIdx = 0, pInventory = [], pQrScanner = null, splashTimer = null, userPos = null, lastAutoGpsIdx = -1, currentUser = null;
+        let pCallTimeSeconds = 0, pCallTimerInterval = null, currentPortalUnsubscribe = null;
+        let pHintIdx = 0, pLastPageId = null;
+        let sortableInstance = null;
+        let activeSort = 'date', activeTagFilter = null, cachedGames = [];
+
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            const isLoggedIn = user && !user.isAnonymous;
+            
+            document.getElementById('community-login-btn')?.classList.toggle('hidden', isLoggedIn);
+            document.getElementById('phone-login-layer')?.classList.toggle('hidden', isLoggedIn);
+            document.getElementById('community-studio-btn')?.classList.toggle('hidden', !isLoggedIn);
+            document.getElementById('community-user-info')?.classList.toggle('hidden', !isLoggedIn);
+            
+            if (isLoggedIn) {
+                document.getElementById('community-user-photo').src = user.photoURL;
+                document.getElementById('user-photo-studio').src = user.photoURL;
+                const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'userSaves', 'latest');
+                const snap = await getDoc(ref);
+                if (snap.exists()) { window.config = snap.data().config; if (document.getElementById('studio-view').style.display === 'block') window.refreshUI(); }
+            }
+            window.initCommunitySync();
+        });
+
+        window.login = () => signInWithPopup(auth, provider);
+        window.logout = () => signOut(auth).then(() => { location.reload(); });
+
+        window.switchView = (v) => {
+            if (v === 'studio' && (!currentUser || currentUser.isAnonymous)) { alert("Login required!"); return; }
+            document.getElementById('studio-view').style.display = v === 'studio' ? 'block' : 'none';
+            document.getElementById('community-view').style.display = v === 'community' ? 'block' : 'none';
+            if(v==='studio') window.refreshUI();
+            if(v==='community') window.initCommunitySync();
+            history.pushState({view: v}, "");
+        };
+
+        window.onpopstate = function(event) {
+            if (document.getElementById('player-view').style.display === 'flex') {
+                window.pTriggerExitConfirm();
+                history.pushState({view: 'player'}, "");
+            } else if (document.getElementById('studio-view').style.display === 'block') {
+                window.switchView('community');
+            }
+        };
+
+        window.exportGame = () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.config, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", (window.config.appTitle || "adventure").replace(/\s/g, '_') + "_v15.json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        };
+
+        window.importGame = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        let imported = JSON.parse(event.target.result);
+                        
+                        // Normalization / Migration for older versions
+                        if (!imported.storyPages || !Array.isArray(imported.storyPages)) throw new Error("Invalid game file.");
+
+                        // 1. First Pass: Ensure every page has a unique ID and initialized fields
+                        imported.storyPages.forEach(p => {
+                            if (!p.id) p.id = self.crypto.randomUUID();
+                            if (!p.rewards) p.rewards = [];
+                            if (!p.hiddenItems) p.hiddenItems = [];
+                            if (!p.choices) p.choices = [];
+                            if (p.hints === undefined) p.hints = "";
+                            if (p.externalUrl === undefined) p.externalUrl = "";
+                        });
+
+                        // 2. Second Pass: Convert index-based navigation to ID-based navigation
+                        // This allows files from older versions (where links were numbers) to work
+                        imported.storyPages.forEach(p => {
+                            // Convert page-level navigation
+                            if (p.nextIdx !== undefined && !p.nextPageId) {
+                                const target = imported.storyPages[parseInt(p.nextIdx)];
+                                if (target) p.nextPageId = target.id;
+                            }
+                            if (p.prevIdx !== undefined && !p.prevPageId) {
+                                const target = imported.storyPages[parseInt(p.prevIdx)];
+                                if (target) p.prevPageId = target.id;
+                            }
+                            
+                            // Convert choice-level navigation
+                            if (p.choices) {
+                                p.choices.forEach(c => {
+                                    if (c.targetIdx !== undefined && !c.targetId) {
+                                        const target = imported.storyPages[parseInt(c.targetIdx)];
+                                        if (target) c.targetId = target.id;
+                                    }
+                                });
+                            }
+                        });
+
+                        window.config = imported;
+                        window.autoSave();
+                        window.refreshUI();
+                        alert("Import successful!");
+                    } catch (err) { alert("Error: " + err.message); }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+
+        window.setSort = (s) => {
+            activeSort = s;
+            document.getElementById('sort-date').classList.toggle('active', s === 'date');
+            document.getElementById('sort-creator').classList.toggle('active', s === 'creator');
+            window.renderCommunityList();
+        };
+
+        window.setTagFilter = (t) => {
+            activeTagFilter = t;
+            const chips = document.querySelectorAll('#tag-filter-container .filter-chip');
+            chips.forEach(c => c.classList.toggle('active', (t === null && c.innerText === 'ALL') || (c.innerText === (t||"").toUpperCase())));
+            window.renderCommunityList();
+        };
+
+        window.initCommunitySync = () => {
+            if (currentPortalUnsubscribe) currentPortalUnsubscribe();
+            const col = collection(db, 'artifacts', appId, 'public', 'data', 'publishedGames');
+            currentPortalUnsubscribe = onSnapshot(col, (snap) => {
+                cachedGames = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.renderCommunityList();
+            }, (err) => console.error(err));
+        };
+
+        window.renderCommunityList = () => {
+            const list = document.getElementById('community-game-list');
+            const tagContainer = document.getElementById('tag-filter-container');
+            let filtered = cachedGames.filter(g => g.config?.isPublic !== false);
+            
+            const allTags = new Set();
+            filtered.forEach(g => (g.config?.appTags || "").split(",").map(t => t.trim().toUpperCase()).filter(t => t).forEach(t => allTags.add(t)));
+            
+            tagContainer.innerHTML = `<button onclick="setTagFilter(null)" class="filter-chip ${!activeTagFilter ? 'active' : ''}">All</button>`;
+            Array.from(allTags).sort().forEach(tag => tagContainer.innerHTML += `<button onclick="setTagFilter('${tag}')" class="filter-chip ${activeTagFilter === tag ? 'active' : ''}">${tag}</button>`);
+            
+            if (activeTagFilter) filtered = filtered.filter(g => (g.config?.appTags || "").toUpperCase().includes(activeTagFilter));
+            if (activeSort === 'date') filtered.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            
+            list.innerHTML = '';
+            filtered.forEach(game => {
+                const canManage = currentUser && !currentUser.isAnonymous && (game.authorId === currentUser.uid || !game.authorId);
+                const tagsHtml = (game.config?.appTags || "").split(",").map(t => t.trim() ? `<span class="tag-pill">${t}</span>` : "").join("");
+                
+                const card = document.createElement('div');
+                card.className = "glass-card p-6 flex flex-col gap-4 border border-slate-700 hover:border-purple-500 transition-all shadow-xl group";
+                card.innerHTML = `
+                    <div class="relative rounded-xl h-40 overflow-hidden bg-slate-900">
+                        <img src="${game.config?.globalBg || 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?q=80&w=600'}" class="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-500">
+                        <div class="absolute top-3 left-3 flex gap-1 flex-wrap">${tagsHtml}</div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start gap-2">
+                            <h3 class="font-bold text-xl text-white truncate mb-1 text-left flex-1">${game.title}</h3>
+                            <button onclick="window.shareGame('${game.id}')" class="text-slate-500 hover:text-cyan-400 transition-colors p-1" title="Share">
+                                <i class="fa fa-share-nodes"></i>
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold text-left">Created by: ${game.author || 'Anonymous'}</p>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-auto">
+                        <button class="bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold uppercase text-xs transition-all" onclick="window.loadAndPlayPublicGame('${game.id}')">
+                            <i class="fa fa-play mr-2"></i> Play Now
+                        </button>
+                        ${canManage ? `
+                            <div class="flex gap-2">
+                                <button onclick="window.loadAndEditPublicGame('${game.id}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-lg font-bold uppercase text-[10px]">Edit</button>
+                                <button onclick="window.deletePublishedGame('${game.id}')" class="bg-red-900/40 hover:bg-red-600 p-2 rounded-lg text-red-500 hover:text-white transition-colors"><i class="fa fa-trash"></i></button>
+                            </div>
+                        ` : ''}
+                    </div>`;
+                list.appendChild(card);
+            });
+        };
+
+        window.shareGame = (id) => {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?gameId=${id}`;
+            const el = document.createElement('textarea');
+            el.value = shareUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            const indicator = document.getElementById('save-indicator');
+            const originalContent = indicator.innerHTML;
+            indicator.innerHTML = '<i class="fa fa-check mr-2"></i> LINK COPIED!';
+            indicator.classList.remove('hidden', 'bg-emerald-500');
+            indicator.classList.add('bg-blue-600');
+            setTimeout(() => {
+                indicator.classList.add('hidden');
+                indicator.innerHTML = originalContent;
+                indicator.classList.remove('bg-blue-600');
+                indicator.classList.add('bg-emerald-500');
+            }, 2000);
+        };
+
+        window.saveGame = async () => {
+            if (!currentUser || currentUser.isAnonymous) return;
+            document.getElementById('save-indicator').classList.remove('hidden');
+            await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'userSaves', 'latest'), { config: window.config, updatedAt: new Date().toISOString() });
+            setTimeout(() => document.getElementById('save-indicator').classList.add('hidden'), 1000);
+        };
+
+        window.publishGame = async () => {
+            if (!currentUser || currentUser.isAnonymous) return;
+            const gid = window.config.cloudId || self.crypto.randomUUID();
+            window.config.cloudId = gid;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gid), { title: window.config.appTitle, author: currentUser.displayName, authorId: currentUser.uid, config: window.config, updatedAt: new Date().toISOString() });
+            await window.saveGame(); alert("Published successfully!");
+        };
+
+        window.autoSave = () => {
+            const p = window.config.storyPages[window.currentIdx];
+            if (p) {
+                p.content = document.getElementById('pageText').value; p.pageType = document.getElementById('pageType').value;
+                p.pageImage = document.getElementById('pageImage').value; p.pageBg = document.getElementById('pageBg').value;
+                p.nextPageId = window.getPageIdByIdx(document.getElementById('nextIdx').value);
+                p.prevPageId = window.getPageIdByIdx(document.getElementById('prevIdx').value);
+                p.password = document.getElementById('passwordVal').value; p.hints = document.getElementById('pageHints').value;
+                p.qrCode = document.getElementById('qrCodeVal').value; p.targetLat = document.getElementById('targetLat').value;
+                p.targetLng = document.getElementById('targetLng').value; p.targetUrl = document.getElementById('targetUrl').value;
+                p.ringtoneUrl = document.getElementById('ringtoneUrl').value; p.voiceUrl = document.getElementById('voiceUrl').value;
+                p.externalUrl = document.getElementById('externalUrl').value;
+            }
+            window.config.appTitle = document.getElementById('appTitle').value; window.config.appTags = document.getElementById('appTags').value;
+            window.config.globalBg = document.getElementById('globalBg').value; window.config.initialMapLink = document.getElementById('initialMapLink').value;
+            window.config.isPublic = document.getElementById('isPublicToggle').checked;
+            localStorage.setItem('KALAND_V15', JSON.stringify(window.config));
+            window.updateSimulator(); window.renderPageList();
+        };
+
+        window.loadPage = (i) => {
+            window.currentIdx = i; const p = window.config.storyPages[i]; if (!p) return;
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('editing-page-id').textContent = `#${i}`;
+            document.getElementById('pageText').value = p.content || ""; document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('pageImage').value = p.pageImage || ""; document.getElementById('pageBg').value = p.pageBg || "";
+            document.getElementById('nextIdx').value = window.getPageIdxById(p.nextPageId) ?? ""; document.getElementById('prevIdx').value = window.getPageIdxById(p.prevPageId) ?? "";
+            document.getElementById('passwordVal').value = p.password || ""; document.getElementById('pageHints').value = p.hints || "";
+            document.getElementById('qrCodeVal').value = p.qrCode || ""; document.getElementById('targetLat').value = p.targetLat || "";
+            document.getElementById('targetLng').value = p.targetLng || ""; document.getElementById('targetUrl').value = p.targetUrl || "";
+            document.getElementById('ringtoneUrl').value = p.ringtoneUrl || ""; document.getElementById('voiceUrl').value = p.voiceUrl || "";
+            document.getElementById('externalUrl').value = p.externalUrl || "";
+            window.updateUI(); window.updateSimulator(); window.renderPageList(); window.renderRewardsEditor(); window.renderVisibilityToggles();
+        };
+
+        window.updateUI = () => {
+            const t = document.getElementById('pageType').value;
+            document.getElementById('passwordInputs').classList.toggle('hidden', t !== 'password');
+            document.getElementById('qrInputs').classList.toggle('hidden', t !== 'qr');
+            document.getElementById('gpsInputs').classList.toggle('hidden', t !== 'gps');
+            document.getElementById('callInputs').classList.toggle('hidden', t !== 'call');
+            document.getElementById('choiceEditor').classList.toggle('hidden', t !== 'choice');
+            if (t === 'choice') window.renderChoiceEditor();
+        };
+
+        window.refreshUI = () => {
+            document.getElementById('appTitle').value = window.config.appTitle || "";
+            document.getElementById('appTags').value = window.config.appTags || "";
+            document.getElementById('globalBg').value = window.config.globalBg || "";
+            document.getElementById('initialMapLink').value = window.config.initialMapLink || "";
+            document.getElementById('isPublicToggle').checked = window.config.isPublic !== false;
+            window.renderPageList(); window.renderAvatarAdmin(); window.loadPage(0); window.initSortable();
+        };
+
+        window.getPageIdxById = (id) => window.config.storyPages.findIndex(p => p.id === id);
+        window.getPageIdByIdx = (idx) => { if (idx==="") return null; const page = window.config.storyPages[parseInt(idx)]; return page ? page.id : null; };
+
+        window.renderPageList = () => {
+            const l = document.getElementById('pageList'); l.innerHTML = '';
+            window.config.storyPages.forEach((p, i) => {
+                const d = document.createElement('div'); d.className = `page-item ${i === window.currentIdx ? 'selected' : ''}`; d.dataset.id = p.id;
+                d.innerHTML = `<div class="flex items-center gap-2 truncate font-bold text-sm text-left"><i class="fa fa-bars handle"></i>#${i}: ${p.content.substring(0,20)}</div><div class="flex gap-2"><button onclick="event.stopPropagation(); window.copyPage(${i})"><i class="fa fa-copy"></i></button><button onclick="event.stopPropagation(); window.openConfirmModal('Delete?','Remove scene?','trash',()=>{window.config.storyPages.splice(${i},1);window.autoSave();})"><i class="fa fa-trash text-red-400"></i></button></div>`;
+                d.onclick = () => window.loadPage(i); l.appendChild(d);
+            });
+        };
+
+        window.initSortable = () => {
+            if (sortableInstance) sortableInstance.destroy();
+            sortableInstance = new Sortable(document.getElementById('pageList'), { handle: '.handle', animation: 150, onEnd: () => {
+                window.config.storyPages = Array.from(document.getElementById('pageList').children).map(item => window.config.storyPages.find(p => p.id === item.dataset.id));
+                window.autoSave(); window.renderPageList();
+            }});
+        };
+
+        window.renderChoiceEditor = () => {
+            const p = window.config.storyPages[window.currentIdx]; const l = document.getElementById('choiceList'); l.innerHTML = '';
+            if (p.choices) p.choices.forEach((c, i) => {
+                const targetIdx = window.getPageIdxById(c.targetId);
+                const d = document.createElement('div'); d.className = "flex gap-2 bg-slate-800/20 p-2 rounded-lg";
+                d.innerHTML = `<input type="text" class="input-style text-xs" value="${c.text || ''}" oninput="window.config.storyPages[window.currentIdx].choices[${i}].text=this.value;window.autoSave()" placeholder="Text"><input type="number" class="input-style text-xs w-20" value="${targetIdx === -1 ? '' : targetIdx}" placeholder="To #" oninput="window.config.storyPages[window.currentIdx].choices[${i}].targetId=window.getPageIdByIdx(this.value);window.autoSave()"><button onclick="window.config.storyPages[window.currentIdx].choices.splice(${i},1);window.renderChoiceEditor();window.autoSave()"><i class="fa fa-trash"></i></button>`;
+                l.appendChild(d);
+            });
+        };
+
+        window.renderRewardsEditor = () => {
+            const p = window.config.storyPages[window.currentIdx]; const l = document.getElementById('rewardsList'); l.innerHTML = '';
+            (p.rewards || []).forEach((r, i) => {
+                const d = document.createElement('div'); d.className = "flex flex-col gap-2 bg-slate-800/20 p-3 rounded-lg";
+                d.innerHTML = `
+                    <div class="flex gap-2 items-center">
+                        <input type="text" class="input-style !p-1 text-[10px]" value="${r.name}" placeholder="Name" oninput="window.config.storyPages[window.currentIdx].rewards[${i}].name=this.value;window.autoSave()">
+                        <input type="text" class="input-style !w-10 !p-1 text-center" value="${r.icon}" oninput="window.config.storyPages[window.currentIdx].rewards[${i}].icon=this.value;window.autoSave()">
+                        <button onclick="window.config.storyPages[window.currentIdx].rewards.splice(${i},1);window.renderRewardsEditor();window.autoSave()"><i class="fa fa-times text-red-500"></i></button>
+                    </div>
+                    <input type="url" class="input-style !p-1 text-[9px]" value="${r.imageUrl || ''}" placeholder="Image URL (optional)" oninput="window.config.storyPages[window.currentIdx].rewards[${i}].imageUrl=this.value;window.autoSave()">
+                `;
+                l.appendChild(d);
+            });
+        };
+
+        window.renderVisibilityToggles = () => {
+            const container = document.getElementById('visibilityToggles'); container.innerHTML = '';
+            const items = new Set(); window.config.storyPages.forEach(p => (p.rewards||[]).forEach(r => items.add(r.name)));
+            const p = window.config.storyPages[window.currentIdx]; if(!p.hiddenItems) p.hiddenItems = [];
+            items.forEach(name => {
+                const hide = p.hiddenItems.includes(name);
+                const btn = document.createElement('button'); btn.className = `px-2 py-1 rounded-full text-[9px] font-bold border ${hide ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-emerald-500/20 border-emerald-500 text-emerald-500'}`;
+                btn.innerHTML = `${name}`; btn.onclick = () => { if(hide) p.hiddenItems = p.hiddenItems.filter(n => n !== name); else p.hiddenItems.push(name); window.autoSave(); window.renderVisibilityToggles(); };
+                container.appendChild(btn);
+            });
+        };
+
+        window.renderAvatarAdmin = () => {
+            const l = document.getElementById('avatarList'); l.innerHTML = '';
+            window.config.avatars.forEach((av, i) => {
+                const d = document.createElement('div'); d.className = "p-2 bg-slate-800/60 rounded mb-2 border border-slate-700/50";
+                d.innerHTML = `<div class="flex gap-1 mb-1"><input type="text" class="input-style !w-10 text-center" value="${av.id}" oninput="window.config.avatars[${i}].id=this.value.toUpperCase();window.autoSave()"><input type="text" class="input-style flex-1" value="${av.name}" oninput="window.config.avatars[${i}].name=this.value;window.autoSave()"><input type="color" class="w-8 h-8 rounded border-0 bg-transparent" value="${av.color}" oninput="window.config.avatars[${i}].color=this.value;window.autoSave()"><button onclick="window.config.avatars.splice(${i},1);window.renderAvatarAdmin();window.autoSave()"><i class="fa fa-trash text-red-400"></i></button></div><input type="url" class="input-style text-[9px]" value="${av.url||''}" oninput="window.config.avatars[${i}].url=this.value;window.autoSave() " placeholder="Image URL">`;
+                l.appendChild(d);
+            });
+            const qs = document.getElementById('avatarQuickSelect'); qs.innerHTML = '';
+            window.config.avatars.forEach(av => {
+                const b = document.createElement('button'); b.className = "w-7 h-7 rounded-full border border-slate-600 font-bold text-[8px] flex items-center justify-center overflow-hidden"; b.style.borderColor = av.color;
+                b.innerHTML = av.url ? `<img src="${av.url}" class="w-full h-full object-cover">` : av.id;
+                b.onclick = () => { const t = document.getElementById('pageText'); t.value += ` §${av.id} `; window.autoSave(); };
+                qs.appendChild(b);
+            });
+        };
+
+        window.updateSimulator = () => {
+            const p = window.config.storyPages[window.currentIdx]; if (!p) return;
+            document.getElementById('sim-bg').src = p.pageBg || window.config.globalBg || "";
+            let text = p.content || ""; const av = document.getElementById('sim-avatar'); av.style.display = 'none';
+            window.config.avatars.forEach(a => { if (text.includes(`§${a.id}`)) { av.src = a.url || ""; av.style.display = 'block'; text = text.replace(new RegExp(`§${a.id}`, 'g'), `<span style="color:${a.color}">${a.name}:</span>`); } });
+            document.getElementById('sim-actual-text').innerHTML = text;
+            const acts = document.getElementById('sim-actions'); acts.innerHTML = '';
+            const row = document.createElement('div'); row.className="flex gap-2";
+            const bB = document.createElement('button'); bB.className="sim-btn sim-btn-secondary flex-1"; bB.textContent="Back"; bB.onclick=()=>window.loadPage(Math.max(0, window.currentIdx-1));
+            const bN = document.createElement('button'); bN.className="sim-btn flex-1"; bN.textContent="Next"; bN.onclick=()=>window.loadPage(Math.min(window.config.storyPages.length - 1, window.currentIdx + 1));
+            row.append(bB, bN); acts.appendChild(row);
+        };
+
+        window.pUpdateUI = () => {
+            const p = window.config.storyPages[pSimIdx]; if (!p) return;
+            pStopAllAudio(); if(splashTimer) clearTimeout(splashTimer);
+            document.getElementById('p-splash-screen').classList.add('hidden');
+            document.getElementById('p-call-screen').classList.add('hidden');
+            document.getElementById('p-bg-layer').src = p.pageBg || window.config.globalBg || "";
+            p.rewards?.forEach(r => { if(r.name && !pInventory.some(i=>i.name===r.name)) pInventory.push({...r, seen:false}); });
+            window.pUpdateBadge();
+
+            if (p.pageType === 'splash') {
+                document.getElementById('p-splash-screen').classList.remove('hidden'); document.getElementById('p-splash-text').textContent = p.content || "";
+                splashTimer = setTimeout(() => { pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); }, 10500); return;
+            }
+            if (p.pageType === 'call') {
+                document.getElementById('p-call-screen').classList.remove('hidden'); document.getElementById('p-call-name').textContent = p.content || "Unknown";
+                document.getElementById('p-call-timer').classList.add('hidden'); document.getElementById('p-call-controls').classList.remove('hidden'); document.getElementById('p-active-ui-buttons').classList.add('hidden');
+                const ring = document.getElementById('p-ringtone-audio'); ring.src = p.ringtoneUrl || "https://cdn.pixabay.com/audio/2022/03/15/audio_73663a7587.mp3"; ring.play().catch(()=>{}); return;
+            }
+            
+            let text = p.content || ""; const avImg = document.getElementById('p-avatar-img'); avImg.style.display = 'none';
+            window.config.avatars.forEach(av => { if (text.includes(`§${av.id}`)) { avImg.src = av.url || ""; avImg.style.display = 'block'; text = text.replace(new RegExp(`§${av.id}`, 'g'), `<span style="color:${av.color}">${av.name}:</span>`); } });
+            document.getElementById('p-story-text').innerHTML = text;
+            const ill = document.getElementById('p-page-illustration'); if(p.pageImage){ ill.src = p.pageImage; ill.classList.remove('hidden'); } else ill.classList.add('hidden');
+            
+            const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
+            
+            if (p.hints?.trim()) { const hb = document.createElement('button'); hb.id = 'p-hint-btn'; hb.innerHTML = '<i class="fa fa-question"></i>'; hb.onclick = window.openHintModal; bc.appendChild(hb); }
+
+            if (p.pageType === 'password') {
+                const inp = document.createElement('input'); inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4"; inp.placeholder = "CODE..."; bc.appendChild(inp);
+                const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "OPEN"; sb.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }; bc.appendChild(sb);
+            } else if (p.pageType === 'qr') {
+                const qb = document.createElement('button'); qb.className = "p-action-btn"; qb.textContent = "SCAN QR"; qb.onclick = window.pStartQR; bc.appendChild(qb);
+            } else if (p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => { const b = document.createElement('button'); b.className = "p-action-btn"; b.textContent = c.text; b.onclick = () => { if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); pSimIdx = window.getPageIdxById(c.targetId); window.pUpdateUI(); }; bc.appendChild(b); });
+            }
+            
+            const row = document.createElement('div'); row.className = "p-nav-row";
+            const bB = document.createElement('button'); bB.className = "p-action-btn btn-secondary"; bB.textContent = "Back"; bB.onclick = () => { pSimIdx = Math.max(0, pSimIdx - 1); window.pUpdateUI(); };
+            row.append(bB);
+            if (!['password','choice','qr','call'].includes(p.pageType)) {
+                const bN = document.createElement('button'); bN.className = "p-action-btn"; bN.textContent = "Next"; 
+                bN.onclick = () => { 
+                    if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); 
+                    pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; 
+                    window.pUpdateUI(); 
+                };
+                row.append(bN);
+            }
+            bc.appendChild(row);
+        };
+
+        window.pTriggerExitConfirm = () => {
+            window.openConfirmModal("Exit Game", "Are you sure you want to quit the adventure?", "right-from-bracket", () => { window.togglePlayerMode(); });
+        };
+
+        window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; if(inv.style.display === 'block') window.pRenderInventory(); };
+        window.pUpdateBadge = () => { const unread = pInventory.filter(i=>!i.seen).length; document.getElementById('p-inv-badge').textContent = unread; document.getElementById('p-inv-badge').classList.toggle('hidden', unread===0); };
+        window.pRenderInventory = () => {
+            const list = document.getElementById('p-item-list'); list.innerHTML = '';
+            pInventory.forEach(item => {
+                const card = document.createElement('div'); card.className = 'p-item-card'; card.onclick = () => { item.seen = true; window.pUpdateBadge(); window.pRenderInventory(); };
+                if (item.imageUrl) {
+                    card.innerHTML = `<img src="${item.imageUrl}" class="mb-2"><div class="text-[9px] font-bold">${item.name}</div>`;
+                } else {
+                    card.innerHTML = `<div class="text-4xl">${item.icon}</div><div class="text-[9px] mt-2 font-bold">${item.name}</div>`;
+                }
+                list.appendChild(card);
+            });
+        };
+
+        window.pStartQR = () => { document.getElementById('p-qr-layer').style.display='flex'; pQrScanner = new Html5Qrcode("p-qr-reader"); pQrScanner.start({facingMode:"environment"}, {fps:10,qrbox:250}, t=>{ const p=window.config.storyPages[pSimIdx]; if(t.trim().toUpperCase()===(p.qrCode||"").toUpperCase()){ if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); window.pStopQR(); pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }); };
+        window.pStopQR = () => { if(pQrScanner) pQrScanner.stop().finally(()=>{ document.getElementById('p-qr-layer').style.display='none'; pQrScanner=null; }); };
+        
+        window.pAnswerCall = () => { pStopAllAudio(); document.getElementById('p-call-status').textContent="CALL IN PROGRESS"; document.getElementById('p-call-timer').classList.remove('hidden'); document.getElementById('p-call-controls').classList.add('hidden'); document.getElementById('p-active-ui-buttons').classList.remove('hidden'); const v=document.getElementById('p-call-voice-audio'); const voiceUrl = window.config.storyPages[pSimIdx].voiceUrl; if (voiceUrl) { v.src = voiceUrl; v.play(); v.onended = window.pEndCall; } else { setTimeout(window.pEndCall, 5000); } };
+        window.pEndCall = () => { pStopAllAudio(); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) !== -1 ? window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) : pSimIdx + 1; window.pUpdateUI(); };
+        function pStopAllAudio(){ document.getElementById('p-ringtone-audio').pause(); document.getElementById('p-call-voice-audio').pause(); }
+
+        window.loadAndEditPublicGame = async (id) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); if(snap.exists()){ window.config = snap.data().config; window.switchView('studio'); } };
+        window.deletePublishedGame = (id) => { window.openConfirmModal("Delete?", "Permanently delete this adventure?", "globe", async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); }); };
+
+        window.openConfirmModal = (title, desc, icon, onConfirm) => { document.getElementById('confirm-title').textContent = title; document.getElementById('confirm-desc').textContent = desc; document.getElementById('confirm-icon').className = `fa fa-${icon}`; const btn = document.getElementById('confirm-action-btn'); btn.onclick = () => { onConfirm(); window.closeConfirmModal(); }; document.getElementById('confirm-modal').style.display = 'flex'; };
+        window.closeConfirmModal = () => document.getElementById('confirm-modal').style.display = 'none';
+        
+        window.togglePlayerMode = () => { const v=document.getElementById('player-view'); if(v.style.display!=='flex'){ v.style.display='flex'; pSimIdx=0; pInventory=[]; window.pUpdateUI(); history.pushState({view: 'player'}, ""); } else { v.style.display='none'; pStopAllAudio(); history.pushState({view: 'community'}, ""); } };
+        window.pResetGame = () => { pSimIdx = 0; pInventory = []; window.pUpdateBadge(); window.pUpdateUI(); };
+        window.pOpenMap = () => window.open(window.config.initialMapLink, '_blank');
+        window.pOpenZoom = (url) => { document.getElementById('p-zoomed-img').src = url; document.getElementById('p-image-zoom').style.display = 'flex'; };
+        window.pCloseZoom = () => document.getElementById('p-image-zoom').style.display = 'none';
+        window.openHintModal = () => { const p = window.config.storyPages[pSimIdx]; if (!p.hints) return; document.getElementById('hint-text').innerText = p.hints.split('\n')[0]; document.getElementById('hint-modal').style.display = 'flex'; };
+        window.closeHintModal = () => document.getElementById('hint-modal').style.display = 'none';
+        window.toggleFullScreen = () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); };
+
+        window.addPage = () => { window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "New scene...", pageType: "story", rewards: [], hiddenItems: [], hints: "", externalUrl: "" }); window.autoSave(); };
+        window.copyPage = (i) => { const c = JSON.parse(JSON.stringify(window.config.storyPages[i])); c.id = self.crypto.randomUUID(); window.config.storyPages.push(c); window.autoSave(); };
+        window.addAvatar = () => { window.config.avatars.push({ id: 'X', name: 'New', url: '', color: '#8b5cf6' }); window.renderAvatarAdmin(); window.autoSave(); };
+        window.addReward = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.rewards) p.rewards=[]; p.rewards.push({name:'Item', icon:'📦', imageUrl:''}); window.renderRewardsEditor(); window.autoSave(); };
+        window.addChoice = () => { const p = window.config.storyPages[window.currentIdx]; if(!p.choices) p.choices=[]; p.choices.push({text:'Choice', targetId:null}); window.renderChoiceEditor(); window.autoSave(); };
+        window.newGame = () => { window.openConfirmModal("New adventure?", "All current content will be deleted!", "file-circle-plus", () => { window.config = JSON.parse(JSON.stringify(defaultConfig)); window.refreshUI(); window.autoSave(); }); };
+        
+        window.loadAndPlayPublicGame = async (id) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); if(snap.exists()){ window.config = snap.data().config; window.togglePlayerMode(); } };
+
+        function setupSliders() {
+            const sliders = [{h:'p-handle-accept', cb:window.pAnswerCall}, {h:'p-handle-decline', cb:window.pEndCall}];
+            sliders.forEach(s => {
+                const h = document.getElementById(s.h); if(!h) return;
+                let sY=0, isD=false; const maxY=-180;
+                h.addEventListener('touchstart', e=>{ sY=e.touches[0].clientY; isD=true; });
+                h.addEventListener('touchmove', e=>{ if(!isD) return; let d=Math.max(maxY, Math.min(0, e.touches[0].clientY-sY)); h.style.transform=`translateY(${d}px)`; });
+                h.addEventListener('touchend', e=>{ if(!isD) return; isD=false; const fY=parseInt(h.style.transform.replace('translateY(',''))||0; if(fY<=maxY+20) s.cb(); else h.style.transform='translateY(0px)'; });
+            });
+        }
+
+        window.onload = async () => { setupSliders(); await initAuth(); history.pushState(null, ""); };
+    </script>
+</body>
+</html>
