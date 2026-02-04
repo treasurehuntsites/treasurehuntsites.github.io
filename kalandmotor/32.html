@@ -582,7 +582,45 @@
                 const reader = new FileReader();
                 reader.onload = event => {
                     try {
-                        const imported = JSON.parse(event.target.result);
+                        let imported = JSON.parse(event.target.result);
+                        
+                        // Normalization / Migration for older versions
+                        if (!imported.storyPages || !Array.isArray(imported.storyPages)) throw new Error("Invalid game file.");
+
+                        // 1. First Pass: Ensure every page has a unique ID and initialized fields
+                        imported.storyPages.forEach(p => {
+                            if (!p.id) p.id = self.crypto.randomUUID();
+                            if (!p.rewards) p.rewards = [];
+                            if (!p.hiddenItems) p.hiddenItems = [];
+                            if (!p.choices) p.choices = [];
+                            if (p.hints === undefined) p.hints = "";
+                            if (p.externalUrl === undefined) p.externalUrl = "";
+                        });
+
+                        // 2. Second Pass: Convert index-based navigation to ID-based navigation
+                        // This allows files from older versions (where links were numbers) to work
+                        imported.storyPages.forEach(p => {
+                            // Convert page-level navigation
+                            if (p.nextIdx !== undefined && !p.nextPageId) {
+                                const target = imported.storyPages[parseInt(p.nextIdx)];
+                                if (target) p.nextPageId = target.id;
+                            }
+                            if (p.prevIdx !== undefined && !p.prevPageId) {
+                                const target = imported.storyPages[parseInt(p.prevIdx)];
+                                if (target) p.prevPageId = target.id;
+                            }
+                            
+                            // Convert choice-level navigation
+                            if (p.choices) {
+                                p.choices.forEach(c => {
+                                    if (c.targetIdx !== undefined && !c.targetId) {
+                                        const target = imported.storyPages[parseInt(c.targetIdx)];
+                                        if (target) c.targetId = target.id;
+                                    }
+                                });
+                            }
+                        });
+
                         window.config = imported;
                         window.autoSave();
                         window.refreshUI();
@@ -864,31 +902,27 @@
             
             const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
             
-            // External Link Button
-            if (p.externalUrl?.trim()) {
-                const eb = document.createElement('button');
-                eb.className = "p-action-btn bg-cyan-600 mb-2";
-                eb.innerHTML = '<i class="fa fa-external-link mr-2"></i> Open Link';
-                eb.onclick = () => window.open(p.externalUrl, '_blank');
-                bc.appendChild(eb);
-            }
-
             if (p.hints?.trim()) { const hb = document.createElement('button'); hb.id = 'p-hint-btn'; hb.innerHTML = '<i class="fa fa-question"></i>'; hb.onclick = window.openHintModal; bc.appendChild(hb); }
 
             if (p.pageType === 'password') {
                 const inp = document.createElement('input'); inp.className = "input-style !p-4 !text-2xl text-center font-bold mb-4"; inp.placeholder = "CODE..."; bc.appendChild(inp);
-                const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "OPEN"; sb.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }; bc.appendChild(sb);
+                const sb = document.createElement('button'); sb.className = "p-action-btn"; sb.textContent = "OPEN"; sb.onclick = () => { if(inp.value.trim().toLowerCase() === (p.password||"").toLowerCase()) { if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }; bc.appendChild(sb);
             } else if (p.pageType === 'qr') {
                 const qb = document.createElement('button'); qb.className = "p-action-btn"; qb.textContent = "SCAN QR"; qb.onclick = window.pStartQR; bc.appendChild(qb);
             } else if (p.pageType === 'choice' && p.choices) {
-                p.choices.forEach(c => { const b = document.createElement('button'); b.className = "p-action-btn"; b.textContent = c.text; b.onclick = () => { pSimIdx = window.getPageIdxById(c.targetId); window.pUpdateUI(); }; bc.appendChild(b); });
+                p.choices.forEach(c => { const b = document.createElement('button'); b.className = "p-action-btn"; b.textContent = c.text; b.onclick = () => { if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); pSimIdx = window.getPageIdxById(c.targetId); window.pUpdateUI(); }; bc.appendChild(b); });
             }
             
             const row = document.createElement('div'); row.className = "p-nav-row";
             const bB = document.createElement('button'); bB.className = "p-action-btn btn-secondary"; bB.textContent = "Back"; bB.onclick = () => { pSimIdx = Math.max(0, pSimIdx - 1); window.pUpdateUI(); };
             row.append(bB);
             if (!['password','choice','qr','call'].includes(p.pageType)) {
-                const bN = document.createElement('button'); bN.className = "p-action-btn"; bN.textContent = "Next"; bN.onclick = () => { pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); };
+                const bN = document.createElement('button'); bN.className = "p-action-btn"; bN.textContent = "Next"; 
+                bN.onclick = () => { 
+                    if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); 
+                    pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; 
+                    window.pUpdateUI(); 
+                };
                 row.append(bN);
             }
             bc.appendChild(row);
@@ -909,7 +943,7 @@
             });
         };
 
-        window.pStartQR = () => { document.getElementById('p-qr-layer').style.display='flex'; pQrScanner = new Html5Qrcode("p-qr-reader"); pQrScanner.start({facingMode:"environment"}, {fps:10,qrbox:250}, t=>{ const p=window.config.storyPages[pSimIdx]; if(t.trim().toUpperCase()===(p.qrCode||"").toUpperCase()){ window.pStopQR(); pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }); };
+        window.pStartQR = () => { document.getElementById('p-qr-layer').style.display='flex'; pQrScanner = new Html5Qrcode("p-qr-reader"); pQrScanner.start({facingMode:"environment"}, {fps:10,qrbox:250}, t=>{ const p=window.config.storyPages[pSimIdx]; if(t.trim().toUpperCase()===(p.qrCode||"").toUpperCase()){ if(p.externalUrl?.trim()) window.open(p.externalUrl, '_blank'); window.pStopQR(); pSimIdx = window.getPageIdxById(p.nextPageId) !== -1 ? window.getPageIdxById(p.nextPageId) : pSimIdx + 1; window.pUpdateUI(); } }); };
         window.pStopQR = () => { if(pQrScanner) pQrScanner.stop().finally(()=>{ document.getElementById('p-qr-layer').style.display='none'; pQrScanner=null; }); };
         
         window.pAnswerCall = () => { pStopAllAudio(); document.getElementById('p-call-status').textContent="CALL IN PROGRESS"; document.getElementById('p-call-timer').classList.remove('hidden'); document.getElementById('p-call-controls').classList.add('hidden'); document.getElementById('p-active-ui-buttons').classList.remove('hidden'); const v=document.getElementById('p-call-voice-audio'); const voiceUrl = window.config.storyPages[pSimIdx].voiceUrl; if (voiceUrl) { v.src = voiceUrl; v.play(); v.onended = window.pEndCall; } else { setTimeout(window.pEndCall, 5000); } };
