@@ -439,7 +439,7 @@
         </div>
         
         <div id="p-image-zoom" class="modal-overlay" onclick="window.pCloseZoom()">
-            <img id="p-zoomed-img" src="" onclick="event.stopPropagation()">
+            <img id="p-zoomed-img" src="">
         </div>
 
         <div class="p-game-wrapper">
@@ -560,12 +560,10 @@
         };
 
         window.onpopstate = function(event) {
-            // Check if zoom is open
             if (document.getElementById('p-image-zoom').style.display === 'flex') {
-                window.pCloseZoom(true); // true means don't trigger another popstate
+                window.pCloseZoom(true);
                 return;
             }
-            // Check if player is open
             if (document.getElementById('player-view').style.display === 'flex') {
                 window.pTriggerExitConfirm();
                 history.pushState({view: 'player'}, "");
@@ -1010,24 +1008,20 @@
             const img = document.getElementById('p-zoomed-img');
             img.src = url; 
             document.getElementById('p-image-zoom').style.display = 'flex'; 
-            // Reset state
             zoomState = { scale: 1, lastScale: 1, x: 0, y: 0, lastX: 0, lastY: 0, isDragging: false };
             img.style.transform = `translate(0px, 0px) scale(1)`;
-            // Push history state so back button works
             history.pushState({modal: 'zoom'}, "");
         };
 
         window.pCloseZoom = (fromPopState = false) => { 
             document.getElementById('p-image-zoom').style.display = 'none'; 
             if (!fromPopState) {
-                // Manually close, so we need to clear the zoom history state if it exists
                 if (history.state?.modal === 'zoom') {
                     history.back();
                 }
             }
         };
 
-        // Touch handling for zoom and pan
         function initZoomPan() {
             const img = document.getElementById('p-zoomed-img');
             let startDistance = 0;
@@ -1060,7 +1054,6 @@
 
             img.addEventListener('touchend', () => { zoomState.isDragging = false; });
 
-            // Desktop Mouse support
             img.addEventListener('mousedown', e => {
                 zoomState.isDragging = true;
                 startX = e.clientX - zoomState.x;
