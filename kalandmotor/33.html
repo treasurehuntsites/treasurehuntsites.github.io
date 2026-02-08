@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Adventure Engine - Game Studio V15.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@300;400;500&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            height: 100dvh;
+            font-family: 'Play', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #studio-view, #community-view { height: 100%; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; }
+        @media (min-width: 768px) { #studio-view, #community-view { padding: 2.5rem; } }
+        
+        #studio-view { display: none; }
+        #community-view { display: block; }
+        
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; }
+
+        .input-style { background: #0f172a; color: var(--secondary); border: 1px solid #334155; border-radius: 0.5rem; padding: 0.6rem; outline: none; transition: 0.2s; width: 100%; font-size: 0.875rem; }
+        .input-style:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+        
+        .filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; border: 1px solid #334155; transition: 0.2s; cursor: pointer; background: rgba(30, 41, 59, 0.5); }
+        .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .tag-pill { background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.3); color: var(--secondary); padding: 2px 8px; border-radius: 4px; font-size: 9px; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #10b981; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid transparent; transition: 0.2s; cursor: pointer; user-select: none; }
+        .page-item:hover { background: #2d3748; }
+        .page-item.selected { border-color: var(--secondary); background: #4c1d95; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+        .handle { cursor: grab; padding: 5px 15px 5px 5px; color: #64748b; font-size: 0.9rem; }
+
+        .sim-container { position: sticky; top: 0; width: 320px; height: 600px; background: #000; border: 10px solid #1e293b; border-radius: 2.5rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s; opacity: 0.6; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sim-box { position: relative; background: rgba(0,0,0,0.92); border-top: 3px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 35px; min-height: 220px; display: flex; flex-direction: column; }
+        .sim-avatar { position: absolute; top: -40px; left: 10px; width: 65px; height: 65px; border-radius: 50%; border: 3px solid var(--primary); background: #000; z-index: 20; object-fit: cover; font-size: 0; }
+        .sim-btn { background: var(--primary); color: white; padding: 10px; border-radius: 0.5rem; font-weight: 700; text-align: center; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; width: 100%; border: none; }
+        .sim-btn-secondary, .btn-secondary { background: #334155 !important; }
+
+        #player-view { position: fixed; inset: 0; z-index: 9000; background: #000; display: none; flex-direction: column; height: 100dvh; }
+        .p-game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
+        #p-viewport { position: relative; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #p-bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s ease-in-out; }
+        #p-content-layer { position: relative; z-index: 10; margin-top: auto; width: 100%; display: flex; flex-direction: column; }
+
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.92); border-top: 4px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 25px; padding-top: 45px; min-height: 280px; max-height: 80dvh; display: flex; flex-direction: column; box-shadow: 0 -15px 35px rgba(0,0,0,0.7); }
+        .p-avatar-frame { position: absolute; top: -45px; left: 20px; width: 85px; height: 85px; border-radius: 50%; border: 4px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; }
+        
+        #p-hint-btn { align-self: center; margin-bottom: 12px; width: 36px; height: 36px; background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: 0.2s; z-index: 50; }
+        #p-story-text { text-align: justify; hyphens: auto; font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 15px; color: #f8fafc; }
+        #p-button-container { display: flex; flex-direction: column; gap: 12px; width: 100%; position: relative; }
+        
+        .p-nav-row { display: flex !important; flex-direction: row !important; gap: 10px; width: 100%; margin-top: 10px; }
+        .p-action-btn { flex: 1; background: var(--primary); color: white; padding: 16px; border-radius: 0.85rem; font-weight: 700; text-align: center; font-size: 1.05rem; cursor: pointer; text-transform: uppercase; transition: 0.1s; display: flex; align-items: center; justify-content: center; border: none; }
+        
+        .p-bottom-nav { height: 80px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.4); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .p-nav-item { color: #94a3b8; font-size: 1.6rem; cursor: pointer; border: none; background: transparent; position: relative; width: 25%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .p-nav-item.active { color: var(--primary); }
+        .p-badge { position: absolute; top: 15px; right: 25%; background: #ef4444; color: white; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: bold; border: 2px solid #0f172a; }
+
+        #p-inventory-overlay { position: absolute; inset: 0; background: #0f172a; z-index: 150; display: none; overflow-y: auto; }
+        .p-item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .p-item-card { background: #1e293b; border: 2px solid #334155; border-radius: 1.25rem; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; position: relative; cursor: pointer; }
+        .p-item-card:active { transform: scale(0.95); }
+        .p-item-card img { width: 100%; height: auto; object-fit: contain; max-height: 100px; border-radius: 0.5rem; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: center; justify-content: center; }
+        .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.2em; }
+        @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.9); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+    </style>
+</head>
+<body>
+
+    <div id="save-indicator" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-2 rounded-full font-bold text-xs z-[10000] hidden">
+        <i class="fa fa-sync-alt fa-spin mr-2"></i> SAVING...
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-sm w-full mx-4 text-center border-red-500/50">
+            <div class="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i id="confirm-icon" class="fa fa-trash-can"></i>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold mb-2">Are you sure?</h2>
+            <p id="confirm-desc" class="text-slate-400 text-sm mb-8">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Cancel</button>
+                <button id="confirm-action-btn" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-600/20">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="studio-view">
+        <div class="max-w-7xl mx-auto flex justify-between items-center pt-4 px-4 md:px-0 mb-6">
+            <button onclick="switchView('community')" class="bg-slate-800 text-slate-300 px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase border border-slate-700 hover:border-purple-500 transition-all">Back to Home</button>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
+                    <span class="text-[9px] uppercase font-bold text-slate-400">Public visibility</span>
+                    <label class="switch">
+                        <input type="checkbox" id="isPublicToggle" onchange="autoSave()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="user-info-studio" class="flex items-center gap-2 bg-slate-800 p-1 rounded-full border border-slate-700">
+                    <img id="user-photo-studio" src="" class="w-8 h-8 rounded-full">
+                    <button onclick="window.logout()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors">
+                        <i class="fa fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto">
+            <header class="mb-10 flex flex-col md:flex-row justify-center items-center gap-4">
+                <button onclick="togglePlayerMode()" class="bg-purple-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg w-full md:w-auto"><i class="fa fa-play mr-2"></i> Start Test</button>
+                <button id="publish-btn" onclick="publishGame()" class="bg-emerald-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg w-full md:w-auto">Publish</button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="glass-card p-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Basic Settings</label>
+                            <button onclick="newGame()" class="w-8 h-8 bg-slate-700 text-white rounded-lg flex items-center justify-center hover:bg-slate-600 transition-all shadow-lg border border-slate-600">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <input type="text" id="appTitle" class="input-style" placeholder="Adventure Title" oninput="autoSave()">
+                                <input type="text" id="appTags" class="input-style" placeholder="Tags (mystery, adventure, escape, etc.)" oninput="autoSave()">
+                                <input type="url" id="globalBg" class="input-style" placeholder="Global Background URL" oninput="autoSave()">
+                                <input type="url" id="initialMapLink" class="input-style" placeholder="Main Map Link" oninput="autoSave()">
+                                
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.importGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase">Import JSON</button>
+                                    <button onclick="window.exportGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase">Export JSON</button>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-slate-500 font-bold uppercase text-[9px]">Avatars</label>
+                                    <button onclick="addAvatar()" class="text-cyan-400 text-[9px] font-bold">+ NEW</button>
+                                </div>
+                                <div id="avatarList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <label class="text-purple-400 font-bold uppercase text-[10px]">Scenes</label>
+                        <div id="pageList" class="mt-4 max-h-60 overflow-y-auto pr-2"></div>
+                        <button onclick="addPage()" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold">+ NEW PAGE</button>
+                    </div>
+
+                    <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                        <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                            <div class="flex flex-col">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Editing</label>
+                                <h2 class="text-xl font-bold text-white"><span id="editing-page-id" class="text-purple-500">#0</span></h2>
+                            </div>
+                            <select id="pageType" class="input-style !w-44" onchange="updateUI(); autoSave();">
+                                <option value="story">Description</option>
+                                <option value="choice">Choice</option>
+                                <option value="password">Passcode</option>
+                                <option value="qr">QR Code</option>
+                                <option value="gps">GPS Point</option>
+                                <option value="splash">Transition</option>
+                                <option value="call">Call</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Story Text</label>
+                                <div id="avatarQuickSelect" class="flex gap-2 items-center flex-wrap"></div>
+                            </div>
+                            <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Text..." oninput="autoSave()"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="url" id="pageImage" class="input-style text-xs" placeholder="Image URL (illustration)" oninput="autoSave()">
+                            <input type="url" id="pageBg" class="input-style text-xs" placeholder="Custom Background URL" oninput="autoSave()">
+                        </div>
+
+                        <div id="passwordInputs" class="hidden space-y-3">
+                            <input type="text" id="passwordVal" class="input-style" placeholder="Correct passcode" oninput="autoSave()">
+                        </div>
+                        
+                        <div id="choiceEditor" class="hidden space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Choice Options</label>
+                            <div id="choiceList" class="space-y-2"></div>
+                            <button onclick="addChoice()" class="text-cyan-400 text-[10px] font-bold">+ NEW OPTION</button>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-700 space-y-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="prevIdx" class="input-style" placeholder="Previous page #" oninput="autoSave()">
+                                <input type="number" id="nextIdx" class="input-style" placeholder="Next page #" oninput="autoSave()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 hidden lg:flex justify-center">
+                    <div class="sim-container">
+                        <div id="sim-viewport">
+                            <img id="sim-bg" src="">
+                            <div id="sim-content">
+                                <div class="sim-box">
+                                    <div id="sim-actual-text" style="font-size: 16px; font-weight: 700;"></div>
+                                    <div id="sim-actions" class="mt-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="community-view">
+        <div class="max-w-7xl mx-auto pb-20">
+            <header class="mb-12 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4 text-left">
+                    <img src="https://treasurehuntsites.github.io/kalandmotor/logo.png" class="w-12 h-12 md:w-16 md:h-16 object-contain">
+                    <div>
+                        <h1 class="text-2xl md:text-5xl font-bold uppercase text-white tracking-tighter">Adventure Engine</h1>
+                        <p class="text-emerald-400 text-[8px] md:text-xs font-bold uppercase">Outdoor Escape Room Builder</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="community-studio-btn" onclick="switchView('studio')" class="hidden bg-purple-600 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg">Studio</button>
+                    <div id="community-user-info" class="hidden flex items-center gap-2 bg-slate-800 p-1 rounded-full border border-slate-700">
+                        <img id="community-user-photo" src="" class="w-8 h-8 rounded-full">
+                        <button onclick="window.logout()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors"><i class="fa fa-sign-out-alt"></i></button>
+                    </div>
+                    <button id="community-login-btn" onclick="window.login()" class="bg-purple-600 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase">Login</button>
+                </div>
+            </header>
+            <div id="community-game-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        </div>
+    </div>
+
+    <div id="player-view">
+        <div class="p-game-wrapper">
+            <div id="p-viewport">
+                <img id="p-bg-layer" src="" class="absolute inset-0 w-full h-full object-cover">
+                <div id="p-content-layer">
+                    <div class="p-dialog-box">
+                        <div id="p-story-text"></div>
+                        <div id="p-button-container" class="flex flex-col"></div>
+                        <button onclick="togglePlayerMode()" class="mt-4 text-slate-500 text-xs uppercase text-center w-full">Kilépés</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const fbCfg = { apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618", authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        const appId = 'kalandmotor-v15-independent';
+        const app = initializeApp(fbCfg);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        const defaultConfig = {
+            appTitle: "The Forgotten Path",
+            isPublic: true,
+            storyPages: [{ id: self.crypto.randomUUID(), content: "Welcome!", pageType: "story" }],
+            avatars: []
+        };
+
+        window.config = JSON.parse(localStorage.getItem('KALAND_V15')) || defaultConfig;
+        let currentUser = null;
+        let pSimIdx = 0;
+        let autoSaveTimeout;
+
+        // Admin ellenőrzés
+        const isAdmin = () => currentUser && currentUser.email === 'jatszmabunker@gmail.com';
+
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            const isLoggedIn = !!user;
+            document.getElementById('community-login-btn')?.classList.toggle('hidden', isLoggedIn);
+            document.getElementById('community-studio-btn')?.classList.toggle('hidden', !isLoggedIn);
+            document.getElementById('community-user-info')?.classList.toggle('hidden', !isLoggedIn);
+            if(isLoggedIn) {
+                document.getElementById('community-user-photo').src = user.photoURL;
+                document.getElementById('user-photo-studio').src = user.photoURL;
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'userSaves', 'latest'));
+                if(snap.exists()) {
+                    window.config = snap.data().config;
+                    if(document.getElementById('studio-view').style.display === 'block') refreshUI();
+                }
+            }
+            initCommunitySync();
+        });
+
+        window.login = () => signInWithPopup(auth, provider);
+        window.logout = () => signOut(auth);
+        window.switchView = (v) => {
+            document.getElementById('studio-view').style.display = v === 'studio' ? 'block' : 'none';
+            document.getElementById('community-view').style.display = v === 'community' ? 'block' : 'none';
+            if(v === 'studio') refreshUI();
+        };
+
+        // INTELLIGENS MÁSOLÁS: Közvetlenül alá szúrja
+        window.copyPage = (i) => {
+            const copy = JSON.parse(JSON.stringify(window.config.storyPages[i]));
+            copy.id = self.crypto.randomUUID();
+            window.config.storyPages.splice(i + 1, 0, copy);
+            window.autoSave();
+        };
+
+        // PONTOS TÖRLÉS ID ALAPJÁN
+        window.deletePage = (id) => {
+            window.openConfirmModal("Törlés?", "Biztosan törlöd ezt a jelenetet?", "trash", () => {
+                window.config.storyPages = window.config.storyPages.filter(p => p.id !== id);
+                window.autoSave();
+            });
+        };
+
+        // CLOUD AUTO-SAVE (2 másodperces késleltetéssel)
+        window.autoSave = () => {
+            const p = window.config.storyPages[window.currentIdx];
+            if (p) {
+                p.content = document.getElementById('pageText').value;
+                p.pageType = document.getElementById('pageType').value;
+                p.pageImage = document.getElementById('pageImage').value;
+                p.pageBg = document.getElementById('pageBg').value;
+                p.password = document.getElementById('passwordVal').value;
+                p.nextPageId = getPageIdByIdx(document.getElementById('nextIdx').value);
+                p.prevPageId = getPageIdByIdx(document.getElementById('prevIdx').value);
+            }
+            window.config.appTitle = document.getElementById('appTitle').value;
+            window.config.appTags = document.getElementById('appTags').value;
+            window.config.globalBg = document.getElementById('globalBg').value;
+            window.config.isPublic = document.getElementById('isPublicToggle').checked;
+
+            localStorage.setItem('KALAND_V15', JSON.stringify(window.config));
+            renderPageList();
+            updateSimulator();
+
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(async () => {
+                if (currentUser) {
+                    document.getElementById('save-indicator').classList.remove('hidden');
+                    await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'userSaves', 'latest'), { 
+                        config: window.config, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                    setTimeout(() => document.getElementById('save-indicator').classList.add('hidden'), 800);
+                }
+            }, 2000);
+        };
+
+        function refreshUI() {
+            document.getElementById('appTitle').value = window.config.appTitle || "";
+            document.getElementById('appTags').value = window.config.appTags || "";
+            document.getElementById('globalBg').value = window.config.globalBg || "";
+            document.getElementById('isPublicToggle').checked = window.config.isPublic !== false;
+            renderPageList();
+            loadPage(0);
+        }
+
+        window.loadPage = (i) => {
+            window.currentIdx = i; const p = window.config.storyPages[i]; if (!p) return;
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('editing-page-id').textContent = `#${i}`;
+            document.getElementById('pageText').value = p.content || "";
+            document.getElementById('pageType').value = p.pageType || 'story';
+            document.getElementById('nextIdx').value = getPageIdxById(p.nextPageId) ?? "";
+            document.getElementById('prevIdx').value = getPageIdxById(p.prevPageId) ?? "";
+            updateUI(); updateSimulator();
+        };
+
+        window.renderPageList = () => {
+            const l = document.getElementById('pageList'); l.innerHTML = '';
+            window.config.storyPages.forEach((p, i) => {
+                const d = document.createElement('div');
+                d.className = `page-item ${i === window.currentIdx ? 'selected' : ''}`;
+                d.innerHTML = `
+                    <div class="truncate font-bold text-xs"><i class="fa fa-bars handle"></i> #${i}: ${p.content.substring(0,15)}</div>
+                    <div class="flex gap-2">
+                        <button onclick="event.stopPropagation(); window.copyPage(${i})"><i class="fa fa-copy"></i></button>
+                        <button onclick="event.stopPropagation(); window.deletePage('${p.id}')"><i class="fa fa-trash text-red-400"></i></button>
+                    </div>`;
+                d.onclick = () => window.loadPage(i);
+                l.appendChild(d);
+            });
+        };
+
+        function initCommunitySync() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'publishedGames'), (snap) => {
+                const list = document.getElementById('community-game-list');
+                list.innerHTML = '';
+                snap.docs.forEach(d => {
+                    const g = d.data();
+                    const canEdit = isAdmin() || (currentUser && d.data().authorId === currentUser.uid);
+                    const card = document.createElement('div');
+                    card.className = "glass-card p-6 flex flex-col gap-4";
+                    card.innerHTML = `
+                        <h3 class="font-bold text-xl text-white">${g.title}</h3>
+                        <p class="text-xs text-slate-400">By: ${g.author}</p>
+                        <button onclick="playPublic('${d.id}')" class="bg-purple-600 py-2 rounded-lg font-bold">PLAY</button>
+                        ${canEdit ? `<button onclick="editPublic('${d.id}')" class="bg-slate-700 py-2 rounded-lg text-xs">EDIT</button>` : ''}
+                    `;
+                    list.appendChild(card);
+                });
+            });
+        }
+
+        window.playPublic = async (id) => {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id));
+            if(snap.exists()) { window.config = snap.data().config; togglePlayerMode(); }
+        };
+
+        window.editPublic = async (id) => {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id));
+            if(snap.exists()) { window.config = snap.data().config; switchView('studio'); }
+        };
+
+        window.openConfirmModal = (title, desc, icon, onConfirm) => {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-desc').textContent = desc;
+            const btn = document.getElementById('confirm-action-btn');
+            btn.onclick = () => { onConfirm(); closeConfirmModal(); };
+            document.getElementById('confirm-modal').style.display = 'flex';
+        };
+        window.closeConfirmModal = () => document.getElementById('confirm-modal').style.display = 'none';
+
+        const getPageIdxById = (id) => window.config.storyPages.findIndex(p => p.id === id);
+        const getPageIdByIdx = (idx) => { if(idx==="") return null; const p = window.config.storyPages[parseInt(idx)]; return p ? p.id : null; };
+        
+        window.updateUI = () => {};
+        window.updateSimulator = () => {
+            const p = window.config.storyPages[window.currentIdx];
+            if(p) document.getElementById('sim-actual-text').textContent = p.content;
+        };
+
+        window.togglePlayerMode = () => {
+            const v = document.getElementById('player-view');
+            v.style.display = v.style.display === 'flex' ? 'none' : 'flex';
+            if(v.style.display === 'flex') { pSimIdx = 0; pUpdateUI(); }
+        };
+
+        function pUpdateUI() {
+            const p = window.config.storyPages[pSimIdx]; if(!p) return;
+            document.getElementById('p-bg-layer').src = p.pageBg || window.config.globalBg || "";
+            document.getElementById('p-story-text').textContent = p.content;
+            const bc = document.getElementById('p-button-container'); bc.innerHTML = '';
+            const btn = document.createElement('button');
+            btn.className = "p-action-btn";
+            btn.textContent = "Tovább";
+            btn.onclick = () => { pSimIdx++; pUpdateUI(); };
+            bc.appendChild(btn);
+        }
+
+        window.addPage = () => {
+            window.config.storyPages.push({ id: self.crypto.randomUUID(), content: "New scene...", pageType: "story" });
+            window.autoSave();
+        };
+
+        window.newGame = () => {
+            window.config = JSON.parse(JSON.stringify(defaultConfig));
+            refreshUI();
+            window.autoSave();
+        };
+        
+        window.publishGame = async () => {
+            if(!currentUser) return;
+            const gid = window.config.cloudId || self.crypto.randomUUID();
+            window.config.cloudId = gid;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gid), {
+                title: window.config.appTitle,
+                author: currentUser.displayName,
+                authorId: currentUser.uid,
+                config: window.config,
+                updatedAt: new Date().toISOString()
+            });
+            alert("Publikálva!");
+        };
+
+    </script>
+</body>
+</html>
