@@ -1,0 +1,64 @@
+<style>
+    .input-style { 
+        padding: 0.85rem !important; /* Nagyobb mezők */
+        font-size: 1rem !important; 
+    }
+    .p-dialog-box, .sim-box { 
+        background: rgba(0, 0, 0, 0.8) !important; /* Átlátszóbb szövegdoboz */
+        backdrop-filter: blur(8px);
+    }
+</style>
+
+<script type="module">
+    // ... (Firebase init marad)
+
+    // ADMIN ELLENŐRZÉS
+    const isAdmin = () => currentUser && currentUser.email === 'jatszmabunker@gmail.com';
+
+    // PONTOS TÖRLÉS ÉS OKOS MÁSOLÁS
+    window.copyPage = (i) => {
+        const sourcePage = window.config.storyPages[i];
+        const newPage = JSON.parse(JSON.stringify(sourcePage));
+        newPage.id = self.crypto.randomUUID();
+        // Közvetlenül alá szúrja be
+        window.config.storyPages.splice(i + 1, 0, newPage);
+        window.autoSave();
+    };
+
+    // VALÓDI AUTO-SAVE (CLOUD SYNC)
+    let autoSaveTimeout;
+    window.autoSave = () => {
+        // 1. UI adatok begyűjtése a configba (a meglévő logikád alapján)
+        const p = window.config.storyPages[window.currentIdx];
+        if (p) {
+            p.content = document.getElementById('pageText').value;
+            // ... többi mező mentése
+        }
+        
+        // 2. Helyi mentés
+        localStorage.setItem('KALAND_V15', JSON.stringify(window.config));
+        window.renderPageList();
+        window.updateSimulator();
+
+        // 3. Felhő mentés (Debounce-olva, hogy ne terhelje a Firebase-t minden betűnél)
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(async () => {
+            if (currentUser && !currentUser.isAnonymous) {
+                document.getElementById('save-indicator').classList.remove('hidden');
+                const ref = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'userSaves', 'latest');
+                await setDoc(ref, { config: window.config, updatedAt: new Date().toISOString() });
+                setTimeout(() => document.getElementById('save-indicator').classList.add('hidden'), 800);
+            }
+        }, 1500);
+    };
+
+    // ADMIN FUNKCIÓK A KÖZÖSSÉGI LISTÁBAN
+    window.renderCommunityList = () => {
+        // ... (szűrési logika)
+        filtered.forEach(game => {
+            const canManage = isAdmin() || (currentUser && game.authorId === currentUser.uid);
+            // ... kártya generálás
+            // Ha admin, akkor szerkesztheti a készítő nevét is a configban
+        });
+    };
+</script>
