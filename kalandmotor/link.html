@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Tracker Pro - Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 1rem; }
+        .input-field { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 0.75rem; border-radius: 0.5rem; width: 100%; outline: none; transition: 0.2s; }
+        .input-field:focus { border-color: #38bdf8; }
+        .btn-primary { background: #0284c7; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; border: none; }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-google { background: white; color: #1f2937; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; border: none; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- ÁTIRÁNYÍTÁS MODAL -->
+    <div id="redirecting-ui" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center hidden">
+        <div class="text-4xl text-sky-500 mb-4"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+        <h2 class="text-2xl font-bold mb-2 text-white">Átirányítás folyamatban...</h2>
+        <p class="text-slate-400" id="redirect-target-text"></p>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-ui" class="max-w-md mx-auto mt-20 p-10 glass-card text-center hidden">
+        <i class="fa-solid fa-lock-open text-5xl text-sky-500 mb-6"></i>
+        <h1 class="text-2xl font-bold mb-2">Admin Belépés</h1>
+        <p class="text-slate-400 mb-8">Jelentkezz be a jatszmabunker@gmail.com fiókkal.</p>
+        <button id="login-btn" class="btn-google w-full">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18">
+            Belépés Google-lel
+        </button>
+    </div>
+
+    <!-- DENIED SCREEN -->
+    <div id="denied-ui" class="max-w-md mx-auto mt-20 p-10 glass-card text-center hidden">
+        <i class="fa-solid fa-shield-slash text-5xl text-red-500 mb-6"></i>
+        <h1 class="text-2xl font-bold mb-2 text-red-400">Nincs jogosultság</h1>
+        <p class="text-slate-400 mb-6">A fiókod (<span id="denied-email" class="text-white"></span>) nem szerepel az admin listán.</p>
+        <button id="logout-retry-btn" class="btn-primary">Kijelentkezés és újrapróbálkozás</button>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="dashboard-ui" class="max-w-6xl mx-auto space-y-8 hidden">
+        <header class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-white">Link Tracker <span class="text-sky-500">Admin</span></h1>
+                <p id="admin-welcome" class="text-slate-400">Üdvözöljük!</p>
+            </div>
+            <button id="logout-btn" class="text-xs text-slate-500 hover:text-white uppercase font-bold tracking-widest">Kijelentkezés</button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-bold mb-4">Link Generálás</h2>
+                    <div class="space-y-4">
+                        <input type="text" id="page-id-input" class="input-field" placeholder="Oldal neve (pl. FB_KAMPANY_01)">
+                        <input type="url" id="target-url-input" class="input-field" placeholder="Cél URL (https://...)">
+                        <button id="generate-btn" class="btn-primary w-full">Link Létrehozása</button>
+                    </div>
+                </div>
+                <div id="result-card" class="glass-card p-6 hidden border-sky-500/20">
+                    <h3 class="text-xs font-bold uppercase text-sky-400 mb-2">Másolható URL:</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="generated-link" class="input-field text-xs bg-slate-900" readonly>
+                        <button onclick="copyLink()" class="p-2 bg-slate-700 rounded hover:bg-slate-600"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="glass-card p-6 min-h-[400px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">Látogatások</h2>
+                        <button onclick="clearLogs()" class="text-xs text-red-500 font-bold uppercase hover:underline">Napló ürítése</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="text-slate-500 border-b border-slate-700">
+                                <tr>
+                                    <th class="pb-3">Időpont</th>
+                                    <th class="pb-3">Oldal</th>
+                                    <th class="pb-3">Célpont</th>
+                                </tr>
+                            </thead>
+                            <tbody id="log-table-body" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                        <div id="no-logs" class="py-20 text-center text-slate-600 hidden">Még nincsenek adatok.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white font-bold shadow-2xl transition-all opacity-0 translate-y-10 pointer-events-none z-[9999]"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const fbCfg = {
+            apiKey: "AIzaSyCfVce17Yye6jyvpSSoW6jlh3ei7T0N618",
+            authDomain: "kalandmotor.firebaseapp.com",
+            projectId: "kalandmotor",
+            storageBucket: "kalandmotor.firebasestorage.app",
+            messagingSenderId: "108860908140",
+            appId: "1:108860908140:web:5fbec83f4ae7b51487ee49"
+        };
+        const ADMIN_EMAIL = 'jatszmabunker@gmail.com';
+        const APP_UID = 'kalandmotor-tracker';
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fbCfg;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        onAuthStateChanged(auth, (user) => {
+            const params = new URLSearchParams(window.location.search);
+            const pid = params.get('pid');
+            const target = params.get('target');
+
+            if (pid && target) {
+                // ÁTIRÁNYÍTÓ MÓD: Látogatói naplózás
+                if (!user) {
+                    signInAnonymously(auth).then(() => handleRedirect(pid, target));
+                } else {
+                    handleRedirect(pid, target);
+                }
+            } else {
+                // ADMIN MÓD
+                if (user && !user.isAnonymous) {
+                    if (user.email === ADMIN_EMAIL) showDashboard(user);
+                    else showDenied(user.email);
+                } else {
+                    showLogin();
+                }
+            }
+        });
+
+        document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
+        document.getElementById('logout-retry-btn').onclick = () => signOut(auth).then(() => location.reload());
+
+        function showLogin() {
+            document.getElementById('login-ui').classList.remove('hidden');
+            document.getElementById('dashboard-ui').classList.add('hidden');
+            document.getElementById('denied-ui').classList.add('hidden');
+        }
+
+        function showDashboard(user) {
+            document.getElementById('login-ui').classList.add('hidden');
+            document.getElementById('dashboard-ui').classList.remove('hidden');
+            document.getElementById('admin-welcome').textContent = `Admin: ${user.displayName}`;
+            startLogs();
+        }
+
+        function showDenied(email) {
+            document.getElementById('login-ui').classList.add('hidden');
+            document.getElementById('denied-ui').classList.remove('hidden');
+            document.getElementById('denied-email').textContent = email;
+        }
+
+        async function handleRedirect(pid, target) {
+            document.getElementById('redirecting-ui').classList.remove('hidden');
+            document.getElementById('redirect-target-text').textContent = target;
+            try {
+                await addDoc(collection(db, 'artifacts', APP_UID, 'public', 'data', 'access_logs'), {
+                    pageId: pid, 
+                    targetUrl: target, 
+                    timestamp: serverTimestamp(), 
+                    platform: navigator.platform
+                });
+                setTimeout(() => { window.location.href = target; }, 800);
+            } catch (e) {
+                console.error("Tracking Error:", e);
+                window.location.href = target;
+            }
+        }
+
+        document.getElementById('generate-btn').onclick = () => {
+            const pid = document.getElementById('page-id-input').value.trim();
+            const target = document.getElementById('target-url-input').value.trim();
+            if (!pid || !target) return showToast("Hiányzó adatok!", "red");
+            const link = `${window.location.origin}${window.location.pathname}?pid=${encodeURIComponent(pid)}&target=${encodeURIComponent(target)}`;
+            document.getElementById('generated-link').value = link;
+            document.getElementById('result-card').classList.remove('hidden');
+            showToast("Sikeres generálás!", "emerald");
+        };
+
+        window.copyLink = () => {
+            document.getElementById('generated-link').select();
+            document.execCommand('copy');
+            showToast("Másolva!", "sky");
+        };
+
+        let logUnsub = null;
+        function startLogs() {
+            if (logUnsub) logUnsub();
+            const col = collection(db, 'artifacts', APP_UID, 'public', 'data', 'access_logs');
+            logUnsub = onSnapshot(col, (snap) => {
+                const logs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                logs.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                const body = document.getElementById('log-table-body');
+                body.innerHTML = '';
+                document.getElementById('no-logs').classList.toggle('hidden', logs.length > 0);
+                logs.forEach(l => {
+                    const row = document.createElement('tr');
+                    const time = l.timestamp ? new Date(l.timestamp.seconds*1000).toLocaleString('hu-HU') : '...';
+                    row.innerHTML = `<td class="py-3 text-slate-500 text-[10px]">${time}</td><td class="py-3 font-bold text-sky-400">${l.pageId}</td><td class="py-3 text-slate-500 truncate max-w-[150px]">${l.targetUrl}</td>`;
+                    body.appendChild(row);
+                });
+            }, (err) => {
+                console.error("Firestore error:", err);
+                showToast("HIBA: Jogosultság megtagadva az adatokhoz!", "red");
+            });
+        }
+
+        window.clearLogs = async () => {
+            if (!confirm("Véglegesen törlöd a statisztikát?")) return;
+            const snap = await getDocs(collection(db, 'artifacts', APP_UID, 'public', 'data', 'access_logs'));
+            await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'artifacts', APP_UID, 'public', 'data', 'access_logs', d.id))));
+            showToast("Napló ürítve!", "emerald");
+        };
+
+        function showToast(m, c) {
+            const t = document.getElementById('toast');
+            t.textContent = m;
+            t.className = `fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white font-bold shadow-2xl transition-all z-[9999] bg-${c}-600`;
+            t.style.opacity = '1'; t.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translate(-50%, 20px)'; }, 3000);
+        }
+    </script>
+</body>
+</html>
+
