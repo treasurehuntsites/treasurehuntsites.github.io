@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Adventure Engine - Puzzle Feladvány</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.85);
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Play', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(139, 92, 246, 0.3); 
+            border-radius: 1.5rem; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+        }
+
+        .grid-cell {
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .grid-cell:active {
+            background: rgba(139, 92, 246, 0.3);
+            border-color: var(--primary);
+        }
+
+        #image-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 4px solid #1e293b;
+            background: #000;
+        }
+
+        .main-bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+            z-index: -1;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #334155;
+            transition: 0.3s;
+        }
+
+        .dot.active {
+            background: var(--secondary);
+            box-shadow: 0 0 10px var(--secondary);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .shake { animation: shake 0.4s ease-in-out; }
+
+        #feedback-message {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-weight: bold;
+            display: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--primary);
+            font-size: 2rem;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="main-bg"></div>
+
+    <div id="feedback-message" class="bg-red-500/90 text-white border border-red-400">Helytelen! Kezdd újra!</div>
+
+    <div class="w-full max-w-lg glass-card p-6 md:p-8 text-center">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold text-white uppercase tracking-tighter mb-2">
+                <i class="fa fa-puzzle-piece text-purple-500 mr-2"></i> Kép-rejtvény
+            </h1>
+            <p class="text-slate-400 text-sm italic">Találd meg a kakukktojást a képen!</p>
+        </header>
+
+        <div class="step-indicator" id="dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div id="puzzle-wrapper">
+            <div id="image-container">
+                <i class="fa fa-circle-notch fa-spin loading-spinner"></i>
+                <img id="current-img" src="https://i.postimg.cc/LsVXHZ42/szex1.png" class="w-full h-full object-cover select-none relative z-10" onload="this.previousElementSibling.style.display='none'">
+                <div class="puzzle-grid">
+                    <div class="grid-cell" onclick="handleChoice(0)"></div>
+                    <div class="grid-cell" onclick="handleChoice(1)"></div>
+                    <div class="grid-cell" onclick="handleChoice(2)"></div>
+                    <div class="grid-cell" onclick="handleChoice(3)"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <div class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest opacity-60">Adventure Engine V14.8</div>
+        </div>
+    </div>
+
+    <script>
+        // Játék adatok a megadott külső linkekkel
+        const steps = [
+            { img: 'https://i.postimg.cc/LsVXHZ42/szex1.png', correct: 3 }, // Jobb alsó
+            { img: 'https://i.postimg.cc/ZKrFrVVV/szex2.png', correct: 2 }, // Bal alsó
+            { img: 'https://i.postimg.cc/9FGtGJJ1/szex3.png', correct: 1 }  // Jobb felső
+        ];
+
+        const finalRedirectUrl = "https://www.google.com"; // Céloldal sikeres befejezés után
+        let currentStep = 0;
+
+        function handleChoice(index) {
+            const step = steps[currentStep];
+            
+            if (index === step.correct) {
+                advance();
+            } else {
+                fail();
+            }
+        }
+
+        function advance() {
+            currentStep++;
+            
+            if (currentStep >= steps.length) {
+                // Átirányítás az utolsó helyes válasz után
+                window.location.href = finalRedirectUrl;
+                return;
+            }
+
+            updateUI();
+        }
+
+        function fail() {
+            const container = document.getElementById('puzzle-wrapper');
+            const feedback = document.getElementById('feedback-message');
+            
+            container.classList.add('shake');
+            feedback.style.display = 'block';
+            
+            setTimeout(() => {
+                container.classList.remove('shake');
+                feedback.style.display = 'none';
+                currentStep = 0; // Vissza az elejére
+                updateUI();
+            }, 800);
+        }
+
+        function updateUI() {
+            const img = document.getElementById('current-img');
+            const spinner = img.previousElementSibling;
+            
+            // Mutatjuk a töltőt, amíg az új kép be nem tölt
+            spinner.style.display = 'block';
+            img.src = steps[currentStep].img;
+
+            // Indikátor pöttyök frissítése
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === currentStep);
+            });
+        }
+    </script>
+</body>
+</html>
