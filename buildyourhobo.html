@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segélyháló - Karakter Alapú Segítségnyújtás</title>
+    <!-- Tailwind CSS a modern UI-hoz -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS a térképhez -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome ikonok -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        #map { height: 60vh; width: 100%; border-radius: 1rem; }
+        .hp-bar-fill, .xp-bar-fill { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .pulse-urgent { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .modal-backdrop { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); }
+        .level-up-anim { animation: levelUp 1s ease-out; }
+        @keyframes levelUp {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.1); filter: brightness(1.5); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans overflow-x-hidden">
+
+    <!-- Header / Nav -->
+    <nav class="bg-slate-800 p-4 shadow-lg flex justify-between items-center sticky top-0 z-[1000] border-b border-slate-700">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-hand-holding-heart text-rose-500 text-2xl"></i>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight leading-none">SEGÉLYHÁLÓ</h1>
+                <p id="user-rank" class="text-[10px] text-amber-400 font-bold uppercase tracking-widest">Kezdő Segítő</p>
+            </div>
+        </div>
+
+        <!-- User Progress Bar in Nav -->
+        <div class="hidden md:flex flex-col items-end space-y-1 mx-8 flex-1 max-w-xs">
+            <div class="flex justify-between w-full text-[10px] uppercase font-bold text-slate-400">
+                <span>Szint: <span id="user-level" class="text-white">1</span></span>
+                <span>XP: <span id="user-xp-text" class="text-white">0 / 1000</span></span>
+            </div>
+            <div class="w-full bg-slate-900 h-2 rounded-full border border-slate-700 overflow-hidden">
+                <div id="user-xp-bar" class="xp-bar-fill h-full bg-gradient-to-r from-amber-500 to-yellow-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div id="badge-container" class="hidden sm:flex space-x-1 mr-2">
+                <!-- Badges will appear here -->
+            </div>
+            <button onclick="toggleRole()" id="role-indicator" class="px-3 py-1 rounded-full text-xs bg-blue-600 font-bold uppercase transition-all hover:brightness-110">Nyilvános Nézet</button>
+        </div>
+    </nav>
+
+    <main class="p-4 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left Col: Map & Stats -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="bg-slate-800 p-2 rounded-2xl shadow-xl relative border border-slate-700">
+                <div id="map" class="z-0"></div>
+                <div class="absolute top-4 right-4 z-[500] bg-slate-900/80 backdrop-blur-md p-3 rounded-xl text-[10px] border border-slate-700">
+                    <div class="flex items-center space-x-2 mb-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> <span>Stabil állapot</span></div>
+                    <div class="flex items-center space-x-2 mb-1"><span class="w-2 h-2 rounded-full bg-orange-500"></span> <span>Veszélyeztetett</span></div>
+                    <div class="flex items-center space-x-2"><span class="w-2 h-2 rounded-full bg-red-500 pulse-urgent"></span> <span>Azonnali segítség</span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-slate-800 p-3 rounded-xl text-center border border-slate-700">
+                    <p class="text-slate-400 text-[10px] uppercase">Rendszeridő</p>
+                    <p id="clock" class="text-lg font-mono text-white">12:00</p>
+                </div>
+                <div class="bg-slate-800 p-3 rounded-xl text-center border border-slate-700">
+                    <p class="text-slate-400 text-[10px] uppercase">Hálózati XP</p>
+                    <p id="global-xp" class="text-lg font-bold text-amber-500">2.4k</p>
+                </div>
+                <div class="bg-slate-800 p-3 rounded-xl text-center border border-slate-700">
+                    <p class="text-slate-400 text-[10px] uppercase">Aktív hősök</p>
+                    <p class="text-lg font-bold text-white">128</p>
+                </div>
+                <div class="bg-slate-800 p-3 rounded-xl text-center border border-slate-700 border-b-2 border-b-rose-500">
+                    <p class="text-slate-400 text-[10px] uppercase">Ma segítve</p>
+                    <p id="helped-today" class="text-lg font-bold text-white">12</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Col: Character Detail -->
+        <div class="lg:col-span-1">
+            <div id="character-panel" class="bg-slate-800 rounded-2xl shadow-xl p-6 sticky top-24 border border-slate-700 hidden">
+                <!-- Character Header -->
+                <div class="flex items-start justify-between mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <img id="char-img" src="" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-rose-500 shadow-lg">
+                            <div class="absolute -top-1 -right-1 bg-amber-500 text-[8px] font-bold px-1 rounded text-slate-900 shadow-sm">+XP</div>
+                        </div>
+                        <div>
+                            <h2 id="char-name" class="text-xl font-bold">Név...</h2>
+                            <div class="flex items-center space-x-2">
+                                <p id="char-money-display" class="text-emerald-400 font-mono text-sm">0 Ft</p>
+                                <span class="text-slate-600">|</span>
+                                <p class="text-[10px] text-slate-400 italic">ID: #400<span id="char-id-num">0</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closePanel()" class="text-slate-500 hover:text-white transition"><i class="fa-solid fa-circle-xmark text-xl"></i></button>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1 uppercase text-slate-400 font-bold tracking-wider">
+                            <span>Életerő (HP)</span>
+                            <span id="stat-hp-val">100%</span>
+                        </div>
+                        <div class="w-full bg-slate-900 h-3 rounded-full border border-slate-700 overflow-hidden">
+                            <div id="stat-hp-bar" class="hp-bar-fill h-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1 uppercase text-slate-400 font-bold tracking-wider">
+                            <span>Jóllakottság</span>
+                            <span id="stat-hunger-val">80%</span>
+                        </div>
+                        <div class="w-full bg-slate-900 h-3 rounded-full border border-slate-700 overflow-hidden">
+                            <div id="stat-hunger-bar" class="hp-bar-fill h-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]" style="width: 80%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Icons Section -->
+                <div class="mb-6 bg-slate-900/40 p-3 rounded-xl border border-slate-700/50">
+                    <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex justify-between items-center">
+                        <span>Aktív Felszerelés</span>
+                        <i class="fa-solid fa-box-open text-slate-700 text-xs"></i>
+                    </h3>
+                    <div id="inventory-grid" class="flex flex-wrap gap-2">
+                        <!-- Icons injected here -->
+                    </div>
+                </div>
+
+                <!-- Volunteer Controls (Conditional) -->
+                <div id="volunteer-controls" class="space-y-3 hidden">
+                    <button onclick="openDonationModal()" class="w-full bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 py-3 rounded-xl text-sm font-bold transition shadow-lg shadow-rose-900/20 active:scale-95 flex items-center justify-center">
+                        <i class="fa-solid fa-plus-circle mr-2"></i> ADOMÁNY RÖGZÍTÉSE
+                    </button>
+                    <button onclick="verifyQR()" class="w-full border border-slate-600 bg-slate-700/50 hover:bg-slate-700 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center">
+                        <i class="fa-solid fa-qrcode mr-2 text-emerald-400"></i> QR HITELLESÍTÉS (+200 XP)
+                    </button>
+                </div>
+
+                <!-- Public Info (Conditional) -->
+                <div id="public-info" class="p-4 bg-slate-900/50 rounded-xl border border-dashed border-slate-600">
+                    <p id="char-quote" class="text-sm italic text-slate-300 mb-4">"..."</p>
+                    <button onclick="openDonationModal()" class="w-full bg-white text-slate-900 hover:bg-slate-100 py-3 rounded-xl text-sm transition font-extrabold flex items-center justify-center">
+                        <i class="fa-solid fa-heart mr-2 text-rose-500"></i> SEGÍTENI SZERETNÉK
+                    </button>
+                </div>
+            </div>
+
+            <div id="empty-panel" class="bg-slate-800 rounded-2xl shadow-xl p-12 text-center border border-slate-700 border-dashed">
+                <div class="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fa-solid fa-map-pin text-3xl text-slate-600 animate-bounce"></i>
+                </div>
+                <h3 class="font-bold mb-2">Segítségnyújtás Kezdése</h3>
+                <p class="text-slate-400 text-sm">Válassz egy rászorulót a térképen az állapotának ellenőrzéséhez és a felajánláshoz.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- DONATION MODAL -->
+    <div id="donation-modal" class="fixed inset-0 z-[3000] modal-backdrop flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-700 overflow-hidden">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800/80 sticky top-0">
+                <div>
+                    <h3 class="text-xl font-bold">Új Felajánlás</h3>
+                    <p class="text-[10px] text-amber-400 uppercase font-bold tracking-widest">Adományozz XP gyűjtéséhez!</p>
+                </div>
+                <button onclick="closeDonationModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-6 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <!-- Clothing -->
+                <div>
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest flex items-center">
+                        <i class="fa-solid fa-shirt mr-2"></i> Ruházat (+100 XP)
+                    </h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectDonation('cloth', 'Zokni', 'fa-socks', 120)" class="bg-slate-700/50 border border-slate-600 p-2 rounded-xl text-xs hover:bg-blue-600 transition hover:border-blue-400">Zokni</button>
+                        <button onclick="selectDonation('cloth', 'Bakancs', 'fa-shoe-prints', 600)" class="bg-slate-700/50 border border-slate-600 p-2 rounded-xl text-xs hover:bg-blue-600 transition hover:border-blue-400">Bakancs</button>
+                        <button onclick="selectDonation('cloth', 'Kabát', 'fa-shirt', 1200)" class="bg-slate-700/50 border border-slate-600 p-2 rounded-xl text-xs hover:bg-blue-600 transition hover:border-blue-400">Kabát</button>
+                    </div>
+                </div>
+
+                <!-- Food -->
+                <div>
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest flex items-center">
+                        <i class="fa-solid fa-utensils mr-2"></i> Élelmezés (+50 XP)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="selectDonation('food', 'Hideg étel', 'fa-box', 40)" class="bg-sky-900/20 border border-sky-700/50 p-4 rounded-2xl text-sm hover:bg-sky-800 transition flex items-center justify-center">
+                            <i class="fa-solid fa-box mr-2"></i> Hideg csomag
+                        </button>
+                        <button onclick="selectDonation('food', 'Meleg étel', 'fa-bowl-food', 40)" class="bg-orange-900/20 border border-orange-700/50 p-4 rounded-2xl text-sm hover:bg-orange-800 transition flex items-center justify-center">
+                            <i class="fa-solid fa-fire mr-2"></i> Meleg étel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Money -->
+                <div>
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest flex items-center">
+                        <i class="fa-solid fa-coins mr-2"></i> Pénzbeli támogatás (XP arányos)
+                    </h4>
+                    <div class="relative">
+                        <input type="number" id="money-input" placeholder="Összeg megadása (Ft)..." class="w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 text-sm focus:border-rose-500 outline-none transition pr-12">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 font-bold">Ft</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 bg-slate-900/50 border-t border-slate-700">
+                <button onclick="submitDonation()" class="w-full bg-rose-600 py-4 rounded-2xl font-bold transition hover:bg-rose-500 shadow-xl shadow-rose-950/20 flex items-center justify-center group">
+                    <span>REGISZTRÁLÁS</span>
+                    <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast UI -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white text-slate-900 px-8 py-4 rounded-2xl font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-[4000] scale-95 border-b-4 border-slate-300"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- GAMIFICATION STATE ---
+        let userProfile = {
+            xp: 0,
+            level: 1,
+            rank: "Kezdő Segítő",
+            badges: [],
+            totalDonations: 0,
+            moneyDonated: 0
+        };
+
+        const RANKS = [
+            { minXp: 0, name: "Kezdő Segítő" },
+            { minXp: 500, name: "Városi Hős" },
+            { minXp: 2000, name: "Őrangyal" },
+            { minXp: 5000, name: "A Város Legendája" }
+        ];
+
+        const BADGES = {
+            FIRST_AID: { icon: 'fa-award', color: 'text-amber-500', name: 'Első Segítség', desc: 'Első adományod leadva' },
+            BIG_HEART: { icon: 'fa-heart', color: 'text-rose-500', name: 'Nagy Szív', desc: 'Több mint 5000 Ft adomány' },
+            QR_MASTER: { icon: 'fa-qrcode', color: 'text-emerald-400', name: 'QR Mester', desc: '5 hitelesített segély' }
+        };
+
+        // --- DATA & CONFIG ---
+        let isVolunteer = false;
+        let selectedCharacter = null;
+        let map;
+        let markers = {};
+        let currentSelection = null;
+
+        const characters = [
+            {
+                id: 1, name: "János", lat: 47.498, lng: 19.060, hp: 85, hunger: 60, money: 1200,
+                inventory: [
+                    { name: 'Bakancs', icon: 'fa-shoe-prints', expires: Date.now() + 600000 },
+                    { name: 'Takaró', icon: 'fa-rug', expires: Date.now() + 800000 }
+                ],
+                quote: "Egy meleg tea sokat segítene ebben a hidegben.",
+                img: "https://images.unsplash.com/photo-1551847677-16082b6cb4ce?w=200&h=200&fit=crop"
+            },
+            {
+                id: 2, name: "Mária", lat: 47.505, lng: 19.040, hp: 32, hunger: 10, money: 500,
+                inventory: [],
+                quote: "Nagyon fázom az éjjel, félek, hogy megbetegszem.",
+                img: "https://images.unsplash.com/photo-1544161513-0179fe746fd5?w=200&h=200&fit=crop"
+            }
+        ];
+
+        // --- CORE ENGINE ---
+        function updateLogic() {
+            const now = Date.now();
+            characters.forEach(char => {
+                char.hunger = Math.max(0, char.hunger - 0.2);
+                if (char.hunger < 20) char.hp = Math.max(5, char.hp - 0.3);
+
+                char.inventory = char.inventory.filter(item => item.expires > now);
+
+                const hasShoes = char.inventory.some(i => i.name === 'Bakancs');
+                if (!hasShoes) char.hp = Math.max(5, char.hp - 0.1);
+
+                updateMarkerStyle(char);
+            });
+
+            if (selectedCharacter) updatePanel(selectedCharacter.id);
+            updateClock();
+        }
+
+        // --- REWARD LOGIC ---
+        function addXP(amount) {
+            userProfile.xp += amount;
+            
+            // Calculate Level
+            const newLevel = Math.floor(userProfile.xp / 1000) + 1;
+            if (newLevel > userProfile.level) {
+                userProfile.level = newLevel;
+                showToast(`SZINTLÉPÉS! Mostantól ${newLevel}. szintű vagy!`, true);
+                document.getElementById('user-level').classList.add('level-up-anim');
+                setTimeout(() => document.getElementById('user-level').classList.remove('level-up-anim'), 1000);
+            }
+
+            // Update Rank
+            const currentRank = RANKS.slice().reverse().find(r => userProfile.xp >= r.minXp);
+            userProfile.rank = currentRank.name;
+
+            // Update UI
+            updateUserUI();
+        }
+
+        function updateUserUI() {
+            document.getElementById('user-level').innerText = userProfile.level;
+            document.getElementById('user-rank').innerText = userProfile.rank;
+            
+            const xpInLevel = userProfile.xp % 1000;
+            const xpPercent = (xpInLevel / 1000) * 100;
+            document.getElementById('user-xp-bar').style.width = xpPercent + "%";
+            document.getElementById('user-xp-text').innerText = `${xpInLevel} / 1000`;
+
+            // Badge Check
+            const container = document.getElementById('badge-container');
+            container.innerHTML = '';
+            
+            if (userProfile.totalDonations >= 1 && !userProfile.badges.includes('FIRST_AID')) userProfile.badges.push('FIRST_AID');
+            if (userProfile.moneyDonated >= 5000 && !userProfile.badges.includes('BIG_HEART')) userProfile.badges.push('BIG_HEART');
+
+            userProfile.badges.forEach(bKey => {
+                const b = BADGES[bKey];
+                const icon = document.createElement('i');
+                icon.className = `fa-solid ${b.icon} ${b.color} text-lg mx-1 drop-shadow-md`;
+                icon.title = `${b.name}: ${b.desc}`;
+                container.appendChild(icon);
+            });
+        }
+
+        // --- UI RENDERERS ---
+        function updatePanel(id) {
+            const char = characters.find(c => c.id === id);
+            if (!char) return;
+
+            document.getElementById('char-name').innerText = char.name;
+            document.getElementById('char-id-num').innerText = char.id;
+            document.getElementById('char-money-display').innerText = char.money.toLocaleString() + " Ft";
+            document.getElementById('char-img').src = char.img;
+            
+            const hpBar = document.getElementById('stat-hp-bar');
+            hpBar.style.width = char.hp + "%";
+            document.getElementById('stat-hp-val').innerText = Math.round(char.hp) + "%";
+            hpBar.className = `hp-bar-fill h-full ${char.hp < 35 ? 'bg-rose-600' : char.hp < 75 ? 'bg-orange-500' : 'bg-green-500'}`;
+
+            document.getElementById('stat-hunger-bar').style.width = char.hunger + "%";
+            document.getElementById('stat-hunger-val').innerText = Math.round(char.hunger) + "%";
+            
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            if (char.inventory.length === 0) {
+                grid.innerHTML = '<p class="text-[9px] text-slate-600 italic">Nincs aktív felszerelés</p>';
+            }
+
+            char.inventory.forEach(item => {
+                const timeLeft = Math.max(0, Math.round((item.expires - Date.now()) / 1000));
+                const div = document.createElement('div');
+                div.className = "inventory-item bg-slate-800/80 px-3 py-2 rounded-xl flex flex-col items-center border border-slate-700 min-w-[65px] shadow-sm";
+                div.innerHTML = `
+                    <i class="fa-solid ${item.icon} text-blue-400 text-xs mb-1"></i>
+                    <span class="text-[7px] text-slate-400 uppercase font-bold">${item.name}</span>
+                    <span class="text-[7px] text-slate-500 font-mono">${timeLeft}s</span>
+                `;
+                grid.appendChild(div);
+            });
+
+            document.getElementById('char-quote').innerText = `"${char.quote}"`;
+        }
+
+        // --- ACTIONS ---
+        function selectDonation(type, name, icon, durationSec) {
+            currentSelection = { type, name, icon, duration: durationSec * 1000 };
+            document.querySelectorAll('#donation-modal button').forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-600'));
+            event.currentTarget.classList.add('ring-2', 'ring-blue-500', 'bg-blue-600');
+            document.getElementById('money-input').value = "";
+        }
+
+        function submitDonation() {
+            const moneyVal = parseInt(document.getElementById('money-input').value);
+            const char = selectedCharacter;
+
+            if (moneyVal > 0) {
+                char.money += moneyVal;
+                userProfile.moneyDonated += moneyVal;
+                userProfile.totalDonations++;
+                addXP(Math.floor(moneyVal / 10)); // 10 Ft = 1 XP
+                showToast(`${moneyVal} Ft támogatás rögzítve! (+${Math.floor(moneyVal / 10)} XP)`);
+            } else if (currentSelection) {
+                char.inventory.push({
+                    name: currentSelection.name,
+                    icon: currentSelection.icon,
+                    expires: Date.now() + currentSelection.duration
+                });
+
+                userProfile.totalDonations++;
+                const xpGain = currentSelection.type === 'cloth' ? 100 : 50;
+                addXP(xpGain);
+
+                if (currentSelection.type === 'food') {
+                    char.hunger = Math.min(100, char.hunger + 60);
+                    char.hp = Math.min(100, char.hp + 10);
+                } else {
+                    char.hp = Math.min(100, char.hp + 15);
+                }
+                showToast(`${currentSelection.name} átadva! (+${xpGain} XP)`);
+            } else {
+                showToast("Kérlek válassz adományt vagy adj meg összeget!");
+                return;
+            }
+
+            updatePanel(char.id);
+            closeDonationModal();
+        }
+
+        function verifyQR() {
+            showToast("QR Olvasó indítása...");
+            setTimeout(() => {
+                showToast("Sikeres hitelesítés! Köszönjük a munkádat! (+200 XP)");
+                addXP(200);
+                selectedCharacter.hp = Math.min(100, selectedCharacter.hp + 10);
+                updatePanel(selectedCharacter.id);
+            }, 1000);
+        }
+
+        // --- UTILS ---
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([47.4979, 19.0402], 14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+            characters.forEach(char => {
+                const marker = L.circleMarker([char.lat, char.lng], {
+                    radius: 12, weight: 3, color: "#1e293b", fillOpacity: 0.9
+                }).addTo(map);
+                marker.on('click', () => {
+                    selectedCharacter = char;
+                    document.getElementById('empty-panel').classList.add('hidden');
+                    document.getElementById('character-panel').classList.remove('hidden');
+                    updatePanel(char.id);
+                });
+                markers[char.id] = marker;
+            });
+            updateUserUI();
+        }
+
+        function updateMarkerStyle(char) {
+            const marker = markers[char.id];
+            if (!marker) return;
+            const color = char.hp < 35 ? "#ef4444" : char.hp < 75 ? "#f97316" : "#22c55e";
+            marker.setStyle({ fillColor: color });
+            const el = marker.getElement();
+            if (el) {
+                if (char.hp < 35) el.classList.add('pulse-urgent');
+                else el.classList.remove('pulse-urgent');
+            }
+        }
+
+        function updateClock() {
+            const d = new Date();
+            document.getElementById('clock').innerText = d.toLocaleTimeString('hu-HU', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        }
+
+        function toggleRole() {
+            isVolunteer = !isVolunteer;
+            const btn = document.getElementById('role-indicator');
+            btn.innerText = isVolunteer ? "Önkéntes Mód" : "Nyilvános Nézet";
+            btn.className = `px-3 py-1 rounded-full text-xs font-bold uppercase transition-all hover:brightness-110 ${isVolunteer ? 'bg-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.4)]' : 'bg-blue-600'}`;
+            document.getElementById('volunteer-controls').classList.toggle('hidden', !isVolunteer);
+            document.getElementById('public-info').classList.toggle('hidden', isVolunteer);
+        }
+
+        function openDonationModal() { document.getElementById('donation-modal').classList.remove('hidden'); currentSelection = null; }
+        function closeDonationModal() { document.getElementById('donation-modal').classList.add('hidden'); }
+        function closePanel() { document.getElementById('character-panel').classList.add('hidden'); document.getElementById('empty-panel').classList.remove('hidden'); }
+        
+        function showToast(m, isSpecial = false) { 
+            const t = document.getElementById('toast'); 
+            t.innerText = m; 
+            t.style.opacity = 1; 
+            t.style.transform = "translateX(-50%) translateY(-20px) scale(1)";
+            if (isSpecial) t.classList.add('bg-amber-100', 'text-amber-900', 'border-amber-400');
+            else t.classList.remove('bg-amber-100', 'text-amber-900', 'border-amber-400');
+            
+            setTimeout(() => {
+                t.style.opacity = 0;
+                t.style.transform = "translateX(-50%) translateY(0) scale(0.95)";
+            }, 3000); 
+        }
+
+        window.onload = () => {
+            initMap();
+            setInterval(updateLogic, 1000);
+        };
+    </script>
+</body>
+</html>
