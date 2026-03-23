@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Adventure Engine - Final Fix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #8b5cf6; --secondary: #22d3ee; --bg-dark: #0f172a; --card-bg: rgba(30, 41, 59, 0.6); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100dvh; font-family: 'Play', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow: hidden; }
+        #studio-view, #community-view { height: 100%; overflow-y: auto; padding-bottom: 5rem; }
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; }
+        .input-style { background: #0f172a; color: var(--secondary); border: 1px solid #334155; border-radius: 0.5rem; padding: 0.8rem; width: 100%; outline: none; }
+        #player-view { position: fixed; inset: 0; z-index: 9000; background: #000; display: none; flex-direction: column; }
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.85); border-top: 4px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 25px; margin-top: auto; min-height: 300px; }
+        .p-action-btn { background: var(--primary); color: white; padding: 16px; border-radius: 0.85rem; font-weight: 700; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <nav class="fixed top-0 w-full z-50 glass-card rounded-none border-b border-purple-500/30 p-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <img src="https://treasurehuntsites.github.io/kalandmotor/logo.png" class="w-8 h-8">
+            <span class="font-bold tracking-tighter uppercase text-sm">Adventure Engine</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="https://discord.gg/6uC6gMETWx" target="_blank" class="text-white hover:text-purple-400 transition-colors"><i class="fab fa-discord text-xl"></i></a>
+            <button id="login-btn" onclick="window.login()" class="bg-purple-600 px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase">Login</button>
+            <div id="user-info" class="hidden flex items-center gap-2">
+                <img id="user-photo" src="" class="w-8 h-8 rounded-full border border-purple-500">
+                <button onclick="window.logout()" class="text-slate-400 hover:text-red-400"><i class="fa fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="community-view" class="pt-24 px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-xl font-bold uppercase text-purple-400">Available Adventures</h2>
+                <button id="studio-btn" onclick="window.switchView('studio')" class="hidden bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Open Studio</button>
+            </div>
+            <div id="game-list" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+        </div>
+    </div>
+
+    <div id="studio-view" class="pt-24 px-4 hidden">
+        <div class="max-w-4xl mx-auto space-y-6">
+            <button onclick="window.switchView('community')" class="text-[10px] font-bold opacity-50 uppercase">← Back to home</button>
+            <div class="glass-card p-6 space-y-4">
+                <input type="text" id="appTitle" class="input-style" placeholder="Game Title" oninput="window.autoSave()">
+                <div id="pageList" class="space-y-2"></div>
+                <button onclick="window.addPage()" class="w-full bg-purple-600 py-3 rounded-xl font-bold">+ NEW PAGE</button>
+            </div>
+            <div id="editor-panel" class="glass-card p-6 hidden">
+                <textarea id="pageText" class="input-style h-40" oninput="window.autoSave()"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="player-view">
+        <div class="p-dialog-box">
+            <div id="p-story-text" class="text-lg font-bold mb-6"></div>
+            <div id="p-buttons"></div>
+            <button onclick="window.closePlayer()" class="absolute top-4 right-4 text-white/20"><i class="fa fa-times"></i></button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
+
+        // 1. CONFIG & INIT - Eredeti kulcsoddal
+        const _k = ["AIzaSy", "CfVce17Yye6jyvpSSoW6jlh3ei7T0N618"].join('');
+        const firebaseConfig = { apiKey: _k, authDomain: "kalandmotor.firebaseapp.com", projectId: "kalandmotor", storageBucket: "kalandmotor.firebasestorage.app", messagingSenderId: "108860908140", appId: "1:108860908140:web:5fbec83f4ae7b51487ee49" };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // GLOBÁLIS ÁLLAPOT
+        window.isDataLoaded = false;
+        window.config = { appTitle: "Új kaland", storyPages: [{ id: "1", content: "Kezdés..." }] };
+        window.currentIdx = 0;
+
+        // 2. AUTH & WINDOW FUNCTIONS
+        window.login = () => signInWithPopup(auth, provider);
+        window.logout = () => signOut(auth).then(() => location.reload());
+
+        window.switchView = (v) => {
+            document.getElementById('studio-view').classList.toggle('hidden', v !== 'studio');
+            document.getElementById('community-view').classList.toggle('hidden', v !== 'community');
+            if(v === 'studio') window.refreshStudio();
+        };
+
+        // 3. STUDIO LOGIC
+        window.refreshStudio = () => {
+            document.getElementById('appTitle').value = window.config.appTitle;
+            window.renderPageList();
+        };
+
+        window.renderPageList = () => {
+            const container = document.getElementById('pageList');
+            container.innerHTML = '';
+            window.config.storyPages.forEach((p, i) => {
+                const btn = document.createElement('div');
+                btn.className = `p-3 bg-slate-800 rounded-lg cursor-pointer border ${i === window.currentIdx ? 'border-cyan-400' : 'border-transparent'}`;
+                btn.innerHTML = `<span class="text-xs">#${i} - ${p.content.substring(0, 20)}...</span>`;
+                btn.onclick = () => window.editPage(i);
+                container.appendChild(btn);
+            });
+        };
+
+        window.editPage = (i) => {
+            window.currentIdx = i;
+            document.getElementById('editor-panel').classList.remove('hidden');
+            document.getElementById('pageText').value = window.config.storyPages[i].content;
+            window.renderPageList();
+        };
+
+        window.addPage = () => {
+            window.config.storyPages.push({ id: Date.now().toString(), content: "Új oldal..." });
+            window.refreshStudio();
+        };
+
+        window.autoSave = () => {
+            if(!window.isDataLoaded) return; // Megakadályozza az üres felülírást
+            window.config.appTitle = document.getElementById('appTitle').value;
+            window.config.storyPages[window.currentIdx].content = document.getElementById('pageText').value;
+            localStorage.setItem('STUDIO_BACKUP', JSON.stringify(window.config));
+        };
+
+        // 4. PLAYER LOGIC
+        window.playGame = (gameData, id) => {
+            window.activeGame = gameData;
+            window.activeGameId = id;
+            document.getElementById('player-view').style.display = 'flex';
+            
+            // Progress betöltése
+            const saved = localStorage.getItem('PROGRESS_' + id);
+            window.showPlayerPage(saved ? parseInt(saved) : 0);
+        };
+
+        window.showPlayerPage = (idx) => {
+            const page = window.activeGame.storyPages[idx];
+            if(!page) return;
+            
+            document.getElementById('p-story-text').textContent = page.content;
+            localStorage.setItem('PROGRESS_' + window.activeGameId, idx); // Mentés
+
+            const btns = document.getElementById('p-buttons');
+            btns.innerHTML = '';
+            if(idx < window.activeGame.storyPages.length - 1) {
+                const nxt = document.createElement('button');
+                nxt.className = "p-action-btn";
+                nxt.textContent = "Tovább";
+                nxt.onclick = () => window.showPlayerPage(idx + 1);
+                btns.appendChild(nxt);
+            }
+        };
+
+        window.closePlayer = () => document.getElementById('player-view').style.display = 'none';
+
+        // 5. FIREBASE SYNC
+        onAuthStateChanged(auth, (user) => {
+            if(user) {
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-photo').src = user.photoURL;
+                document.getElementById('studio-btn').classList.remove('hidden');
+            }
+            window.isDataLoaded = true; // Most már engedélyezett az autoSave
+            window.loadCommunity();
+        });
+
+        window.loadCommunity = () => {
+            const list = document.getElementById('game-list');
+            onSnapshot(collection(db, 'artifacts/kalandmotor-v13/public/data/publishedGames'), (snap) => {
+                list.innerHTML = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    const div = document.createElement('div');
+                    div.className = "glass-card p-6 space-y-4";
+                    div.innerHTML = `<h3 class="font-bold">${data.config.appTitle}</h3>
+                                     <button onclick='window.playGame(${JSON.stringify(data.config)}, "${d.id}")' class="w-full bg-purple-600 py-2 rounded-lg text-[10px] font-bold">PLAY</button>`;
+                    list.appendChild(div);
+                });
+            });
+        };
+    </script>
+</body>
+</html>
