@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Adventure Engine - Game Studio V14.8</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Roboto:wght@300;400;500&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.45); /* More transparent */
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            height: 100dvh;
+            font-family: 'Play', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: #f8fafc; 
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        #studio-view, #community-view { height: 100%; overflow-y: auto; padding: 1rem; padding-bottom: 5rem; }
+        @media (min-width: 768px) { #studio-view, #community-view { padding: 2.5rem; } }
+        
+        #studio-view { display: none; }
+        #community-view { display: block; }
+        
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 1rem; }
+
+        .input-style { background: #0f172a; color: var(--secondary); border: 1px solid #334155; border-radius: 0.5rem; padding: 0.8rem; outline: none; transition: 0.2s; width: 100%; font-size: 1rem; min-height: 48px; }
+        .input-style:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+        
+        .page-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: #1e293b; border: 1px solid transparent; transition: 0.2s; cursor: pointer; user-select: none; }
+        .page-item:hover { background: #2d3748; }
+        .page-item.selected { border-color: var(--secondary); background: #4c1d95; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+        .handle { cursor: grab; padding: 5px 15px 5px 5px; color: #64748b; font-size: 0.9rem; }
+        .handle:active { cursor: grabbing; }
+
+        .sim-container { position: sticky; top: 0; width: 320px; height: 600px; background: #000; border: 10px solid #1e293b; border-radius: 2.5rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+        #sim-viewport { position: relative; flex-grow: 1; overflow: hidden; background: #000; }
+        #sim-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s; opacity: 0.6; }
+        #sim-content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sim-box { position: relative; background: rgba(0,0,0,0.75); border-top: 3px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 20px; padding-top: 35px; min-height: 220px; display: flex; flex-direction: column; }
+        .sim-avatar { position: absolute; top: -40px; left: 10px; width: 65px; height: 65px; border-radius: 50%; border: 3px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; }
+        .sim-btn { background: var(--primary); color: white; padding: 10px; border-radius: 0.5rem; font-weight: 700; text-align: center; font-size: 0.85rem; cursor: pointer; text-transform: uppercase; transition: 0.2s; width: 100%; border: none; }
+        .sim-btn-secondary { background: #334155; }
+
+        #player-view { position: fixed; inset: 0; z-index: 9000; background: #000; display: none; flex-direction: column; height: 100dvh; }
+        .p-game-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; background: #000; }
+        #p-viewport { position: relative; flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; }
+        #p-bg-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: opacity 0.5s ease-in-out; }
+        #p-content-layer { position: relative; z-index: 10; margin-top: auto; width: 100%; display: flex; flex-direction: column; }
+
+        .p-dialog-box { position: relative; background: rgba(0,0,0,0.75); border-top: 4px solid var(--primary); border-radius: 1.5rem 1.5rem 0 0; padding: 25px; padding-top: 45px; min-height: 280px; max-height: 80dvh; display: flex; flex-direction: column; box-shadow: 0 -15px 35px rgba(0,0,0,0.7); }
+        .p-avatar-frame { position: absolute; top: -45px; left: 20px; width: 85px; height: 85px; border-radius: 50%; border: 4px solid var(--primary); background: #000; z-index: 20; object-fit: cover; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        #p-hint-btn { align-self: center; margin-bottom: 12px; width: 36px; height: 36px; background: rgba(139, 92, 246, 0.2); border: 2px solid var(--primary); border-radius: 50%; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: 0.2s; z-index: 50; }
+        #p-hint-btn:active { transform: scale(0.9); background: var(--primary); color: white; }
+
+        #p-story-text { text-align: justify; hyphens: auto; font-size: 20px; font-weight: 700; line-height: 1.6; margin-bottom: 15px; color: #f8fafc; }
+        #p-button-container { display: flex; flex-direction: column; gap: 12px; width: 100%; position: relative; }
+        
+        .p-nav-row { display: flex !important; flex-direction: row !important; gap: 10px; width: 100%; margin-top: 10px; background: transparent !important; }
+        .p-action-btn { flex: 1; background: var(--primary); color: white; padding: 16px; border-radius: 0.85rem; font-weight: 700; text-align: center; font-size: 1.05rem; cursor: pointer; text-transform: uppercase; transition: 0.1s; display: flex; align-items: center; justify-content: center; border: none; }
+        .p-action-btn:active { transform: scale(0.98); }
+        .p-action-btn.btn-secondary { background: #334155; }
+
+        .p-bottom-nav { height: 80px; background: #0f172a; border-top: 1px solid rgba(139, 92, 246, 0.4); display: flex; justify-content: space-around; align-items: center; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+        .p-nav-item { color: #94a3b8; font-size: 1.6rem; cursor: pointer; border: none; background: transparent; position: relative; width: 25%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: color 0.2s; }
+        .p-nav-item.active { color: var(--primary); }
+        .p-badge { position: absolute; top: 15px; right: 25%; background: #ef4444; color: white; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: bold; border: 2px solid #0f172a; }
+
+        #p-inventory-overlay { position: absolute; inset: 0; background: #0f172a; z-index: 150; display: none; overflow-y: auto; }
+        .p-item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+        .p-item-card { background: #1e293b; border: 2px solid #334155; border-radius: 1.25rem; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; cursor: default; position: relative; }
+        .p-item-card img { width: 100%; height: auto; object-fit: contain; cursor: zoom-in; max-height: 100px; }
+        .p-item-card .text-4xl { font-size: 3.5rem; }
+
+        .phone-ui { background: radial-gradient(circle at top, #2c3e50, #000); width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 15% 20px 10% 20px; box-sizing: border-box; text-align: center; font-family: 'Roboto', sans-serif; color: white; }
+        .p-call-status { color: #bdc3c7; font-size: 0.9rem; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px; }
+        .p-call-timer { font-size: 1.2rem; font-weight: 400; opacity: 0.9; margin-top: 8px; font-variant-numeric: tabular-nums; }
+        .p-call-name { font-size: 2.8rem; font-weight: 300; margin-top: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .p-call-controls-wrapper { display: flex; justify-content: space-around; align-items: flex-end; width: 100%; height: 350px; margin-bottom: 20px; }
+        .slide-container-v { position: relative; width: 76px; height: 260px; background: transparent; border-radius: 38px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 6px; box-sizing: border-box; border: none; }
+        .slide-handle-v { width: 64px; height: 64px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; cursor: grab; transition: transform 0.1s linear; touch-action: none; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .slide-handle-v.accept { background: #2ecc71; }
+        .slide-handle-v.decline { background: #e74c3c; }
+        .pulse-soft { animation: pulse-soft-anim 2s infinite; }
+        @keyframes pulse-soft-anim { 0% { box-shadow: 0 0 0 0px rgba(46, 204, 113, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0px rgba(46, 204, 113, 0); } }
+        .p-active-ui-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 320px; margin: 0 auto; opacity: 0.8; }
+        .p-active-icon-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 10px; color: #ecf0f1; }
+        .p-active-icon-btn i { width: 50px; height: 50px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 50px; }
+        @keyframes fadeInOutSplash { 0% { opacity: 0; transform: scale(0.9); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+        .splash-text-anim { font-family: 'Special Elite', cursive; animation: fadeInOutSplash 10s ease-in-out forwards; text-transform: uppercase; letter-spacing: 0.2em; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: center; justify-content: center; }
+        #p-zoomed-img { max-width: 95%; max-height: 95%; object-fit: contain; transition: transform 0.05s ease-out; touch-action: none; user-select: none; will-change: transform; }
+        
+        .logo-svg { filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)); }
+        
+        .hero-gradient { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(34, 211, 238, 0.05) 100%); }
+        .feature-card { border-left: 3px solid var(--primary); transition: 0.3s; }
+        .feature-card:hover { transform: translateX(5px); background: rgba(255,255,255,0.03); }
+    </style>
+</head>
+<body>
+
+    <div id="save-indicator" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-2 rounded-full font-bold text-xs z-[10000] hidden">
+        <i class="fa fa-sync-alt fa-spin mr-2"></i> SAVING...
+    </div>
+
+    <div id="session-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-sm w-full mx-4 text-center border-cyan-500/50">
+            <div class="w-16 h-16 bg-cyan-500/20 text-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i class="fa fa-history"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2">Folytatod a kalandot?</h2>
+            <p class="text-slate-400 text-sm mb-8">Találtunk egy korábbi mentést ehhez a játékhoz. Onnan folytatod, ahol legutóbb abbahagytad?</p>
+            <div class="flex gap-4">
+                <button id="session-new-btn" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-600 transition-all">Új játék</button>
+                <button id="session-resume-btn" class="flex-1 py-3 bg-cyan-600 rounded-xl font-bold text-xs uppercase hover:bg-cyan-500 shadow-lg shadow-cyan-600/20 transition-all">Folytatás</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-sm w-full mx-4 text-center border-red-500/50">
+            <div id="confirm-icon-box" class="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i id="confirm-icon" class="fa fa-trash-can"></i>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold mb-2">Are you sure?</h2>
+            <p id="confirm-desc" class="text-slate-400 text-sm mb-8">This action cannot be undone.</p>
+            <div class="flex gap-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-600 transition-all">Cancel</button>
+                <button id="confirm-action-btn" class="flex-1 py-3 bg-red-600 rounded-xl font-bold text-xs uppercase hover:bg-red-500 shadow-lg shadow-red-600/20 transition-all">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hint-modal" class="modal-overlay">
+        <div class="glass-card p-8 max-w-sm w-full mx-4 text-center">
+            <div id="hint-confirm-view">
+                <h3 class="text-xl font-bold mb-4 uppercase text-cyan-400">Request Help</h3>
+                <p class="text-slate-400 mb-8 text-sm">Are you sure you want to see the next hint?</p>
+                <div class="flex gap-4">
+                    <button onclick="closeHintModal()" class="flex-1 py-3 bg-slate-700 rounded-xl font-bold text-xs uppercase">Cancel</button>
+                    <button id="hint-show-btn" class="flex-1 py-3 bg-purple-600 rounded-xl font-bold text-xs uppercase">Yes, please</button>
+                </div>
+            </div>
+            <div id="hint-display-view" class="hidden">
+                <h3 class="text-xl font-bold mb-4 uppercase text-purple-400">Guidance</h3>
+                <p id="hint-text" class="text-white text-lg font-bold mb-8 italic"></p>
+                <button onclick="closeHintModal()" class="w-full py-3 bg-cyan-600 rounded-xl font-bold text-xs uppercase">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="studio-view">
+        <div class="max-w-7xl mx-auto flex justify-between items-center pt-4 px-4 md:px-0 mb-6">
+            <button onclick="switchView('community')" class="bg-slate-800 text-slate-300 px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase border border-slate-700 hover:border-purple-500 transition-all">Back to Home</button>
+            <div id="auth-container-studio">
+                <div id="user-info-studio" class="flex items-center gap-2 bg-slate-800 p-1 rounded-full border border-slate-700">
+                    <img id="user-photo-studio" src="" class="w-8 h-8 rounded-full">
+                    <button onclick="window.logout()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors" title="Logout">
+                        <i class="fa fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto">
+            
+            <div id="admin-panel" class="glass-card p-6 mb-8 border border-red-500/50 hidden">
+                <label class="text-red-400 font-bold uppercase text-[10px] tracking-widest"><i class="fa fa-shield mr-2"></i>Admin Controls</label>
+                <div class="mt-4">
+                    <input type="text" id="adminAuthorName" class="input-style !border-red-500/30 !focus:border-red-500" placeholder="Author Override (Forced Creator Name)">
+                </div>
+            </div>
+
+            <header class="mb-10 flex flex-col md:flex-row justify-center items-center gap-4">
+                <button onclick="togglePlayerMode()" class="bg-purple-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-purple-600/20 hover:brightness-110 active:scale-95 transition-all w-full md:w-auto"><i class="fa fa-play mr-2"></i> Start Test</button>
+                <button id="publish-btn" onclick="publishGame()" class="bg-emerald-600 text-white px-10 py-3.5 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-emerald-600/20 hover:brightness-110 active:scale-95 transition-all w-full md:w-auto">Publish</button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="glass-card p-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Basic Settings</label>
+                            <button onclick="newGame()" class="w-8 h-8 bg-slate-700 text-white rounded-lg flex items-center justify-center hover:bg-slate-600 transition-all shadow-lg border border-slate-600" title="New game">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <input type="text" id="appTitle" class="input-style" placeholder="Title">
+                                <input type="url" id="globalBg" class="input-style" placeholder="Background URL">
+                                <input type="url" id="initialMapLink" class="input-style" placeholder="Main Map Link">
+                                
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.importGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase hover:bg-slate-700 transition-all">Import (JSON)</button>
+                                    <button onclick="window.exportGame()" class="flex-1 bg-slate-800 text-slate-400 border border-slate-700 py-2 rounded-lg font-bold text-[9px] uppercase hover:bg-slate-700 transition-all">Export (JSON)</button>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-slate-500 font-bold uppercase text-[9px]">Avatars</label>
+                                    <button onclick="addAvatar()" class="text-cyan-400 text-[9px] font-bold">+ NEW</button>
+                                </div>
+                                <div id="avatarList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <label class="text-purple-400 font-bold uppercase text-[10px]">Scenes</label>
+                        <div id="pageList" class="mt-4 max-h-60 overflow-y-auto pr-2"></div>
+                        <button onclick="addPage()" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold">+ NEW PAGE</button>
+                    </div>
+
+                    <div id="editorPanel" class="glass-card p-8 space-y-6 hidden">
+                        <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                            <div class="flex flex-col">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Editing</label>
+                                <h2 class="text-xl font-bold text-white"><span id="editing-page-id" class="text-purple-500">#0</span></h2>
+                            </div>
+                            <select id="pageType" class="input-style !w-44" onchange="updateUI()">
+                                <option value="story">Description</option>
+                                <option value="choice">Choice</option>
+                                <option value="password">Passcode</option>
+                                <option value="qr">QR Code</option>
+                                <option value="gps">GPS Point</option>
+                                <option value="splash">Transition</option>
+                                <option value="call">Call</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Story Text</label>
+                                <div id="avatarQuickSelect" class="flex gap-2 items-center flex-wrap"></div>
+                            </div>
+                            <textarea id="pageText" rows="5" class="input-style text-base" placeholder="Text..."></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="url" id="pageImage" class="input-style text-xs" placeholder="Image URL (illustration)">
+                            <input type="url" id="pageBg" class="input-style text-xs" placeholder="Custom Background URL">
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-slate-700">
+                            <div class="flex justify-between items-center">
+                                <label class="text-purple-400 font-bold uppercase text-[10px]">Item Acquisition</label>
+                                <button onclick="addReward()" class="text-cyan-400 text-[10px] font-bold">+ NEW ITEM</button>
+                            </div>
+                            <div id="rewardsList" class="space-y-3"></div>
+                        </div>
+
+                        <div class="space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Hide Items</label>
+                            <div id="visibilityToggles" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div id="passwordInputs" class="hidden space-y-3">
+                            <input type="text" id="passwordVal" class="input-style" placeholder="Correct passcode">
+                            <textarea id="pageHints" class="input-style text-xs" placeholder="Hints (one per line)"></textarea>
+                        </div>
+                        <div id="qrInputs" class="hidden">
+                            <input type="text" id="qrCodeVal" class="input-style" placeholder="QR code value">
+                        </div>
+                        <div id="callInputs" class="hidden grid grid-cols-2 gap-4">
+                            <input type="url" id="ringtoneUrl" class="input-style text-xs" placeholder="Ringtone URL">
+                            <input type="url" id="voiceUrl" class="input-style text-xs" placeholder="Voice Clip URL">
+                        </div>
+                        <div id="gpsInputs" class="hidden grid grid-cols-1 gap-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="targetLat" step="any" class="input-style" placeholder="Lat">
+                                <input type="number" id="targetLng" step="any" class="input-style" placeholder="Lng">
+                            </div>
+                            <input type="url" id="targetUrl" class="input-style text-xs" placeholder="Link for GPS">
+                        </div>
+                        <div id="choiceEditor" class="hidden space-y-3 pt-4 border-t border-slate-700">
+                            <label class="text-purple-400 font-bold uppercase text-[10px]">Choice Options</label>
+                            <div id="choiceList" class="space-y-2"></div>
+                            <button onclick="addChoice()" class="text-cyan-400 text-[10px] font-bold">+ NEW OPTION</button>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-700 space-y-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="number" id="prevIdx" class="input-style" placeholder="Previous page #">
+                                <input type="number" id="nextIdx" class="input-style" placeholder="Next page #">
+                            </div>
+                            <input type="url" id="externalUrl" class="input-style text-xs" placeholder="External link">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 hidden lg:flex justify-center">
+                    <div class="sim-container">
+                        <div id="sim-viewport">
+                            <img id="sim-bg" src="">
+                            <div id="sim-content">
+                                <div class="sim-box">
+                                    <img id="sim-avatar" class="sim-avatar" src="">
+                                    <div id="sim-scroll" class="overflow-y-auto flex-grow">
+                                        <div id="sim-actual-text" style="font-size: 16px; font-weight: 700;"></div>
+                                        <div id="sim-gps-monitor" class="hidden text-center p-3 bg-slate-900 rounded-xl mt-4 border border-cyan-500/30">
+                                            <div class="text-[8px] text-cyan-500 font-bold uppercase mb-1">Target Distance</div>
+                                            <div class="text-[9px] text-cyan-500 font-bold">Distance: <span id="sim-distance-val">...</span> m</div>
+                                        </div>
+                                    </div>
+                                    <div id="sim-actions" class="mt-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="community-view">
+        <div class="max-w-6xl mx-auto">
+            <header class="flex justify-between items-center mb-12">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-600/40">
+                        <i class="fa fa-map-marked-alt text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">ADVENTURE <span class="text-purple-500">ENGINE</span></h1>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em]">Game Studio V14.8</p>
+                    </div>
+                </div>
+                <div id="auth-container-community">
+                    <button onclick="window.login()" id="login-btn" class="bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase hover:bg-slate-700 transition-all border border-slate-700">Sign In</button>
+                    <div id="user-info-community" class="hidden flex items-center gap-4 bg-slate-800/50 p-1.5 pr-4 rounded-full border border-slate-700">
+                        <img id="user-photo-community" src="" class="w-10 h-10 rounded-full border-2 border-purple-500/50">
+                        <button onclick="switchView('studio')" class="bg-purple-600 text-white px-5 py-2 rounded-full font-bold text-[10px] uppercase shadow-lg shadow-purple-600/20 hover:scale-105 transition-all">My Studio</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="hero-gradient rounded-3xl p-8 md:p-12 mb-16 border border-white/5 relative overflow-hidden">
+                <div class="relative z-10 max-w-2xl">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">Create your own <span class="text-cyan-400">interactive</span> stories.</h2>
+                    <p class="text-slate-400 text-lg mb-8 leading-relaxed">A professional engine for building location-based adventures, escape rooms, and interactive novels without coding.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="switchView('studio')" class="bg-white text-slate-900 px-8 py-4 rounded-2xl font-bold text-sm uppercase hover:bg-cyan-400 hover:text-white transition-all">Start Creating</button>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-slate-900/50 rounded-xl border border-white/5">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Platform Live</span>
+                        </div>
+                    </div>
+                </div>
+                <i class="fa fa-terminal absolute -bottom-10 -right-10 text-[20rem] text-white/5 rotate-12"></i>
+            </div>
+
+            <div class="mb-8 flex justify-between items-end">
+                <div>
+                    <h3 class="text-2xl font-bold">Community Explorations</h3>
+                    <p class="text-slate-500 text-sm">Discover adventures created by other explorers</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white border border-slate-700"><i class="fa fa-search"></i></button>
+                </div>
+            </div>
+
+            <div id="game-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+                </div>
+        </div>
+    </div>
+
+    <div id="player-view">
+        <div class="p-game-wrapper">
+            <div id="p-viewport">
+                <img id="p-bg-layer" src="">
+                <div id="p-content-layer">
+                    <div id="p-hint-btn" onclick="openHintModal()" class="hidden">
+                        <i class="fa fa-lightbulb"></i>
+                    </div>
+                    <div class="p-dialog-box">
+                        <img id="p-avatar-img" class="p-avatar-frame" src="">
+                        <div id="p-scroll-area" class="overflow-y-auto flex-grow mb-4">
+                            <div id="p-story-text"></div>
+                            
+                            <div id="p-gps-monitor" class="hidden text-center p-4 bg-slate-900 rounded-2xl mt-4 border border-cyan-500/30">
+                                <div class="text-[10px] text-cyan-500 font-bold uppercase mb-1 tracking-widest">Target Found?</div>
+                                <div class="text-lg text-white font-bold">Distance: <span id="p-distance-val">...</span> m</div>
+                            </div>
+
+                            <div id="p-input-container" class="hidden mt-4">
+                                <input type="text" id="p-passcode-input" class="input-style text-center text-2xl tracking-[0.5em]" placeholder="****">
+                                <button onclick="window.pCheckPasscode()" class="w-full mt-3 py-4 bg-cyan-600 rounded-xl font-bold uppercase tracking-widest">Verify</button>
+                            </div>
+
+                            <div id="p-qr-container" class="hidden mt-4">
+                                <div id="p-qr-reader" class="rounded-2xl overflow-hidden border-2 border-dashed border-slate-700"></div>
+                                <button onclick="window.pStartQR()" class="w-full mt-3 py-4 bg-purple-600 rounded-xl font-bold uppercase tracking-widest">Scan Code</button>
+                            </div>
+                        </div>
+                        <div id="p-button-container"></div>
+                    </div>
+                </div>
+
+                <div id="p-phone-ui" class="absolute inset-0 z-[100] hidden">
+                    <div class="phone-ui">
+                        <div>
+                            <div class="p-call-status">Incoming Call</div>
+                            <div id="p-call-name" class="p-call-name">Unknown</div>
+                            <div id="p-call-timer" class="p-call-timer hidden">00:00</div>
+                        </div>
+                        <div class="p-call-controls-wrapper">
+                            <div class="slide-container-v">
+                                <div id="p-handle-accept" class="slide-handle-v accept pulse-soft">
+                                    <i class="fa fa-phone"></i>
+                                </div>
+                            </div>
+                            <div class="slide-container-v">
+                                <div id="p-handle-decline" class="slide-handle-v decline">
+                                    <i class="fa fa-phone-slash"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-active-ui-buttons">
+                            <div class="p-active-icon-btn"><i class="fa fa-microphone-slash"></i>mute</div>
+                            <div class="p-active-icon-btn"><i class="fa fa-th"></i>keypad</div>
+                            <div class="p-active-icon-btn"><i class="fa fa-volume-up"></i>speaker</div>
+                            <div class="p-active-icon-btn"><i class="fa fa-plus"></i>add call</div>
+                            <div class="p-active-icon-btn"><i class="fa fa-video"></i>FaceTime</div>
+                            <div class="p-active-icon-btn"><i class="fa fa-user-circle"></i>contacts</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="p-splash-ui" class="absolute inset-0 z-[200] bg-black hidden flex items-center justify-center p-10 text-center">
+                    <h2 id="p-splash-text" class="text-2xl md:text-4xl text-white splash-text-anim"></h2>
+                </div>
+            </div>
+
+            <div id="p-inventory-overlay">
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-10">
+                        <h2 class="text-3xl font-bold uppercase tracking-tighter">Your Bag</h2>
+                        <button onclick="window.pToggleInventory()" class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-xl"><i class="fa fa-times"></i></button>
+                    </div>
+                    <div id="p-inventory-grid" class="p-item-grid"></div>
+                </div>
+            </div>
+
+            <nav class="p-bottom-nav">
+                <button onclick="window.pShowScene()" class="p-nav-item active" id="nav-story">
+                    <i class="fa fa- ghost"></i>
+                    <span class="text-[8px] font-bold uppercase mt-1">Story</span>
+                </button>
+                <button onclick="window.pToggleInventory()" class="p-nav-item" id="nav-bag">
+                    <i class="fa fa-briefcase"></i>
+                    <span class="text-[8px] font-bold uppercase mt-1">Bag</span>
+                    <span id="p-inv-badge" class="p-badge hidden">0</span>
+                </button>
+                <button onclick="window.pOpenMap()" class="p-nav-item">
+                    <i class="fa fa-map-location-dot"></i>
+                    <span class="text-[8px] font-bold uppercase mt-1">Map</span>
+                </button>
+                <button onclick="window.closePlayer()" class="p-nav-item text-red-400">
+                    <i class="fa fa-power-off"></i>
+                    <span class="text-[8px] font-bold uppercase mt-1">Exit</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <div id="img-modal" class="modal-overlay" onclick="closeImgModal()">
+        <img id="p-zoomed-img" src="" onclick="event.stopPropagation()">
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // FIREBASE CONFIG - REPLACE WITH YOURS
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-REPLACE-THIS",
+            authDomain: "adventure-engine-REPLACE.firebaseapp.com",
+            projectId: "adventure-engine-REPLACE",
+            storageBucket: "adventure-engine-REPLACE.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "1:000000000000:web:REPLACE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // GLOBAL CONFIG
+        window.config = {
+            id: null,
+            appTitle: "New Adventure",
+            globalBg: "",
+            initialMapLink: "",
+            author: "Anonymous",
+            authorId: null,
+            avatars: [],
+            pages: [{ id: 0, type: 'story', text: 'Welcome to your story.', choices: [], rewards: [], hiddenItems: [] }]
+        };
+
+        window.pData = {
+            curIdx: 0,
+            inv: [],
+            isInventoryOpen: false,
+            activeCall: null,
+            callTimer: 0,
+            callInterval: null,
+            qrScanner: null,
+            gpsWatcher: null,
+            hintsShown: 0,
+            currentLat: null,
+            currentLng: null
+        };
+
+        let selectedPageIdx = 0;
+        let isStudioModified = false;
+
+        // --- AUTH ---
+        window.login = () => signInWithPopup(auth, provider);
+        window.logout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            const studioAuth = document.getElementById('auth-container-studio');
+            const commAuth = document.getElementById('auth-container-community');
+            
+            if (user) {
+                window.config.authorId = user.uid;
+                if (!document.getElementById('adminAuthorName').value) {
+                    window.config.author = user.displayName;
+                }
+                
+                document.getElementById('user-photo-studio').src = user.photoURL;
+                document.getElementById('user-photo-community').src = user.photoURL;
+                document.getElementById('user-info-community').classList.remove('hidden');
+                document.getElementById('login-btn').classList.add('hidden');
+                
+                if (user.uid === "ADMIN_UID_HERE") { // Replace with actual admin UID
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                }
+                
+                loadCommunityGames();
+            } else {
+                window.config.authorId = null;
+                document.getElementById('user-info-community').classList.add('hidden');
+                document.getElementById('login-btn').classList.remove('hidden');
+                loadCommunityGames();
+            }
+        });
+
+        // --- PERSISTENCE (NEW V14.8 FEATURE) ---
+        function saveGameState() {
+            if (!window.config.id) return;
+            const state = {
+                curIdx: window.pData.curIdx,
+                inv: window.pData.inv,
+                hintsShown: window.pData.hintsShown,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(`adv_save_${window.config.id}`, JSON.stringify(state));
+        }
+
+        function loadGameState(gameId) {
+            const saved = localStorage.getItem(`adv_save_${gameId}`);
+            return saved ? JSON.parse(saved) : null;
+        }
+
+        // --- CORE LOGIC ---
+        window.switchView = (v) => {
+            document.getElementById('studio-view').style.display = (v==='studio'?'block':'none');
+            document.getElementById('community-view').style.display = (v==='community'?'block':'none');
+            if(v==='community') loadCommunityGames();
+        };
+
+        window.autoSave = async () => {
+            if (!window.config.authorId || !window.config.id) return;
+            document.getElementById('save-indicator').classList.remove('hidden');
+            
+            // Check admin override
+            const adminName = document.getElementById('adminAuthorName').value;
+            if (adminName) window.config.author = adminName;
+
+            try {
+                await setDoc(doc(db, "games", window.config.id), {
+                    ...window.config,
+                    updatedAt: Date.now()
+                });
+                isStudioModified = false;
+            } catch (e) { console.error("Save error", e); }
+            
+            setTimeout(() => document.getElementById('save-indicator').classList.add('hidden'), 1000);
+        };
+
+        window.newGame = () => {
+            window.config = {
+                id: 'g' + Math.random().toString(36).substr(2, 9),
+                appTitle: "New Adventure",
+                globalBg: "",
+                initialMapLink: "",
+                author: auth.currentUser?.displayName || "Anonymous",
+                authorId: auth.currentUser?.uid,
+                avatars: [],
+                pages: [{ id: 0, type: 'story', text: 'New Story Begins...', choices: [], rewards: [], hiddenItems: [] }]
+            };
+            selectedPageIdx = 0;
+            refreshUI();
+            window.autoSave();
+        };
+
+        async function loadCommunityGames() {
+            const q = query(collection(db, "games"));
+            const snap = await getDocs(q);
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = '';
+            
+            snap.forEach(d => {
+                const g = d.data();
+                const card = document.createElement('div');
+                card.className = "glass-card overflow-hidden group hover:border-purple-500/60 transition-all cursor-pointer";
+                card.innerHTML = `
+                    <div class="h-48 bg-slate-800 relative">
+                        <img src="${g.globalBg || 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&q=80'}" class="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                        <div class="absolute bottom-4 left-4">
+                            <h4 class="text-xl font-bold">${g.appTitle}</h4>
+                            <p class="text-[10px] text-purple-400 font-bold uppercase tracking-widest">By ${g.author}</p>
+                        </div>
+                    </div>
+                    <div class="p-5 flex justify-between items-center bg-slate-900/40">
+                        <div class="flex gap-4">
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-white">${g.pages.length}</div>
+                                <div class="text-[8px] text-slate-500 uppercase font-bold">Scenes</div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                             ${g.authorId === auth.currentUser?.uid ? `<button class="edit-btn w-10 h-10 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors border border-slate-700"><i class="fa fa-edit"></i></button>` : ''}
+                             <button class="play-btn bg-purple-600 text-white px-6 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-purple-600/20 hover:brightness-110 transition-all">Play</button>
+                        </div>
+                    </div>
+                `;
+                card.querySelector('.play-btn').onclick = () => playRemoteGame(g);
+                if (card.querySelector('.edit-btn')) {
+                    card.querySelector('.edit-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        window.config = g;
+                        selectedPageIdx = 0;
+                        refreshUI();
+                        switchView('studio');
+                    };
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        async function playRemoteGame(g) {
+            window.config = g;
+            const savedState = loadGameState(g.id);
+            
+            if (savedState) {
+                const modal = document.getElementById('session-modal');
+                modal.style.display = 'flex';
+                
+                document.getElementById('session-new-btn').onclick = () => {
+                    modal.style.display = 'none';
+                    startNewPlayerSession();
+                };
+                
+                document.getElementById('session-resume-btn').onclick = () => {
+                    modal.style.display = 'none';
+                    resumePlayerSession(savedState);
+                };
+            } else {
+                startNewPlayerSession();
+            }
+        }
+
+        function startNewPlayerSession() {
+            window.pData = {
+                curIdx: 0, inv: [], isInventoryOpen: false, activeCall: null,
+                callTimer: 0, callInterval: null, qrScanner: null, gpsWatcher: null,
+                hintsShown: 0, currentLat: null, currentLng: null
+            };
+            localStorage.removeItem(`adv_save_${window.config.id}`);
+            launchPlayer();
+        }
+
+        function resumePlayerSession(savedState) {
+            window.pData = {
+                curIdx: savedState.curIdx || 0,
+                inv: savedState.inv || [],
+                hintsShown: savedState.hintsShown || 0,
+                isInventoryOpen: false, activeCall: null,
+                callTimer: 0, callInterval: null, qrScanner: null, gpsWatcher: null,
+                currentLat: null, currentLng: null
+            };
+            launchPlayer();
+        }
+
+        function launchPlayer() {
+            document.getElementById('player-view').style.display = 'flex';
+            window.pShowScene();
+        }
+
+        // --- EDITOR UI ---
+        function refreshUI() {
+            document.getElementById('appTitle').value = window.config.appTitle;
+            document.getElementById('globalBg').value = window.config.globalBg;
+            document.getElementById('initialMapLink').value = window.config.initialMapLink;
+            renderPageList();
+            renderAvatars();
+            if (window.config.pages[selectedPageIdx]) loadPageEditor(selectedPageIdx);
+            updateSimulator();
+        }
+
+        function renderPageList() {
+            const list = document.getElementById('pageList');
+            list.innerHTML = '';
+            window.config.pages.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = `page-item ${i === selectedPageIdx ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="handle"><i class="fa fa-grip-vertical"></i></div>
+                        <span class="text-[10px] font-bold text-slate-500 mr-3 w-4">#${i}</span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-sm">${p.text.substring(0, 25)}...</span>
+                            <span class="text-[8px] uppercase tracking-widest text-cyan-400 font-bold">${p.type}</span>
+                        </div>
+                    </div>
+                    <button onclick="event.stopPropagation(); deletePage(${i})" class="text-slate-600 hover:text-red-500 p-2"><i class="fa fa-trash-alt"></i></button>
+                `;
+                div.onclick = () => { selectedPageIdx = i; refreshUI(); };
+                list.appendChild(div);
+            });
+            
+            new Sortable(list, {
+                handle: '.handle',
+                animation: 150,
+                onEnd: (evt) => {
+                    const item = window.config.pages.splice(evt.oldIndex, 1)[0];
+                    window.config.pages.splice(evt.newIndex, 0, item);
+                    selectedPageIdx = evt.newIndex;
+                    refreshUI();
+                    window.autoSave();
+                }
+            });
+        }
+
+        function renderAvatars() {
+            const list = document.getElementById('avatarList');
+            const quick = document.getElementById('avatarQuickSelect');
+            list.innerHTML = '';
+            quick.innerHTML = '';
+            
+            window.config.avatars.forEach((a, i) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-slate-900 p-2 rounded-lg border border-slate-700";
+                div.innerHTML = `
+                    <img src="${a.url}" class="w-8 h-8 rounded-full bg-black object-cover">
+                    <input type="text" value="${a.name}" onchange="updateAv(${i}, 'name', this.value)" class="bg-transparent text-[10px] font-bold outline-none w-full">
+                    <button onclick="deleteAv(${i})" class="text-red-400 text-xs px-2"><i class="fa fa-times"></i></button>
+                `;
+                list.appendChild(div);
+
+                const btn = document.createElement('button');
+                btn.className = "w-8 h-8 rounded-full border-2 border-slate-700 overflow-hidden hover:border-purple-500 transition-all";
+                btn.innerHTML = `<img src="${a.url}" class="w-full h-full object-cover">`;
+                btn.onclick = () => {
+                    const tx = document.getElementById('pageText');
+                    tx.value = `[${a.name}] ` + tx.value;
+                    updatePageData();
+                };
+                quick.appendChild(btn);
+            });
+        }
+
+        window.addAvatar = () => {
+            window.config.avatars.push({ name: 'Hero', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + Math.random() });
+            refreshUI();
+            window.autoSave();
+        };
+
+        window.updateAv = (i, k, v) => { window.config.avatars[i][k] = v; window.autoSave(); };
+        window.deleteAv = (i) => { window.config.avatars.splice(i, 1); refreshUI(); window.autoSave(); };
+
+        window.addPage = () => {
+            const id = window.config.pages.length;
+            window.config.pages.push({ id, type: 'story', text: 'New content...', choices: [], rewards: [], hiddenItems: [] });
+            selectedPageIdx = id;
+            refreshUI();
+            window.autoSave();
+        };
+
+        window.deletePage = (i) => {
+            if (window.config.pages.length <= 1) return;
+            window.config.pages.splice(i, 1);
+            selectedPageIdx = Math.max(0, i - 1);
+            refreshUI();
+            window.autoSave();
+        };
+
+        function loadPageEditor(i) {
+            const p = window.config.pages[i];
+            document.getElementById('editorPanel').classList.remove('hidden');
+            document.getElementById('editing-page-id').innerText = `#${i}`;
+            document.getElementById('pageType').value = p.type;
+            document.getElementById('pageText').value = p.text;
+            document.getElementById('pageImage').value = p.image || '';
+            document.getElementById('pageBg').value = p.bg || '';
+            document.getElementById('passwordVal').value = p.password || '';
+            document.getElementById('pageHints').value = (p.hints || []).join('\n');
+            document.getElementById('qrCodeVal').value = p.qrCode || '';
+            document.getElementById('ringtoneUrl').value = p.ringtoneUrl || '';
+            document.getElementById('voiceUrl').value = p.voiceUrl || '';
+            document.getElementById('targetLat').value = p.targetLat || '';
+            document.getElementById('targetLng').value = p.targetLng || '';
+            document.getElementById('targetUrl').value = p.targetUrl || '';
+            document.getElementById('prevIdx').value = p.prevIdx !== undefined ? p.prevIdx : '';
+            document.getElementById('nextIdx').value = p.nextIdx !== undefined ? p.nextIdx : '';
+            document.getElementById('externalUrl').value = p.externalUrl || '';
+
+            // Update Visibility Toggles
+            const vt = document.getElementById('visibilityToggles');
+            vt.innerHTML = '';
+            const allItems = [];
+            window.config.pages.forEach(pg => (pg.rewards || []).forEach(r => { if(!allItems.includes(r.name)) allItems.push(r.name); }));
+            
+            allItems.forEach(itemName => {
+                const btn = document.createElement('button');
+                const isHidden = (p.hiddenItems || []).includes(itemName);
+                btn.className = `px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${isHidden ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-slate-800 border-slate-700 text-slate-500'}`;
+                btn.innerText = itemName;
+                btn.onclick = () => {
+                    if (!p.hiddenItems) p.hiddenItems = [];
+                    if (isHidden) p.hiddenItems = p.hiddenItems.filter(x => x !== itemName);
+                    else p.hiddenItems.push(itemName);
+                    loadPageEditor(selectedPageIdx);
+                    window.autoSave();
+                };
+                vt.appendChild(btn);
+            });
+
+            renderChoices(p);
+            renderRewards(p);
+            updateUI();
+        }
+
+        function updateUI() {
+            const type = document.getElementById('pageType').value;
+            document.getElementById('choiceEditor').classList.toggle('hidden', type !== 'choice');
+            document.getElementById('passwordInputs').classList.toggle('hidden', type !== 'password');
+            document.getElementById('qrInputs').classList.toggle('hidden', type !== 'qr');
+            document.getElementById('callInputs').classList.toggle('hidden', type !== 'call');
+            document.getElementById('gpsInputs').classList.toggle('hidden', type !== 'gps');
+            updatePageData();
+        }
+
+        function updatePageData() {
+            const p = window.config.pages[selectedPageIdx];
+            p.type = document.getElementById('pageType').value;
+            p.text = document.getElementById('pageText').value;
+            p.image = document.getElementById('pageImage').value;
+            p.bg = document.getElementById('pageBg').value;
+            p.password = document.getElementById('passwordVal').value;
+            p.hints = document.getElementById('pageHints').value.split('\n').filter(h => h.trim() !== '');
+            p.qrCode = document.getElementById('qrCodeVal').value;
+            p.ringtoneUrl = document.getElementById('ringtoneUrl').value;
+            p.voiceUrl = document.getElementById('voiceUrl').value;
+            p.targetLat = parseFloat(document.getElementById('targetLat').value);
+            p.targetLng = parseFloat(document.getElementById('targetLng').value);
+            p.targetUrl = document.getElementById('targetUrl').value;
+            p.prevIdx = document.getElementById('prevIdx').value !== '' ? parseInt(document.getElementById('prevIdx').value) : undefined;
+            p.nextIdx = document.getElementById('nextIdx').value !== '' ? parseInt(document.getElementById('nextIdx').value) : undefined;
+            p.externalUrl = document.getElementById('externalUrl').value;
+            
+            updateSimulator();
+            window.autoSave();
+        }
+
+        // --- ATTACH LISTENERS ---
+        ['pageText', 'pageImage', 'pageBg', 'passwordVal', 'pageHints', 'qrCodeVal', 'ringtoneUrl', 'voiceUrl', 'targetLat', 'targetLng', 'targetUrl', 'prevIdx', 'nextIdx', 'externalUrl', 'appTitle', 'globalBg', 'initialMapLink'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('input', updatePageData);
+        });
+
+        function renderChoices(p) {
+            const list = document.getElementById('choiceList');
+            list.innerHTML = '';
+            (p.choices || []).forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = "flex gap-2 items-center bg-slate-800 p-2 rounded-lg border border-slate-700";
+                div.innerHTML = `
+                    <input type="text" value="${c.text}" oninput="updateChoice(${i}, 'text', this.value)" class="flex-grow bg-transparent text-[11px] font-bold outline-none" placeholder="Option text">
+                    <input type="number" value="${c.next}" oninput="updateChoice(${i}, 'next', this.value)" class="w-12 bg-slate-900 rounded p-1 text-[11px] text-center" placeholder="#">
+                    <button onclick="deleteChoice(${i})" class="text-red-400 p-1"><i class="fa fa-times"></i></button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.addChoice = () => {
+            if (!window.config.pages[selectedPageIdx].choices) window.config.pages[selectedPageIdx].choices = [];
+            window.config.pages[selectedPageIdx].choices.push({ text: 'New Choice', next: 0 });
+            refreshUI();
+            window.autoSave();
+        };
+        window.updateChoice = (i, k, v) => { 
+            window.config.pages[selectedPageIdx].choices[i][k] = (k === 'next' ? parseInt(v) : v); 
+            updateSimulator();
+            window.autoSave();
+        };
+        window.deleteChoice = (i) => { 
+            window.config.pages[selectedPageIdx].choices.splice(i, 1); 
+            refreshUI(); 
+            window.autoSave();
+        };
+
+        function renderRewards(p) {
+            const list = document.getElementById('rewardsList');
+            list.innerHTML = '';
+            (p.rewards || []).forEach((r, i) => {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-12 gap-2 items-center bg-slate-900/50 p-3 rounded-xl border border-white/5";
+                div.innerHTML = `
+                    <div class="col-span-5"><input type="text" value="${r.name}" oninput="updateRew(${i}, 'name', this.value)" class="input-style !p-2 !text-[10px]" placeholder="Item name"></div>
+                    <div class="col-span-5"><input type="text" value="${r.icon || ''}" oninput="updateRew(${i}, 'icon', this.value)" class="input-style !p-2 !text-[10px]" placeholder="URL or Emoji"></div>
+                    <div class="col-span-2 text-right"><button onclick="deleteRew(${i})" class="text-red-400"><i class="fa fa-trash-alt"></i></button></div>
+                `;
+                list.appendChild(div);
+            });
+        }
+        window.addReward = () => {
+            if (!window.config.pages[selectedPageIdx].rewards) window.config.pages[selectedPageIdx].rewards = [];
+            window.config.pages[selectedPageIdx].rewards.push({ name: 'Key', icon: '🔑' });
+            refreshUI();
+            window.autoSave();
+        };
+        window.updateRew = (i, k, v) => { window.config.pages[selectedPageIdx].rewards[i][k] = v; window.autoSave(); };
+        window.deleteRew = (i) => { window.config.pages[selectedPageIdx].rewards.splice(i, 1); refreshUI(); window.autoSave(); };
+
+        // --- SIMULATOR ---
+        function updateSimulator() {
+            const p = window.config.pages[selectedPageIdx];
+            const bg = p.bg || window.config.globalBg || '';
+            document.getElementById('sim-bg').src = bg;
+            document.getElementById('sim-bg').style.opacity = bg ? '0.6' : '0';
+            
+            const rawText = p.text;
+            let finalName = "";
+            let finalText = rawText;
+            const match = rawText.match(/^\[(.*?)\]/);
+            if (match) {
+                finalName = match[1];
+                finalText = rawText.replace(/^\[.*?\]\s*/, '');
+                const av = window.config.avatars.find(a => a.name === finalName);
+                if (av) {
+                    document.getElementById('sim-avatar').src = av.url;
+                    document.getElementById('sim-avatar').style.display = 'block';
+                } else {
+                    document.getElementById('sim-avatar').style.display = 'none';
+                }
+            } else {
+                document.getElementById('sim-avatar').style.display = 'none';
+            }
+            
+            document.getElementById('sim-actual-text').innerText = finalText;
+            
+            const actions = document.getElementById('sim-actions');
+            actions.innerHTML = '';
+            if (p.type === 'choice') {
+                p.choices.forEach(c => {
+                    const b = document.createElement('button');
+                    b.className = "sim-btn mb-2";
+                    b.innerText = c.text;
+                    actions.appendChild(b);
+                });
+            } else {
+                const b = document.createElement('button');
+                b.className = "sim-btn";
+                b.innerText = "Continue";
+                actions.appendChild(b);
+            }
+        }
+
+        // --- PLAYER SYSTEM ---
+        window.togglePlayerMode = () => {
+            window.pData = { curIdx: 0, inv: [], isInventoryOpen: false, activeCall: null, callTimer: 0, callInterval: null, qrScanner: null, gpsWatcher: null, hintsShown: 0, currentLat: null, currentLng: null };
+            document.getElementById('player-view').style.display = 'flex';
+            window.pShowScene();
+        };
+
+        window.closePlayer = () => {
+            document.getElementById('player-view').style.display = 'none';
+            if (window.pData.callInterval) clearInterval(window.pData.callInterval);
+            if (window.pData.qrScanner) window.pData.qrScanner.clear();
+            if (window.pData.gpsWatcher) navigator.geolocation.clearWatch(window.pData.gpsWatcher);
+        };
+
+        window.pShowScene = () => {
+            saveGameState(); // Persist at every scene change
+            const p = window.config.pages[window.pData.curIdx];
+            if (!p) return;
+
+            // Reset UI
+            document.getElementById('p-phone-ui').classList.add('hidden');
+            document.getElementById('p-splash-ui').classList.add('hidden');
+            document.getElementById('p-input-container').classList.add('hidden');
+            document.getElementById('p-qr-container').classList.add('hidden');
+            document.getElementById('p-gps-monitor').classList.add('hidden');
+            document.getElementById('p-hint-btn').classList.add('hidden');
+            
+            const bg = p.bg || window.config.globalBg || '';
+            document.getElementById('p-bg-layer').src = bg;
+            document.getElementById('p-bg-layer').style.opacity = bg ? '1' : '0';
+
+            // Process Rewards
+            if (p.rewards) {
+                p.rewards.forEach(rew => {
+                    if (!window.pData.inv.find(i => i.name === rew.name)) {
+                        window.pData.inv.push(rew);
+                        showNotification(`Acquired: ${rew.name}`);
+                    }
+                });
+                updateInventoryUI();
+            }
+
+            // Text & Avatar
+            let finalName = "";
+            let finalText = p.text;
+            const match = p.text.match(/^\[(.*?)\]/);
+            if (match) {
+                finalName = match[1];
+                finalText = p.text.replace(/^\[.*?\]\s*/, '');
+                const av = window.config.avatars.find(a => a.name === finalName);
+                if (av) {
+                    document.getElementById('p-avatar-img').src = av.url;
+                    document.getElementById('p-avatar-img').style.display = 'block';
+                } else {
+                    document.getElementById('p-avatar-img').style.display = 'none';
+                }
+            } else {
+                document.getElementById('p-avatar-img').style.display = 'none';
+            }
+            document.getElementById('p-story-text').innerText = finalText;
+
+            const btnCont = document.getElementById('p-button-container');
+            btnCont.innerHTML = '';
+
+            // Handle Types
+            if (p.type === 'choice') {
+                p.choices.forEach(c => {
+                    const b = document.createElement('button');
+                    b.className = "p-action-btn";
+                    b.innerText = c.text;
+                    b.onclick = () => { window.pData.curIdx = c.next; window.pShowScene(); };
+                    btnCont.appendChild(b);
+                });
+            } else if (p.type === 'password') {
+                document.getElementById('p-input-container').classList.remove('hidden');
+                document.getElementById('p-passcode-input').value = '';
+                if (p.hints && p.hints.length > 0) document.getElementById('p-hint-btn').classList.remove('hidden');
+            } else if (p.type === 'qr') {
+                document.getElementById('p-qr-container').classList.remove('hidden');
+            } else if (p.type === 'call') {
+                window.pStartCall(p);
+            } else if (p.type === 'splash') {
+                window.pStartSplash(p);
+            } else if (p.type === 'gps') {
+                window.pStartGPS(p);
+            } else {
+                const b = document.createElement('button');
+                b.className = "p-action-btn";
+                b.innerText = "Continue";
+                b.onclick = () => {
+                    if (p.externalUrl) window.open(p.externalUrl, '_blank');
+                    window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                    window.pShowScene();
+                };
+                btnCont.appendChild(b);
+            }
+
+            // Prev button if exists
+            if (p.prevIdx !== undefined) {
+                const pb = document.createElement('button');
+                pb.className = "p-action-btn btn-secondary mt-2";
+                pb.innerText = "Back";
+                pb.onclick = () => { window.pData.curIdx = p.prevIdx; window.pShowScene(); };
+                btnCont.appendChild(pb);
+            }
+            
+            document.getElementById('p-scroll-area').scrollTop = 0;
+            updateInventoryUI();
+        };
+
+        // --- CALL SYSTEM ---
+        window.pStartCall = (p) => {
+            const ui = document.getElementById('p-phone-ui');
+            ui.classList.remove('hidden');
+            const nameMatch = p.text.match(/^\[(.*?)\]/);
+            document.getElementById('p-call-name').innerText = nameMatch ? nameMatch[1] : "Unknown";
+            document.getElementById('p-call-timer').classList.add('hidden');
+            
+            const ring = p.ringtoneUrl ? new Audio(p.ringtoneUrl) : null;
+            if(ring) { ring.loop = true; ring.play(); }
+            
+            window.pAnswerCall = () => {
+                if(ring) ring.pause();
+                document.getElementById('p-call-timer').classList.remove('hidden');
+                window.pData.callTimer = 0;
+                window.pData.callInterval = setInterval(() => {
+                    window.pData.callTimer++;
+                    const m = Math.floor(window.pData.callTimer/60).toString().padStart(2,'0');
+                    const s = (window.pData.callTimer%60).toString().padStart(2,'0');
+                    document.getElementById('p-call-timer').innerText = `${m}:${s}`;
+                }, 1000);
+                if(p.voiceUrl) new Audio(p.voiceUrl).play();
+            };
+            
+            window.pEndCall = () => {
+                if(ring) ring.pause();
+                clearInterval(window.pData.callInterval);
+                ui.classList.add('hidden');
+                window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                window.pShowScene();
+            };
+        };
+
+        // --- SPLASH SYSTEM ---
+        window.pStartSplash = (p) => {
+            const ui = document.getElementById('p-splash-ui');
+            const txt = document.getElementById('p-splash-text');
+            ui.classList.remove('hidden');
+            txt.innerText = p.text;
+            setTimeout(() => {
+                ui.classList.add('hidden');
+                window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                window.pShowScene();
+            }, 5000);
+        };
+
+        // --- GPS SYSTEM ---
+        window.pStartGPS = (p) => {
+            document.getElementById('p-gps-monitor').classList.remove('hidden');
+            const target = { lat: p.targetLat, lng: p.targetLng };
+            
+            if (window.pData.gpsWatcher) navigator.geolocation.clearWatch(window.pData.gpsWatcher);
+            
+            window.pData.gpsWatcher = navigator.geolocation.watchPosition(pos => {
+                const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, target.lat, target.lng);
+                document.getElementById('p-distance-val').innerText = Math.round(dist);
+                if (dist < 25) {
+                    navigator.geolocation.clearWatch(window.pData.gpsWatcher);
+                    if (p.targetUrl) window.open(p.targetUrl, '_blank');
+                    window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                    window.pShowScene();
+                }
+            }, err => console.error(err), { enableHighAccuracy: true });
+        };
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // --- PASSCODE / QR ---
+        window.pCheckPasscode = () => {
+            const p = window.config.pages[window.pData.curIdx];
+            const input = document.getElementById('p-passcode-input').value.trim().toLowerCase();
+            if (input === p.password.toLowerCase()) {
+                window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                window.pShowScene();
+            } else {
+                alert("Incorrect passcode!");
+            }
+        };
+
+        window.pStartQR = () => {
+            const p = window.config.pages[window.pData.curIdx];
+            window.pData.qrScanner = new Html5Qrcode("p-qr-reader");
+            window.pData.qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
+                if (txt === p.qrCode) {
+                    window.pData.qrScanner.stop();
+                    window.pData.curIdx = (p.nextIdx !== undefined) ? p.nextIdx : window.pData.curIdx + 1;
+                    window.pShowScene();
+                }
+            });
+        };
+
+        // --- HINTS ---
+        window.openHintModal = () => {
+            document.getElementById('hint-confirm-view').classList.remove('hidden');
+            document.getElementById('hint-display-view').classList.add('hidden');
+            document.getElementById('hint-modal').style.display = 'flex';
+        };
+        window.closeHintModal = () => document.getElementById('hint-modal').style.display = 'none';
+
+        document.getElementById('hint-show-btn').onclick = () => {
+            const p = window.config.pages[window.pData.curIdx];
+            const hint = p.hints[window.pData.hintsShown % p.hints.length];
+            document.getElementById('hint-text').innerText = hint;
+            window.pData.hintsShown++;
+            document.getElementById('hint-confirm-view').classList.add('hidden');
+            document.getElementById('hint-display-view').classList.remove('hidden');
+        };
+
+        // --- INVENTORY ---
+        window.pToggleInventory = () => {
+            window.pData.isInventoryOpen = !window.pData.isInventoryOpen;
+            document.getElementById('p-inventory-overlay').style.display = window.pData.isInventoryOpen ? 'block' : 'none';
+            document.getElementById('nav-bag').classList.toggle('active', window.pData.isInventoryOpen);
+            document.getElementById('nav-story').classList.toggle('active', !window.pData.isInventoryOpen);
+        };
+
+        function updateInventoryUI() {
+            const p = window.config.pages[window.pData.curIdx];
+            const hidden = p ? (p.hiddenItems || []) : [];
+            const visibleItems = window.pData.inv.filter(item => !hidden.includes(item.name));
+            
+            const grid = document.getElementById('p-inventory-grid');
+            grid.innerHTML = '';
+            visibleItems.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "p-item-card";
+                if (item.icon.startsWith('http')) {
+                    card.innerHTML = `<img src="${item.icon}" onclick="window.zoomImg('${item.icon}')">`;
+                } else {
+                    card.innerHTML = `<span class="text-4xl">${item.icon}</span>`;
+                }
+                card.innerHTML += `<div class="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">${item.name}</div>`;
+                grid.appendChild(card);
+            });
+            
+            const badge = document.getElementById('p-inv-badge');
+            badge.innerText = visibleItems.length;
+            badge.classList.toggle('hidden', visibleItems.length === 0);
+        }
+
+        window.zoomImg = (src) => {
+            document.getElementById('p-zoomed-img').src = src;
+            document.getElementById('img-modal').style.display = 'flex';
+        };
+        window.closeImgModal = () => document.getElementById('img-modal').style.display = 'none';
+
+        window.pOpenMap = () => {
+            if (window.config.initialMapLink) window.open(window.config.initialMapLink, '_blank');
+            else alert("No map link defined for this adventure.");
+        };
+
+        function showNotification(text) {
+            const n = document.createElement('div');
+            n.className = "fixed top-10 left-1/2 -translate-x-1/2 z-[30000] bg-cyan-600 text-white px-8 py-3 rounded-2xl font-bold shadow-2xl animate-bounce";
+            n.innerText = text;
+            document.body.appendChild(n);
+            setTimeout(() => n.remove(), 3000);
+        }
+
+        // --- EXPORT / IMPORT ---
+        window.importGame = () => {
+            const i = document.createElement('input'); i.type = 'file';
+            i.onchange = e => {
+                const f = e.target.files[0]; const r = new FileReader();
+                r.onload = () => { try { window.config = JSON.parse(r.result); refreshUI(); window.autoSave(); } catch(err){ alert("Error!"); } }; r.readAsText(f);
+            }; i.click();
+        };
+        window.exportGame = () => { window.autoSave(); const b=new Blob([JSON.stringify(window.config,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=(window.config.appTitle || 'adventure') + '.json'; a.click(); };
+
+        function setupSliders() {
+            const sliders =[{h:'p-handle-accept', cb:window.pAnswerCall}, {h:'p-handle-decline', cb:window.pEndCall}];
+            sliders.forEach(s => {
+                const h = document.getElementById(s.h); if(!h) return;
+                let sY=0, isD=false; const maxY=-180;
+                h.addEventListener('touchstart', e=>{ sY=e.touches[0].clientY; isD=true; h.classList.remove('pulse-soft'); });
+                h.addEventListener('touchmove', e=>{ if(!isD) return; let d=Math.max(maxY, Math.min(0, e.touches[0].clientY-sY)); h.style.transform=`translateY(${d}px)`; });
+                h.addEventListener('touchend', e=>{ if(!isD) return; isD=false; const fY=parseInt(h.style.transform.replace('translateY(',''))||0; if(fY<=maxY+20) s.cb(); else { h.style.transform='translateY(0px)'; h.classList.add('pulse-soft'); } });
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            setupSliders();
+            refreshUI();
+        });
+    </script>
+</body>
+</html>
