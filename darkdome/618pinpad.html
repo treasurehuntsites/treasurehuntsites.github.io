@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Biztonsági Panel</title>
     <style>
         body {
@@ -13,6 +13,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            width: 100vw;
             touch-action: none;
         }
         canvas {
@@ -89,6 +90,7 @@
         let currentInput = "";
         let attempts = 0;
         let isProcessing = false;
+        let isFullscreenTriggered = false;
         const CORRECT_CODE = "618";
         
         let displaySlots = [];
@@ -122,7 +124,9 @@
             document.body.style.transition = "opacity 0.4s";
             document.body.style.opacity = "0";
             setTimeout(() => {
+                // Megpróbáljuk bezárni az ablakot, ha nem lehet, csak kiürítjük
                 document.body.innerHTML = "";
+                window.close();
             }, 400);
         }
 
@@ -230,6 +234,17 @@
         }
 
         function handleKeyPress(btn) {
+            // Teljes képernyő kérése az első interakciónál
+            if (!isFullscreenTriggered) {
+                const doc = window.document;
+                const docEl = doc.documentElement;
+                const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+                if (requestFullScreen) {
+                    requestFullScreen.call(docEl).catch(e => console.log("Fullscreen error: ", e));
+                }
+                isFullscreenTriggered = true;
+            }
+
             if(isProcessing) return;
             const val = btn.userData.id;
             
