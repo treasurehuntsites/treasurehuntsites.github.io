@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urbex Hunter v7 - Production</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            onAuthStateChanged,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            collection, 
+            onSnapshot, 
+            updateDoc, 
+            arrayUnion, 
+            increment,
+            query
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE KONFIGURÁCIÓ ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCE9HsgnhCbjGWkRUSYeWblSAJAj9Y-3lk",
+            authDomain: "urbex-hunter.firebaseapp.com",
+            projectId: "urbex-hunter",
+            storageBucket: "urbex-hunter.firebasestorage.app",
+            messagingSenderId: "23703144828",
+            appId: "1:23703144828:web:016a96cd6c1fe01ab5fcf9",
+            measurementId: "G-NWN15EC2RW"
+        };
+        // -----------------------------
+
+        const appId = "urbex-hunter-v7-prod"; 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        const LEVELS = [
+            { min: 0, name: "Zöldfülű Betörő", maxScan: 100 },
+            { min: 100, name: "Rozsdás Vándor", maxScan: 250 },
+            { min: 300, name: "Falkajáró", maxScan: 500 },
+            { min: 500, name: "Ipari Alpinista", maxScan: 9999 }
+        ];
+
+        let user = null;
+        let currentUserScore = 0;
+        let locations = [];
+        let map = null;
+        let markers = [];
+        let unsubscribeList = [];
+        let adminTestMode = false;
+        let videoStream = null;
+        let selectedCoords = null;
+        let pendingLocId = null;
+
+        const getLevelInfo = (score) => LEVELS.slice().reverse().find(l => score >= l.min) || LEVELS[0];
+        
+        const showMessage = (text, type = 'info') => {
+            const box = document.getElementById('message-box');
+            if (!box) return;
+            box.innerText = text;
+            box.className = `fixed top-4 left-1/2 -translate-x-1/2 p-4 rounded shadow-2xl z-[6000] text-white font-bold text-center text-xs transition-all ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 4000);
+        };
+
+        // --- GLOBÁLIS NAVIGÁCIÓS ÉS AUTH FUNKCIÓK ---
+        window.showView = (viewId) => {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            const target = document.getElementById(viewId);
+            if (target) target.classList.remove('hidden');
+            if (viewId === 'view-map' && map) setTimeout(() => map.invalidateSize(), 200);
+            if (viewId !== 'view-scan') window.stopCamera();
+            if (viewId !== 'view-add') {
+                selectedCoords = null;
+                document.getElementById('coord-indicator').classList.add('hidden');
+            }
+        };
+
+        window.stopCamera = () => { 
+            if (videoStream) { 
+                videoStream.getTracks().forEach(t => t.stop()); 
+                videoStream = null; 
+            } 
+        };
+
+        window.loginWithGoogle = async () => {
+            try {
+                await signInWithPopup(auth, googleProvider);
+                showMessage("Sikeres bejelentkezés!");
+            } catch (err) {
+                console.error(err);
+                showMessage("Hiba a belépésnél! Ellenőrizd az Authorized Domains-t.", "error");
+            }
+        };
+
+        window.logout = async () => {
+            await signOut(auth);
+            location.reload();
+        };
+
+        // --- ADATBÁZIS MŰVELETEK ---
+        window.saveNewLocation = async (e) => {
+            e.preventDefault();
+            if (!user) return showMessage("Lépj be a Google fiókoddal!", "error");
+            const nameInput = document.getElementById('loc-name');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const lat = selectedCoords ? selectedCoords.lat : 47.4979;
+            const lng = selectedCoords ? selectedCoords.lng : 19.0402;
+            const id = "LOC-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+            try {
+                // Rule 1: Public path for locations
+                const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', id);
+                await setDoc(locRef, {
+                    id, name, lat, lng,
+                    voteCount: 0, voteTotal: 0, voters: [],
+                    status: 'voting',
+                    creatorId: user.uid,
+                    creatorName: user.displayName || "Hunter",
+                    createdAt: Date.now()
+                });
+                showMessage("Helyszín beküldve validálásra!");
+                window.showView('view-list');
+            } catch (err) { 
+                console.error(err);
+                showMessage("Hiba a mentésnél! Ellenőrizd a szabályokat.", "error"); 
+            }
+        };
+
+        window.voteValue = async (locId, val) => {
+            if (!user) return;
+            const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId);
+            const snap = await getDoc(locRef);
+            const data = snap.data();
+            if (data.voters?.includes(user.uid) && !adminTestMode) return showMessage("Már szavaztál!");
+
+            const newTotal = (data.voteTotal || 0) + val;
+            const newCount = (data.voteCount || 0) + 1;
+            let updates = { voteTotal: newTotal, voteCount: newCount, voters: arrayUnion(user.uid) };
+            if (newCount >= 10) {
+                updates.status = 'accepting';
+                updates.finalPoints = Math.round(newTotal / newCount);
+            }
+            await updateDoc(locRef, updates);
+            showMessage("Voks rögzítve!");
+        };
+
+        window.handleDecision = async (locId, accept) => {
+            const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId);
+            if (accept) {
+                await updateDoc(locRef, { status: 'active' });
+                showMessage("Helyszín élesítve!");
+            } else {
+                await updateDoc(locRef, { status: 'public_domain', creatorId: 'SYSTEM', creatorName: 'Közösség' });
+                showMessage("Átadva a közösségnek.");
+            }
+        };
+
+        window.reopenQR = (id, name, points) => {
+            window.showView('view-qr-display');
+            document.getElementById('qr-title').innerText = name;
+            document.getElementById('qr-points').innerText = points;
+            const div = document.getElementById('qr-canvas');
+            div.innerHTML = "";
+            new QRCode(div, { text: id, width: 220, height: 220 });
+        };
+
+        window.confirmInstallation = async (confirmed) => {
+            document.getElementById('install-modal').classList.add('hidden');
+            if (confirmed && pendingLocId) {
+                await processQRCode(pendingLocId);
+            } else {
+                window.showView('view-list');
+            }
+            pendingLocId = null;
+        };
+
+        // --- SCANNER LOGIKA ---
+        window.startScan = async () => { 
+            window.showView('view-scan'); 
+            const video = document.getElementById('qr-video');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = videoStream;
+                video.setAttribute("playsinline", true);
+                video.play();
+                requestAnimationFrame(tick);
+            } catch (err) {
+                showMessage("Kamera hiba!", "error");
+                window.showView('view-list');
+            }
+        };
+
+        const tick = () => {
+            const video = document.getElementById('qr-video');
+            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement("canvas");
+                canvas.height = video.videoHeight; canvas.width = video.videoWidth;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const code = window.jsQR(ctx.getImageData(0,0,canvas.width,canvas.height).data, canvas.width, canvas.height);
+                if (code) { 
+                    window.stopCamera();
+                    pendingLocId = code.data;
+                    document.getElementById('install-modal').classList.remove('hidden');
+                    return; 
+                }
+            }
+            if (videoStream) requestAnimationFrame(tick);
+        };
+
+        const processQRCode = async (locId) => {
+            if (!user) return;
+            try {
+                const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId);
+                const locSnap = await getDoc(locRef);
+                if (!locSnap.exists() || locSnap.data().status !== 'active') return showMessage("Érvénytelen QR kód!", "error");
+                
+                const locData = locSnap.data();
+                const info = getLevelInfo(currentUserScore);
+                if (locData.finalPoints > info.maxScan) return showMessage("Túl alacsony szint ehhez!");
+
+                // Rule 1: Private path for user profile
+                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                const userSnap = await getDoc(userRef);
+                const userData = userSnap.data() || { visited: [] };
+                if (userData.visited?.includes(locId)) return showMessage("Ezt a pontot már begyűjtötted!");
+
+                const pts = Math.round(locData.finalPoints / 2);
+                await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locId) }, { merge: true });
+                
+                if (!locData.firstVisitor) {
+                    await updateDoc(locRef, { firstVisitor: user.uid });
+                    const creatorRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
+                    await setDoc(creatorRef, { score: increment(locData.finalPoints) }, { merge: true });
+                }
+                showMessage(`Sikeres találat! +${pts} pont`);
+                window.showView('view-list');
+            } catch (err) { showMessage("Adatbázis hiba!", "error"); }
+        };
+
+        // --- MAP ÉS UI FRISSÍTÉS ---
+        const initMap = () => {
+            if (map) return;
+            map = L.map('map-container', { zoomControl: false }).setView([47.4979, 19.0402], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CartoDB' }).addTo(map);
+            map.on('click', (e) => {
+                if (!user) return showMessage("Jelentkezz be a rögzítéshez!", "error");
+                selectedCoords = e.latlng;
+                document.getElementById('coord-indicator').classList.remove('hidden');
+                document.getElementById('lat-val').innerText = selectedCoords.lat.toFixed(5);
+                document.getElementById('lng-val').innerText = selectedCoords.lng.toFixed(5);
+                window.showView('view-add');
+            });
+        };
+
+        const setupListeners = () => {
+            if (!user) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), snap => {
+                locations = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderList();
+                updateMarkers();
+            });
+            onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), snap => {
+                const d = snap.data() || { score: 0 };
+                currentUserScore = d.score;
+                const info = getLevelInfo(d.score);
+                document.getElementById('user-score').innerText = d.score;
+                document.getElementById('user-level').innerText = info.name;
+                document.getElementById('profile-name').innerText = user.displayName || "Hunter";
+                document.getElementById('level-limit').innerText = info.maxScan === 9999 ? "∞" : info.maxScan;
+                if (user.photoURL) document.getElementById('profile-img').src = user.photoURL;
+                renderList();
+                updateMarkers();
+            });
+        };
+
+        const renderList = () => {
+            const list = document.getElementById('location-list');
+            const info = getLevelInfo(currentUserScore);
+            const filtered = locations.filter(loc => !(loc.status === 'active' && loc.finalPoints > info.maxScan));
+            if (filtered.length === 0) { list.innerHTML = `<div class="text-center p-10 text-gray-500 uppercase italic text-[10px] font-bold">Még nincsenek adatok a szinteden.</div>`; return; }
+            list.innerHTML = filtered.map(loc => {
+                const isCreator = loc.creatorId === user?.uid;
+                const canVote = loc.status === 'voting' && !loc.voters?.includes(user?.uid);
+                return `
+                <div class="bg-gray-800 p-5 rounded-3xl border border-gray-700 mb-4 shadow-xl relative overflow-hidden transition-all hover:border-gray-500">
+                    ${loc.status === 'active' ? `<div class="absolute top-0 right-0 bg-green-600 text-[8px] px-3 py-1 font-bold uppercase rounded-bl-xl tracking-tighter">${loc.finalPoints} PTS</div>` : ''}
+                    <div class="mb-3">
+                        <h3 class="font-bold text-white uppercase tracking-tight">${loc.name}</h3>
+                        <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest italic font-bold">Beküldte: ${loc.creatorName}</p>
+                    </div>
+                    ${loc.status === 'voting' ? `
+                        <div class="bg-black/40 p-3 rounded-2xl mb-2 border border-gray-700/50">
+                            <p class="text-[8px] text-gray-400 uppercase mb-2 font-bold tracking-wider italic font-bold">Validálás (${loc.voteCount}/10)</p>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                ${[10, 20, 50, 100, 250, 500].map(v => `<button onclick="window.voteValue('${loc.id}', ${v})" class="py-1.5 text-[9px] font-bold border border-gray-700 rounded-lg hover:border-green-500 text-green-500 transition-colors ${!canVote ? 'opacity-20 pointer-events-none' : ''} font-bold">${v}</button>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${loc.status === 'accepting' && isCreator ? `
+                        <div class="bg-orange-900/20 p-4 rounded-2xl border border-orange-500/30 text-center">
+                            <p class="text-[10px] text-orange-400 font-bold mb-3 uppercase font-bold">Átlagos érték: ${loc.finalPoints} PTS</p>
+                            <div class="flex gap-2">
+                                <button onclick="window.handleDecision('${loc.id}', true)" class="flex-1 bg-green-600 text-black font-bold text-[10px] py-2 rounded-xl uppercase active:scale-95 transition-transform font-bold">Elfogadom</button>
+                                <button onclick="window.handleDecision('${loc.id}', false)" class="flex-1 bg-red-600 text-white font-bold text-[10px] py-2 rounded-xl uppercase active:scale-95 transition-transform font-bold">Elengedem</button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${loc.status === 'active' && isCreator ? `
+                        <div class="mt-4"><button onclick="window.reopenQR('${loc.id}', '${loc.name}', ${loc.finalPoints})" class="w-full bg-blue-600 text-black font-bold text-[10px] py-2.5 rounded-xl uppercase tracking-widest active:scale-95 transition-transform font-bold">Kód Megjelenítése</button></div>
+                    ` : ''}
+                </div>`;
+            }).join('');
+        };
+
+        const updateMarkers = () => {
+            if (!map) return;
+            markers.forEach(m => m.remove());
+            markers = [];
+            const info = getLevelInfo(currentUserScore);
+            locations.forEach(loc => {
+                if (loc.status === 'active' && loc.finalPoints > info.maxScan) return;
+                const color = loc.status === 'active' ? '#22c55e' : '#3b82f6';
+                if (loc.status === 'active' || loc.status === 'public_domain') {
+                    const circle = L.circle([loc.lat, loc.lng], { color, fillColor: color, fillOpacity: 0.15, weight: 1, radius: 250 }).addTo(map);
+                    circle.bindPopup(`<div class="bg-gray-900 text-white p-2"><b>${loc.name}</b><br>Keresési zóna: 250m</div>`);
+                    markers.push(circle);
+                }
+            });
+        };
+
+        window.toggleAdmin = (checked) => {
+            adminTestMode = checked;
+            document.getElementById('admin-tag').classList.toggle('hidden', !checked);
+            renderList();
+        };
+
+        // AUTH FIGYELŐ
+        onAuthStateChanged(auth, u => {
+            user = u;
+            unsubscribeList.forEach(un => un());
+            unsubscribeList = [];
+            if (u && !u.isAnonymous) {
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('profile-area').classList.remove('hidden');
+                setupListeners();
+            } else {
+                document.getElementById('login-btn').classList.remove('hidden');
+                document.getElementById('profile-area').classList.add('hidden');
+            }
+        });
+
+        window.addEventListener('load', () => initMap());
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        body { font-family: 'Space Mono', monospace; background: #080808; color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .green-glow { text-shadow: 0 0 12px rgba(34, 197, 94, 0.6); }
+        .view { animation: fadeInUp 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #map-container { height: calc(100vh - 300px); border-radius: 2rem; border: 2px solid #1f2937; }
+        #qr-canvas img { margin: 0 auto; border: 12px solid white; border-radius: 1.5rem; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="message-box" class="hidden"></div>
+
+    <!-- Megerősítő Modal -->
+    <div id="install-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[5000] flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-700 w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl text-center">
+            <h2 class="text-lg font-bold text-white mb-4 uppercase tracking-tighter italic font-bold">Megerősítés</h2>
+            <p class="text-[11px] text-gray-400 mb-8 uppercase tracking-widest leading-relaxed">Valóban telepíteni akarod ezt a kódot ezen a helyszínen?</p>
+            <div class="flex gap-3">
+                <button onclick="window.confirmInstallation(true)" class="flex-1 py-4 bg-green-600 text-black font-bold rounded-2xl uppercase text-[11px] active:scale-95 transition-transform font-bold">Igen, mehet!</button>
+                <button onclick="window.confirmInstallation(false)" class="flex-1 py-4 bg-gray-800 text-gray-400 font-bold rounded-2xl uppercase text-[11px] active:scale-95 transition-transform font-bold">Mégse</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fejléc -->
+    <header class="p-6 bg-black/95 backdrop-blur-xl sticky top-0 z-[1100] border-b border-gray-800 shadow-2xl">
+        <div class="flex justify-between items-center max-w-2xl mx-auto mb-4">
+            <div>
+                <h1 class="text-xl font-bold text-green-500 green-glow italic uppercase tracking-tighter">Urbex Hunter</h1>
+                <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic font-bold">Belépés szükséges...</p>
+            </div>
+            <div id="login-area">
+                <button id="login-btn" onclick="window.loginWithGoogle()" class="bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all hover:bg-gray-200">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pwa_google_light.svg" width="14"> Google Belépés
+                </button>
+                <div id="profile-area" class="hidden flex flex-col items-end">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="profile-name" class="text-xs font-bold text-white italic">...</span>
+                        <img id="profile-img" src="" class="w-6 h-6 rounded-full border border-green-500">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <div class="text-[10px] font-bold text-green-500 font-bold"><span id="user-score">0</span> PTS</div>
+                        <button onclick="window.logout()" class="text-[8px] text-red-500 font-bold uppercase italic font-bold hover:underline">Kilépés</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <div class="text-[8px] text-gray-500 uppercase italic font-bold font-bold">Limit: <span id="level-limit" class="text-blue-400">...</span> pts</div>
+            <div class="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1.5 rounded-2xl">
+                <span class="text-[7px] font-bold text-gray-500 uppercase font-bold">Teszt 🧪</span>
+                <input type="checkbox" onchange="window.toggleAdmin(this.checked)" class="w-4 h-4 cursor-pointer">
+            </div>
+        </div>
+        <div id="admin-tag" class="hidden text-center text-[7px] text-orange-500 font-bold uppercase mt-2 animate-pulse font-bold">Debug mód aktív</div>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4 mb-32">
+        <!-- Térkép -->
+        <div id="view-map" class="view">
+            <div id="map-container" class="shadow-inner"></div>
+            <div class="mt-4 p-4 bg-gray-900/50 border border-gray-800 rounded-3xl text-[9px] text-gray-400 italic uppercase font-bold leading-relaxed font-bold">
+                💡 Kattints a térképre ott, ahol új pontot szeretnél rögzíteni!
+            </div>
+        </div>
+
+        <!-- Helyszín lista -->
+        <div id="view-list" class="view hidden">
+            <div id="location-list" class="min-h-[100px] space-y-4"></div>
+        </div>
+
+        <!-- Új pont hozzáadása -->
+        <div id="view-add" class="view hidden">
+            <div class="bg-gray-900 border border-gray-800 p-8 rounded-[2.5rem] shadow-2xl">
+                <h2 class="text-xl font-bold text-green-500 mb-8 uppercase italic tracking-tighter">Új Helyszín Rögzítése</h2>
+                <div id="coord-indicator" class="hidden mb-6 p-4 bg-green-900/10 border border-green-500/30 rounded-2xl text-[9px] font-mono text-white italic font-bold">
+                    Koordináták: <span id="lat-val">0</span>, <span id="lng-val">0</span>
+                </div>
+                <form onsubmit="window.saveNewLocation(event)" class="space-y-6">
+                    <input id="loc-name" type="text" required class="w-full bg-black border border-gray-800 p-4 rounded-2xl text-xs outline-none focus:border-green-500 text-white" placeholder="Pl: Soviet Bunker X">
+                    <button type="submit" class="w-full py-5 bg-green-600 text-black font-bold rounded-2xl uppercase text-xs tracking-widest font-bold active:scale-95 transition-all">Beküldés Validálásra</button>
+                    <button type="button" onclick="window.showView('view-map')" class="w-full py-3 text-[9px] text-gray-500 uppercase font-bold hover:text-white transition-colors font-bold">Mégse</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Szkennelés -->
+        <div id="view-scan" class="view hidden">
+            <div class="relative w-full aspect-square max-w-sm mx-auto bg-gray-900 rounded-[3rem] overflow-hidden border-2 border-green-500/30 shadow-2xl">
+                <video id="qr-video" playsinline></video>
+                <div class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                    <div class="w-64 h-64 border-2 border-green-500/50 rounded-[2rem] relative shadow-[0_0_20px_#22c55e]">
+                        <div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-green-500"></div>
+                        <div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-green-500"></div>
+                    </div>
+                    <p class="mt-8 text-[10px] text-green-400 animate-pulse font-bold tracking-[0.4em] uppercase font-bold">Szkennelés...</p>
+                </div>
+            </div>
+            <button onclick="window.showView('view-list')" class="mt-8 w-full py-4 bg-gray-800 rounded-2xl font-bold uppercase text-[10px] tracking-widest border border-gray-700 active:scale-95 transition-transform font-bold">Mégse</button>
+        </div>
+
+        <!-- QR Kód mutatás -->
+        <div id="view-qr-display" class="view hidden text-center pt-8">
+            <h2 id="qr-title" class="text-2xl font-bold text-white uppercase mb-2 italic">...</h2>
+            <p class="text-green-500 font-bold mb-10 uppercase text-xs tracking-widest font-bold"><span id="qr-points">0</span> PTS</p>
+            <div id="qr-canvas" class="mb-12 inline-block p-6 bg-white rounded-[3rem] shadow-2xl"></div>
+            <button onclick="window.showView('view-list')" class="w-full py-4 bg-gray-800 rounded-2xl font-bold uppercase text-[10px] font-bold">Vissza a listához</button>
+        </div>
+    </main>
+
+    <!-- Navigáció -->
+    <nav class="fixed bottom-0 inset-x-0 bg-black/95 backdrop-blur-2xl border-t border-gray-800 p-6 pb-12 z-[1100] shadow-2xl">
+        <div class="max-w-2xl mx-auto flex justify-around items-end">
+            <button onclick="window.showView('view-map')" class="flex flex-col items-center gap-2 group transition-all active:scale-90">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-hover:text-green-500 transition-colors"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="text-[8px] font-bold text-gray-500 uppercase tracking-widest font-bold">Térkép</span>
+            </button>
+            <button onclick="window.startScan()" class="bg-green-600 p-6 rounded-full -mt-16 border-[8px] border-black shadow-2xl transition-all active:scale-90 hover:bg-green-500 group">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" class="group-hover:rotate-12 transition-transform"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10v10H7z"/></svg>
+            </button>
+            <button onclick="window.showView('view-list')" class="flex flex-col items-center gap-2 group transition-all active:scale-90">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-hover:text-green-500 transition-colors"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                <span class="text-[8px] font-bold text-gray-500 uppercase tracking-widest font-bold">Lista</span>
+            </button>
+        </div>
+    </nav>
+</body>
+</html>
