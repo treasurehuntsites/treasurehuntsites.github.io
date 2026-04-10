@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urbex Hunter v9 - Clans & Privacy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, arrayUnion, increment, query, deleteDoc
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyCE9HsgnhCbjGWkRUSYeWblSAJAj9Y-3lk",
+                authDomain: "urbex-hunter.firebaseapp.com",
+                projectId: "urbex-hunter",
+                storageBucket: "urbex-hunter.firebasestorage.app",
+                messagingSenderId: "23703144828",
+                appId: "1:23703144828:web:016a96cd6c1fe01ab5fcf9",
+                measurementId: "G-NWN15EC2RW"
+            };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'urbex-hunter-v9'; 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        const ADMIN_EMAIL = "jatszmabunker@gmail.com";
+
+        const LEVELS = [
+            { min: 0, name: "Zöldfülű", maxScan: 100 },
+            { min: 100, name: "Vándor", maxScan: 300 },
+            { min: 500, name: "Alpinista", maxScan: 9999 }
+        ];
+
+        // Helyszín kategóriák és ikonok
+        const CATEGORIES = [
+            { id: 'bunker', name: 'Bunker', icon: '🛡️' },
+            { id: 'crane', name: 'Daru', icon: '🏗️' },
+            { id: 'sanatorium', name: 'Szanatórium', icon: '🏥' },
+            { id: 'hospital', name: 'Kórház', icon: '🚑' },
+            { id: 'industrial', name: 'Ipari', icon: '🏭' },
+            { id: 'facility', name: 'Létesítmény', icon: '🏢' },
+            { id: 'residential', name: 'Lakóépület', icon: '🏚️' },
+            { id: 'other', name: 'Egyéb', icon: '📍' }
+        ];
+
+        let user = null;
+        let userData = { score: 0, groups: [], visited: [], username: "Hunter" };
+        let locations = [];
+        let allGroups = [];
+        let allApplications = []; 
+        let myGroupIds = []; 
+        let publicProfiles = {}; 
+        let map = null;
+        let markers = [];
+        let userMarker = null; 
+        let lastTrackedPos = null;
+        let selectedCoords = null;
+        let currentGroupId = null;
+        let activeLocationId = null; 
+        let isDemoMode = false;
+        let isChecking = false;
+        let unsubscribeList = [];
+
+        const getLevelInfo = (score) => LEVELS.slice().reverse().find(l => score >= l.min) || LEVELS[0];
+
+        const showMessage = (text, type = 'info') => {
+            const box = document.getElementById('message-box');
+            box.innerText = text;
+            box.className = `fixed top-4 left-1/2 -translate-x-1/2 p-4 rounded shadow-2xl z-[6000] text-white font-bold text-center text-xs transition-all ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 4000);
+        };
+
+        window.showView = (viewId) => {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            
+            const checkinBtn = document.getElementById('checkin-btn-outer');
+            if (viewId === 'view-location-info') {
+                checkinBtn.classList.remove('hidden');
+                updateCheckinButtonUI();
+            } else {
+                checkinBtn.classList.add('hidden');
+                activeLocationId = null;
+            }
+
+            if (viewId === 'view-map' && map) setTimeout(() => map.invalidateSize(), 200);
+            if (viewId === 'view-group-detail') renderGroupLocations();
+        };
+
+        const getDistance = (lat1, lon1, lat2, lon2) => {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
+        };
+
+        const getCurrentPos = () => new Promise((res, rej) => {
+            if (!navigator.geolocation) return rej("Nincs GPS támogatás");
+            navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 5000 });
+        });
+
+        const updateCheckinButtonUI = () => {
+            const btn = document.getElementById('checkin-btn-outer');
+            if (!activeLocationId || !btn) return;
+
+            const isAdmin = user?.email === ADMIN_EMAIL;
+            
+            if (!lastTrackedPos) {
+                btn.style.opacity = (isAdmin || isDemoMode) ? "1" : "0.4";
+                return;
+            }
+
+            const loc = locations.find(l => l.id === activeLocationId);
+            if (!loc) return;
+
+            const dist = getDistance(lastTrackedPos.lat, lastTrackedPos.lng, loc.lat, loc.lng);
+
+            if (dist <= 25 || isAdmin || isDemoMode) {
+                btn.style.opacity = "1";
+            } else {
+                btn.style.opacity = "0.4";
+            }
+        };
+
+        const trackUserPosition = () => {
+            if (!navigator.geolocation) return;
+            
+            let smoothLat = null;
+            let smoothLng = null;
+            const alpha = 0.35; 
+
+            navigator.geolocation.watchPosition(pos => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                
+                if (accuracy > 40) return;
+
+                if (smoothLat === null) {
+                    smoothLat = latitude;
+                    smoothLng = longitude;
+                } else {
+                    smoothLat = (latitude * alpha) + (smoothLat * (1 - alpha));
+                    smoothLng = (longitude * alpha) + (smoothLng * (1 - alpha));
+                }
+                
+                const distChange = lastTrackedPos ? getDistance(smoothLat, smoothLng, lastTrackedPos.lat, lastTrackedPos.lng) : 999;
+                if (distChange < 3) return;
+
+                lastTrackedPos = { lat: smoothLat, lng: smoothLng };
+                const latlng = [smoothLat, smoothLng];
+
+                if (!userMarker) {
+                    userMarker = L.circleMarker(latlng, {
+                        radius: 8, fillColor: "#3b82f6", color: "white", weight: 2, opacity: 1, fillOpacity: 0.9, className: "player-pulse"
+                    }).addTo(map).bindPopup("Te itt vagy");
+                } else {
+                    userMarker.setLatLng(latlng);
+                }
+
+                updateCheckinButtonUI();
+            }, err => console.log("Helymeghatározási hiba:", err), { 
+                enableHighAccuracy: true, 
+                maximumAge: 0, 
+                timeout: 10000 
+            });
+        };
+
+        window.loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+        window.loginAsDemo = async () => {
+            isDemoMode = true;
+            try { 
+                await signInAnonymously(auth); 
+            } catch(e) { 
+                handleAuthChange({ uid: "demo-user-" + Math.random().toString(36).substr(2, 5), displayName: "Demo Hunter", isAnonymous: true }); 
+                showMessage("Demo mód aktív!");
+            }
+        };
+
+        window.logout = () => signOut(auth).then(() => location.reload());
+
+        const handleAuthChange = (u) => {
+            user = u;
+            unsubscribeList.forEach(unsub => unsub());
+            unsubscribeList = [];
+            if (u) {
+                document.getElementById('login-area').classList.add('hidden');
+                document.getElementById('profile-area').classList.remove('hidden');
+                setupListeners();
+            } else {
+                document.getElementById('login-area').classList.remove('hidden');
+                document.getElementById('profile-area').classList.add('hidden');
+            }
+        };
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                }
+            } catch(e) { console.log("Token hiba:", e.message); }
+            onAuthStateChanged(auth, handleAuthChange);
+        };
+
+        const setupListeners = () => {
+            if (!user) return;
+            unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'profiles'), snap => {
+                snap.docs.forEach(d => publicProfiles[d.id] = d.data());
+                if (currentGroupId) renderGroupMembers();
+            }));
+            
+            unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
+                allGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                myGroupIds = allGroups.filter(g => g.members && g.members.includes(user.uid)).map(g => g.id);
+                renderGroups();
+                updateMarkers();
+            }));
+
+            unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), snap => {
+                allApplications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderApplications(allApplications);
+                renderGroups(); 
+            }));
+
+            if (user.uid.indexOf("demo-user") === -1) {
+                unsubscribeList.push(onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), snap => {
+                    userData = snap.data() || { score: 0, groups: [], visited: [], username: user.displayName || "Hunter" };
+                    updateUI();
+                    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'profiles', user.uid), {
+                        username: userData.username, score: userData.score
+                    }, { merge: true });
+                    renderGroups();
+                    updateMarkers();
+                }));
+                unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), snap => {
+                    locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    updateMarkers();
+                    if (currentGroupId) renderGroupLocations();
+                }));
+            } else {
+                updateUI();
+                renderGroups();
+            }
+        };
+
+        const updateUI = () => {
+            const info = getLevelInfo(userData.score || 0);
+            document.getElementById('user-score').innerText = userData.score || 0;
+            document.getElementById('user-level').innerText = isDemoMode ? "TESZTER" : info.name;
+            document.getElementById('profile-name').innerText = userData.username || "Hunter";
+        };
+
+        window.addEventListener('load', () => {
+            map = L.map('map-container', { zoomControl: false }).setView([47.4979, 19.0402], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            
+            map.on('click', (e) => {
+                const isAdmin = user?.email === ADMIN_EMAIL;
+                if (!user) return showMessage("Lépj be a rögzítéshez!", "error");
+                
+                if (myGroupIds.length === 0 && !isAdmin) {
+                    return showMessage("Előbb csatlakozz egy klánhoz!", "error");
+                }
+
+                selectedCoords = e.latlng;
+                
+                const latEl = document.getElementById('lat-val');
+                const lngEl = document.getElementById('lng-val');
+                if (latEl) latEl.innerText = selectedCoords.lat.toFixed(5);
+                if (lngEl) lngEl.innerText = selectedCoords.lng.toFixed(5);
+
+                const select = document.getElementById('loc-group-select');
+                if (select) {
+                    if (myGroupIds.length > 0) {
+                        const myGroups = allGroups.filter(g => myGroupIds.includes(g.id));
+                        select.innerHTML = myGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                    } else if (isAdmin) {
+                        select.innerHTML = `<option value="">Válassz klánt (Admin)</option>` + 
+                            allGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                    }
+                }
+
+                // Kategória választó feltöltése
+                const catSelect = document.getElementById('loc-category-select');
+                if (catSelect) {
+                    catSelect.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                }
+                
+                window.showView('view-add');
+            });
+            
+            trackUserPosition();
+            initAuth();
+        });
+
+        const updateMarkers = () => {
+            if (!map) return;
+            markers.forEach(m => m.remove());
+            markers = [];
+            const visibleLocations = locations.filter(loc => myGroupIds.includes(loc.groupId));
+            visibleLocations.forEach(loc => {
+                let color = '#3b82f6'; // Szavazás alatt (kék)
+                if (loc.status === 'active') {
+                    color = loc.installed ? '#22c55e' : '#f97316'; // Aktív (zöld) / Telepítésre vár (narancs)
+                }
+
+                const cat = CATEGORIES.find(c => c.id === (loc.categoryId || 'other')) || CATEGORIES[7];
+
+                // 25 méteres kör a pont körül
+                const circle = L.circle([loc.lat, loc.lng], { 
+                    color, 
+                    fillColor: color, 
+                    fillOpacity: 0.1, 
+                    radius: 25,
+                    weight: 1
+                }).addTo(map);
+
+                // Pin formájú ikon
+                const pinIcon = L.divIcon({
+                    className: 'custom-pin-icon',
+                    html: `
+                        <div class="pin-marker" style="--pin-color: ${color}">
+                            <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+                                <path d="M17 0C7.61 0 0 7.61 0 17C0 29.75 17 44 17 44C17 44 34 29.75 34 17C34 7.61 26.39 0 17 0Z" fill="var(--pin-color)"/>
+                                <circle cx="17" cy="17" r="13" fill="white"/>
+                            </svg>
+                            <span class="pin-emoji">${cat.icon}</span>
+                        </div>`,
+                    iconSize: [34, 44],
+                    iconAnchor: [17, 44]
+                });
+
+                const marker = L.marker([loc.lat, loc.lng], { icon: pinIcon }).addTo(map);
+
+                const handleClick = (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    window.showLocationDetail(loc.id);
+                };
+
+                circle.on('click', handleClick);
+                marker.on('click', handleClick);
+
+                markers.push(circle, marker);
+            });
+        };
+
+        window.showLocationDetail = (locId) => {
+            const loc = locations.find(l => l.id === locId);
+            if (!loc) return;
+            
+            activeLocationId = locId;
+            const isAdmin = user?.email === ADMIN_EMAIL;
+            const group = allGroups.find(g => g.id === loc.groupId);
+            const levelInfo = LEVELS[loc.requiredLevelIndex || 0];
+            const cat = CATEGORIES.find(c => c.id === (loc.categoryId || 'other')) || CATEGORIES[7];
+
+            document.getElementById('info-title').innerText = loc.name;
+            document.getElementById('info-status').innerText = loc.status === 'active' ? (loc.installed ? 'ÉLES / AKTÍV' : 'AKTIVÁLÁSRA VÁR') : 'SZAVAZÁS ALATT';
+            document.getElementById('info-status').className = `text-[10px] font-bold px-3 py-1 rounded-full ${loc.status === 'active' ? (loc.installed ? 'bg-green-900 text-green-400' : 'bg-orange-900 text-orange-400') : 'bg-blue-900 text-blue-400'}`;
+            
+            document.getElementById('info-pts').innerText = loc.status === 'active' ? (loc.finalPoints || '?') + ' PTS' : 'Szavazáson';
+            document.getElementById('info-group').innerText = group?.name || 'Ismeretlen Klán';
+            document.getElementById('info-creator').innerText = loc.creatorName || 'Hunter';
+            document.getElementById('info-approach').innerText = loc.approach || 'Nincs megadva leírás.';
+            document.getElementById('info-level').innerText = levelInfo?.name || 'Zöldfülű';
+            document.getElementById('info-coords').innerText = `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
+            
+            const catDisplay = document.getElementById('info-category');
+            if (catDisplay) catDisplay.innerText = `${cat.icon} ${cat.name}`;
+
+            const actionContainer = document.getElementById('info-action-container');
+            actionContainer.innerHTML = '';
+            
+            if (loc.status === 'voting') {
+                const canVote = !loc.voters?.includes(user?.uid) || isAdmin;
+                actionContainer.innerHTML = `
+                    <p class="text-[9px] text-gray-500 uppercase font-bold mb-3 text-center">Értékelés (${loc.voteCount || 0}/10)</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        ${[10, 20, 50, 100, 150, 200, 300, 500].map(v => `<button onclick="window.voteValue('${loc.id}', ${v})" class="py-2 text-[10px] font-bold border border-gray-700 rounded-xl text-blue-400 active:bg-blue-900 ${!canVote ? 'opacity-20 pointer-events-none' : ''}">${v}</button>`).join('')}
+                    </div>
+                `;
+            }
+
+            window.showView('view-location-info');
+        };
+
+        window.handleAction = async () => {
+            if (!activeLocationId) return;
+            const loc = locations.find(l => l.id === activeLocationId);
+            if (!loc || loc.status !== 'active') return;
+
+            if (isChecking) return;
+            isChecking = true;
+            const btnIcon = document.getElementById('checkin-btn');
+            btnIcon.classList.add('animate-spin');
+
+            try {
+                const isAdmin = user?.email === ADMIN_EMAIL;
+                let uLat, uLng;
+
+                if (lastTrackedPos) {
+                    uLat = lastTrackedPos.lat;
+                    uLng = lastTrackedPos.lng;
+                } else {
+                    const pos = await getCurrentPos().catch(e => {
+                        if ((isDemoMode || isAdmin) && map) return { coords: { latitude: map.getCenter().lat, longitude: map.getCenter().lng }};
+                        throw e;
+                    });
+                    uLat = pos.coords.latitude;
+                    uLng = pos.coords.longitude;
+                }
+
+                const dist = getDistance(uLat, uLng, loc.lat, loc.lng);
+
+                if (dist <= 25 || isDemoMode || isAdmin) {
+                    if (loc.installed && !isAdmin) {
+                        const playerLevelIndex = LEVELS.findIndex(l => (userData.score || 0) >= l.min);
+                        if (playerLevelIndex < (loc.requiredLevelIndex || 0)) {
+                            showMessage(`Szinted túl alacsony! Elvárt: ${LEVELS[loc.requiredLevelIndex].name}`, "error");
+                            return;
+                        }
+                    }
+                    await processLocationAction(loc);
+                    window.showView('view-map');
+                } else {
+                    showMessage(`Túl messze vagy! (${Math.round(dist)}m)`, "error");
+                }
+            } catch (err) { 
+                showMessage("Műveleti hiba!", "error"); 
+            } finally { 
+                isChecking = false; 
+                btnIcon.classList.remove('animate-spin');
+            }
+        };
+
+        const processLocationAction = async (locData) => {
+            try {
+                const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locData.id);
+                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                const isAdmin = user.email === ADMIN_EMAIL;
+                
+                // AKTIVÁLÁS
+                if (!locData.installed) {
+                    if (locData.creatorId !== user.uid && !isAdmin) {
+                        showMessage("Ezt csak a beküldője aktiválhatja!", "error");
+                        return;
+                    }
+                    
+                    const pts = locData.finalPoints || 50;
+                    await setDoc(userRef, { 
+                        score: increment(pts), 
+                        visited: arrayUnion(locData.id) 
+                    }, { merge: true });
+                    
+                    await updateDoc(locRef, { installed: true });
+                    showMessage(`Helyszín sikeresen aktiválva! +${pts} pont.`);
+                    return;
+                }
+
+                // BECSEKKOLÁS
+                if (userData.visited && userData.visited.includes(locData.id)) {
+                    showMessage("Már meglátogattad!", "error");
+                    return;
+                }
+
+                if (locData.creatorId === user.uid) {
+                    showMessage("Saját helyet már aktiváltad!");
+                    return;
+                }
+
+                const pts = Math.round((locData.finalPoints || 50) / 2);
+                await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
+                
+                const creatorProfileRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
+                await setDoc(creatorProfileRef, { score: increment(5) }, { merge: true });
+                
+                showMessage(`Sikeres igazolás! +${pts} pont.`);
+            } catch (err) { 
+                showMessage("Adatbázis hiba!", "error"); 
+            }
+        };
+
+        window.voteValue = async (locId, val) => {
+            if (!user) return;
+            const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId);
+            const snap = await getDoc(locRef);
+            const data = snap.data();
+            const isAdmin = user.email === ADMIN_EMAIL;
+            if (data.voters?.includes(user.uid) && !isDemoMode && !isAdmin) return showMessage("Már szavaztál!");
+            const newTotal = (data.voteTotal || 0) + val;
+            const newCount = (data.voteCount || 0) + 1;
+            let updates = { voteTotal: newTotal, voteCount: newCount, voters: arrayUnion(user.uid) };
+            
+            if (newCount >= 10) {
+                const avg = Math.round(newTotal / newCount);
+                updates.status = 'active';
+                updates.finalPoints = avg;
+                let requiredLvl = 0;
+                if (avg > 300) requiredLvl = 2;
+                else if (avg > 100) requiredLvl = 1;
+                updates.requiredLevelIndex = requiredLvl;
+                showMessage(`Helyszín elfogadva! ${avg} PTS`);
+                window.showView('view-map');
+            } else {
+                showMessage("Voks rögzítve!");
+                window.showLocationDetail(locId);
+            }
+            await updateDoc(locRef, updates);
+        };
+
+        window.createGroup = async () => {
+            if (!user) return;
+            const name = document.getElementById('new-group-name').value.trim();
+            const minScore = parseInt(document.getElementById('new-group-min').value) || 0;
+            if (!name) return;
+            const id = "GRP-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', id), {
+                    id, name, creatorId: user.uid, members: [user.uid], totalScore: userData.score || 0, minScoreToSee: minScore
+                });
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), { groups: arrayUnion(id) }, { merge: true });
+                showMessage("Csoport létrehozva!");
+                document.getElementById('new-group-name').value = "";
+                document.getElementById('new-group-min').value = "";
+            } catch (err) { showMessage("Hiba!", "error"); }
+        };
+
+        window.applyToGroup = async (e, groupId) => {
+            e.stopPropagation();
+            if (!user) return;
+            const reason = prompt("Miért szeretnél csatlakozni?");
+            if (!reason) return;
+            const id = `APP-${user.uid}-${groupId}`;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', id), {
+                    id, groupId, userId: user.uid, username: userData.username, reason, creatorId: allGroups.find(g => g.id === groupId).creatorId
+                });
+                showMessage("Jelentkezés elküldve!");
+            } catch (err) { showMessage("Hiba!", "error"); }
+        };
+
+        const renderGroups = () => {
+            const container = document.getElementById('group-list');
+            if (!container) return;
+            const score = userData.score || 0;
+            const visibleGroups = allGroups.filter(g => score >= (g.minScoreToSee || 0));
+            container.innerHTML = visibleGroups.map(g => {
+                const isMember = myGroupIds.includes(g.id);
+                const isPending = allApplications.some(a => a.groupId === g.id && a.userId === user?.uid);
+                
+                let buttonHtml = `<button onclick="window.applyToGroup(event, '${g.id}')" class="bg-blue-600 text-white text-[9px] px-2 py-1.5 rounded-lg font-bold uppercase">Belépés</button>`;
+                
+                if (isMember) {
+                    buttonHtml = `<span class="text-[9px] bg-green-900 text-green-400 px-3 py-1 rounded-full font-bold uppercase">TAG</span>`;
+                } else if (isPending) {
+                    buttonHtml = `<button disabled class="bg-gray-700 text-gray-500 text-[9px] px-2 py-1.5 rounded-lg font-bold uppercase cursor-not-allowed">Függőben</button>`;
+                }
+
+                return `
+                <div onclick="window.showGroupDetail('${g.id}')" class="bg-gray-800 p-4 rounded-2xl border border-gray-700 mb-3 flex justify-between items-center active:bg-gray-700 transition-colors cursor-pointer">
+                    <div>
+                        <h4 class="font-bold text-white uppercase tracking-tight">${g.name}</h4>
+                        <p class="text-[9px] text-gray-500 uppercase font-bold">Tagok: ${g.members.length} | Összpont: ${g.totalScore || 0}</p>
+                    </div>
+                    ${buttonHtml}
+                </div>`;
+            }).join('');
+        };
+
+        window.showGroupDetail = (groupId) => {
+            currentGroupId = groupId;
+            const group = allGroups.find(g => g.id === groupId);
+            if (!group) return;
+            document.getElementById('detail-group-name').innerText = group.name;
+            window.showView('view-group-detail');
+        };
+
+        const renderGroupLocations = () => {
+            const container = document.getElementById('detail-location-list');
+            const groupLocs = locations.filter(loc => loc.groupId === currentGroupId);
+            if (groupLocs.length === 0) {
+                container.innerHTML = `<div class="text-center p-10 text-gray-500 uppercase italic text-[10px] font-bold">Nincs helyszín a klánban.</div>`;
+                return;
+            }
+            container.innerHTML = groupLocs.map(loc => `
+                <div onclick="window.showLocationDetail('${loc.id}')" class="bg-gray-800/50 p-5 rounded-3xl border border-gray-700 mb-4 shadow-xl relative overflow-hidden active:scale-95 transition-all">
+                    <div class="absolute top-0 right-0 ${loc.status === 'active' ? (loc.installed ? 'bg-green-600' : 'bg-orange-600 animate-pulse') : 'bg-blue-600'} text-[8px] px-3 py-1 font-bold uppercase rounded-bl-xl tracking-tighter">
+                        ${loc.status === 'active' ? (loc.installed ? (loc.finalPoints || 50) + ' PTS' : 'VÁRJA AZ AKTIVÁLÁST') : 'VOTING ('+ (loc.voteCount || 0) +'/10)'}
+                    </div>
+                    <div class="mb-1">
+                        <h3 class="font-bold text-white uppercase tracking-tight">${loc.name}</h3>
+                        <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest italic">${loc.creatorName || 'Hunter'}</p>
+                    </div>
+                </div>`).join('');
+        };
+
+        window.showGroupMembers = () => {
+            const group = allGroups.find(g => g.id === currentGroupId);
+            if (!group) return;
+            document.getElementById('member-modal-title').innerText = `${group.name} - Tagok`;
+            const memberList = document.getElementById('modal-member-list');
+            memberList.innerHTML = group.members.map(uid => {
+                const profile = publicProfiles[uid] || { username: "Ismeretlen", score: 0 };
+                const info = getLevelInfo(profile.score);
+                return `<div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800 mb-2"><div><p class="text-xs font-bold text-white uppercase">${profile.username}</p><p class="text-[8px] text-blue-400 uppercase font-bold">${info.name}</p></div><p class="text-[10px] font-bold text-green-500">${profile.score} PTS</p></div>`;
+            }).join('');
+            document.getElementById('member-modal').classList.remove('hidden');
+        };
+
+        window.closeMemberModal = () => document.getElementById('member-modal').classList.add('hidden');
+
+        const renderApplications = (apps) => {
+            const container = document.getElementById('app-list');
+            if (!user) return;
+            const myManagedApps = apps.filter(a => a.creatorId === user.uid);
+            if (myManagedApps.length === 0) {
+                container.innerHTML = `<p class="text-[10px] text-gray-600 italic">Nincs új jelentkező.</p>`;
+                return;
+            }
+            container.innerHTML = myManagedApps.map(a => `<div class="bg-gray-900 p-4 rounded-2xl border border-blue-900/30 mb-2"><p class="text-[10px] text-white font-bold mb-1 uppercase tracking-tight">${a.username} -> ${allGroups.find(g => g.id === a.groupId)?.name || 'Klán'}</p><p class="text-[9px] text-gray-400 italic mb-3">"${a.reason}"</p><div class="flex gap-2"><button onclick="window.processApp('${a.id}', true)" class="flex-1 bg-green-600 text-black text-[9px] font-bold py-2 rounded-lg uppercase">Elfogad</button><button onclick="window.processApp('${a.id}', false)" class="flex-1 bg-red-600 text-white text-[9px] font-bold py-2 rounded-lg uppercase">Elutasít</button></div></div>`).join('');
+        };
+
+        window.processApp = async (appIdStr, accept) => {
+            const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdStr);
+            const appSnap = await getDoc(appRef);
+            if (!appSnap.exists()) return;
+            const aData = appSnap.data();
+            try {
+                if (accept) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'groups', aData.groupId), { 
+                        members: arrayUnion(aData.userId) 
+                    });
+                    showMessage("Tag felvéve!");
+                }
+                await deleteDoc(appRef);
+            } catch (err) { 
+                console.error(err);
+                showMessage("Hiba!", "error"); 
+            }
+        };
+
+        window.saveLocation = async (e) => {
+            e.preventDefault();
+            if (!user || !selectedCoords) return;
+            const name = document.getElementById('loc-name').value;
+            const groupId = document.getElementById('loc-group-select').value;
+            const categoryId = document.getElementById('loc-category-select').value;
+            const approach = document.getElementById('loc-approach').value;
+            
+            if (!groupId) return showMessage("Válassz egy klánt!", "error");
+
+            const id = "LOC-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', id), {
+                    id, name, groupId, categoryId, approach, requiredLevelIndex: 0, lat: selectedCoords.lat, lng: selectedCoords.lng, installed: false, creatorId: user.uid, creatorName: userData.username, voteCount: 0, voteTotal: 0, voters: [], status: 'voting', createdAt: Date.now()
+                });
+                showMessage("Helyszín beküldve!");
+                window.showView('view-map');
+            } catch (err) { showMessage("Adatbázis hiba!", "error"); }
+        };
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        body { font-family: 'Space Mono', monospace; background: #050505; color: #eee; -webkit-tap-highlight-color: transparent; }
+        .view { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        #map-container { height: calc(100vh - 250px); border-radius: 1.5rem; border: 1px solid #1f2937; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .player-pulse { animation: pulse-ring 2s infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 0.4; } 100% { transform: scale(1); opacity: 0.8; } }
+        
+        /* Pin marker stílusok */
+        .pin-marker { position: relative; width: 34px; height: 44px; display: flex; align-items: center; justify-content: center; }
+        .pin-emoji { position: absolute; top: 17px; left: 17px; transform: translate(-50%, -50%); font-size: 14px; z-index: 10; pointer-events: none; }
+        .custom-pin-icon { background: none !important; border: none !important; }
+
+        input, select, textarea { background: #000 !important; border: 1px solid #1f2937 !important; color: white !important; }
+        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.2em; padding-right: 2.5rem !important; }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+    <div id="message-box" class="hidden"></div>
+
+    <!-- FEJLÉC - Megemelt z-index a láthatóságért -->
+    <header class="p-3 px-6 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
+        <div class="flex justify-between items-center max-w-xl mx-auto">
+            <div>
+                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v9</span></h1>
+                <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Betöltés...</p>
+            </div>
+            <div id="login-area" class="flex gap-2">
+                <button onclick="window.loginWithGoogle()" class="bg-white text-black text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-tighter">Google</button>
+            </div>
+            <div id="profile-area" class="hidden text-right">
+                <p id="profile-name" class="text-[10px] font-bold text-white mb-0 uppercase tracking-tight leading-none">Hunter</p>
+                <div class="flex items-center gap-2 justify-end">
+                    <p class="text-green-500 font-bold text-[9px] tracking-widest leading-none"><span id="user-score">0</span> PTS</p>
+                    <button onclick="window.logout()" class="text-[8px] text-red-500 uppercase font-bold tracking-widest active:scale-95 transition-all leading-none">❌</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-4 max-w-xl mx-auto">
+        <div id="view-map" class="view">
+            <div id="map-container" class="shadow-2xl"></div>
+            <div class="mt-4 p-4 bg-gray-900/50 border border-gray-800 rounded-3xl text-[9px] text-gray-400 uppercase leading-relaxed font-bold tracking-tight">
+                💡 Kattints a térképre új pont rögzítéséhez! Az ikonok jelzik a kategóriát, a körök pedig a 25m igazolási zónát.
+            </div>
+        </div>
+
+        <div id="view-groups" class="view hidden">
+            <h2 class="text-lg font-bold mb-6 italic text-blue-500 uppercase tracking-tighter">Klánok & Csoportok</h2>
+            <div class="mb-8 p-6 bg-gray-900 rounded-[2.5rem] border border-gray-800">
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-4 tracking-widest">Új csoport alapítása</p>
+                <input id="new-group-name" type="text" placeholder="Csoport neve" class="w-full p-4 rounded-2xl text-xs mb-3 outline-none">
+                <input id="new-group-min" type="number" placeholder="Láthatósági küszöb (PTS)" class="w-full p-4 rounded-2xl text-xs mb-4 outline-none">
+                <button onclick="window.createGroup()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl text-[10px] uppercase active:scale-95 transition-all tracking-widest">Alapítás</button>
+            </div>
+            <div id="app-area" class="mb-8">
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-widest">Jelentkezők</p>
+                <div id="app-list"></div>
+            </div>
+            <p class="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-widest">Elérhető klánok</p>
+            <div id="group-list"></div>
+        </div>
+
+        <div id="view-group-detail" class="view hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="window.showView('view-groups')" class="text-[10px] text-blue-400 uppercase font-bold flex items-center gap-1 tracking-widest">← Vissza</button>
+                <button onclick="window.showGroupMembers()" class="bg-gray-800 p-2.5 rounded-xl border border-gray-700 active:scale-90 transition-all flex items-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tagok</span>
+                </button>
+            </div>
+            <div class="bg-gray-900/40 p-2 rounded-3xl">
+                <h2 id="detail-group-name" class="text-xl font-bold text-white mb-6 uppercase tracking-tight italic text-center">Csoport</h2>
+                <div id="detail-location-list" class="space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- HELYSZÍN ADATLAP - z-index beállítva -->
+        <div id="view-location-info" class="view hidden fixed inset-0 bg-black z-[4000] overflow-y-auto pt-4">
+            <div class="max-w-xl mx-auto p-6 pb-40">
+                <button onclick="window.showView('view-map')" class="text-[10px] text-green-500 uppercase font-bold mb-8 flex items-center gap-2 tracking-widest">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7 7l-7-7 7-7"/></svg> Vissza a térképhez
+                </button>
+                <div class="flex flex-col gap-6">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <h2 id="info-title" class="text-3xl font-bold text-white uppercase tracking-tighter italic leading-none mb-2">Helyszín</h2>
+                            <p id="info-category" class="text-xs font-bold text-blue-400 uppercase tracking-widest">📍 Egyéb</p>
+                        </div>
+                        <span id="info-status">AKTÍV</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-900 p-4 rounded-3xl border border-gray-800">
+                            <p class="text-[9px] text-gray-500 uppercase font-bold mb-1 tracking-widest">Érték</p>
+                            <p id="info-pts" class="text-xl font-bold text-green-500">0 PTS</p>
+                        </div>
+                        <div class="bg-gray-900 p-4 rounded-3xl border border-gray-800">
+                            <p class="text-[9px] text-gray-500 uppercase font-bold mb-1 tracking-widest">Szint</p>
+                            <p id="info-level" class="text-xl font-bold text-blue-400 tracking-tighter italic">Zöldfülű</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 space-y-6">
+                        <div>
+                            <p class="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Megközelítés</p>
+                            <p id="info-approach" class="text-sm text-gray-300 leading-relaxed">Nincs leírás.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-y-4 border-t border-gray-800 pt-6">
+                            <div><p class="text-[9px] text-gray-500 uppercase font-bold mb-1 tracking-widest">Beküldő</p><p id="info-creator" class="text-xs font-bold text-white uppercase">-</p></div>
+                            <div><p class="text-[9px] text-gray-500 uppercase font-bold mb-1 tracking-widest">Klán</p><p id="info-group" class="text-xs font-bold text-white uppercase italic">-</p></div>
+                            <div><p class="text-[9px] text-gray-500 uppercase font-bold mb-1 tracking-widest">Koordináták</p><p id="info-coords" class="text-[10px] font-bold text-gray-400">-</p></div>
+                        </div>
+                    </div>
+                    <div id="info-action-container" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-add" class="view hidden fixed inset-0 bg-black z-[4000] overflow-y-auto pt-4">
+            <div class="max-w-xl mx-auto p-8 pb-32">
+                <button onclick="window.showView('view-map')" class="text-[10px] text-gray-500 uppercase font-bold mb-8 flex items-center gap-2 tracking-widest">← Mégse</button>
+                <h2 class="text-4xl font-bold text-green-500 mb-2 italic uppercase tracking-tighter leading-none">Új Helyszín</h2>
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-8 tracking-widest">Pozíció: <span id="lat-val" class="text-white"></span>, <span id="lng-val" class="text-white"></span></p>
+                
+                <form onsubmit="window.saveLocation(event)" class="space-y-6">
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase block mb-2 tracking-widest">Helyszín neve</label>
+                        <input id="loc-name" required type="text" placeholder="Helyszín neve" class="w-full p-4 rounded-xl text-sm font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase block mb-2 tracking-widest">Kategória</label>
+                        <select id="loc-category-select" class="w-full p-4 rounded-xl text-xs font-bold uppercase"></select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase block mb-2 tracking-widest">Klán (Tulajdonos)</label>
+                        <select id="loc-group-select" class="w-full p-4 rounded-xl text-xs font-bold uppercase"></select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 font-bold uppercase block mb-2 tracking-widest">Leírás / Bejutás</label>
+                        <textarea id="loc-approach" required rows="3" placeholder="Hogyan jutunk be?" class="w-full p-4 rounded-xl text-sm font-bold bg-black border border-gray-800 outline-none focus:border-green-500 text-white"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-black font-bold py-5 rounded-2xl text-sm uppercase mt-4 active:scale-95 transition-all shadow-2xl tracking-widest">Beküldés</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="member-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[4000] hidden flex items-center justify-center p-4">
+            <div class="bg-gray-900 w-full max-w-sm rounded-[3rem] border border-gray-800 p-8 shadow-2xl relative">
+                <button onclick="window.closeMemberModal()" class="absolute top-6 right-6 text-gray-500">❌</button>
+                <h2 id="member-modal-title" class="text-xl font-bold text-white mb-6 uppercase italic tracking-tighter">Tagok</h2>
+                <div id="modal-member-list" class="max-h-[60vh] overflow-y-auto space-y-2 pr-2"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- NAVIGÁCIÓ - z-index megemelve a láthatóságért -->
+    <nav class="fixed bottom-0 inset-x-0 bg-black/95 backdrop-blur-2xl border-t border-gray-800 p-2 pb-6 z-[5000] shadow-2xl">
+        <div class="max-w-xl mx-auto flex justify-around items-end">
+            <button onclick="window.showView('view-map')" class="flex flex-col items-center gap-1 group active:scale-90 transition-all">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus:text-green-500 transition-colors"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest font-bold">Térkép</span>
+            </button>
+            
+            <!-- AKTIVÁLÓ GOMB - Magasabb rétegen és igazított pozícióban -->
+            <button id="checkin-btn-outer" onclick="window.handleAction()" class="hidden bg-green-600 p-5 rounded-full -mt-10 border-[6px] border-black shadow-2xl active:scale-95 transition-all hover:bg-green-500 group opacity-40">
+                <svg id="checkin-btn" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+            </button>
+            
+            <button onclick="window.showView('view-groups')" class="flex flex-col items-center gap-1 group active:scale-90 transition-all">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus:text-blue-500 transition-colors"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest font-bold">Klánok</span>
+            </button>
+        </div>
+    </nav>
+</body>
+</html>
