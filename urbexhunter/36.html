@@ -511,7 +511,7 @@
                 await processLocationAction(loc);
                 window.showView('view-map');
             } catch (err) { 
-                console.error(err);
+                console.error("GPS Check error:", err);
                 showMessage("Adatbázis hiba!", "error"); 
             } finally { 
                 isChecking = false; 
@@ -536,37 +536,41 @@
             const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
             const isAdmin = user.email === ADMIN_EMAIL;
             
-            // Pontszám rögzítése a felhasználónál
-            if (!locData.installed) {
-                // Aktiválás
-                if (locData.creatorId !== user.uid && !isAdmin) {
-                    showMessage("Ezt csak a beküldője aktiválhatja!", "error");
-                    return;
+            try {
+                if (!locData.installed) {
+                    // Aktiválás
+                    if (locData.creatorId !== user.uid && !isAdmin) {
+                        showMessage("Ezt csak a beküldője aktiválhatja!", "error");
+                        return;
+                    }
+                    const pts = locData.finalPoints || 50;
+                    await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
+                    const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locData.id);
+                    await updateDoc(locRef, { installed: true });
+                    showMessage(`Helyszín sikeresen aktiválva! +${pts} pont.`);
+                } else {
+                    // Sima igazolás
+                    if (userData.visited && userData.visited.includes(locData.id)) {
+                        showMessage("Már meglátogattad!", "error");
+                        return;
+                    }
+                    if (locData.creatorId === user.uid) {
+                        showMessage("Saját helyet nem igazolhatsz!");
+                        return;
+                    }
+                    const pts = Math.round((locData.finalPoints || 50) / 2);
+                    await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
+                    
+                    // Alkotói bónusz (opcionális, nem szakítja meg a folyamatot hiba esetén)
+                    if (locData.creatorId) {
+                        const creatorRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
+                        setDoc(creatorRef, { score: increment(5) }, { merge: true }).catch(e => console.log("Creator bonus failed"));
+                    }
+                    showMessage(`Sikeres igazolás! +${pts} pont.`);
                 }
-                const pts = locData.finalPoints || 50;
-                await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
-                const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locData.id);
-                await updateDoc(locRef, { installed: true });
-                showMessage(`Helyszín sikeresen aktiválva! +${pts} pont.`);
-            } else {
-                // Sima igazolás
-                if (userData.visited && userData.visited.includes(locData.id)) {
-                    showMessage("Már meglátogattad!", "error");
-                    return;
-                }
-                if (locData.creatorId === user.uid) {
-                    showMessage("Saját helyet nem igazolhatsz!");
-                    return;
-                }
-                const pts = Math.round((locData.finalPoints || 50) / 2);
-                await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
-                
-                // Alkotói bónusz
-                if (locData.creatorId) {
-                    const creatorRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
-                    await setDoc(creatorRef, { score: increment(5) }, { merge: true });
-                }
-                showMessage(`Sikeres igazolás! +${pts} pont.`);
+            } catch (e) {
+                console.error("Process action error:", e);
+                throw e; // Feladja a hívónak (startGpsCheck), ami kiírja az adatbázis hibát
             }
         };
 
@@ -762,8 +766,8 @@
             <div id="profile-area" class="hidden text-right flex items-center gap-4">
                 <div class="flex flex-col items-end">
                     <p id="profile-name" class="text-[10px] font-bold text-white mb-0 uppercase tracking-tight leading-none opacity-0 transition-opacity duration-300">Hunter</p>
-                    <div id="score-reveal-area" class="bg-green-900/40 border border-green-500/30 px-5 py-2 rounded-2xl mt-1 profile-pulse cursor-pointer select-none active:scale-95 transition-all">
-                        <p class="text-green-500 font-bold text-4xl tracking-tighter leading-none"><span id="user-score">0</span> <span class="text-[10px] ml-1 opacity-50 uppercase tracking-widest">pts</span></p>
+                    <div id="score-reveal-area" class="bg-green-900/40 border border-green-500/30 px-3 py-1.5 rounded-2xl mt-1 profile-pulse cursor-pointer select-none active:scale-95 transition-all">
+                        <p class="text-green-500 font-bold text-3xl tracking-tighter leading-none"><span id="user-score">0</span></p>
                     </div>
                 </div>
             </div>
