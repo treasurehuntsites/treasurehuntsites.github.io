@@ -76,7 +76,6 @@
         let unsubscribeList = [];
         let qrScanner = null;
 
-        // GPS Simítási perzisztens változók
         let smoothLat = null;
         let smoothLng = null;
 
@@ -151,7 +150,6 @@
             const loc = locations.find(l => l.id === activeLocationId);
             if (!loc) return;
 
-            // Ikon csere QR-re ha QR típusú
             const btnIcon = document.getElementById('checkin-btn');
             if (loc.verifyType === 'qr') {
                 btnIcon.innerHTML = `<path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" /><rect x="7" y="7" width="3" height="3" /><rect x="14" y="7" width="3" height="3" /><rect x="7" y="14" width="3" height="3" /><rect x="14" y="14" width="3" height="3" />`;
@@ -168,7 +166,6 @@
 
             const dist = getDistance(lastTrackedPos.lat, lastTrackedPos.lng, loc.lat, loc.lng);
 
-            // Ha QR-es, csak akkor legyen aktív a gomb, ha a közelben van (biztonság kedvéért)
             if (dist <= 35 || isAdmin || isDemoMode) {
                 btn.style.opacity = "1";
             } else {
@@ -345,6 +342,11 @@
                     catSelect.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                 }
                 
+                // Form reset
+                document.getElementById('loc-verify-qr').checked = false;
+                document.getElementById('qr-secret-container').classList.add('hidden');
+                document.getElementById('loc-qr-secret').value = "";
+
                 window.showView('view-add');
             });
             
@@ -429,7 +431,6 @@
             const catDisplay = document.getElementById('info-category');
             if (catDisplay) catDisplay.innerText = `${cat.icon} ${cat.name}`;
 
-            // Igazolás típusa jelzése
             const typeLabel = loc.verifyType === 'qr' ? '🔒 QR KÓD SZÜKSÉGES' : '🛰️ GPS ALAPÚ';
             const typeDisplay = document.getElementById('info-verify-type');
             if (typeDisplay) {
@@ -509,7 +510,6 @@
 
             const dist = getDistance(uLat, uLng, loc.lat, loc.lng);
 
-            // Távolság ellenőrzés mindenképp (hogy ne lehessen otthonról QR-t beolvasni, ha valaki lefotózta)
             if (dist > 50 && !isDemoMode && !isAdmin) {
                 return showMessage(`Túl messze vagy! (${Math.round(dist)}m)`, "error");
             }
@@ -551,11 +551,12 @@
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 (decodedText) => {
-                    // QR kód tartalma a helyszín ID-ja kell legyen
-                    if (decodedText.trim() === loc.id) {
+                    // Ha van qrSecret, azt nézzük, egyébként fallback az ID-ra
+                    const secret = loc.qrSecret || loc.id;
+                    if (decodedText.trim() === secret.trim()) {
                         qrScanner.stop().then(() => {
                             document.getElementById('qr-modal').classList.add('hidden');
-                            startGpsCheck(loc); // QR után ugyanúgy processzáljuk
+                            startGpsCheck(loc); 
                         });
                     } else {
                         showMessage("Érvénytelen QR kód!", "error");
@@ -879,6 +880,16 @@
             }
         };
 
+        window.toggleQrSecret = () => {
+            const isChecked = document.getElementById('loc-verify-qr').checked;
+            const container = document.getElementById('qr-secret-container');
+            if (isChecked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        };
+
         window.saveLocation = async (e) => {
             e.preventDefault();
             if (!user || !selectedCoords) return;
@@ -887,13 +898,17 @@
             const categoryId = document.getElementById('loc-category-select').value;
             const approach = document.getElementById('loc-approach').value;
             const verifyType = document.getElementById('loc-verify-qr').checked ? 'qr' : 'gps';
+            const qrSecret = document.getElementById('loc-qr-secret').value.trim();
             
             if (!groupId) return showMessage("Válassz egy klánt!", "error");
+            if (verifyType === 'qr' && !qrSecret) return showMessage("Adj meg egy QR szöveget!", "error");
 
             const id = "LOC-" + Math.random().toString(36).substring(2, 10).toUpperCase();
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', id), {
-                    id, name, groupId, categoryId, approach, verifyType, requiredLevelIndex: 0, lat: selectedCoords.lat, lng: selectedCoords.lng, installed: false, creatorId: user.uid, creatorName: userData.username, voteCount: 0, voteTotal: 0, voters: [], status: 'voting', createdAt: Date.now()
+                    id, name, groupId, categoryId, approach, verifyType, 
+                    qrSecret: verifyType === 'qr' ? qrSecret : null,
+                    requiredLevelIndex: 0, lat: selectedCoords.lat, lng: selectedCoords.lng, installed: false, creatorId: user.uid, creatorName: userData.username, voteCount: 0, voteTotal: 0, voters: [], status: 'voting', createdAt: Date.now()
                 });
                 showMessage("Helyszín beküldve!");
                 window.showView('view-map');
@@ -919,7 +934,6 @@
         input, select, textarea { background: #000 !important; border: 1px solid #1f2937 !important; color: white !important; }
         select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1.2em; padding-right: 2.5rem !important; }
         
-        /* QR Modal design */
         #qr-reader { border: none !important; }
         #qr-reader__scan_region { background: #111; border-radius: 1.5rem; overflow: hidden; }
         #qr-reader__dashboard { background: transparent !important; }
@@ -986,7 +1000,6 @@
             <div id="detail-location-list" class="space-y-1"></div>
         </div>
 
-        <!-- HELYSZÍN ADATLAP -->
         <div id="view-location-info" class="view hidden fixed inset-0 bg-black z-[4000] overflow-y-auto pt-4">
             <div class="max-w-xl mx-auto p-6 pb-40">
                 <button onclick="window.showView('view-map')" class="text-[10px] text-green-500 uppercase font-bold mb-8 flex items-center gap-2 tracking-widest">
@@ -1050,16 +1063,21 @@
                         <label class="text-[10px] text-gray-500 font-bold uppercase block mb-2 tracking-widest">Leírás / Bejutás</label>
                         <textarea id="loc-approach" required rows="3" placeholder="Hogyan jutunk be?" class="w-full p-4 rounded-xl text-sm font-bold bg-black border border-gray-800 outline-none focus:border-green-500 text-white"></textarea>
                     </div>
-                    <div class="flex items-center gap-4 bg-gray-900 p-4 rounded-2xl border border-gray-800">
-                        <input id="loc-verify-qr" type="checkbox" class="w-5 h-5 accent-yellow-500 bg-black rounded border-gray-700">
-                        <label for="loc-verify-qr" class="text-[10px] text-gray-300 font-bold uppercase tracking-widest">QR kód alapú igazolás</label>
+                    <div class="bg-gray-900 p-5 rounded-3xl border border-gray-800 space-y-4">
+                        <div class="flex items-center gap-4">
+                            <input id="loc-verify-qr" type="checkbox" onchange="window.toggleQrSecret()" class="w-6 h-6 accent-yellow-500 bg-black rounded-lg border-gray-700">
+                            <label for="loc-verify-qr" class="text-[10px] text-gray-300 font-bold uppercase tracking-widest cursor-pointer">QR kód alapú igazolás</label>
+                        </div>
+                        <div id="qr-secret-container" class="hidden animate-fadeIn">
+                            <label class="text-[9px] text-yellow-500 font-bold uppercase block mb-2 tracking-widest italic">A beolvasandó szöveg (Titok)</label>
+                            <input id="loc-qr-secret" type="text" placeholder="Pl: UrbexHuntersRulez123" class="w-full p-4 rounded-2xl text-xs font-bold tracking-tight">
+                        </div>
                     </div>
                     <button type="submit" class="w-full bg-green-600 text-black font-bold py-5 rounded-2xl text-sm uppercase mt-4 active:scale-95 transition-all shadow-2xl tracking-widest">Beküldés</button>
                 </form>
             </div>
         </div>
 
-        <!-- MODALOK -->
         <div id="member-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[4000] hidden flex items-center justify-center p-4">
             <div class="bg-gray-900 w-full max-w-sm rounded-[3rem] border border-gray-800 p-8 shadow-2xl relative">
                 <button onclick="window.closeMemberModal()" class="absolute top-6 right-6 text-gray-500">❌</button>
@@ -1080,26 +1098,21 @@
 
     <nav class="fixed bottom-0 inset-x-0 bg-black/95 backdrop-blur-2xl border-t border-gray-800 p-2 pb-6 z-[5000] shadow-2xl">
         <div class="max-w-xl mx-auto flex justify-around items-end">
-            <!-- Térkép Gomb -->
             <button onclick="window.showView('view-map')" class="flex-1 flex flex-col items-center gap-1 group active:scale-90 transition-all">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus:text-green-500 transition-colors"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Térkép</span>
             </button>
             
-            <!-- AKTIVÁLÓ GOMB (Dinamikus ikonnal) -->
             <button id="checkin-btn-outer" onclick="window.handleAction()" class="hidden bg-green-600 p-5 rounded-full -mt-10 border-[6px] border-black shadow-2xl active:scale-95 transition-all hover:bg-green-500 group opacity-40">
                 <svg id="checkin-btn" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3">
-                    <!-- Itt dinamikusan cserélődik az ikon: pipa vagy qr -->
                 </svg>
             </button>
             
-            <!-- Klánok Gomb -->
             <button onclick="window.showView('view-groups')" class="flex-1 flex flex-col items-center gap-1 group active:scale-90 transition-all">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus:text-blue-500 transition-colors"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Klánok</span>
             </button>
 
-            <!-- BELÉPÉS SZEKCIÓ -->
             <button id="nav-login-section" onclick="window.loginWithGoogle()" class="flex-1 flex flex-col items-center gap-1 group active:scale-90 transition-all">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 transition-colors">
                     <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
@@ -1107,7 +1120,6 @@
                 <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Belépés</span>
             </button>
 
-            <!-- KILÉPÉS SZEKCIÓ -->
             <button id="nav-logout-section" onclick="window.logout()" class="hidden flex-1 flex flex-col items-center gap-1 group active:scale-90 transition-all">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500 transition-colors">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
