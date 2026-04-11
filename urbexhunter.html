@@ -14,7 +14,7 @@
             getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-            getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, arrayUnion, increment, query, deleteDoc
+            getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, arrayUnion, arrayRemove, increment, query, deleteDoc
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -167,12 +167,11 @@
         const trackUserPosition = () => {
             if (!navigator.geolocation) return;
             
-            const alpha = 0.05; // Extrém simítás a "visszaugrálás" ellen
+            const alpha = 0.05; 
 
             navigator.geolocation.watchPosition(pos => {
                 const { latitude, longitude, accuracy } = pos.coords;
                 
-                // Szigorú szűrés: csak a nagyon pontos jelet fogadjuk el
                 if (accuracy > 20) return;
 
                 if (smoothLat === null) {
@@ -183,7 +182,6 @@
                     smoothLng = (longitude * alpha) + (smoothLng * (1 - alpha));
                 }
                 
-                // Megnövelt holtzóna: 10 méter alatti mozgást mozdulatlanságnak veszünk
                 const distChange = lastTrackedPos ? getDistance(smoothLat, smoothLng, lastTrackedPos.lat, lastTrackedPos.lng) : 999;
                 if (distChange < 10) return;
 
@@ -257,6 +255,10 @@
                 myGroupIds = allGroups.filter(g => g.members && g.members.includes(user.uid)).map(g => g.id);
                 renderGroups();
                 updateMarkers();
+                if (currentGroupId) {
+                    renderGroupMembers();
+                    updateGroupDetailUI();
+                }
             }));
 
             unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'applications'), snap => {
@@ -344,11 +346,10 @@
             markers = [];
             const visibleLocations = locations.filter(loc => myGroupIds.includes(loc.groupId));
             visibleLocations.forEach(loc => {
-                let color = '#3b82f6'; // Alapértelmezett kék (szavazás)
+                let color = '#3b82f6'; 
                 
-                // Ellenőrizzük, hogy a felhasználó megtalálta-e már
                 if (userData.visited && userData.visited.includes(loc.id)) {
-                    color = '#6b7280'; // Megtalált helyszín szürke
+                    color = '#6b7280'; 
                 } else if (loc.status === 'active') {
                     color = loc.installed ? '#22c55e' : '#f97316'; 
                 }
@@ -429,7 +430,6 @@
                 `;
             }
 
-            // Törlés gomb saját pontnál vagy adminnak
             if (isOwner || isAdmin) {
                 const deleteWrap = document.createElement('div');
                 deleteWrap.className = "mt-6 pt-6 border-t border-gray-800";
@@ -648,10 +648,52 @@
 
         window.showGroupDetail = (groupId) => {
             currentGroupId = groupId;
-            const group = allGroups.find(g => g.id === groupId);
-            if (!group) return;
-            document.getElementById('detail-group-name').innerText = group.name;
+            updateGroupDetailUI();
             window.showView('view-group-detail');
+        };
+
+        const updateGroupDetailUI = () => {
+            const group = allGroups.find(g => g.id === currentGroupId);
+            if (!group) return;
+            
+            const nameEl = document.getElementById('detail-group-name');
+            if (nameEl) nameEl.innerText = group.name;
+
+            const leaveContainer = document.getElementById('group-leave-container');
+            if (leaveContainer) {
+                const isMember = user && group.members.includes(user.uid);
+                if (isMember) {
+                    leaveContainer.innerHTML = `
+                        <button onclick="window.leaveCurrentGroup()" class="w-full py-2 bg-gray-900/50 border border-gray-800 text-gray-500 text-[9px] font-bold uppercase rounded-xl active:bg-red-900/20 active:text-red-500 active:border-red-500/30 transition-all">Kilépés a klánból</button>
+                    `;
+                } else {
+                    leaveContainer.innerHTML = '';
+                }
+            }
+        };
+
+        window.leaveCurrentGroup = async () => {
+            if (!currentGroupId || !user) return;
+            const group = allGroups.find(g => g.id === currentGroupId);
+            if (!group) return;
+
+            const isCreator = group.creatorId === user.uid;
+            const confirmMsg = isCreator 
+                ? "Te vagy az alapító! Ha kilépsz, a klán alapító nélkül marad. Biztosan kilépsz?"
+                : "Biztosan elhagyod a klánt?";
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
+                await updateDoc(groupRef, { 
+                    members: arrayRemove(user.uid) 
+                });
+                showMessage("Kiléptél a klánból.");
+                window.showView('view-groups');
+            } catch (e) {
+                showMessage("Hiba a kilépés során!", "error");
+            }
         };
 
         const renderGroupLocations = () => {
@@ -673,15 +715,55 @@
                 </div>`).join('');
         };
 
+        window.removeMember = async (targetUid) => {
+            if (!currentGroupId) return;
+            const group = allGroups.find(g => g.id === currentGroupId);
+            if (!group) return;
+
+            if (!confirm(`Biztosan eltávolítod ezt a tagot a csoportból?`)) return;
+
+            try {
+                const groupRef = doc(db, 'artifacts', appId, 'public', 'data', 'groups', currentGroupId);
+                await updateDoc(groupRef, { 
+                    members: arrayRemove(targetUid) 
+                });
+                showMessage("Tag eltávolítva.");
+            } catch (e) {
+                console.error(e);
+                showMessage("Hiba az eltávolítás során!", "error");
+            }
+        };
+
         window.showGroupMembers = () => {
             const group = allGroups.find(g => g.id === currentGroupId);
             if (!group) return;
+
+            const isCreator = user && group.creatorId === user.uid;
+            const isAdmin = user && user.email === ADMIN_EMAIL;
+
             document.getElementById('member-modal-title').innerText = `${group.name} - Tagok`;
             const memberList = document.getElementById('modal-member-list');
             memberList.innerHTML = group.members.map(uid => {
                 const profile = publicProfiles[uid] || { username: "Ismeretlen", score: 0 };
                 const info = getLevelInfo(profile.score);
-                return `<div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800 mb-2"><div><p class="text-xs font-bold text-white uppercase">${profile.username}</p><p class="text-[8px] text-blue-400 uppercase font-bold">${info.name}</p></div><p class="text-[10px] font-bold text-green-500">${profile.score} PTS</p></div>`;
+                
+                const canRemove = (isCreator || isAdmin) && uid !== group.creatorId;
+                const removeBtn = canRemove ? 
+                    `<button onclick="window.removeMember('${uid}')" class="ml-4 text-red-500 p-2 active:scale-90 transition-all">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>` : '';
+
+                return `
+                    <div class="flex justify-between items-center p-3 bg-black/40 rounded-xl border border-gray-800 mb-2">
+                        <div class="flex-1">
+                            <p class="text-xs font-bold text-white uppercase">${profile.username}</p>
+                            <p class="text-[8px] text-blue-400 uppercase font-bold">${info.name}</p>
+                        </div>
+                        <div class="flex items-center">
+                            <p class="text-[10px] font-bold text-green-500">${profile.score} PTS</p>
+                            ${removeBtn}
+                        </div>
+                    </div>`;
             }).join('');
             document.getElementById('member-modal').classList.remove('hidden');
         };
@@ -811,10 +893,11 @@
                     <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tagok</span>
                 </button>
             </div>
-            <div class="bg-gray-900/40 p-2 rounded-3xl">
-                <h2 id="detail-group-name" class="text-xl font-bold text-white mb-6 uppercase tracking-tight italic text-center">Csoport</h2>
-                <div id="detail-location-list" class="space-y-1"></div>
+            <div class="bg-gray-900/40 p-4 rounded-3xl mb-4">
+                <h2 id="detail-group-name" class="text-xl font-bold text-white mb-4 uppercase tracking-tight italic text-center">Csoport</h2>
+                <div id="group-leave-container" class="max-w-xs mx-auto"></div>
             </div>
+            <div id="detail-location-list" class="space-y-1"></div>
         </div>
 
         <!-- HELYSZÍN ADATLAP -->
@@ -917,7 +1000,7 @@
 
             <!-- BELÉPÉS SZEKCIÓ -->
             <button id="nav-login-section" onclick="window.loginWithGoogle()" class="flex-1 flex flex-col items-center gap-1 group active:scale-90 transition-all">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus: желтый-500 transition-colors">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500 group-focus:text-yellow-500 transition-colors">
                     <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
                 </svg>
                 <span class="text-[7px] font-bold text-gray-500 uppercase tracking-widest">Belépés</span>
