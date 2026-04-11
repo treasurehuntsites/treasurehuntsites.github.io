@@ -238,7 +238,6 @@
                 const profileArea = document.getElementById('profile-area');
                 if(profileArea) profileArea.classList.remove('hidden');
                 
-                // Ellenőrizzük, hogy van-e neve
                 const userRef = doc(db, 'artifacts', appId, 'users', u.uid, 'profile', 'data');
                 const snap = await getDoc(userRef);
                 if (!snap.exists() || !snap.data().username) {
@@ -383,18 +382,20 @@
                 window.showView('view-add');
             });
 
-            // Long-press név megjelenítéshez
-            const logoutBtn = document.getElementById('nav-logout-section');
+            // Long-press név megjelenítéshez a pontszámon
+            const scoreContainer = document.getElementById('score-reveal-area');
             const profileName = document.getElementById('profile-name');
 
             const showName = () => profileName.classList.remove('opacity-0');
             const hideName = () => profileName.classList.add('opacity-0');
 
-            logoutBtn.addEventListener('mousedown', showName);
-            logoutBtn.addEventListener('mouseup', hideName);
-            logoutBtn.addEventListener('mouseleave', hideName);
-            logoutBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showName(); });
-            logoutBtn.addEventListener('touchend', hideName);
+            if (scoreContainer) {
+                scoreContainer.addEventListener('mousedown', showName);
+                scoreContainer.addEventListener('mouseup', hideName);
+                scoreContainer.addEventListener('mouseleave', hideName);
+                scoreContainer.addEventListener('touchstart', (e) => { e.preventDefault(); showName(); });
+                scoreContainer.addEventListener('touchend', hideName);
+            }
             
             trackUserPosition();
             initAuth();
@@ -509,7 +510,13 @@
                 }
                 await processLocationAction(loc);
                 window.showView('view-map');
-            } catch (err) { showMessage("Műveleti hiba!", "error"); } finally { isChecking = false; btnIcon.classList.remove('animate-spin'); }
+            } catch (err) { 
+                console.error("GPS Check error:", err);
+                showMessage("Adatbázis hiba!", "error"); 
+            } finally { 
+                isChecking = false; 
+                btnIcon.classList.remove('animate-spin'); 
+            }
         };
 
         const openQrScanner = (loc) => {
@@ -525,25 +532,46 @@
         window.closeQrScanner = () => { if (qrScanner) qrScanner.stop().then(() => document.getElementById('qr-modal').classList.add('hidden')); else document.getElementById('qr-modal').classList.add('hidden'); };
 
         const processLocationAction = async (locData) => {
+            if (!user) return;
+            const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+            const isAdmin = user.email === ADMIN_EMAIL;
+            
             try {
-                const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locData.id);
-                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-                const isAdmin = user.email === ADMIN_EMAIL;
                 if (!locData.installed) {
-                    if (locData.creatorId !== user.uid && !isAdmin) return showMessage("Ezt csak a beküldője aktiválhatja!", "error");
+                    // Aktiválás
+                    if (locData.creatorId !== user.uid && !isAdmin) {
+                        showMessage("Ezt csak a beküldője aktiválhatja!", "error");
+                        return;
+                    }
                     const pts = locData.finalPoints || 50;
                     await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
+                    const locRef = doc(db, 'artifacts', appId, 'public', 'data', 'locations', locData.id);
                     await updateDoc(locRef, { installed: true });
-                    return showMessage(`Helyszín sikeresen aktiválva! +${pts} pont.`);
+                    showMessage(`Helyszín sikeresen aktiválva! +${pts} pont.`);
+                } else {
+                    // Sima igazolás
+                    if (userData.visited && userData.visited.includes(locData.id)) {
+                        showMessage("Már meglátogattad!", "error");
+                        return;
+                    }
+                    if (locData.creatorId === user.uid) {
+                        showMessage("Saját helyet nem igazolhatsz!");
+                        return;
+                    }
+                    const pts = Math.round((locData.finalPoints || 50) / 2);
+                    await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
+                    
+                    // Alkotói bónusz (opcionális, nem szakítja meg a folyamatot hiba esetén)
+                    if (locData.creatorId) {
+                        const creatorRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
+                        setDoc(creatorRef, { score: increment(5) }, { merge: true }).catch(e => console.log("Creator bonus failed"));
+                    }
+                    showMessage(`Sikeres igazolás! +${pts} pont.`);
                 }
-                if (userData.visited && userData.visited.includes(locData.id)) return showMessage("Már meglátogattad!", "error");
-                if (locData.creatorId === user.uid) return showMessage("Saját helyet már aktiváltad!");
-                const pts = Math.round((locData.finalPoints || 50) / 2);
-                await setDoc(userRef, { score: increment(pts), visited: arrayUnion(locData.id) }, { merge: true });
-                const creatorProfileRef = doc(db, 'artifacts', appId, 'users', locData.creatorId, 'profile', 'data');
-                await setDoc(creatorProfileRef, { score: increment(5) }, { merge: true });
-                showMessage(`Sikeres igazolás! +${pts} pont.`);
-            } catch (err) { showMessage("Adatbázis hiba!", "error"); }
+            } catch (e) {
+                console.error("Process action error:", e);
+                throw e; // Feladja a hívónak (startGpsCheck), ami kiírja az adatbázis hibát
+            }
         };
 
         window.voteValue = async (locId, val) => {
@@ -738,8 +766,8 @@
             <div id="profile-area" class="hidden text-right flex items-center gap-4">
                 <div class="flex flex-col items-end">
                     <p id="profile-name" class="text-[10px] font-bold text-white mb-0 uppercase tracking-tight leading-none opacity-0 transition-opacity duration-300">Hunter</p>
-                    <div class="bg-green-900/40 border border-green-500/30 px-3 py-1 rounded-xl mt-1 profile-pulse">
-                        <p class="text-green-500 font-bold text-xl tracking-tighter leading-none"><span id="user-score">0</span> <span class="text-[10px] ml-1 opacity-50 uppercase tracking-widest">pts</span></p>
+                    <div id="score-reveal-area" class="bg-green-900/40 border border-green-500/30 px-3 py-1.5 rounded-2xl mt-1 profile-pulse cursor-pointer select-none active:scale-95 transition-all">
+                        <p class="text-green-500 font-bold text-3xl tracking-tighter leading-none"><span id="user-score">0</span></p>
                     </div>
                 </div>
             </div>
@@ -750,7 +778,7 @@
         <div id="view-map" class="view">
             <div id="map-container" class="shadow-2xl"></div>
             <div class="mt-4 p-4 bg-gray-900/50 border border-gray-800 rounded-3xl text-[9px] text-gray-400 uppercase leading-relaxed font-bold tracking-tight">
-                💡 Kattints a térképre új pont rögzítéséhez! <br> A nevedet a kilépés gomb nyomva tartásával nézheted meg.
+                💡 Kattints a térképre új pont rögzítéséhez! <br> A nevedet a bal felső pontszám nyomva tartásával nézheted meg.
             </div>
         </div>
 
