@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Urbex Hunter v9 - Map & GPS Fix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, arrayUnion, arrayRemove, increment, query, deleteDoc
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCE9HsgnhCbjGWkRUSYeWblSAJAj9Y-3lk",
+            authDomain: "urbex-hunter.firebaseapp.com",
+            projectId: "urbex-hunter",
+            storageBucket: "urbex-hunter.firebasestorage.app",
+            messagingSenderId: "23703144828",
+            appId: "1:23703144828:web:016a96cd6c1fe01ab5fcf9"
+        };
+
+        const appId = 'urbex-hunter-v9'; 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        const LEVELS = [
+            { min: 0, name: "Zöldfülű", color: "text-gray-400" },
+            { min: 100, name: "Vándor", color: "text-blue-400" },
+            { min: 500, name: "Alpinista", color: "text-purple-400" }
+        ];
+
+        const CATEGORIES = [
+            { id: 'bunker', name: 'Bunker', icon: '🛡️' },
+            { id: 'crane', name: 'Daru', icon: '🏗️' },
+            { id: 'sanatorium', name: 'Szanatórium', icon: '🏥' },
+            { id: 'hospital', name: 'Kórház', icon: '🚑' },
+            { id: 'industrial', name: 'Ipari', icon: '🏭' },
+            { id: 'facility', name: 'Létesítmény', icon: '🏢' },
+            { id: 'residential', name: 'Lakóépület', icon: '🏚️' },
+            { id: 'other', name: 'Egyéb', icon: '📍' }
+        ];
+
+        let user = null;
+        let userData = { score: 0, visited: [], username: "" };
+        let locations = [];
+        let allGroups = [];
+        let myGroupIds = [];
+        let map = null;
+        let markers = [];
+        let userMarker = null; 
+        let lastTrackedPos = null;
+        let activeLocationId = null;
+
+        const getLevelInfo = (score) => LEVELS.slice().reverse().find(l => score >= l.min) || LEVELS[0];
+
+        const showMessage = (text, type = 'info') => {
+            const box = document.getElementById('message-box');
+            box.innerText = text;
+            box.className = `fixed top-4 left-1/2 -translate-x-1/2 p-4 rounded shadow-2xl z-[10000] text-white font-bold text-center text-xs transition-all ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 4000);
+        };
+
+        const getDistance = (lat1, lon1, lat2, lon2) => {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+
+        // GPS STABILIZÁLÁSA
+        const trackUserPosition = () => {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.watchPosition(pos => {
+                const { latitude, longitude, accuracy } = pos.coords;
+                
+                // 1. Szűrő: Ha a jel pontatlanabb mint 30 méter, eldobjuk, hogy ne ugráljon
+                if (accuracy > 30) return;
+
+                // 2. Szűrő: Csak akkor frissítünk, ha legalább 5 métert mozdult el (fantom mozgás kiszűrése)
+                if (lastTrackedPos) {
+                    const moveDist = getDistance(latitude, longitude, lastTrackedPos.lat, lastTrackedPos.lng);
+                    if (moveDist < 5) return; 
+                }
+
+                lastTrackedPos = { lat: latitude, lng: longitude };
+                
+                if (!userMarker) {
+                    userMarker = L.circleMarker([latitude, longitude], {
+                        radius: 10, fillColor: "#3b82f6", color: "white", weight: 3, opacity: 1, fillOpacity: 0.8
+                    }).addTo(map).bindPopup("Te itt vagy");
+                } else {
+                    userMarker.setLatLng([latitude, longitude]);
+                }
+            }, err => console.error(err), { enableHighAccuracy: true, maximumAge: 0 });
+        };
+
+        const updateMarkers = () => {
+            if (!map) return;
+            markers.forEach(m => m.remove());
+            markers = [];
+            
+            const visibleLocations = locations.filter(loc => myGroupIds.includes(loc.groupId) || user?.email === "jatszmabunker@gmail.com");
+            
+            visibleLocations.forEach(loc => {
+                let color = '#3b82f6'; 
+                if (userData.visited?.includes(loc.id)) color = '#6b7280'; 
+                else if (loc.status === 'active') color = loc.installed ? '#22c55e' : '#f97316'; 
+
+                const cat = CATEGORIES.find(c => c.id === (loc.categoryId || 'other')) || CATEGORIES[7];
+                
+                // IKONOS JELÖLŐ GENERÁLÁSA
+                const pinIcon = L.divIcon({
+                    className: 'custom-pin-icon',
+                    html: `
+                        <div class="pin-marker" style="--pin-color: ${color}">
+                            <svg class="pin-svg" viewBox="0 0 34 44">
+                                <path d="M17 0C7.61 0 0 7.61 0 17C0 29.75 17 44 17 44C17 44 34 29.75 34 17C34 7.61 26.39 0 17 0Z" fill="currentColor"/>
+                            </svg>
+                            <div class="pin-white-circle"></div>
+                            <span class="pin-emoji">${cat.icon}</span>
+                        </div>
+                    `,
+                    iconSize: [36, 46],
+                    iconAnchor: [18, 46]
+                });
+
+                const marker = L.marker([loc.lat, loc.lng], { icon: pinIcon }).addTo(map);
+                marker.on('click', () => window.showLocationDetail(loc.id));
+                markers.push(marker);
+            });
+        };
+
+        // UI és Firebase logika (rövidítve a 37.html alapján)
+        window.showView = (viewId) => {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            if (viewId === 'view-map' && map) setTimeout(() => map.invalidateSize(), 100);
+        };
+
+        window.recenterMap = () => {
+            if (lastTrackedPos) map.setView([lastTrackedPos.lat, lastTrackedPos.lng], 16);
+            else showMessage("Várj GPS jelre...", "info");
+        };
+
+        window.loginWithGoogle = async () => {
+            try { await signInWithPopup(auth, googleProvider); } 
+            catch (e) { await signInAnonymously(auth); }
+        };
+
+        const setupListeners = () => {
+            unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'groups'), snap => {
+                allGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                myGroupIds = allGroups.filter(g => g.members?.includes(user?.uid)).map(g => g.id);
+                updateMarkers();
+            }));
+            unsubscribeList.push(onSnapshot(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), snap => {
+                userData = snap.data() || { score: 0, visited: [], username: "" };
+                updateMarkers();
+                document.getElementById('user-score').innerText = userData.score || 0;
+            }));
+            unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'locations'), snap => {
+                locations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                updateMarkers();
+            }));
+        };
+
+        onAuthStateChanged(auth, u => {
+            user = u;
+            if (u) {
+                document.getElementById('profile-area').classList.remove('hidden');
+                setupListeners();
+            }
+            window.showView('view-map');
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            map = L.map('map-container', { zoomControl: false }).setView([47.4979, 19.0402], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            trackUserPosition();
+        });
+
+        // Név felfedése hosszú nyomásra
+        const scoreArea = document.getElementById('score-reveal-area');
+        const nameLabel = document.getElementById('profile-name');
+        const toggleName = (show) => nameLabel.classList.toggle('opacity-0', !show);
+        
+        scoreArea?.addEventListener('mousedown', () => toggleName(true));
+        scoreArea?.addEventListener('mouseup', () => toggleName(false));
+        scoreArea?.addEventListener('touchstart', (e) => { e.preventDefault(); toggleName(true); });
+        scoreArea?.addEventListener('touchend', () => toggleName(false));
+
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        body { font-family: 'Space Mono', monospace; background: #050505; color: #eee; overflow: hidden; }
+        
+        #view-map { position: fixed; inset: 0; padding-bottom: 5rem; }
+        #map-container { width: 100%; height: 100%; }
+
+        /* IKONOS PIN STÍLUS */
+        .pin-marker { position: relative; width: 36px; height: 46px; display: flex; align-items: center; justify-content: center; color: var(--pin-color); }
+        .pin-svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5)); }
+        .pin-white-circle { position: absolute; top: 18px; left: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; background: white; border-radius: 50%; z-index: 5; }
+        .pin-emoji { position: absolute; top: 18px; left: 50%; transform: translate(-50%, -50%); font-size: 14px; z-index: 10; line-height: 1; pointer-events: none; }
+        .custom-pin-icon { background: none !important; border: none !important; }
+
+        .map-btn { position: absolute; right: 1rem; width: 44px; height: 44px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(5px); }
+        #recenter-btn { bottom: 7rem; }
+        
+        .view { height: 100vh; overflow-y: auto; background: #050505; position: relative; z-index: 20; }
+        #view-map.view { background: transparent; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div id="message-box" class="hidden"></div>
+
+    <header class="p-3 px-6 border-b border-gray-800 bg-black/80 backdrop-blur-md sticky top-0 z-[5000]">
+        <div class="flex justify-between items-center max-w-xl mx-auto">
+            <div>
+                <h1 class="text-md font-bold text-green-500 uppercase italic leading-none">Urbex Hunter <span class="text-[8px] text-gray-500">v9</span></h1>
+                <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase">Zöldfülű</p>
+            </div>
+            <div id="profile-area" class="hidden text-right flex flex-col items-end">
+                <p id="profile-name" class="text-[9px] font-bold text-white mb-0 uppercase opacity-0 transition-opacity">Hunter</p>
+                <div id="score-reveal-area" class="bg-green-900/20 border border-green-500/20 px-3 py-1.5 rounded-xl mt-1 cursor-pointer select-none">
+                    <p class="text-green-500 font-bold text-2xl tracking-tighter leading-none"><span id="user-score">0</span></p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="view-map" class="view">
+            <div id="map-container"></div>
+            <button id="recenter-btn" onclick="window.recenterMap()" class="map-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2m10-10h-2M4 12H2"/></svg>
+            </button>
+        </div>
+        </main>
+
+    <nav class="fixed bottom-0 inset-x-0 bg-black/95 backdrop-blur-2xl border-t border-gray-800 p-2 pb-6 z-[6000]">
+        <div class="max-w-xl mx-auto flex justify-around items-end">
+            <button onclick="window.showView('view-map')" class="flex-1 flex flex-col items-center gap-1">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="text-[8px] font-bold text-gray-500 uppercase">Térkép</span>
+            </button>
+            <button onclick="window.loginWithGoogle()" class="flex-1 flex flex-col items-center gap-1">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-500"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <span class="text-[8px] font-bold text-gray-500 uppercase">Belépés</span>
+            </button>
+        </div>
+    </nav>
+</body>
+</html>
