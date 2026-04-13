@@ -186,22 +186,30 @@
 
             navigator.geolocation.watchPosition(pos => {
                 const { latitude, longitude, accuracy } = pos.coords;
+                const now = Date.now();
                 
-                // Csak pontos jeleket fogadunk el, megszünteti az ugrálást
-                if (accuracy > 50) return;
+                // 1. Szigorú alap szűrés: 40m-nél rosszabb pontosságot azonnal eldobunk
+                if (accuracy > 40) return;
 
-                const distChange = lastTrackedPos ? getDistance(latitude, longitude, lastTrackedPos.lat, lastTrackedPos.lng) : 999;
-                
-                // Csak akkor frissítjük a markert, ha legalább 2 métert elmozdultunk
-                if (distChange < 2) return;
+                if (lastTrackedPos) {
+                    const distChange = getDistance(latitude, longitude, lastTrackedPos.lat, lastTrackedPos.lng);
+                    
+                    // 2. Egyhelyben állós "remegés" szűrése (1 méter alatti elmozdulást ignoráljuk)
+                    if (distChange < 1) return;
+                }
 
-                lastTrackedPos = { lat: latitude, lng: longitude };
+                lastTrackedPos = { lat: latitude, lng: longitude, timestamp: now, accuracy: accuracy };
                 const latlng = [latitude, longitude];
 
                 if (!userMarker) {
-                    userMarker = L.circleMarker(latlng, {
-                        radius: 8, fillColor: "#3b82f6", color: "white", weight: 2, opacity: 1, fillOpacity: 0.9, className: "player-pulse"
-                    }).addTo(map).bindPopup("Saját pozíció");
+                    // SVG CircleMarker helyett stabil HTML DivIcon-t használunk a CSS pulzáláshoz
+                    const userIcon = L.divIcon({
+                        className: 'user-loc-icon',
+                        html: '<div class="user-loc-dot"></div>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8] // Tökéletesen középre igazítja az ikont
+                    });
+                    userMarker = L.marker(latlng, { icon: userIcon, zIndexOffset: 1000 }).addTo(map).bindPopup("Saját pozíció");
                 } else {
                     userMarker.setLatLng(latlng);
                 }
@@ -209,7 +217,7 @@
                 updateCheckinButtonUI();
             }, err => console.log("Helymeghatározási hiba:", err), { 
                 enableHighAccuracy: true, 
-                maximumAge: 5000, 
+                maximumAge: 0, // Cache tiltása
                 timeout: 10000 
             });
         };
@@ -833,8 +841,11 @@
 
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .player-pulse { animation: pulse-ring 2s infinite; }
-        @keyframes pulse-ring { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 0.4; } 100% { transform: scale(1); opacity: 0.8; } }
+        
+        /* ÚJ, STABIL CSS ANIMÁCIÓ A SAJÁT POZÍCIÓHOZ (Megakadályozza az elcsúszást) */
+        .user-loc-icon { background: transparent !important; border: none !important; }
+        .user-loc-dot { width: 16px; height: 16px; background-color: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59,130,246,0.8); animation: user-pulse 2s infinite; transform-origin: center center; margin: 0; padding: 0; }
+        @keyframes user-pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; box-shadow: 0 0 20px rgba(59,130,246,0.5); } 100% { transform: scale(1); opacity: 1; } }
         
         .custom-pin-icon { background: none !important; border: none !important; }
         
