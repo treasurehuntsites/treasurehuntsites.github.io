@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urbex Hunter v9 - Map & Filter Pro</title>
+    <title>Urbex Hunter v44 - Map & Filter Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -40,10 +40,16 @@
 
         const ADMIN_EMAIL = "jatszmabunker@gmail.com";
 
+        // ÚJ RANGRENDSZER ÉS PONTOZÁS (v44)
         const LEVELS = [
-            { min: 0, name: "Zöldfülű", color: "text-gray-400" },
-            { min: 100, name: "Vándor", color: "text-blue-400" },
-            { min: 500, name: "Alpinista", color: "text-purple-400" }
+            { min: 0, name: "Kóborló", color: "text-gray-400" },
+            { min: 250, name: "Kerítésmászó", color: "text-green-400" },
+            { min: 750, name: "Betonpatkány", color: "text-blue-400" },
+            { min: 2000, name: "Folyosóvadász", color: "text-indigo-400" },
+            { min: 5000, name: "Ipari Régész", color: "text-purple-400" },
+            { min: 12000, name: "Zónajáró", color: "text-pink-400" },
+            { min: 30000, name: "Épület-szellem", color: "text-red-400" },
+            { min: 75000, name: "Urbex Legenda", color: "text-yellow-400" }
         ];
 
         const CATEGORIES = [
@@ -193,9 +199,22 @@
 
                 if (lastTrackedPos) {
                     const distChange = getDistance(latitude, longitude, lastTrackedPos.lat, lastTrackedPos.lng);
+                    const timeDiffSeconds = (now - (lastTrackedPos.timestamp || now)) / 1000;
                     
                     // 2. Egyhelyben állós "remegés" szűrése (1 méter alatti elmozdulást ignoráljuk)
                     if (distChange < 1) return;
+
+                    // 3. Kőkemény Anti-Teleport algoritmus (Ugrálás megelőzése)
+                    if (timeDiffSeconds > 0 && timeDiffSeconds < 30) {
+                        const speed = distChange / timeDiffSeconds; // m/s
+                        
+                        // Ha irreálisan gyorsan tettünk meg távot (pl 8 m/s felett, ami kb 30 km/h)
+                        if (speed > 8) {
+                            // Csak akkor fogadjuk el ezt az "ugrást", ha a telefon most talált egy sokkal pontosabb műholdat.
+                            const isSignificantlyBetter = accuracy <= 20 && accuracy < (lastTrackedPos.accuracy - 5);
+                            if (!isSignificantlyBetter) return; // Eldobjuk a fals ugrálást!
+                        }
+                    }
                 }
 
                 lastTrackedPos = { lat: latitude, lng: longitude, timestamp: now, accuracy: accuracy };
@@ -535,7 +554,7 @@
             document.getElementById('info-group').innerText = group?.name || 'Ismeretlen Klán';
             document.getElementById('info-creator').innerText = loc.creatorName || 'Hunter';
             document.getElementById('info-approach').innerText = loc.approach || 'Nincs megadva leírás.';
-            document.getElementById('info-level').innerText = levelInfo?.name || 'Zöldfülű';
+            document.getElementById('info-level').innerText = levelInfo?.name || 'Kóborló';
             document.getElementById('info-coords').innerText = `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`;
             
             if (document.getElementById('info-category')) document.getElementById('info-category').innerText = `${cat.icon} ${cat.name}`;
@@ -665,7 +684,15 @@
             if (newCount >= 10) {
                 const avg = Math.round(newTotal / newCount);
                 updates.status = 'active'; updates.finalPoints = avg;
-                let requiredLvl = 0; if (avg > 300) requiredLvl = 2; else if (avg > 100) requiredLvl = 1;
+                
+                // Új, 8 lépcsős szint kiosztási logika a helyszínek szavazott pontértéke alapján:
+                let requiredLvl = 0; 
+                if (avg >= 500) requiredLvl = 5;      // Zónajáró szint (12.000 pts limithez)
+                else if (avg >= 400) requiredLvl = 4; // Ipari Régész
+                else if (avg >= 300) requiredLvl = 3; // Folyosóvadász
+                else if (avg >= 200) requiredLvl = 2; // Betonpatkány
+                else if (avg >= 100) requiredLvl = 1; // Kerítésmászó
+                
                 updates.requiredLevelIndex = requiredLvl;
                 showMessage(`Helyszín elfogadva! ${avg} PTS`); window.showView('view-map');
             } else { showMessage("Voks rögzítve!"); window.showLocationDetail(locId); }
@@ -721,15 +748,15 @@
 
             if (groupFilter === 'mine') {
                 filtered = allGroups.filter(g => myGroupIds.includes(g.id));
-            } else if (['0', '1', '2'].includes(groupFilter)) {
+            } else if (['0', '1', '2', '3', '4', '5', '6', '7'].includes(groupFilter)) {
                 filtered = allGroups.filter(g => (g.requiredLevelIndex || 0).toString() === groupFilter);
             }
 
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 if (btn.dataset.filter === groupFilter) {
-                    btn.className = "filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest";
+                    btn.className = "filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0";
                 } else {
-                    btn.className = "filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest";
+                    btn.className = "filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0";
                 }
             });
 
@@ -872,7 +899,7 @@
     <header class="p-3 px-6 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
         <div class="flex justify-between items-center max-w-xl mx-auto">
             <div>
-                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v9</span></h1>
+                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v44</span></h1>
                 <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Betöltés...</p>
             </div>
             
@@ -947,13 +974,18 @@
             <div>
                 <p class="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-widest">Aktív klánok</p>
                 
-                <!-- SZŰRŐK KÖZVETLENÜL A KLÁNOK FELETT -->
+                <!-- SZŰRŐK KÖZVETLENÜL A KLÁNOK FELETT (Bővítve a 8 új szintre) -->
                 <div class="mb-4 flex gap-2 overflow-x-auto filter-scroll pb-2">
                     <button onclick="window.setGroupFilter('all')" data-filter="all" class="filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Mind</button>
                     <button onclick="window.setGroupFilter('mine')" data-filter="mine" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Saját</button>
-                    <button onclick="window.setGroupFilter('0')" data-filter="0" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Zöldfülű</button>
-                    <button onclick="window.setGroupFilter('1')" data-filter="1" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Vándor</button>
-                    <button onclick="window.setGroupFilter('2')" data-filter="2" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Alpinista</button>
+                    <button onclick="window.setGroupFilter('0')" data-filter="0" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Kóborló</button>
+                    <button onclick="window.setGroupFilter('1')" data-filter="1" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Kerítésmászó</button>
+                    <button onclick="window.setGroupFilter('2')" data-filter="2" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Betonpatkány</button>
+                    <button onclick="window.setGroupFilter('3')" data-filter="3" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Folyosóvadász</button>
+                    <button onclick="window.setGroupFilter('4')" data-filter="4" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Ipari Régész</button>
+                    <button onclick="window.setGroupFilter('5')" data-filter="5" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Zónajáró</button>
+                    <button onclick="window.setGroupFilter('6')" data-filter="6" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Épület-szellem</button>
+                    <button onclick="window.setGroupFilter('7')" data-filter="7" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Urbex Legenda</button>
                 </div>
                 
                 <div id="group-list" class="space-y-2 pb-10"></div>
