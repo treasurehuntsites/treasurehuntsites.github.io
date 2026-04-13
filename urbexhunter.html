@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urbex Hunter v44 - Map & Filter Pro</title>
+    <title>Urbex Hunter v45 - Map & Filter Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -40,7 +40,7 @@
 
         const ADMIN_EMAIL = "jatszmabunker@gmail.com";
 
-        // ÚJ RANGRENDSZER ÉS PONTOZÁS (v44)
+        // ÚJ RANGRENDSZER ÉS PONTOZÁS (v44+)
         const LEVELS = [
             { min: 0, name: "Kóborló", color: "text-gray-400" },
             { min: 250, name: "Kerítésmászó", color: "text-green-400" },
@@ -543,6 +543,10 @@
             const isAdmin = user?.email === ADMIN_EMAIL;
             const isOwner = loc.creatorId === user?.uid;
             const group = allGroups.find(g => g.id === loc.groupId);
+            
+            // JOGOSULTSÁG: Megnézzük, hogy a felhasználó az adott klán vezetője-e
+            const isClanLeader = group && user && group.creatorId === user.uid;
+            
             const levelInfo = LEVELS[loc.requiredLevelIndex || 0];
             const cat = CATEGORIES.find(c => c.id === (loc.categoryId || 'other')) || CATEGORIES[7];
 
@@ -571,10 +575,15 @@
                 actionContainer.innerHTML = `<p class="text-[9px] text-gray-500 uppercase font-bold mb-3 text-center">Értékelés (${loc.voteCount || 0}/10)</p><div class="grid grid-cols-4 gap-2">${[10, 20, 50, 100, 150, 200, 300, 500].map(v => `<button onclick="window.voteValue('${loc.id}', ${v})" class="py-2 text-[10px] font-bold border border-gray-700 rounded-xl text-blue-400 active:bg-blue-900 ${!canVote ? 'opacity-20 pointer-events-none' : ''}">${v}</button>`).join('')}</div>`;
             }
 
-            if (isOwner || isAdmin) {
+            // GOMB MEGJELENÍTÉSE: Ha beküldő, rendszeradmin, vagy KLÁNVEZETŐ
+            if (isOwner || isAdmin || isClanLeader) {
                 const deleteWrap = document.createElement('div');
                 deleteWrap.className = "mt-6 pt-6 border-t border-gray-800";
-                deleteWrap.innerHTML = `<button id="del-btn-${loc.id}" onclick="window.deleteLocation('${loc.id}')" class="w-full py-3 bg-red-900/20 text-red-500 text-[10px] font-bold uppercase rounded-xl border border-red-500/20 active:bg-red-900/40">Helyszín Törlése</button>`;
+                
+                let btnLabel = "Helyszín Törlése";
+                if (isClanLeader && !isOwner && !isAdmin) btnLabel = "Törlés (Klánvezetői Jog)";
+                
+                deleteWrap.innerHTML = `<button id="del-btn-${loc.id}" data-label="${btnLabel}" onclick="window.deleteLocation('${loc.id}')" class="w-full py-3 bg-red-900/20 text-red-500 text-[10px] font-bold uppercase rounded-xl border border-red-500/20 active:bg-red-900/40">${btnLabel}</button>`;
                 actionContainer.appendChild(deleteWrap);
             }
             window.showView('view-location-info');
@@ -582,10 +591,11 @@
 
         window.deleteLocation = async (locId) => {
             const btn = document.getElementById(`del-btn-${locId}`);
+            const originalLabel = btn.dataset.label || "Helyszín Törlése";
             if (!btn.dataset.confirm) {
                 btn.dataset.confirm = "true"; btn.innerText = "BIZTOSAN TÖRÖLNI AKAROD?";
                 btn.className = "w-full py-3 bg-red-600 text-white text-[10px] font-bold uppercase rounded-xl shadow-xl";
-                setTimeout(() => { btn.dataset.confirm = ""; btn.innerText = "Helyszín Törlése"; btn.className = "w-full py-3 bg-red-900/20 text-red-500 text-[10px] font-bold uppercase rounded-xl border border-red-500/20"; }, 4000);
+                setTimeout(() => { btn.dataset.confirm = ""; btn.innerText = originalLabel; btn.className = "w-full py-3 bg-red-900/20 text-red-500 text-[10px] font-bold uppercase rounded-xl border border-red-500/20"; }, 4000);
                 return;
             }
             try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'locations', locId)); showMessage("Helyszín sikeresen törölve!"); window.showView('view-map'); } catch (e) { showMessage("Hiba a törlés során!", "error"); }
@@ -899,7 +909,7 @@
     <header class="p-3 px-6 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
         <div class="flex justify-between items-center max-w-xl mx-auto">
             <div>
-                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v44</span></h1>
+                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v45</span></h1>
                 <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Betöltés...</p>
             </div>
             
