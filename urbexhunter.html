@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urbex Hunter v52 - Map & Filter Pro</title>
+    <title>Urbex Hunter v53 - Map & Filter Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -86,7 +86,7 @@
         let isChecking = false;
         let unsubscribeList = [];
         let qrScanner = null;
-        let groupFilter = 'all'; 
+        let groupFilter = 'mine'; // Alapértelmezett szűrő mostantól a 'mine' (Saját)
         let inviteProcessed = false; 
 
         const getLevelInfo = (score) => LEVELS.slice().reverse().find(l => score >= l.min) || LEVELS[0];
@@ -868,6 +868,9 @@
                 filtered = allGroups.filter(g => (g.requiredLevelIndex || 0).toString() === groupFilter);
             }
 
+            // A klánok sorbarendezése szint szerint (emelkedő), eredeti lista másolatán
+            filtered = [...filtered].sort((a, b) => (a.requiredLevelIndex || 0) - (b.requiredLevelIndex || 0));
+
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 if (btn.dataset.filter === groupFilter) {
                     btn.className = "filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0";
@@ -1061,24 +1064,24 @@
         </div>
     </div>
 
-    <!-- ÚJRATERVEZETT FEJLÉC (v52) -->
+    <!-- ÚJRATERVEZETT FEJLÉC (v53) -->
     <header class="px-3 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
-        <div class="flex justify-between items-center max-w-xl mx-auto relative h-16">
+        <div class="flex justify-between items-center max-w-xl mx-auto h-16">
             
-            <!-- Bal felső menü gomb (csak bejelentkezve látszik) -->
-            <button id="hamburger-menu-btn" onclick="window.toggleMenu()" class="hidden absolute left-0 p-2 text-gray-400 hover:text-white z-10 active:scale-90 transition-transform">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
-            </button>
-            
-            <!-- Középre igazított, kisebb cím (verziószám nélkül) -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <!-- Bal oldal: Menü gomb + Cím Flexboxszal egymás mellett -->
+            <div class="flex items-center gap-2">
+                <!-- Bal felső menü gomb (csak bejelentkezve látszik) -->
+                <button id="hamburger-menu-btn" onclick="window.toggleMenu()" class="hidden p-2 -ml-2 text-gray-400 hover:text-white active:scale-90 transition-transform">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+                </button>
+                
                 <h1 class="text-base font-bold text-green-500 tracking-tighter italic uppercase leading-none">
                     Urbex Hunter
                 </h1>
             </div>
             
-            <!-- Jobb felső sarok pontszám (visszaállítva nagyobb méretre) -->
-            <div id="profile-area" class="hidden absolute right-0 flex items-center h-full z-10">
+            <!-- Jobb felső sarok pontszám -->
+            <div id="profile-area" class="hidden flex items-center h-full">
                 <div id="score-reveal-area" class="bg-green-900/40 border border-green-500/30 px-3 py-1.5 rounded-xl flex items-center profile-pulse">
                     <p class="text-green-500 font-bold text-3xl tracking-tighter leading-none flex items-baseline gap-1"><span id="user-score">0</span> <span class="text-[10px]">PTS</span></p>
                 </div>
@@ -1161,8 +1164,8 @@
                 <p class="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-widest">Aktív klánok</p>
                 
                 <div class="mb-4 flex gap-2 overflow-x-auto filter-scroll pb-2">
-                    <button onclick="window.setGroupFilter('all')" data-filter="all" class="filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Mind</button>
-                    <button onclick="window.setGroupFilter('mine')" data-filter="mine" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Saját</button>
+                    <button onclick="window.setGroupFilter('mine')" data-filter="mine" class="filter-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Saját</button>
+                    <button onclick="window.setGroupFilter('all')" data-filter="all" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Mind</button>
                     <button onclick="window.setGroupFilter('0')" data-filter="0" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Kóborló</button>
                     <button onclick="window.setGroupFilter('1')" data-filter="1" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Kerítésmászó</button>
                     <button onclick="window.setGroupFilter('2')" data-filter="2" class="filter-btn px-4 py-2 bg-gray-900 text-gray-500 border border-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest flex-shrink-0">Betonpatkány</button>
