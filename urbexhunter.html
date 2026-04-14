@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urbex Hunter v47 - Map & Filter Pro</title>
+    <title>Urbex Hunter v50 - Map & Filter Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -87,6 +87,7 @@
         let unsubscribeList = [];
         let qrScanner = null;
         let groupFilter = 'all'; 
+        let inviteProcessed = false; // Változó a meghívó egyszeri lefutásának biztosítására
 
         const getLevelInfo = (score) => LEVELS.slice().reverse().find(l => score >= l.min) || LEVELS[0];
 
@@ -140,6 +141,31 @@
                 renderGroupCreationLevels();
                 renderGroups();
             }
+        };
+
+        // URL MEGHÍVÓ ELLENŐRZŐ (v50: Végtelen várakozás hiba javítva)
+        const checkInviteURL = () => {
+            if (inviteProcessed) return;
+            
+            const params = new URLSearchParams(window.location.search);
+            const inviteGroupId = params.get('invite');
+            
+            if (!inviteGroupId) {
+                inviteProcessed = true; // Nincs meghívó a linkben, nem kell többet vizsgálni
+                return;
+            }
+
+            // VÁRAKOZÁS: Csak akkor dolgozzuk fel, ha a user már befejezte a regisztrációt/névadást, és a klánok betöltöttek.
+            // JAVÍTVA: allApplications ellenőrzés kivéve, mert ha üres a rendszer, sosem futott le.
+            if (!user || !userData.username || allGroups.length === 0) return;
+
+            inviteProcessed = true; // Ne fusson le többször
+            
+            // Kitöröljük a linkből a paramétert (ha frissít, ne dobja fel újra)
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Egy pici késleltetéssel indítjuk a közös jelentkezési logikát (mintha gombra kattintott volna)
+            setTimeout(() => window.applyToGroup(null, inviteGroupId, true), 600);
         };
 
         const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -429,6 +455,7 @@
 
                 document.getElementById('name-setup-modal').classList.add('hidden');
                 showMessage("Név elmentve!");
+                checkInviteURL(); // Névadás után megnézzük, volt-e meghívó az URL-ben
             } catch (e) {
                 showMessage("Hiba a mentésnél!", "error");
             }
@@ -454,6 +481,7 @@
             unsubscribeList.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'profiles'), snap => {
                 snap.docs.forEach(d => publicProfiles[d.id] = d.data());
                 if (currentGroupId) renderGroupMembers();
+                checkInviteURL();
             }, err => console.error("Profile listen error", err)));
             
             // Groups
@@ -466,6 +494,7 @@
                     renderGroupMembers();
                     updateGroupDetailUI();
                 }
+                checkInviteURL();
             }, err => console.error("Group listen error", err)));
 
             // Applications
@@ -473,6 +502,7 @@
                 allApplications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderApplications(allApplications);
                 renderGroups(); 
+                checkInviteURL();
             }, err => console.error("App listen error", err)));
 
             // User Profile - Guarded by real UID
@@ -487,6 +517,7 @@
                     }
                     renderGroups();
                     updateMarkers();
+                    checkInviteURL();
                 }, err => console.error("User profile error", err)));
 
                 // Locations
@@ -821,16 +852,58 @@
             } catch (err) { showMessage("Hiba!", "error"); }
         };
 
-        window.applyToGroup = async (e, groupId) => {
-            e.stopPropagation(); if (!user) return;
+        // KÖZÖS JELENTKEZÉSI LOGIKA (Gombra ÉS Linkre egyaránt használva)
+        window.applyToGroup = async (e, groupId, isInvite = false) => {
+            if (e) e.stopPropagation(); 
+            if (!user) return;
+            
             const group = allGroups.find(g => g.id === groupId);
+            if (!group) return showMessage("Érvénytelen vagy törölt klán!", "error");
+
+            // Extra védelem 1: Már tagja-e? (Ezt régen csak a link nézte, most már a gomb is!)
+            if (group.members.includes(user.uid)) {
+                showMessage("Már tagja vagy ennek a klánnak!");
+                if (isInvite) window.showGroupDetail(groupId);
+                return;
+            }
+
+            // Extra védelem 2: Van-e már függő jelentkezése? (Megakadályozza a spamelést)
+            const isPending = allApplications.some(a => a.groupId === groupId && a.userId === user.uid);
+            if (isPending) {
+                showMessage("Már van függőben lévő jelentkezésed ehhez a klánhoz!", "error");
+                if (isInvite) window.showGroupDetail(groupId);
+                return;
+            }
+
+            // Szint ellenőrzés
             const playerLevelInfo = getLevelInfo(userData.score || 0);
             const playerLevelIndex = LEVELS.findIndex(l => l.name === playerLevelInfo.name);
-            if (playerLevelIndex < (group.requiredLevelIndex || 0)) return showMessage("Szinted túl alacsony ehhez a klánhoz!", "error");
+            if (playerLevelIndex < (group.requiredLevelIndex || 0)) {
+                showMessage(`Szinted túl alacsony ehhez a klánhoz! Elvárt: ${LEVELS[group.requiredLevelIndex].name}`, "error");
+                return;
+            }
             
-            const reason = prompt("Miért szeretnél csatlakozni?"); if (!reason) return;
+            const promptMsg = isInvite ? `Meghívtak a(z) ${group.name} klánba!\nMiért szeretnél csatlakozni?` : "Miért szeretnél csatlakozni?";
+            const reason = prompt(promptMsg); 
+            if (!reason) return;
+            
             const id = `APP-${user.uid}-${groupId}`;
-            try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', id), { id, groupId, userId: user.uid, username: userData.username, reason, creatorId: group.creatorId }); showMessage("Jelentkezés elküldve!"); } catch (err) { showMessage("Hiba!", "error"); }
+            try { 
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'applications', id), { 
+                    id, 
+                    groupId, 
+                    userId: user.uid, 
+                    username: userData.username, 
+                    reason, 
+                    creatorId: group.creatorId // Ez biztosítja, hogy pontosan a klánvezetőhöz fusson be!
+                }); 
+                showMessage("Jelentkezés elküldve a klánvezetőnek!"); 
+                
+                // Ha linkről jött, automatikusan bedobjuk a klán adatlapjára, hogy lássa hova jelentkezett
+                if (isInvite) window.showGroupDetail(groupId);
+            } catch (err) { 
+                showMessage("Hiba a jelentkezés során!", "error"); 
+            }
         };
 
         window.setGroupFilter = (f) => {
@@ -870,14 +943,36 @@
 
         window.showGroupDetail = (groupId) => { currentGroupId = groupId; updateGroupDetailUI(); window.showView('view-group-detail'); };
 
+        // MEGHÍVÓ LINK MÁSOLÓ LOGIKA (iFrame kompatibilis)
+        window.copyInviteLink = () => {
+            if (!currentGroupId) return;
+            const inviteUrl = `${window.location.origin}${window.location.pathname}?invite=${currentGroupId}`;
+            
+            const tempInput = document.createElement("input");
+            tempInput.value = inviteUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            
+            showMessage("Meghívó link sikeresen kimásolva!");
+        };
+
         const updateGroupDetailUI = () => {
             const group = allGroups.find(g => g.id === currentGroupId); if (!group) return;
             const nameEl = document.getElementById('detail-group-name'); if (nameEl) nameEl.innerText = group.name;
             const leaveContainer = document.getElementById('group-leave-container');
             if (leaveContainer) {
                 const isMember = user && group.members.includes(user.uid);
-                if (isMember) leaveContainer.innerHTML = `<button onclick="window.leaveCurrentGroup()" class="w-full py-2 bg-gray-900/50 border border-gray-800 text-gray-500 text-[9px] font-bold uppercase rounded-xl active:bg-red-900/20 active:text-red-500 active:border-red-500/30 transition-all">Kilépés a klánból</button>`;
-                else leaveContainer.innerHTML = '';
+                // Csak akkor mutatjuk a másoló gombot is, ha tagja
+                if (isMember) {
+                    leaveContainer.innerHTML = `
+                        <button onclick="window.copyInviteLink()" class="w-full py-3 mb-3 bg-blue-900/40 border border-blue-800/50 text-blue-400 text-[9px] font-bold uppercase rounded-xl active:bg-blue-800/50 transition-all flex justify-center items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Meghívó link másolása</button>
+                        <button onclick="window.leaveCurrentGroup()" class="w-full py-2 bg-gray-900/50 border border-gray-800 text-gray-500 text-[9px] font-bold uppercase rounded-xl active:bg-red-900/20 active:text-red-500 active:border-red-500/30 transition-all">Kilépés a klánból</button>
+                    `;
+                } else {
+                    leaveContainer.innerHTML = '';
+                }
             }
         };
 
@@ -996,7 +1091,7 @@
     <header class="p-3 px-6 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
         <div class="flex justify-between items-center max-w-xl mx-auto">
             <div>
-                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v47</span></h1>
+                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v50</span></h1>
                 <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Betöltés...</p>
             </div>
             
