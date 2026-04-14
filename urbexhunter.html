@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urbex Hunter v46 - Map & Filter Pro</title>
+    <title>Urbex Hunter v47 - Map & Filter Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -175,6 +175,12 @@
             }
 
             const isAdmin = user?.email === ADMIN_EMAIL;
+            
+            // Ha QR kódos, nem számít a GPS távolság, mindig legyen aktív a gomb vizuálisan
+            if (loc.verifyType === 'qr') {
+                btn.style.opacity = "1";
+                return;
+            }
             
             if (!lastTrackedPos) {
                 btn.style.opacity = (isAdmin || isDemoMode) ? "1" : "0.4";
@@ -672,15 +678,29 @@
             const loc = locations.find(l => l.id === activeLocationId);
             if (!loc || loc.status !== 'active') return;
             if (isChecking) return;
+            
+            // Ha QR kódos helyszín, azonnal ugorjuk át a GPS ellenőrzést,
+            // és egyből nyissuk meg a szkennert. Nincs távolság korlát.
+            if (loc.verifyType === 'qr') {
+                openQrScanner(loc);
+                return;
+            }
+
             const isAdmin = user?.email === ADMIN_EMAIL;
+            
+            // Ha nem QR, akkor marad a szigorú GPS alapú ellenőrzés
             let uLat, uLng;
-            if (lastTrackedPos) { uLat = lastTrackedPos.lat; uLng = lastTrackedPos.lng; } else {
+            if (lastTrackedPos) { 
+                uLat = lastTrackedPos.lat; uLng = lastTrackedPos.lng; 
+            } else {
                 const pos = await getCurrentPos().catch(e => { if ((isDemoMode || isAdmin) && map) return { coords: { latitude: map.getCenter().lat, longitude: map.getCenter().lng }}; throw e; });
                 uLat = pos.coords.latitude; uLng = pos.coords.longitude;
             }
+            
             const dist = getDistance(uLat, uLng, loc.lat, loc.lng);
             if (dist > 50 && !isDemoMode && !isAdmin) return showMessage(`Túl messze vagy! (${Math.round(dist)}m)`, "error");
-            if (loc.verifyType === 'qr') openQrScanner(loc); else startGpsCheck(loc);
+            
+            startGpsCheck(loc); // Itt ha sima GPS-es, tovább küldjük a feldolgozóra
         };
 
         const startGpsCheck = async (loc) => {
@@ -976,7 +996,7 @@
     <header class="p-3 px-6 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-[5000]">
         <div class="flex justify-between items-center max-w-xl mx-auto">
             <div>
-                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v46</span></h1>
+                <h1 class="text-lg font-bold text-green-500 tracking-tighter italic uppercase leading-none">Urbex Hunter <span class="text-[8px] bg-gray-800 px-2 py-0.5 rounded ml-1 text-gray-400">v47</span></h1>
                 <p id="user-level" class="text-[8px] text-gray-500 font-bold uppercase tracking-widest italic">Betöltés...</p>
             </div>
             
