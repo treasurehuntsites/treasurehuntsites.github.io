@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zóna: Vadászat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        .ui-overlay { z-index: 1000; position: absolute; pointer-events: none; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; }
+        .interactive { pointer-events: auto; }
+        .pulse { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .marker-pin { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; background: #c30b0e; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -15px 0 0 -15px; }
+        .marker-pin::after { content: ''; width: 24px; height: 24px; margin: 3px 0 0 3px; background: #fff; position: absolute; border-radius: 50%; }
+        .custom-div-icon i { position: absolute; width: 22px; font-size: 22px; left: 0; right: 0; margin: 10px auto; text-align: center; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white overflow-hidden">
+
+    <div id="setup-screen" class="fixed inset-0 z-[2000] bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
+        <h1 class="text-4xl font-black mb-2 text-red-500 tracking-tighter italic">ZÓNA: VADÁSZAT</h1>
+        <p class="text-slate-400 mb-8">GPS-alapú valós idejű fogócska</p>
+        
+        <div class="w-full max-w-sm space-y-4">
+            <input id="player-name" type="text" placeholder="Neved..." class="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-white">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="setRole('hider')" id="role-hider" class="p-4 rounded-xl border-2 border-blue-500 bg-blue-500/10 hover:bg-blue-500/20 transition">
+                    <i data-lucide="ghost" class="mx-auto mb-2 text-blue-500"></i>
+                    <span class="block font-bold">Menekülő</span>
+                </button>
+                <button onclick="setRole('seeker')" id="role-seeker" class="p-4 rounded-xl border-2 border-slate-700 bg-slate-800 hover:border-red-500 transition">
+                    <i data-lucide="crosshair" class="mx-auto mb-2 text-red-500"></i>
+                    <span class="block font-bold">Vadász</span>
+                </button>
+            </div>
+
+            <button onclick="startGame()" id="start-btn" class="w-full p-4 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-lg shadow-lg shadow-red-900/20 transition transform active:scale-95">
+                CSATLAKOZÁS
+            </button>
+        </div>
+        <p class="mt-8 text-xs text-slate-500">Engedélyezd a GPS hozzáférést a folytatáshoz!</p>
+    </div>
+
+    <div id="game-ui" class="hidden">
+        <div id="map"></div>
+
+        <div class="ui-overlay">
+            <div class="flex justify-between items-start">
+                <div class="interactive bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700 flex items-center gap-3">
+                    <div id="status-icon" class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                    <div>
+                        <div id="ui-role-text" class="text-xs font-bold uppercase tracking-widest text-slate-400">Menekülő</div>
+                        <div id="ui-name-text" class="text-sm font-bold">Játékos</div>
+                    </div>
+                </div>
+                
+                <div id="ability-cooldown" class="interactive bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-slate-700 font-mono text-xl text-red-500 font-bold">
+                    READY
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 items-center">
+                <div id="proximity-warning" class="hidden bg-red-600 px-6 py-2 rounded-full font-bold animate-bounce shadow-xl">
+                    VESZÉLY: VADÁSZ A KÖZELBEN!
+                </div>
+
+                <div class="flex gap-4 w-full justify-center">
+                    <button id="action-btn" class="interactive w-20 h-20 rounded-full bg-red-600 shadow-2xl flex items-center justify-center border-4 border-white/20 active:scale-90 transition">
+                        <i data-lucide="zap" class="w-10 h-10 text-white"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="notification" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[3000] bg-slate-900 border border-slate-700 p-8 rounded-3xl text-center hidden pointer-events-none transition-all scale-90 opacity-0">
+        <h2 id="notif-title" class="text-2xl font-black mb-2">ELKAPTÁK!</h2>
+        <p id="notif-body" class="text-slate-400">Egy vadász elért téged.</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config (környezeti változókból)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gps-tag-game';
+
+        let user = null;
+        let map, userMarker;
+        let otherMarkers = {};
+        let selectedRole = 'hider';
+        let isPowerActive = false;
+        let lastPowerUse = 0;
+        const COOLDOWN = 60000; // 60 mp cooldown
+        const TAG_DISTANCE = 15; // méter
+
+        // Lucide ikonok inicializálása
+        lucide.createIcons();
+
+        // Szerepkör választás UI
+        window.setRole = (role) => {
+            selectedRole = role;
+            const hBtn = document.getElementById('role-hider');
+            const sBtn = document.getElementById('role-seeker');
+            
+            if (role === 'hider') {
+                hBtn.classList.replace('border-slate-700', 'border-blue-500');
+                hBtn.classList.add('bg-blue-500/10');
+                sBtn.classList.replace('border-red-500', 'border-slate-700');
+                sBtn.classList.remove('bg-red-500/10');
+            } else {
+                sBtn.classList.replace('border-slate-700', 'border-red-500');
+                sBtn.classList.add('bg-red-500/10');
+                hBtn.classList.replace('border-blue-500', 'border-slate-700');
+                hBtn.classList.remove('bg-blue-500/10');
+            }
+        };
+
+        // Játék indítása
+        window.startGame = async () => {
+            const name = document.getElementById('player-name').value.trim();
+            if (!name) return alert('Kérlek adj meg egy nevet!');
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-ui').classList.remove('hidden');
+            
+            document.getElementById('ui-name-text').innerText = name;
+            document.getElementById('ui-role-text').innerText = selectedRole === 'hider' ? 'Menekülő' : 'Vadász';
+            document.getElementById('ui-role-text').className = `text-xs font-bold uppercase tracking-widest ${selectedRole === 'hider' ? 'text-blue-400' : 'text-red-400'}`;
+
+            await initAuth();
+            initMap();
+            startTracking();
+            listenToPlayers();
+        };
+
+        // Auth
+        async function initAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            
+            return new Promise(resolve => {
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    resolve();
+                });
+            });
+        }
+
+        // Térkép init
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([47.4979, 19.0402], 18);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
+            }).addTo(map);
+        }
+
+        // GPS követés
+        function startTracking() {
+            if (!navigator.geolocation) return alert("A GPS nem támogatott!");
+
+            navigator.geolocation.watchPosition(async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                
+                if (!userMarker) {
+                    const icon = createCustomIcon(selectedRole, true);
+                    userMarker = L.marker([latitude, longitude], { icon }).addTo(map);
+                    map.panTo([latitude, longitude]);
+                } else {
+                    userMarker.setLatLng([latitude, longitude]);
+                }
+
+                if (user) {
+                    const name = document.getElementById('player-name').value;
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', user.uid), {
+                        id: user.uid,
+                        name: name,
+                        role: selectedRole,
+                        lat: latitude,
+                        lng: longitude,
+                        lastSeen: Date.now(),
+                        isHidden: isPowerActive && selectedRole === 'hider'
+                    });
+                }
+            }, (err) => console.error(err), {
+                enableHighAccuracy: true,
+                maximumAge: 0
+            });
+        }
+
+        // Más játékosok figyelése
+        function listenToPlayers() {
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+            onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    const data = change.doc.data();
+                    if (data.id === user?.uid) return;
+
+                    if (change.type === "removed") {
+                        if (otherMarkers[data.id]) {
+                            map.removeLayer(otherMarkers[data.id]);
+                            delete otherMarkers[data.id];
+                        }
+                    } else {
+                        // Ha rejtve van a hider, ne mutassuk (kivéve ha épp radarozunk, de azt egyszerűsítve most így kezeljük)
+                        if (data.isHidden) {
+                             if (otherMarkers[data.id]) {
+                                map.removeLayer(otherMarkers[data.id]);
+                                delete otherMarkers[data.id];
+                            }
+                            return;
+                        }
+
+                        if (!otherMarkers[data.id]) {
+                            const icon = createCustomIcon(data.role, false);
+                            otherMarkers[data.id] = L.marker([data.lat, data.lng], { icon }).addTo(map);
+                            otherMarkers[data.id].bindTooltip(data.name, { permanent: true, direction: 'top', className: 'bg-slate-900 border-none text-white font-bold rounded p-1 text-xs' });
+                        } else {
+                            otherMarkers[data.id].setLatLng([data.lat, data.lng]);
+                        }
+                        
+                        // Kövessük a távolságot a veszélyjelzéshez
+                        checkProximity(data);
+                    }
+                });
+            }, (err) => console.error("Firestore error:", err));
+        }
+
+        // Távolság figyelmeztetés
+        function checkProximity(other) {
+            if (!userMarker) return;
+            const userPos = userMarker.getLatLng();
+            const dist = getDistance(userPos.lat, userPos.lng, other.lat, other.lng);
+            
+            const warning = document.getElementById('proximity-warning');
+            if (selectedRole === 'hider' && other.role === 'seeker' && dist < 50) {
+                warning.classList.remove('hidden');
+            } else {
+                // Ezt finomítani kellene, hogy csak akkor tűnjön el ha SENKI nincs közel
+            }
+        }
+
+        // Akció gomb (Elkapás / Képesség)
+        document.getElementById('action-btn').addEventListener('click', async () => {
+            const now = Date.now();
+            if (now - lastPowerUse < COOLDOWN) return;
+
+            if (selectedRole === 'seeker') {
+                // ELKAPÁS próbálkozás
+                let caughtCount = 0;
+                const userPos = userMarker.getLatLng();
+
+                // Itt most le kell kérnünk a többi játékost a lokális cache-ből
+                Object.keys(otherMarkers).forEach(id => {
+                    const marker = otherMarkers[id];
+                    const pos = marker.getLatLng();
+                    const dist = getDistance(userPos.lat, userPos.lng, pos.lat, pos.lng);
+
+                    if (dist < TAG_DISTANCE) {
+                        // TALÁLAT!
+                        caughtCount++;
+                        // Egyszerűség kedvéért csak értesítést küldünk nekik (Firestore triggerrel lehetne)
+                        triggerCapture(id);
+                    }
+                });
+
+                if (caughtCount > 0) {
+                    showNotification("SIKER!", `${caughtCount} játékost elkaptál!`, "bg-green-600");
+                } else {
+                    showNotification("MELLÉ!", "Nincs senki elég közel (15m).", "bg-orange-600");
+                }
+            } else {
+                // LÁTHATATLANSÁG
+                isPowerActive = true;
+                lastPowerUse = now;
+                showNotification("REJTŐZKÖDÉS", "30 másodpercre eltűntél a térképről!", "bg-blue-600");
+                startCooldown();
+                
+                setTimeout(() => {
+                    isPowerActive = false;
+                }, 30000);
+            }
+        });
+
+        async function triggerCapture(targetId) {
+            // Itt egy "caught" flaget állítanánk be a célpontnál
+            // A célpont kliense ezt figyelné és kidobná a játékból
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId), {
+                isCaught: true,
+                caughtAt: Date.now()
+            });
+        }
+
+        // Cooldown vizuális visszajelzés
+        function startCooldown() {
+            const display = document.getElementById('ability-cooldown');
+            let timeLeft = COOLDOWN / 1000;
+            
+            const interval = setInterval(() => {
+                timeLeft--;
+                display.innerText = timeLeft + "s";
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    display.innerText = "READY";
+                    display.classList.add('text-green-500');
+                    display.classList.remove('text-red-500');
+                }
+            }, 1000);
+        }
+
+        // Helper: Távolság számítás (m)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Föld sugara méterben
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c;
+        }
+
+        function createCustomIcon(role, isSelf) {
+            const color = role === 'hider' ? '#3b82f6' : '#ef4444';
+            const iconName = role === 'hider' ? 'ghost' : 'crosshair';
+            
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="marker-pin" style="background: ${color}; border: 2px solid white;"></div><i data-lucide="${iconName}" style="color: ${color}"></i>`,
+                iconSize: [30, 42],
+                iconAnchor: [15, 42]
+            });
+        }
+
+        function showNotification(title, body, bgColor) {
+            const el = document.getElementById('notification');
+            const t = document.getElementById('notif-title');
+            const b = document.getElementById('notif-body');
+            
+            el.className = `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[3000] border border-white/20 p-8 rounded-3xl text-center shadow-2xl transition-all scale-100 opacity-100 ${bgColor}`;
+            t.innerText = title;
+            b.innerText = body;
+            el.classList.remove('hidden');
+
+            setTimeout(() => {
+                el.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => el.classList.add('hidden'), 300);
+            }, 3000);
+        }
+
+        // Kilépéskor törlés
+        window.addEventListener('beforeunload', async () => {
+            if (user) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', user.uid));
+            }
+        });
+
+    </script>
+</body>
+</html>
+
