@@ -1,0 +1,300 @@
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digitális Megoldókulcs Készítő</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Egyedi stílusok a csúszkákhoz és a canvas görgetéshez */
+        input[type="range"] { cursor: pointer; }
+        #canvas-wrapper:-webkit-full-screen { width: 100vw; height: 100vh; background: black; display: flex; align-items: center; justify-content: center; }
+        #canvas-wrapper:fullscreen { width: 100vw; height: 100vh; background: black; display: flex; align-items: center; justify-content: center; }
+        canvas { touch-action: none; user-select: none; }
+        .custom-shadow { shadow-lg shadow-blue-500/20; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <div id="app" class="max-w-6xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header id="main-header" class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center justify-center gap-2">
+                <i data-lucide="layers" class="text-blue-600"></i> Digitális Megoldókulcs Készítő
+            </h1>
+            <p class="text-gray-600 mt-2 text-sm md:text-base">Helyezz virtuális papírt a képre és vágd ki a fontos részeket.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Controls Panel -->
+            <div id="controls-panel" class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md space-y-5">
+                    
+                    <!-- Upload -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">1. Kép feltöltése</label>
+                        <div class="relative group">
+                            <div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg group-hover:border-blue-400 transition-colors bg-gray-50 cursor-pointer text-center">
+                                <i data-lucide="upload" class="h-10 w-10 text-gray-400 mb-2"></i>
+                                <span class="text-xs text-blue-600 font-medium">Kattints a fájl kiválasztásához</span>
+                            </div>
+                            <input type="file" id="imageInput" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+                        </div>
+                    </div>
+
+                    <!-- Editor Controls (Hidden until image loaded) -->
+                    <div id="editor-controls" class="hidden space-y-5 border-t pt-5">
+                        <div>
+                            <label class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Papír átlátszósága</span>
+                                <span id="opacity-val">70%</span>
+                            </label>
+                            <input type="range" id="opacitySlider" min="0" max="1" step="0.01" value="0.7" class="w-full h-2 bg-gray-200 rounded-lg appearance-none accent-blue-600">
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <button id="undoBtn" class="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-all">
+                                <i data-lucide="undo" class="w-4 h-4"></i> Visszavonás
+                            </button>
+                            <button id="clearBtn" class="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm transition-all">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i> Összes törlése
+                            </button>
+                            <button id="downloadBtn" class="mt-2 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md transition-all active:scale-95 group">
+                                <i data-lucide="download" class="w-5 h-5"></i> Maszk letöltése
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Viewport -->
+            <div class="lg:col-span-3">
+                <div id="canvas-wrapper" class="relative bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-h-[500px] flex items-center justify-center">
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="text-center p-12">
+                        <i data-lucide="mouse-pointer-2" class="mx-auto h-16 w-16 text-gray-300 mb-4 animate-pulse"></i>
+                        <p class="text-gray-400 italic">Kép feltöltése után itt tudsz majd rajzolni.</p>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div id="canvas-container" class="hidden w-full h-full overflow-auto flex items-center justify-center p-4">
+                        <canvas id="mainCanvas" class="shadow-2xl bg-white max-w-full h-auto cursor-crosshair border border-gray-300"></canvas>
+                    </div>
+
+                    <!-- Fullscreen Toggle -->
+                    <button id="fullscreenBtn" class="hidden absolute bottom-6 right-6 p-4 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-xl transition-all z-50 border border-gray-200">
+                        <i data-lucide="maximize-2" id="fs-icon"></i>
+                    </button>
+
+                    <!-- Overlay Controls for Fullscreen -->
+                    <div id="fs-controls" class="hidden absolute top-6 left-6 z-50 flex gap-3">
+                        <button id="undoBtnFs" class="p-4 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white shadow-lg transition-all">
+                            <i data-lucide="undo" class="w-6 h-6"></i>
+                        </button>
+                        <button id="downloadBtnFs" class="p-4 bg-blue-600 hover:bg-blue-700 rounded-full text-white shadow-lg transition-all">
+                            <i data-lucide="download" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let img = null;
+        let masks = [];
+        let isDrawing = false;
+        let startPos = { x: 0, y: 0 };
+        let currentPos = { x: 0, y: 0 };
+        let opacity = 0.7;
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Helpers
+        const updateUI = () => {
+            const hasImage = img !== null;
+            document.getElementById('empty-state').classList.toggle('hidden', hasImage);
+            document.getElementById('canvas-container').classList.toggle('hidden', !hasImage);
+            document.getElementById('editor-controls').classList.toggle('hidden', !hasImage);
+            document.getElementById('fullscreenBtn').classList.toggle('hidden', !hasImage);
+            render();
+        };
+
+        const getCoords = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        };
+
+        // Core Drawing Function
+        const render = () => {
+            if (!img) return;
+
+            // 1. Draw original image
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            // 2. Draw mask layer
+            ctx.save();
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 3. Cut holes
+            ctx.globalCompositeOperation = 'destination-out';
+            masks.forEach(m => ctx.fillRect(m.x, m.y, m.w, m.h));
+
+            if (isDrawing) {
+                const x = Math.min(startPos.x, currentPos.x);
+                const y = Math.min(startPos.y, currentPos.y);
+                const w = Math.abs(currentPos.x - startPos.x);
+                const h = Math.abs(currentPos.y - startPos.y);
+                ctx.fillRect(x, y, w, h);
+            }
+            ctx.restore();
+
+            // 4. Draw helper borders for editing
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = Math.max(1, canvas.width / 800);
+            masks.forEach(m => ctx.strokeRect(m.x, m.y, m.w, m.h));
+        };
+
+        // Event Listeners
+        imageInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const newImg = new Image();
+                newImg.onload = () => {
+                    img = newImg;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    masks = [];
+                    updateUI();
+                };
+                newImg.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        const handleStart = (e) => {
+            if (!img) return;
+            isDrawing = true;
+            startPos = getCoords(e);
+            currentPos = startPos;
+        };
+
+        const handleMove = (e) => {
+            if (!isDrawing) return;
+            currentPos = getCoords(e);
+            render();
+        };
+
+        const handleEnd = () => {
+            if (!isDrawing) return;
+            const x = Math.min(startPos.x, currentPos.x);
+            const y = Math.min(startPos.y, currentPos.y);
+            const w = Math.abs(currentPos.x - startPos.x);
+            const h = Math.abs(currentPos.y - startPos.y);
+            if (w > 2 && h > 2) masks.push({ x, y, w, h });
+            isDrawing = false;
+            render();
+        };
+
+        canvas.onmousedown = handleStart;
+        window.onmousemove = handleMove;
+        window.onmouseup = handleEnd;
+
+        canvas.ontouchstart = handleStart;
+        canvas.ontouchmove = handleMove;
+        canvas.ontouchend = handleEnd;
+
+        opacitySlider.oninput = (e) => {
+            opacity = e.target.value;
+            document.getElementById('opacity-val').innerText = Math.round(opacity * 100) + '%';
+            render();
+        };
+
+        const undo = () => { masks.pop(); render(); };
+        document.getElementById('undoBtn').onclick = undo;
+        document.getElementById('undoBtnFs').onclick = undo;
+
+        document.getElementById('clearBtn').onclick = () => {
+            if(confirm('Törli az összeset?')) { masks = []; render(); }
+        };
+
+        // Download Logic (Improved)
+        const download = () => {
+            if (!img) return;
+            const temp = document.createElement('canvas');
+            temp.width = img.width;
+            temp.height = img.height;
+            const tCtx = temp.getContext('2d');
+            
+            tCtx.fillStyle = 'white';
+            tCtx.fillRect(0, 0, temp.width, temp.height);
+            tCtx.globalCompositeOperation = 'destination-out';
+            masks.forEach(m => tCtx.fillRect(m.x, m.y, m.w, m.h));
+
+            temp.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'megoldokulcs_maszk.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            }, 'image/png');
+        };
+
+        document.getElementById('downloadBtn').onclick = download;
+        document.getElementById('downloadBtnFs').onclick = download;
+
+        // Fullscreen Logic
+        const toggleFs = () => {
+            if (!document.fullscreenElement) {
+                wrapper.requestFullscreen().catch(err => alert(err.message));
+            } else {
+                document.exitFullscreen();
+            }
+        };
+
+        document.getElementById('fullscreenBtn').onclick = toggleFs;
+
+        document.addEventListener('fullscreenchange', () => {
+            const isFs = !!document.fullscreenElement;
+            document.getElementById('fs-icon').setAttribute('data-lucide', isFs ? 'minimize-2' : 'maximize-2');
+            document.getElementById('main-header').style.display = isFs ? 'none' : 'block';
+            document.getElementById('fs-controls').classList.toggle('hidden', !isFs);
+            lucide.createIcons();
+            
+            if (isFs) {
+                canvas.classList.add('max-h-screen', 'object-contain');
+            } else {
+                canvas.classList.remove('max-h-screen', 'object-contain');
+            }
+            render();
+        });
+
+    </script>
+</body>
+</html>
+
