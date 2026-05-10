@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saját AR Célpont Felismerő - Canvas Fix</title>
+    <!-- A-Frame és AR.js könyvtárak -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Szigorú méretezés, hogy az iFrame/Canvas ne omoljon össze a kamera indulásakor */
+        html, body { width: 100vw; height: 100vh; margin: 0; padding: 0; overflow: hidden; background: #0f172a; color: white; }
+        
+        /* A UI elemek fölött jelenjen meg, de a kamera alatt */
+        #ar-render-container { position: absolute; inset: 0; z-index: 10; display: none; width: 100vw; height: 100vh; }
+        
+        .upload-card { background: rgba(30, 41, 59, 0.7); border: 2px dashed rgba(71, 85, 105, 0.5); transition: all 0.3s; }
+        .upload-card.active { border-color: #6366f1; background: rgba(79, 70, 229, 0.1); }
+        .upload-card.processing { border-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+        
+        /* iFrame védelem: A videó és a canvas nem méretezheti át magát 0-ra */
+        video { 
+            position: absolute !important; 
+            top: 0 !important; left: 0 !important; 
+            width: 100vw !important; height: 100vh !important; 
+            object-fit: cover !important; 
+            z-index: 1 !important; 
+            margin: 0 !important; padding: 0 !important;
+        }
+        .a-canvas { 
+            position: absolute !important; 
+            top: 0 !important; left: 0 !important; 
+            width: 100vw !important; height: 100vh !important; 
+            z-index: 2 !important; 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BEÁLLÍTÁSI FELÜLET -->
+    <div id="setup-ui" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-900 overflow-y-auto">
+        <div class="max-w-md w-full text-center">
+            <h1 class="text-4xl font-black mb-2 text-indigo-400 tracking-tight">AR GENERÁTOR</h1>
+            <p class="text-slate-400 mb-10 text-sm">Töltsd fel a képeket és indítsd a kamerát!</p>
+
+            <div class="space-y-6">
+                <!-- 1. LÉPÉS: MARKER -->
+                <div id="card-1" class="upload-card rounded-2xl p-6 flex flex-col items-center">
+                    <span class="bg-indigo-600 text-[10px] font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">1. Célpont (Fénykép)</span>
+                    <p class="text-xs text-slate-400 mb-4 text-center">Ezt a képet kell felismernie a kamerának.</p>
+                    <input type="file" id="marker-input" accept="image/*" class="hidden">
+                    <label id="marker-label" for="marker-input" class="cursor-pointer bg-indigo-500 hover:bg-indigo-600 text-white py-2.5 px-6 rounded-xl text-sm font-semibold transition shadow-lg">Fájl kiválasztása</label>
+                    <img id="marker-preview" class="mt-4 h-20 w-20 object-cover rounded-lg border-2 border-indigo-500/30 hidden">
+                </div>
+
+                <!-- 2. LÉPÉS: OVERLAY -->
+                <div id="card-2" class="upload-card rounded-2xl p-6 flex flex-col items-center">
+                    <span class="bg-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">2. Ami megjelenik</span>
+                    <p class="text-xs text-slate-400 mb-4 text-center">Ez a kép fog megjelenni a célpont felett.</p>
+                    <input type="file" id="overlay-input" accept="image/*" class="hidden">
+                    <label id="overlay-label" for="overlay-input" class="cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 px-6 rounded-xl text-sm font-semibold transition shadow-lg">Fájl kiválasztása</label>
+                    <img id="overlay-preview" class="mt-4 h-20 w-20 object-cover rounded-lg border-2 border-emerald-500/30 hidden">
+                </div>
+            </div>
+
+            <button id="start-btn" disabled class="mt-10 w-full bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold py-4 px-8 rounded-2xl shadow-2xl transition-all active:scale-95 text-lg">
+                <span id="btn-text">Várom a képeket...</span>
+            </button>
+            
+            <p id="status-msg" class="mt-4 text-[11px] text-slate-400 uppercase tracking-widest font-medium">Azonnal használható</p>
+        </div>
+    </div>
+
+    <!-- AR HUD -->
+    <div id="ar-hud" class="hidden fixed top-8 left-0 right-0 z-[110] flex justify-center pointer-events-none">
+        <div class="bg-slate-900/80 backdrop-blur-lg text-white px-6 py-3 rounded-2xl border border-white/10 text-sm font-bold shadow-2xl transition-colors duration-300" id="hud-text">
+            Kamera indul...
+        </div>
+    </div>
+
+    <!-- Dedikált konténer az AR Scene számára (megakadályozza a body összeomlását) -->
+    <div id="ar-render-container"></div>
+
+    <script>
+        /** Böngészőbe épített marker generátor */
+        const MarkerGenerator = {
+            build: function(dataUrl, callback) {
+                const image = new Image();
+                image.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 16;
+                    canvas.height = 16;
+                    
+                    context.drawImage(image, 0, 0, 16, 16);
+                    const imageData = context.getImageData(0, 0, 16, 16);
+                    
+                    let patternString = "";
+                    for (let orientation = 0; orientation < 4; orientation++) {
+                        for (let y = 0; y < 16; y++) {
+                            for (let x = 0; x < 16; x++) {
+                                let pixelX, pixelY;
+                                if (orientation === 0) { pixelX = x; pixelY = y; }
+                                else if (orientation === 1) { pixelX = y; pixelY = 15 - x; }
+                                else if (orientation === 2) { pixelX = 15 - x; pixelY = 15 - y; }
+                                else { pixelX = 15 - y; pixelY = x; }
+
+                                const i = (pixelY * 16 + pixelX) * 4;
+                                const r = imageData.data[i];
+                                const g = imageData.data[i+1];
+                                const b = imageData.data[i+2];
+                                patternString += `${r} ${g} ${b}\n`;
+                            }
+                        }
+                    }
+                    callback(patternString);
+                };
+                image.src = dataUrl;
+            }
+        };
+
+        const elements = {
+            markerInput: document.getElementById('marker-input'),
+            overlayInput: document.getElementById('overlay-input'),
+            markerPreview: document.getElementById('marker-preview'),
+            overlayPreview: document.getElementById('overlay-preview'),
+            startBtn: document.getElementById('start-btn'),
+            btnText: document.getElementById('btn-text'),
+            statusMsg: document.getElementById('status-msg'),
+            setupUi: document.getElementById('setup-ui'),
+            arRenderContainer: document.getElementById('ar-render-container'),
+            arHud: document.getElementById('ar-hud'),
+            hudText: document.getElementById('hud-text')
+        };
+
+        let state = {
+            markerPatternUrl: null,
+            overlayImageUrl: null
+        };
+
+        // 1. Célpont feldolgozása
+        elements.markerInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            elements.statusMsg.innerText = "Célpont feldolgozása...";
+            document.getElementById('card-1').classList.add('processing');
+            
+            reader.onload = function(event) {
+                const dataUrl = event.target.result;
+                elements.markerPreview.src = dataUrl;
+                elements.markerPreview.classList.remove('hidden');
+                
+                MarkerGenerator.build(dataUrl, function(patternString) {
+                    const blob = new Blob([patternString], {type: 'text/plain'});
+                    if (state.markerPatternUrl) URL.revokeObjectURL(state.markerPatternUrl);
+                    state.markerPatternUrl = URL.createObjectURL(blob);
+                    
+                    document.getElementById('card-1').classList.remove('processing');
+                    document.getElementById('card-1').classList.add('active');
+                    elements.statusMsg.innerText = "Célpont kész!";
+                    checkAllReady();
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 2. Megjelenő kép feldolgozása
+        elements.overlayInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                state.overlayImageUrl = event.target.result;
+                elements.overlayPreview.src = state.overlayImageUrl;
+                elements.overlayPreview.classList.remove('hidden');
+                document.getElementById('card-2').classList.add('active');
+                elements.statusMsg.innerText = "Második kép kész!";
+                checkAllReady();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function checkAllReady() {
+            if (state.markerPatternUrl && state.overlayImageUrl) {
+                elements.startBtn.disabled = false;
+                elements.btnText.innerText = "AR Kamera Indítása";
+                elements.statusMsg.innerText = "Kattints az indításhoz!";
+                elements.statusMsg.className = "mt-4 text-[11px] text-emerald-400 uppercase tracking-widest font-bold";
+            }
+        }
+
+        // AR Indítása
+        elements.startBtn.addEventListener('click', function() {
+            // UI elrejtése
+            elements.setupUi.style.display = 'none';
+            elements.arHud.classList.remove('hidden');
+            elements.arRenderContainer.style.display = 'block';
+
+            // Kamera paraméterek korlátozása (iFrame fix)
+            // A canvasWidth/canvasHeight fixálása megakadályozza, hogy az AR.js a végtelenségig méretezzen és összeomoljon
+            const sceneHtml = `
+                <a-scene 
+                    embedded 
+                    vr-mode-ui="enabled: false" 
+                    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; canvasWidth: 640; canvasHeight: 480;">
+                    
+                    <a-assets>
+                        <img id="ovl" src="${state.overlayImageUrl}">
+                    </a-assets>
+                    
+                    <a-marker id="mkr" type="pattern" url="${state.markerPatternUrl}">
+                        <a-image src="#ovl" position="0 0.2 0" rotation="-90 0 0" scale="1.5 1.5 1.5"
+                                 animation="property: position; from: 0 0.2 0; to: 0 0.4 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine">
+                        </a-image>
+                    </a-marker>
+                    
+                    <a-entity camera></a-entity>
+                </a-scene>
+            `;
+            elements.arRenderContainer.innerHTML = sceneHtml;
+
+            // Kamera védelem: Folyamatosan ellenőrizzük, hogy a videó stream aktív-e
+            let videoCheckCount = 0;
+            const videoInterval = setInterval(() => {
+                const video = document.querySelector('video');
+                if (video) {
+                    // Megakadályozza a Safari teljes képernyős bezáródását
+                    video.setAttribute('playsinline', '');
+                    video.setAttribute('webkit-playsinline', '');
+                    video.muted = true;
+                    
+                    if (video.paused) {
+                        video.play().catch(e => console.warn("Lejátszás blokkolva:", e));
+                    }
+                    elements.hudText.innerText = "Irányítsd a kamerát a célpontra!";
+                    clearInterval(videoInterval);
+                }
+                
+                videoCheckCount++;
+                if (videoCheckCount > 50) {
+                    elements.hudText.innerText = "Hiba: A kamera nem érhető el.";
+                    elements.hudText.classList.replace('bg-slate-900/80', 'bg-red-600');
+                    clearInterval(videoInterval);
+                }
+            }, 100);
+
+            // Marker események (visszajelzés)
+            setTimeout(() => {
+                const m = document.getElementById('mkr');
+                if (m) {
+                    m.addEventListener('markerFound', () => {
+                        elements.hudText.innerText = "Célpont észlelve!";
+                        elements.hudText.className = "bg-emerald-500 text-white px-6 py-3 rounded-2xl border border-white/20 text-sm font-bold shadow-2xl transition-colors duration-300";
+                    });
+                    m.addEventListener('markerLost', () => {
+                        elements.hudText.innerText = "Keresem a célpontot...";
+                        elements.hudText.className = "bg-slate-900/80 backdrop-blur-lg text-white px-6 py-3 rounded-2xl border border-white/10 text-sm font-bold shadow-2xl transition-colors duration-300";
+                    });
+                }
+            }, 1500);
+        });
+    </script>
+</body>
+</html>
+
