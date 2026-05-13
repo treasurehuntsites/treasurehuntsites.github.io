@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kódgép Szimulátor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500;700&display=swap');
+
+        body {
+            background-color: #2c2c2c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .device-container {
+            background-color: #9ca3af; /* Szürke ház */
+            border-radius: 2rem;
+            padding: 2rem;
+            display: flex;
+            gap: 2rem;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.2),
+                0 20px 50px rgba(0,0,0,0.5);
+            width: 800px;
+            max-width: 95vw;
+        }
+
+        /* Bal oldali panel */
+        .left-panel {
+            background-color: #374151; /* Sötétebb szürke panel */
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 250px;
+            box-shadow: 
+                inset 2px 2px 5px rgba(255,255,255,0.1),
+                inset -5px -5px 10px rgba(0,0,0,0.5),
+                5px 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .wifi-icon {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        /* Kijelző stílusok */
+        .display-screen {
+            background-color: #1f2937;
+            border: 4px solid #111827;
+            border-radius: 0.25rem;
+            width: 100%;
+            height: 60px;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 100%;
+            background-color: rgba(74, 222, 128, 0.3); /* Zöldes szkennelő doboz */
+            z-index: 10;
+            transition: left 0.1s ease;
+        }
+
+        svg.wave-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        .wave-path {
+            stroke: #4ade80; /* Világoszöld vonal */
+            stroke-width: 3;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 4px #4ade80);
+        }
+
+        /* Ajtó stílusok */
+        .door-container {
+            width: 100%;
+            height: 180px;
+            background-color: #4b5563; /* Alap szín az ajtó mögött */
+            border-radius: 0.25rem;
+            position: relative;
+            perspective: 1000px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .secret-code {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 2.5rem;
+            color: #111827;
+            background-color: #fef08a; /* Sárga papír hatás */
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            transform: rotate(-5deg); /* Kicsit ferde */
+            opacity: 0; /* Kezdetben rejtve */
+            transition: opacity 0.5s ease 0.5s;
+        }
+
+        .door {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #374151; /* Ajtó színe, egyezik a panellel */
+            border: 2px solid #1f2937;
+            border-radius: 0.25rem;
+            transform-origin: left; /* Balra nyílik */
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                inset 1px 1px 2px rgba(255,255,255,0.1),
+                inset -2px -2px 5px rgba(0,0,0,0.4);
+            z-index: 20;
+        }
+
+        .door.open {
+            transform: rotateY(-110deg);
+            box-shadow: 10px 0 20px rgba(0,0,0,0.5);
+        }
+
+        .door-screw {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            box-shadow: inset -1px -1px 3px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.5);
+        }
+        
+        /* Csavar mintázat */
+        .door-screw::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 2px;
+            width: 8px;
+            height: 2px;
+            background-color: #4b5563;
+            transform: rotate(45deg);
+        }
+        .door-screw::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 2px;
+            width: 8px;
+            height: 2px;
+            background-color: #4b5563;
+            transform: rotate(-45deg);
+        }
+
+        .screw-tl { top: 8px; left: 8px; }
+        .screw-tr { top: 8px; right: 8px; }
+        .screw-bl { bottom: 8px; left: 8px; }
+        .screw-br { bottom: 8px; right: 8px; }
+
+        /* Jobb oldali panel */
+        .right-panel {
+            background-color: #1f2937; /* Sötétebb kijelző rész a gomboknak */
+            border-radius: 0.5rem;
+            flex-grow: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+            border: 4px solid #374151;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background-color: transparent;
+            border: 3px solid white;
+            border-radius: 0.25rem;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .control-btn.active {
+            background-color: rgba(255,255,255,0.2);
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+
+        /* Gomb ikonok (SVG) */
+        .btn-icon {
+            width: 50px;
+            height: 50px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            pointer-events: none; /* Hogy a kattintás a gombon landoljon */
+        }
+        
+        .btn-icon-fill {
+            fill: white;
+            stroke: none;
+            pointer-events: none;
+        }
+
+        /* Segéd osztályok */
+        .success-text {
+            position: absolute;
+            bottom: -30px;
+            color: #4ade80;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="device-container">
+        <!-- Bal panel -->
+        <div class="left-panel">
+            <!-- Wifi Ikon -->
+            <svg class="wifi-icon w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M19.364 8.114a8.956 8.956 0 00-6.425-2.613C10.5 5.5 8.212 6.426 6.5 8.114c-.39.39-.39 1.023 0 1.414.39.39 1.023.39 1.414 0 1.25-1.25 2.92-1.925 4.693-1.925 1.774 0 3.444.675 4.694 1.925.39.39 1.023.39 1.414 0 .39-.39.39-1.024 0-1.414z"/>
+                <path d="M16.536 10.943a4.978 4.978 0 00-3.597-1.464c-1.312 0-2.545.511-3.473 1.44-.39.39-.39 1.023 0 1.414.39.39 1.023.39 1.414 0 .825-.826 1.924-1.282 3.093-1.282 1.17 0 2.268.456 3.093 1.282.39.39 1.023.39 1.414 0 .39-.39.39-1.024 0-1.414z"/>
+                <path d="M13.707 13.77a.998.998 0 00-1.414 0c-.39.39-1.023.39-1.414 0a.998.998 0 00-1.414 1.414 2.986 2.986 0 002.121.879c.768 0 1.49-.3 2.033-.843a.998.998 0 00.088-1.45z"/>
+            </svg>
+
+            <!-- Monitor -->
+            <div class="display-screen" id="monitor">
+                <div class="scanline" id="scanbox"></div>
+                <svg class="wave-canvas" preserveAspectRatio="none" viewBox="0 0 100 100" id="waveCanvas">
+                    <path class="wave-path" id="wavePath" d="M 0 50 L 100 50"></path>
+                </svg>
+            </div>
+
+            <!-- Titkos rekesz -->
+            <div class="door-container">
+                <div class="secret-code" id="secretCode">7391</div>
+                <div class="door" id="secretDoor">
+                    <div class="door-screw screw-tl"></div>
+                    <div class="door-screw screw-tr"></div>
+                    <div class="door-screw screw-bl"></div>
+                    <div class="door-screw screw-br"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jobb panel -->
+        <div class="right-panel">
+            <div class="btn-row">
+                <!-- Völgy gomb -->
+                <button class="control-btn" id="btn-valley" data-shape="valley" aria-label="Lefelé mutató minta">
+                    <svg class="btn-icon" viewBox="0 0 100 100">
+                        <path d="M 10 30 L 30 30 L 50 70 L 70 30 L 90 30"></path>
+                    </svg>
+                </button>
+                <!-- Egyenes gomb -->
+                <button class="control-btn" id="btn-flat" data-shape="flat" aria-label="Egyenes vonal">
+                    <svg class="btn-icon" viewBox="0 0 100 100">
+                        <path d="M 15 50 L 85 50"></path>
+                    </svg>
+                </button>
+                <!-- Hegy gomb -->
+                <button class="control-btn" id="btn-peak" data-shape="peak" aria-label="Felfelé mutató minta">
+                    <svg class="btn-icon" viewBox="0 0 100 100">
+                        <path d="M 10 70 L 30 70 L 50 30 L 70 70 L 90 70"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="btn-row">
+                <!-- Balra gomb -->
+                <button class="control-btn" id="btn-left" aria-label="Balra lépés">
+                    <svg class="btn-icon-fill w-12 h-12" viewBox="0 0 24 24">
+                        <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+                    </svg>
+                </button>
+                <!-- Jobbra gomb -->
+                <button class="control-btn" id="btn-right" aria-label="Jobbra lépés">
+                    <svg class="btn-icon-fill w-12 h-12" viewBox="0 0 24 24">
+                        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="successMsg" class="success-text">Hozzáférés engedélyezve</div>
+        </div>
+    </div>
+
+    <script>
+        // --- Állapot változók ---
+        const SEGMENTS = 6; // A hullámvonal szakaszainak száma
+        // Lehetséges formák: 'flat', 'peak', 'valley'
+        let currentWave = Array(SEGMENTS).fill('flat'); // Kezdeti állapot: minden egyenes
+        let currentIndex = 0; // Melyik szakaszt szerkesztjük éppen
+        let isSolved = false;
+
+        // --- Cél minta a kép alapján ---
+        // A képen balról jobbra a minta: Hegy, Völgy, Hegy, Egyenes, Völgy, Egyenes (részben kilóg)
+        // Kicsit leegyszerűsítjük 6 látható szakaszra.
+        // Pontos minta a kép alapján (a zöld doboztól jobbra haladva):
+        // 1. Kis hegy (vagy sima egyenes után egy hegy, vegyük a zöld doboz alatti részt 0-nak)
+        // Nézzük a teljes látható vonalat a képen:
+        // [Zöld dobozban: egyenes -> hegy_eleje] -> [hegy_vége -> egyenes] -> [völgy] -> [hegy] -> [egyenes] -> [völgy] -> [egyenes_vége]
+        // Osszuk fel diszkrét, gombokkal beállítható szakaszokra.
+        // A gombok: \/ (völgy), -- (egyenes), /\ (hegy).
+        // Tegyük fel, hogy 6 szegmens van. A képen látható minta jó közelítéssel:
+        // 1. Hegy (a zöld dobozban és közvetlen utána)
+        // 2. Völgy
+        // 3. Hegy
+        // 4. Egyenes
+        // 5. Völgy
+        // 6. Egyenes
+        
+        // Tehát a cél: ['peak', 'valley', 'peak', 'flat', 'valley', 'flat']
+        // Ez alapján készítjük el a célt, bár a képen a gombok alatti minták picit másak.
+        // A képen a gombok: Völgy, Egyenes, Hegy.
+        // Állítsuk be a cél mintát úgy, hogy kb. úgy nézzen ki, mint a kijelzőn lévő vonal.
+        const targetWave = ['peak', 'valley', 'peak', 'flat', 'valley', 'flat'];
+
+        // --- DOM Elemek ---
+        const wavePath = document.getElementById('wavePath');
+        const scanbox = document.getElementById('scanbox');
+        const door = document.getElementById('secretDoor');
+        const secretCode = document.getElementById('secretCode');
+        const successMsg = document.getElementById('successMsg');
+        
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const shapeButtons = {
+            'valley': document.getElementById('btn-valley'),
+            'flat': document.getElementById('btn-flat'),
+            'peak': document.getElementById('btn-peak')
+        };
+
+        // --- Rajzoló funkciók ---
+
+        // Generálja az SVG path d attribútumát a currentWave tömb alapján
+        function renderWave() {
+            // A canvas viewBox 0 0 100 100.
+            // A vonal középen fut (Y=50).
+            // A X tengelyt felosztjuk SEGMENTS számú részre.
+            const segmentWidth = 100 / SEGMENTS;
+            let pathD = `M 0 50`; // Kezdőpont
+
+            currentWave.forEach((shape, index) => {
+                const startX = index * segmentWidth;
+                const endX = (index + 1) * segmentWidth;
+                const midX = startX + (segmentWidth / 2);
+
+                if (shape === 'flat') {
+                    pathD += ` L ${endX} 50`;
+                } else if (shape === 'peak') {
+                    // Cikkcakk felfelé
+                    // Kis egyenes előtte, csúcs, kis egyenes utána
+                    const q1 = startX + (segmentWidth * 0.25);
+                    const q3 = startX + (segmentWidth * 0.75);
+                    pathD += ` L ${q1} 50 L ${midX} 20 L ${q3} 50 L ${endX} 50`;
+                } else if (shape === 'valley') {
+                    // Cikkcakk lefelé
+                    const q1 = startX + (segmentWidth * 0.25);
+                    const q3 = startX + (segmentWidth * 0.75);
+                    pathD += ` L ${q1} 50 L ${midX} 80 L ${q3} 50 L ${endX} 50`;
+                }
+            });
+
+            wavePath.setAttribute('d', pathD);
+        }
+
+        // Frissíti a zöld szkennelő doboz (kurzor) pozícióját
+        function updateCursor() {
+            const segmentWidthPercent = 100 / SEGMENTS;
+            scanbox.style.width = `${segmentWidthPercent}%`;
+            scanbox.style.left = `${currentIndex * segmentWidthPercent}%`;
+            
+            // Frissíti az aktív gomb stílusát az adott pozíción lévő forma alapján
+            updateActiveButton();
+        }
+
+        // Kiemeli azt a forma gombot, ami az aktuális pozíción van
+        function updateActiveButton() {
+            const currentShape = currentWave[currentIndex];
+            
+            // Levesszük az active classt mindről
+            Object.values(shapeButtons).forEach(btn => btn.classList.remove('active'));
+            
+            // Rátesszük az aktuálisra
+            if(shapeButtons[currentShape]) {
+                shapeButtons[currentShape].classList.add('active');
+            }
+        }
+
+
+        // --- Logika ---
+
+        // Forma beállítása az aktuális indexen
+        function setShape(shape) {
+            if (isSolved) return; // Ha már megoldotta, ne lehessen változtatni
+            
+            currentWave[currentIndex] = shape;
+            renderWave();
+            updateActiveButton();
+            checkWinCondition();
+        }
+
+        // Mozgás balra/jobbra
+        function moveCursor(direction) {
+            if (isSolved) return;
+
+            if (direction === 'left' && currentIndex > 0) {
+                currentIndex--;
+            } else if (direction === 'right' && currentIndex < SEGMENTS - 1) {
+                currentIndex++;
+            }
+            updateCursor();
+        }
+
+        // Ellenőrzi, hogy a currentWave megegyezik-e a targetWave-vel
+        function checkWinCondition() {
+            const isMatch = currentWave.every((val, index) => val === targetWave[index]);
+            
+            if (isMatch && !isSolved) {
+                triggerWin();
+            }
+        }
+
+        // Nyerési animációk és effektek
+        function triggerWin() {
+            isSolved = true;
+            
+            // Kijelző villantása
+            wavePath.style.stroke = '#fff';
+            setTimeout(() => {
+                wavePath.style.stroke = '#4ade80';
+            }, 200);
+
+            // Ajtó kinyitása
+            door.classList.add('open');
+            
+            // Kód megjelenítése
+            secretCode.style.opacity = '1';
+            
+            // Sikeres üzenet
+            successMsg.style.opacity = '1';
+
+            // Zöld kurzor eltüntetése
+            scanbox.style.opacity = '0';
+            
+            // Gombok halványítása (opcionális, jelzi hogy nincs több interakció)
+            const allBtns = document.querySelectorAll('.control-btn');
+            allBtns.forEach(btn => {
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'default';
+            });
+        }
+
+        // --- Eseménykezelők hozzárendelése ---
+
+        btnLeft.addEventListener('click', () => moveCursor('left'));
+        btnRight.addEventListener('click', () => moveCursor('right'));
+
+        Object.entries(shapeButtons).forEach(([shape, btn]) => {
+            btn.addEventListener('click', () => setShape(shape));
+        });
+
+        // Billentyűzet támogatás
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') moveCursor('left');
+            if (e.key === 'ArrowRight') moveCursor('right');
+            // Opcionális: Számgombokkal is lehessen formát váltani (1: völgy, 2: egyenes, 3: hegy)
+            if (e.key === '1') setShape('valley');
+            if (e.key === '2') setShape('flat');
+            if (e.key === '3') setShape('peak');
+        });
+
+        // --- Inicializálás ---
+        // Generáljunk egy kezdő állapotot, ami nem a megoldás, hogy a felhasználónak dolgoznia kelljen rajta.
+        // Legyen mondjuk egy lapos vonal kezdetben, kivéve az elsőt.
+        currentWave = ['peak', 'flat', 'flat', 'flat', 'flat', 'flat'];
+        
+        renderWave();
+        updateCursor();
+
+    </script>
+</body>
+</html>
