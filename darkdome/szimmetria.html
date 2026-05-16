@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometriai Rezonancia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #0a0a0c;
+            color: #f0f0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hex-grid {
+            background-image: radial-gradient(#1a1a2e 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+
+        .shape-container {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+        }
+
+        .shape-container:hover {
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4));
+        }
+
+        .shape-active {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 0;
+            animation: dash 2s linear infinite;
+        }
+
+        @keyframes dash {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .status-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .status-off { background-color: #333; box-shadow: none; }
+        .status-on { background-color: #00ff88; box-shadow: 0 0 10px #00ff88; }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .hint-box {
+            border-left: 4px solid #4f46e5;
+            background: rgba(79, 70, 229, 0.1);
+        }
+    </style>
+</head>
+<body class="hex-grid">
+
+    <header class="p-6 border-b border-white/10 flex justify-between items-center bg-black/40 backdrop-blur-md">
+        <div>
+            <h1 class="text-2xl font-light tracking-widest uppercase">Geometriai <span class="font-bold text-indigo-500">Kalibráció</span></h1>
+            <p class="text-xs text-zinc-500 mt-1">Állítsd helyre a szimmetriát az elemek összehangolásával.</p>
+        </div>
+        <div id="timer" class="font-mono text-xl text-indigo-400">00:00</div>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-4">
+        <!-- Dashboard/Status -->
+        <div class="mb-12 flex gap-8">
+            <div class="flex flex-col items-center gap-2">
+                <div id="light-0" class="status-light status-off"></div>
+                <span class="text-[10px] uppercase tracking-tighter text-zinc-500">III</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <div id="light-1" class="status-light status-off"></div>
+                <span class="text-[10px] uppercase tracking-tighter text-zinc-500">IV</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <div id="light-2" class="status-light status-off"></div>
+                <span class="text-[10px] uppercase tracking-tighter text-zinc-500">V</span>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <div id="light-3" class="status-light status-off"></div>
+                <span class="text-[10px] uppercase tracking-tighter text-zinc-500">VI</span>
+            </div>
+        </div>
+
+        <!-- Puzzle Area -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 max-w-5xl w-full">
+            <!-- 1. Háromszög -->
+            <div class="flex flex-col items-center" onclick="handleInteraction(0)">
+                <svg width="120" height="120" viewBox="0 0 100 100" class="shape-container" id="svg-0">
+                    <polygon points="50,15 90,85 10,85" fill="none" stroke="#ef4444" stroke-width="3" />
+                </svg>
+                <span class="mt-4 text-xs font-bold text-red-500">TRI-01</span>
+            </div>
+
+            <!-- 2. Négyzet -->
+            <div class="flex flex-col items-center" onclick="handleInteraction(1)">
+                <svg width="120" height="120" viewBox="0 0 100 100" class="shape-container" id="svg-1">
+                    <rect x="20" y="20" width="60" height="60" fill="none" stroke="#3b82f6" stroke-width="3" />
+                </svg>
+                <span class="mt-4 text-xs font-bold text-blue-500">QUAD-02</span>
+            </div>
+
+            <!-- 3. Ötszög -->
+            <div class="flex flex-col items-center" onclick="handleInteraction(2)">
+                <svg width="120" height="120" viewBox="0 0 100 100" class="shape-container" id="svg-2">
+                    <polygon points="50,15 90,45 75,90 25,90 10,45" fill="none" stroke="#eab308" stroke-width="3" />
+                </svg>
+                <span class="mt-4 text-xs font-bold text-yellow-500">PENTA-03</span>
+            </div>
+
+            <!-- 4. Hatszög -->
+            <div class="flex flex-col items-center" onclick="handleInteraction(3)">
+                <svg width="120" height="120" viewBox="0 0 100 100" class="shape-container" id="svg-3">
+                    <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="none" stroke="#10b981" stroke-width="3" />
+                </svg>
+                <span class="mt-4 text-xs font-bold text-emerald-500">HEXA-04</span>
+            </div>
+        </div>
+
+        <!-- Clue Section -->
+        <div class="mt-16 max-w-md text-center">
+            <div class="hint-box p-4 rounded-r-lg">
+                <p class="text-sm text-zinc-400 italic">"Az érintés hullámokat vet. Minden mozgás kihat a következőre. Találd meg az egyensúlyt ott, ahol minden csúcs az ég felé mutat."</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="p-4 bg-black/60 border-t border-white/5 flex justify-center gap-4">
+        <button onclick="showInstruction()" class="px-4 py-2 border border-zinc-700 rounded text-xs hover:bg-zinc-800 transition">PROTOKOLL</button>
+        <button onclick="resetPuzzle()" class="px-4 py-2 border border-zinc-700 rounded text-xs hover:bg-zinc-800 transition text-red-400">RESTART</button>
+    </footer>
+
+    <!-- Win Modal -->
+    <div id="win-modal" class="modal-overlay">
+        <div class="bg-zinc-900 border border-indigo-500 p-8 rounded-2xl max-w-sm w-full text-center shadow-[0_0_50px_rgba(79,70,229,0.3)]">
+            <div class="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">REZONANCIA KÉSZ</h2>
+            <p class="text-zinc-400 mb-6">A rendszer kalibrálva. A kijárat feloldva.</p>
+            <div id="final-stats" class="text-sm font-mono text-indigo-300 bg-black/30 p-3 rounded mb-6"></div>
+            <button onclick="location.reload()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold transition">ÚJRAINDÍTÁS</button>
+        </div>
+    </div>
+
+    <!-- Instruction Modal -->
+    <div id="info-modal" class="modal-overlay" onclick="closeModals()">
+        <div class="bg-zinc-900 border border-zinc-700 p-8 rounded-2xl max-w-md w-full" onclick="event.stopPropagation()">
+            <h2 class="text-xl font-bold mb-4 text-indigo-400">Kalibrációs Segédlet</h2>
+            <ul class="text-sm text-zinc-400 space-y-3 list-disc pl-4">
+                <li>Minden alakzat érintésre elfordul egy meghatározott szöggel.</li>
+                <li>Az alakzatok <b>láncreakciót</b> váltanak ki:
+                    <br><span class="text-zinc-300">- A Háromszög forgatja a Négyzetet is.</span>
+                    <br><span class="text-zinc-300">- A Négyzet forgatja az Ötszöget is.</span>
+                    <br><span class="text-zinc-300">- Az Ötszög forgatja a Hatszöget is.</span>
+                    <br><span class="text-zinc-300">- A Hatszög visszahajlik a Háromszögre.</span>
+                </li>
+                <li>A cél: Minden alakzatnak a "kezdőpontján" (0 fokos elforgatás) kell állnia egyszerre.</li>
+            </ul>
+            <button onclick="closeModals()" class="mt-6 w-full py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition">ÉRTETTEM</button>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            startTime: Date.now(),
+            angles: [90, 180, 72, 120], // Kezdő véletlenszerű állások
+            steps: 0,
+            solved: false
+        };
+
+        const config = [
+            { id: 0, step: 90, affects: 1 },  // Triangle
+            { id: 1, step: 90, affects: 2 },  // Square
+            { id: 2, step: 72, affects: 3 },  // Pentagon
+            { id: 3, step: 60, affects: 0 }   // Hexagon
+        ];
+
+        function init() {
+            updateVisuals();
+            startTimer();
+        }
+
+        function handleInteraction(index) {
+            if (state.solved) return;
+
+            state.steps++;
+            
+            // Forgatjuk a kiválasztottat
+            rotateShape(index);
+            
+            // Forgatjuk az általa befolyásoltat
+            const affectedIndex = config[index].affects;
+            rotateShape(affectedIndex);
+
+            updateVisuals();
+            checkWin();
+        }
+
+        function rotateShape(index) {
+            state.angles[index] = (state.angles[index] + config[index].step) % 360;
+        }
+
+        function updateVisuals() {
+            state.angles.forEach((angle, i) => {
+                const el = document.getElementById(`svg-${i}`);
+                el.style.transform = `rotate(${angle}deg)`;
+                
+                // Status fények frissítése (0 foknál zöld)
+                const light = document.getElementById(`light-${i}`);
+                if (angle % 360 === 0) {
+                    light.className = 'status-light status-on';
+                    el.classList.add('shape-active');
+                } else {
+                    light.className = 'status-light status-off';
+                    el.classList.remove('shape-active');
+                }
+            });
+        }
+
+        function checkWin() {
+            const isSolved = state.angles.every(angle => angle % 360 === 0);
+            if (isSolved && !state.solved) {
+                state.solved = true;
+                const elapsed = document.getElementById('timer').textContent;
+                document.getElementById('final-stats').textContent = `IDŐ: ${elapsed} | LÉPÉSEK: ${state.steps}`;
+                document.getElementById('win-modal').classList.add('active');
+            }
+        }
+
+        function startTimer() {
+            setInterval(() => {
+                if (state.solved) return;
+                const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const secs = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('timer').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function resetPuzzle() {
+            state.angles = [90, 180, 144, 240];
+            state.steps = 0;
+            updateVisuals();
+        }
+
+        function showInstruction() {
+            document.getElementById('info-modal').classList.add('active');
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
