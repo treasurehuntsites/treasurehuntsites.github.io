@@ -27,6 +27,20 @@
             <!-- Bal oldal: Karakter paletta és kiválasztás -->
             <div class="lg:col-span-5 flex flex-col gap-6">
                 
+                <!-- ÚJ: Adatkezelés panel -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+                    <h2 class="text-sm font-bold text-gray-700">Színkészlet mentése / betöltése</h2>
+                    <div class="flex gap-2">
+                        <button id="export-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-3 rounded text-sm transition-colors" title="Beállítások letöltése fájlba">
+                            Export
+                        </button>
+                        <button id="import-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-3 rounded text-sm transition-colors" title="Beállítások betöltése fájlból">
+                            Import
+                        </button>
+                        <input type="file" id="import-file" accept=".json" class="hidden">
+                    </div>
+                </div>
+
                 <!-- Szerkesztő panel -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
@@ -118,11 +132,9 @@
         function generateDefaultColors() {
             const defaults = {};
             characters.forEach((char, index) => {
-                // Egyszerű színátmenet generálása alapértelmezettnek
                 const hue = Math.floor((index / characters.length) * 360);
                 defaults[char] = `hsl(${hue}, 70%, 50%)`;
             });
-            // HSL-t HEX-re alakítjuk az <input type="color"> kompatibilitás miatt
             Object.keys(defaults).forEach(k => {
                 const tempDiv = document.createElement('div');
                 tempDiv.style.color = defaults[k];
@@ -155,6 +167,9 @@
         const ctx = canvas.getContext('2d');
         const emptyStateMsg = document.getElementById('empty-state-msg');
         const downloadBtn = document.getElementById('download-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const importBtn = document.getElementById('import-btn');
+        const importFile = document.getElementById('import-file');
 
         // --- INICIALIZÁLÁS ÉS RENDERELÉS ---
         
@@ -169,11 +184,80 @@
             });
 
             textInput.addEventListener('input', drawCanvas);
-            
             downloadBtn.addEventListener('click', downloadCanvas);
+
+            // Export / Import eseménykezelők
+            exportBtn.addEventListener('click', exportColors);
+            importBtn.addEventListener('click', () => importFile.click());
+            importFile.addEventListener('change', importColors);
             
             // Kezdeti üres vászon beállítása
             drawCanvas();
+        }
+
+        // --- ÚJ: EXPORT / IMPORT LOGIKA ---
+
+        function exportColors() {
+            const dataStr = JSON.stringify(colorMap, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'szinesztezia_beallitasok.json';
+            document.body.appendChild(a);
+            a.click();
+            
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importColors(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    
+                    if (typeof importedData === 'object' && importedData !== null) {
+                        // Kicseréljük és frissítjük a colorMap-et az új adatokkal
+                        colorMap = { ...colorMap, ...importedData };
+                        saveColors();
+                        
+                        // Felület frissítése
+                        renderCharGrid();
+                        updateEditorUI();
+                        drawCanvas();
+                        
+                        // Siker vizuális jelzése
+                        showButtonFeedback(importBtn, "Sikeres!", "bg-green-100", "text-green-700");
+                    }
+                } catch (error) {
+                    console.error("Hiba az importálás során:", error);
+                    // Hiba vizuális jelzése
+                    showButtonFeedback(importBtn, "Hiba!", "bg-red-100", "text-red-700");
+                }
+                
+                // Input érték törlése, hogy ugyanazt a fájlt kétszer is kiválaszthassuk, ha szükséges
+                e.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        function showButtonFeedback(button, tempText, bgClass, textClass) {
+            const origText = button.innerText;
+            const origClass = button.className;
+            
+            button.innerText = tempText;
+            button.classList.remove("bg-gray-100", "text-gray-700");
+            button.classList.add(bgClass, textClass);
+            
+            setTimeout(() => {
+                button.innerText = origText;
+                button.className = origClass;
+            }, 2000);
         }
 
         // Fő színek gombjainak generálása
