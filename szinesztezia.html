@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szinesztézia Szöveg Generátor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Egyedi fókusz stílusok és finomítások */
+        .color-preset:hover { transform: scale(1.1); }
+        .color-preset.active { border-width: 4px; border-color: #374151; transform: scale(1.1); }
+        .char-box.active { border-width: 4px; border-color: #2563eb; transform: scale(1.05); }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen font-sans">
+
+    <div class="container mx-auto p-4 max-w-6xl">
+        <header class="mb-8 text-center md:text-left">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Szinesztézia Szöveg Generátor</h1>
+            <p class="text-gray-600">Rendelj színeket a betűkhöz és számokhoz, a böngésző megjegyzi a választásod! Ezután alakítsd a szövegeidet színkódolt képekké.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Bal oldal: Karakter paletta és kiválasztás -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Szerkesztő panel -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span>Szín szerkesztése:</span>
+                        <span id="active-char-display" class="inline-block w-10 h-10 text-center leading-10 text-2xl font-black bg-gray-100 rounded text-gray-900">A</span>
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Kiemelt Fő Színek</label>
+                        <div id="preset-colors-container" class="flex flex-wrap gap-2">
+                            <!-- Preset színek ide kerülnek generálásra -->
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Teljes Színpaletta (Egyedi szín)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="color" id="custom-color-picker" class="w-16 h-12 rounded cursor-pointer border-0 shadow-sm">
+                            <span id="current-hex-display" class="text-gray-500 font-mono text-sm uppercase">#000000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Karakter grid -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold mb-4">Betűk és Számok</h3>
+                    <div id="char-grid" class="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                        <!-- Betűk és számok ide kerülnek generálásra -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Jobb oldal: Szöveg generátor -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-xl font-bold mb-4">Szöveg beírása</h2>
+                    <textarea id="text-input" rows="4" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-y" placeholder="Írd ide a szöveget, amit képpé szeretnél alakítani..."></textarea>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">Generált Kép</h2>
+                        <button id="download-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Letöltés
+                        </button>
+                    </div>
+                    
+                    <div class="w-full overflow-auto bg-gray-50 rounded-xl border border-gray-200 p-4 flex-1 flex justify-center items-center min-h-[300px]">
+                        <canvas id="output-canvas" class="max-w-full shadow-sm rounded"></canvas>
+                        <p id="empty-state-msg" class="text-gray-400 italic text-center pointer-events-none absolute">Ide kerül a generált színes kód</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ÁLLAPOT (STATE) ---
+        // A betűk és számok listája
+        const characters = 'AÁBCDEÉFGHIÍJKLMNOÓÖŐPQRSTUÚÜŰVWXYZ0123456789'.split('');
+        
+        // Kiemelt fő színek palettája
+        const presetColors = [
+            '#EF4444', // Piros
+            '#F97316', // Narancs
+            '#EAB308', // Sárga
+            '#22C55E', // Zöld
+            '#3B82F6', // Kék
+            '#6366F1', // Indigó
+            '#A855F7', // Lila
+            '#EC4899', // Rózsaszín
+            '#8B5CF6', // Ibolya
+            '#14B8A6', // Kékeszöld (Teal)
+            '#84CC16', // Lime
+            '#F43F5E', // Rózsa
+            '#8B4513', // Barna
+            '#000000', // Fekete
+            '#9CA3AF', // Szürke
+            '#FFFFFF'  // Fehér
+        ];
+
+        // Alapértelmezett színek generálása, ha nincs mentett adat
+        function generateDefaultColors() {
+            const defaults = {};
+            characters.forEach((char, index) => {
+                // Egyszerű színátmenet generálása alapértelmezettnek
+                const hue = Math.floor((index / characters.length) * 360);
+                defaults[char] = `hsl(${hue}, 70%, 50%)`;
+            });
+            // HSL-t HEX-re alakítjuk az <input type="color"> kompatibilitás miatt
+            Object.keys(defaults).forEach(k => {
+                const tempDiv = document.createElement('div');
+                tempDiv.style.color = defaults[k];
+                document.body.appendChild(tempDiv);
+                const computed = window.getComputedStyle(tempDiv).color;
+                document.body.removeChild(tempDiv);
+                defaults[k] = rgbToHex(computed);
+            });
+            return defaults;
+        }
+
+        // Adat betöltése LocalStorage-ból
+        const STORAGE_KEY = 'synesthesia_colors';
+        let colorMap = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!colorMap) {
+            colorMap = generateDefaultColors();
+            saveColors();
+        }
+
+        let activeChar = 'A';
+
+        // --- DOM ELEMEK ---
+        const charGrid = document.getElementById('char-grid');
+        const presetContainer = document.getElementById('preset-colors-container');
+        const colorPicker = document.getElementById('custom-color-picker');
+        const hexDisplay = document.getElementById('current-hex-display');
+        const activeCharDisplay = document.getElementById('active-char-display');
+        const textInput = document.getElementById('text-input');
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+        const emptyStateMsg = document.getElementById('empty-state-msg');
+        const downloadBtn = document.getElementById('download-btn');
+
+        // --- INICIALIZÁLÁS ÉS RENDERELÉS ---
+        
+        function init() {
+            renderPresetColors();
+            renderCharGrid();
+            updateEditorUI();
+            
+            // Eseménykezelők beállítása
+            colorPicker.addEventListener('input', (e) => {
+                changeColor(e.target.value);
+            });
+
+            textInput.addEventListener('input', drawCanvas);
+            
+            downloadBtn.addEventListener('click', downloadCanvas);
+            
+            // Kezdeti üres vászon beállítása
+            drawCanvas();
+        }
+
+        // Fő színek gombjainak generálása
+        function renderPresetColors() {
+            presetContainer.innerHTML = '';
+            presetColors.forEach(color => {
+                const btn = document.createElement('button');
+                btn.className = 'w-8 h-8 rounded-full shadow-sm border border-gray-200 cursor-pointer transition-transform color-preset';
+                btn.style.backgroundColor = color;
+                btn.title = color;
+                btn.onclick = () => changeColor(color);
+                presetContainer.appendChild(btn);
+            });
+        }
+
+        // Karakter rács generálása
+        function renderCharGrid() {
+            charGrid.innerHTML = '';
+            characters.forEach(char => {
+                const box = document.createElement('div');
+                box.className = `char-box w-10 h-10 rounded shadow-sm flex items-center justify-center font-bold cursor-pointer transition-all ${char === activeChar ? 'active' : 'border border-gray-200'}`;
+                box.style.backgroundColor = colorMap[char] || '#ffffff';
+                
+                // Szöveg színének beállítása (kontraszt a háttérrel)
+                box.style.color = getContrastYIQ(colorMap[char] || '#ffffff');
+                box.innerText = char;
+                
+                box.onclick = () => {
+                    activeChar = char;
+                    updateEditorUI();
+                    renderCharGrid(); // Újrarajzoljuk a kiválasztás frissítéséhez
+                };
+                
+                charGrid.appendChild(box);
+            });
+        }
+
+        // Szerkesztő panel frissítése az aktív karakter alapján
+        function updateEditorUI() {
+            activeCharDisplay.innerText = activeChar;
+            activeCharDisplay.style.backgroundColor = colorMap[activeChar];
+            activeCharDisplay.style.color = getContrastYIQ(colorMap[activeChar]);
+            
+            const hexColor = colorMap[activeChar];
+            colorPicker.value = hexColor;
+            hexDisplay.innerText = hexColor.toUpperCase();
+
+            // Preset gombok aktív állapotának frissítése
+            const presets = presetContainer.querySelectorAll('button');
+            presets.forEach(btn => {
+                if (btn.title.toLowerCase() === hexColor.toLowerCase()) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Szín megváltoztatása
+        function changeColor(newColor) {
+            colorMap[activeChar] = newColor;
+            saveColors();
+            updateEditorUI();
+            
+            // Csak az adott karakter dobozát frissítjük a DOM-ban a teljes újrarajzolás helyett a teljesítményért
+            const boxes = charGrid.children;
+            const index = characters.indexOf(activeChar);
+            if(boxes[index]) {
+                boxes[index].style.backgroundColor = newColor;
+                boxes[index].style.color = getContrastYIQ(newColor);
+            }
+
+            drawCanvas(); // Ha a szövegben szerepel a betű, frissüljön a kép is
+        }
+
+        // Mentés LocalStorage-ba
+        function saveColors() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(colorMap));
+        }
+
+        // --- VÁSZON (CANVAS) LOGIKA ---
+
+        function drawCanvas() {
+            const text = textInput.value.toUpperCase();
+            
+            if (!text.trim()) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.width = 0;
+                canvas.height = 0;
+                emptyStateMsg.style.display = 'block';
+                downloadBtn.disabled = true;
+                return;
+            }
+
+            emptyStateMsg.style.display = 'none';
+            downloadBtn.disabled = false;
+
+            const blockSize = 30; // Egy négyzet mérete
+            const gap = 2; // Távolság a négyzetek között
+            const maxCols = 25; // Maximális négyzet egy sorban
+
+            // Szöveg feldolgozása sorokká (tördelés + sortörések megtartása)
+            let lines = [];
+            let currentLine = [];
+            
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '\n') {
+                    lines.push(currentLine);
+                    currentLine = [];
+                } else {
+                    currentLine.push(char);
+                    if (currentLine.length >= maxCols) {
+                        lines.push(currentLine);
+                        currentLine = [];
+                    }
+                }
+            }
+            if (currentLine.length > 0) {
+                lines.push(currentLine);
+            }
+
+            // Vászon méretének kiszámítása
+            const rows = lines.length;
+            const actualCols = Math.max(...lines.map(l => l.length));
+
+            const padding = 20;
+            canvas.width = actualCols * (blockSize + gap) - gap + (padding * 2);
+            canvas.height = rows * (blockSize + gap) - gap + (padding * 2);
+
+            // Háttér rajzolása (fehér)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Blokkok rajzolása
+            const startX = padding;
+            const startY = padding;
+
+            lines.forEach((line, r) => {
+                line.forEach((char, c) => {
+                    const x = startX + c * (blockSize + gap);
+                    const y = startY + r * (blockSize + gap);
+
+                    if (char === ' ') {
+                        // Szóköz: üres hely marad (vagy halvány jelzés)
+                        return;
+                    }
+
+                    if (colorMap[char]) {
+                        // Ismert szinesztézia karakter
+                        ctx.fillStyle = colorMap[char];
+                        ctx.fillRect(x, y, blockSize, blockSize);
+                    } else {
+                        // Ismeretlen karakter (pl. írásjel)
+                        ctx.fillStyle = '#f3f4f6';
+                        ctx.fillRect(x, y, blockSize, blockSize);
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.font = '14px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(char, x + blockSize/2, y + blockSize/2);
+                    }
+                });
+            });
+        }
+
+        function downloadCanvas() {
+            if(canvas.width === 0) return;
+            const link = document.createElement('a');
+            link.download = 'szinesztezia-szoveg.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // --- SEGÉDFÜGGVÉNYEK ---
+
+        // Szín konvertálása RGB-ből HEX formátumba
+        function rgbToHex(rgb) {
+            if (rgb.startsWith('#')) return rgb;
+            const result = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i.exec(rgb);
+            return result ? "#" + 
+                (1 << 24 | parseInt(result[1]) << 16 | parseInt(result[2]) << 8 | parseInt(result[3])).toString(16).slice(1)
+                : rgb;
+        }
+
+        // Kontrasztos szövegszín számítása (fekete vagy fehér) a háttérszín alapján
+        function getContrastYIQ(hexcolor){
+            hexcolor = hexcolor.replace("#", "");
+            if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(c => c+c).join('');
+            const r = parseInt(hexcolor.substr(0,2),16);
+            const g = parseInt(hexcolor.substr(2,2),16);
+            const b = parseInt(hexcolor.substr(4,2),16);
+            const yiq = ((r*299)+(g*587)+(b*114))/1000;
+            return (yiq >= 128) ? '#000000' : '#ffffff';
+        }
+
+        // Alkalmazás indítása
+        init();
+    </script>
+</body>
+</html>
