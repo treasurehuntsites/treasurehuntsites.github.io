@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A Titokzatos Szerkezet</title>
+    <!-- Tailwind CSS a tökéletes elrendezéshez -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts a misztikus hangulathoz és a kézíráshoz -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #0b0603;
+            background-image: radial-gradient(circle at center, #1a0f07 0%, #050301 100%);
+            font-family: 'Cinzel', serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Fa textúra és mélység hatások */
+        .wood-panel {
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.95), 0 15px 35px rgba(0,0,0,0.9);
+            background: linear-gradient(135deg, #2c170b 0%, #170c05 100%);
+        }
+        /* Papír kicsúszás animáció */
+        .paper-slip {
+            transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+        }
+        .paper-slip.hidden-slip {
+            transform: translateY(-115%);
+            opacity: 0;
+        }
+        .paper-slip.shown-slip {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .handwritten {
+            font-family: 'Special Elite', monospace;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center overflow-hidden p-4 select-none">
+
+    <!-- JÁTÉKFELÜLET -->
+    <div class="relative w-full max-w-lg aspect-[3/4] wood-panel border-[10px] border-[#100804] rounded-2xl flex flex-col items-center justify-between p-6 overflow-hidden">
+        
+        <!-- Finom háttérfény / Árnyék hatás a fafaragáson -->
+        <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none"></div>
+
+        <!-- FELSŐ DÍSZÍTÉS (A kép hangulatát idéző faragott jellegű fejléc) -->
+        <div class="w-full text-center border-b border-amber-950 pb-3 z-10">
+            <span class="text-amber-800/60 text-xs tracking-[0.2em] font-bold">LIBRARIUM SECRETIUM</span>
+        </div>
+
+        <!-- A FŐ DIAGRAM / KOSÁR SÉMA -->
+        <div class="relative w-full flex-grow flex items-center justify-center py-4 z-10">
+            <svg viewBox="0 0 400 400" class="w-full max-w-[340px] h-auto drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]">
+                <defs>
+                    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#73431f" />
+                        <stop offset="50%" stop-color="#4a2a12" />
+                        <stop offset="100%" stop-color="#261508" />
+                    </linearGradient>
+                    <linearGradient id="basketGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#593419" />
+                        <stop offset="100%" stop-color="#24140a" />
+                    </linearGradient>
+                    <filter id="shadow">
+                        <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.6"/>
+                    </filter>
+                </defs>
+
+                <!-- Gyümölcsök és levelek fafaragás relief -->
+                <g id="fruits" filter="url(#shadow)">
+                    <!-- Levelek -->
+                    <path d="M 120,150 C 100,130 120,90 150,100 C 170,110 180,130 180,150 Z" fill="#3d220f" stroke="#1d1007" stroke-width="2"/>
+                    <path d="M 280,150 C 300,130 280,90 250,100 C 230,110 220,130 220,150 Z" fill="#3d220f" stroke="#1d1007" stroke-width="2"/>
+                    
+                    <!-- Bogyók / Szőlők -->
+                    <circle cx="135" cy="160" r="14" fill="#4a2912" stroke="#241409" stroke-width="1.5" />
+                    <circle cx="150" cy="150" r="16" fill="#542f15" stroke="#241409" stroke-width="1.5" />
+                    <circle cx="140" cy="135" r="15" fill="#3d220f" stroke="#1d1007" stroke-width="1.5" />
+                    <circle cx="265" cy="160" r="14" fill="#4a2912" stroke="#241409" stroke-width="1.5" />
+                    <circle cx="250" cy="150" r="16" fill="#542f15" stroke="#241409" stroke-width="1.5" />
+                    
+                    <!-- Központi gyümölcsök -->
+                    <circle cx="180" cy="140" r="26" fill="#5e371a" stroke="#2d1a0c" stroke-width="2" />
+                    <circle cx="220" cy="140" r="26" fill="#543117" stroke="#2d1a0c" stroke-width="2" />
+                    <circle cx="200" cy="155" r="28" fill="url(#woodGrad)" stroke="#1d1007" stroke-width="2.5" />
+                </g>
+
+                <!-- Kosár fülei -->
+                <g id="handles" filter="url(#shadow)">
+                    <path d="M 120,190 C 80,190 75,240 95,240 C 110,240 110,210 120,210" fill="none" stroke="url(#basketGrad)" stroke-width="10" stroke-linecap="round"/>
+                    <path d="M 280,190 C 320,190 325,240 305,240 C 290,240 290,210 280,210" fill="none" stroke="url(#basketGrad)" stroke-width="10" stroke-linecap="round"/>
+                </g>
+
+                <!-- Kosár fő egysége -->
+                <g id="basket" filter="url(#shadow)">
+                    <path d="M 110,185 L 290,185 C 290,185 300,200 280,200 L 120,200 C 100,200 110,185 110,185 Z" fill="#422612" stroke="#1f1108" stroke-width="2"/>
+                    <path d="M 115,198 C 120,245 140,300 200,320 C 260,300 280,245 285,198 Z" fill="url(#basketGrad)" stroke="#1d1007" stroke-width="2.5" />
+                    <!-- Alsó talp -->
+                    <path d="M 180,318 L 220,318 C 220,318 228,340 200,340 C 172,340 180,318 180,318 Z" fill="#3d2210" stroke="#1c0f07" stroke-width="2"/>
+                </g>
+            </svg>
+
+            <!-- TITKOS NYÍLÁS A PAPÍRNAK -->
+            <div class="absolute bottom-[14%] left-1/2 -translate-x-1/2 w-[150px] h-[8px] bg-[#0c0502] border-t border-b border-black/80 rounded shadow-[inset_0_2px_4px_rgba(0,0,0,0.9)] z-0 overflow-visible">
+                
+                <!-- A KIACSÚSZÓ PAPÍRCETLI (KIZÁRÓLAG A SZÁMOKAT TARTALMAZZA) -->
+                <div id="paperSlip" onclick="resetPuzzle()" class="paper-slip hidden-slip absolute top-1 left-[5%] w-[90%] bg-[#faf5e6] border-l border-r border-b border-stone-400/40 rounded-b shadow-[0_10px_20px_rgba(0,0,0,0.8)] flex items-center justify-center cursor-pointer hover:brightness-105 z-20" style="height: 100px;">
+                    <!-- Minimális vintage papír-háttér textúra -->
+                    <div class="absolute inset-0 bg-gradient-to-b from-stone-200/20 via-transparent to-stone-300/30 pointer-events-none rounded-b"></div>
+                    
+                    <!-- KIZÁRÓLAG A SZÁMOK -->
+                    <span id="secretCodeDisplay" class="handwritten text-4xl font-black text-stone-900 tracking-[0.2em] select-none pl-3">
+                        7392
+                    </span>
+                </div>
+            </div>
+
+            <!-- MEGERÍTHETŐ GOMBOK (Állítható magasságú és stílusú oválisok) -->
+            <!-- Pozíciójuk tökéletesen illeszkedik a kosár alsó ívéhez -->
+            <div class="absolute bottom-[22%] left-1/2 -translate-x-1/2 w-[220px] h-[50px] flex justify-between items-center px-1 z-35">
+                <!-- 1. GOMB -->
+                <button onclick="toggleButton(0)" id="btn-0" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+                <!-- 2. GOMB -->
+                <button onclick="toggleButton(1)" id="btn-1" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+                <!-- 3. GOMB -->
+                <button onclick="toggleButton(2)" id="btn-2" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+                <!-- 4. GOMB -->
+                <button onclick="toggleButton(3)" id="btn-3" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+                <!-- 5. GOMB -->
+                <button onclick="toggleButton(4)" id="btn-4" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+                <!-- 6. GOMB -->
+                <button onclick="toggleButton(5)" id="btn-5" class="w-7 h-11 rounded-full border border-amber-950 bg-amber-900/40 shadow-[0_2px_4px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center cursor-pointer focus:outline-none">
+                    <span class="w-4 h-8 rounded-full bg-gradient-to-b from-[#8f542c] to-[#593114] border border-[#a6683c]/30 shadow-md"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- REJTETT / KREATÍV KÓDVÁLTOZTATÓ (Fejlesztőknek/Üzemeltetőknek) 
+             Ha 3 másodpercig hosszan nyomják a felső díszítést, felugrik egy natív prompt, ahol átírható a kód -->
+        <div id="secretConfigZone" class="absolute top-0 inset-x-0 h-10 cursor-default opacity-0 z-50"></div>
+
+    </div>
+
+    <!-- HANGEFFEKT GENERÁTOR -->
+    <script>
+        // BEÁLLÍTÁSOK (Itt módosítható a megkapott kód!)
+        let targetCode = "7392";
+
+        // Gombok állapota (false = kiemelkedő, true = be van nyomva / mély üreg)
+        let buttonStates = [false, false, false, false, false, false];
+        let isSolved = false;
+
+        // Web Audio API a beépített hangokhoz (nincs szükség külső fájlokra)
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioCtx;
+        }
+
+        // Koppanás / Fa kattanás effekt
+        function playClickSound() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.08);
+                
+                gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.09);
+            } catch (e) {}
+        }
+
+        // Papír előbukkanás / mechanika hangja
+        function playSuccessSound() {
+            try {
+                const ctx = getAudioContext();
+                
+                // Fémes zárkattanás
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(350, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+
+                // Papír zizegés (zajgenerátorral)
+                setTimeout(() => {
+                    const bufferSize = ctx.sampleRate * 0.5;
+                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    
+                    const noise = ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 1200;
+                    
+                    const noiseGain = ctx.createGain();
+                    noiseGain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    
+                    noise.connect(filter);
+                    filter.connect(noiseGain);
+                    noiseGain.connect(ctx.destination);
+                    noise.start();
+                }, 100);
+            } catch (e) {}
+        }
+
+        // Gombállapot váltás
+        function toggleButton(index) {
+            if (isSolved) return;
+
+            playClickSound();
+            buttonStates[index] = !buttonStates[index];
+            updateButtonVisual(index);
+            checkSolution();
+        }
+
+        // Vizuális megjelenítés frissítése (Kiemelkedő vs Mély fekete üreg)
+        function updateButtonVisual(index) {
+            const btn = document.getElementById(`btn-${index}`);
+            const innerSpan = btn.querySelector('span');
+
+            if (buttonStates[index]) {
+                // SÖTÉT MÉLY ÜREG (Pontosan úgy néz ki, mint a képen lévő 2. és 6. lyuk)
+                btn.style.transform = 'translateY(2px)';
+                btn.classList.remove('bg-amber-900/40', 'shadow-[0_2px_4px_rgba(0,0,0,0.6)]');
+                btn.classList.add('bg-black', 'shadow-[inset_0_4px_8px_rgba(0,0,0,1)]', 'border-[#0a0502]');
+                
+                // A belső "fa dugó" eltűnik / teljesen besüllyed a sötétségbe
+                innerSpan.style.opacity = '0';
+            } else {
+                // KIEMELKEDŐ FA DUGÓ
+                btn.style.transform = 'translateY(0px)';
+                btn.classList.remove('bg-black', 'shadow-[inset_0_4px_8px_rgba(0,0,0,1)]', 'border-[#0a0502]');
+                btn.classList.add('bg-amber-900/40', 'shadow-[0_2px_4px_rgba(0,0,0,0.6)]');
+                
+                innerSpan.style.opacity = '1';
+            }
+        }
+
+        // Ellenőrzés: Csak a 2. és a 6. gombnak kell benyomva lennie (index 1 és index 5)
+        function checkSolution() {
+            const isCorrect = 
+                buttonStates[1] === true && 
+                buttonStates[5] === true &&
+                buttonStates[0] === false &&
+                buttonStates[2] === false &&
+                buttonStates[3] === false &&
+                buttonStates[4] === false;
+
+            if (isCorrect && !isSolved) {
+                isSolved = true;
+                triggerSuccess();
+            }
+        }
+
+        // Sikeres nyitás
+        function triggerSuccess() {
+            playSuccessSound();
+
+            // Kód megjelenítése a papíron
+            document.getElementById('secretCodeDisplay').innerText = targetCode;
+
+            // Papír kitolása
+            const paper = document.getElementById('paperSlip');
+            paper.classList.remove('hidden-slip');
+            paper.classList.add('shown-slip');
+        }
+
+        // Újraindítás / Bezárás (Ha megérintik a papírt, visszahúzódik és a gombok kiugranak)
+        function resetPuzzle() {
+            if (!isSolved) return;
+            
+            playClickSound();
+            isSolved = false;
+            buttonStates = [false, false, false, false, false, false];
+
+            // Papír elrejtése
+            const paper = document.getElementById('paperSlip');
+            paper.classList.remove('shown-slip');
+            paper.classList.add('hidden-slip');
+
+            // Gombok visszaállítása
+            for (let i = 0; i < 6; i++) {
+                updateButtonVisual(i);
+            }
+        }
+
+        // Játékmesteri titkos funkció (Hosszan tartó nyomás a legfelső díszítésen előhozza a kódmódosítót)
+        let touchTimer;
+        const secretZone = document.getElementById('secretConfigZone');
+        
+        function startTouch() {
+            touchTimer = setTimeout(() => {
+                const newCode = prompt("Játékmester mód: Adj meg egy új kódot (pl. 4 számjegy):", targetCode);
+                if (newCode !== null && newCode.trim() !== "") {
+                    targetCode = newCode.trim();
+                    resetPuzzle();
+                }
+            }, 2500); // 2.5 másodperc folyamatos nyomás a tetején
+        }
+
+        function endTouch() {
+            clearTimeout(touchTimer);
+        }
+
+        secretZone.addEventListener('mousedown', startTouch);
+        secretZone.addEventListener('mouseup', endTouch);
+        secretZone.addEventListener('touchstart', startTouch);
+        secretZone.addEventListener('touchend', endTouch);
+
+    </script>
+</body>
+</html>
+I 
