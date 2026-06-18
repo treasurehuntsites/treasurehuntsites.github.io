@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misztikus Zárt Kincsesláda</title>
+    <!-- Tailwind CSS a reszponzív elrendezéshez -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Special+Elite&display=swap');
+
+        body {
+            background-color: #030201;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Cinzel', serif;
+            color: #fce08e;
+        }
+
+        /* Misztikus fáklyafény háttér a láda mögött */
+        .ambient-glow {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(139, 92, 26, 0.15) 0%, transparent 75%),
+                radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.5) 0%, #030201 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Fő konténer */
+        .chest-frame {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            aspect-ratio: 1 / 2;
+            max-height: 96vh;
+            /* Alapértelmezett helyi háttér a gyors betöltés érdekében */
+            background-image: url('1000035250.png');
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.95);
+            border-radius: 16px;
+            border: 1px solid rgba(168, 127, 50, 0.2);
+            z-index: 10;
+            overflow: hidden;
+            opacity: 0; /* Alapértelmezetten rejtett, amíg a kép be nem tölt */
+            transition: opacity 1.2s ease, filter 0.5s ease;
+        }
+
+        /* Betöltő képernyő */
+        .loader-screen {
+            position: absolute;
+            inset: 0;
+            background-color: #0c0805;
+            z-index: 50;
+            display: flex;
+            flex-col: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+
+        /* KÓD TÁRCSA OVERLAY (Középre pozicionálva, integrált zárként) */
+        #lockMechanism {
+            /* Pontosan a lakat helyére és stílusára igazítva */
+            position: absolute;
+            top: 55%; /* Kicsit feljebb a korábbihoz képest */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 82%; /* Szélesebb, hogy kitöltse a helyet */
+            height: 22%; /* Megnövelt magasság, hogy a gombok kényelmesen elférjenek */
+            border-radius: 12px;
+            background: radial-gradient(circle, #3d2c16 0%, #171007 80%, #090502 100%);
+            border: 4px solid #5a4222;
+            box-shadow: 
+                inset 0 2px 4px rgba(255,255,255,0.1), /* Belső fény */
+                0 4px 8px rgba(0,0,0,0.8), /* Külső árnyék */
+                0 0 20px rgba(0,0,0,0.5) inset; /* Mélység érzet */
+            z-index: 25;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Sarokszegecsek igazítása */
+
+        /* Tekerőgombok fém stílusa */
+        .metal-btn {
+            background: linear-gradient(180deg, #3d2c16 0%, #171007 100%);
+            border: 1px solid #5a4222;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.6);
+            transition: all 0.15s ease;
+        }
+
+        .metal-btn:active {
+            background: #100a04;
+            transform: scale(0.92);
+        }
+
+        /* Mágikus portál és pergamen */
+        .magic-portal {
+            position: absolute;
+            top: 22%;
+            left: 10%;
+            width: 80%;
+            height: 45%;
+            z-index: 30;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .parchment {
+            width: 85%;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transform: scale(0.4) translateY(100px) rotateZ(-8deg);
+            opacity: 0;
+            transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 1s ease;
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.95));
+            cursor: pointer;
+        }
+
+        .parchment.reveal {
+            transform: scale(1) translateY(0) rotateZ(0deg);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .gold-glow-portal {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(253, 184, 19, 0.6) 0%, rgba(184, 115, 51, 0.1) 65%, transparent 100%);
+            opacity: 0;
+            transition: opacity 1.2s ease;
+            pointer-events: none;
+            z-index: 28;
+        }
+
+        .gold-glow-portal.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="select-none">
+
+    <!-- REJTETT SVG FILTEREK -->
+    <svg class="absolute w-0 h-0" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="hammered-brass" x="0%" y="0%" width="100%" height="100%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" result="noise" />
+                <feDiffuseLighting in="noise" lighting-color="#dfb76c" surfaceScale="2.5" result="light">
+                    <feDistantLight azimuth="135" elevation="60" />
+                </feDiffuseLighting>
+                <feBlend mode="multiply" in="SourceGraphic" in2="light" result="blend" />
+                <feColorMatrix type="matrix" values="1 0 0 0 0  0 0.85 0 0 0  0 0 0.65 0 0  0 0 0 1 0"/>
+            </filter>
+            <filter id="bevel-edges">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
+                <feSpecularLighting in="blur" surfaceScale="3" specularConstant="1" specularExponent="10" lighting-color="#fff" result="spec">
+                    <feDistantLight azimuth="135" elevation="45" />
+                </feSpecularLighting>
+                <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut" />
+                <feBlend mode="screen" in="SourceGraphic" in2="specOut" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- HÁTTÉR ATMOSZFÉRA -->
+    <div class="ambient-glow"></div>
+
+    <!-- SZIKRA GENERÁTOR KANVAS -->
+    <canvas id="sparkCanvas" class="absolute w-full h-full pointer-events-none z-40"></canvas>
+
+    <!-- FŐ KERET -->
+    <div id="chestFrame" class="chest-frame">
+
+        <!-- MÁGIKUS PORTÁL ÉS MEGJELENŐ KÓD -->
+        <div id="goldGlow" class="gold-glow-portal"></div>
+        <div class="magic-portal">
+            <div id="parchment" class="parchment relative" onclick="closeChest()">
+                <!-- Tépett szélű pergamen lap -->
+                <svg class="absolute inset-0 w-full h-full filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.9)]" viewBox="0 0 300 240" preserveAspectRatio="none">
+                    <path d="M 12 18 Q 45 15, 90 20 T 195 16 Q 245 20, 288 18 Q 284 65, 288 120 T 284 222 Q 225 225, 150 220 T 55 224 Q 28 220, 12 222 Q 15 160, 11 110 T 12 18 Z" fill="#edd9b4" stroke="#704724" stroke-width="3" style="filter: url(#hammered-brass);"/>
+                    <path d="M 20 24 Q 80 26, 150 22 T 280 24 Q 276 80, 278 140 T 275 214 Q 200 210, 120 215 T 20 214 Q 22 150, 21 80 T 20 24 Z" fill="none" stroke="#805328" stroke-dasharray="5,4" stroke-width="1" opacity="0.5"/>
+                </svg>
+                
+                <!-- Pergamen belső tartalma (csak a kód maradt) -->
+                <div class="relative z-10 flex flex-col items-center justify-center w-full h-full">
+                    <!-- Kézzel rajzolt lúdtollas kalligráfia "1924" -->
+                    <svg class="w-40 h-20 text-[#221306]" viewBox="0 0 200 100" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M 32 35 Q 39 24, 46 27 L 46 75 M 34 75 L 58 75" />
+                        <path d="M 92 45 C 92 30, 70 30, 70 45 C 70 60, 92 60, 92 45 Z M 92 45 L 87 70 Q 82 82, 66 80" />
+                        <path d="M 114 35 C 114 22, 142 22, 137 45 Q 132 55, 117 75 L 147 75" />
+                        <path d="M 177 60 L 154 60 L 172 25 L 172 75" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- KÓD TÁRCSA OVERLAY (Középre pozicionálva a closed chest lakatjára) -->
+        <div id="lockMechanism" class="rounded-lg flex flex-col items-center justify-center p-2 z-25 transition-opacity duration-500">
+            
+            <!-- Sarokszegecsek -->
+            <div class="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-[#735632] border border-black flex items-center justify-center"><div class="w-1.5 h-[1px] bg-black"></div></div>
+            <div class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#735632] border border-black flex items-center justify-center"><div class="w-1.5 h-[1px] bg-black"></div></div>
+            <div class="absolute bottom-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-[#735632] border border-black flex items-center justify-center"><div class="w-1.5 h-[1px] bg-black"></div></div>
+            <div class="absolute bottom-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#735632] border border-black flex items-center justify-center"><div class="w-1.5 h-[1px] bg-black"></div></div>
+
+            <!-- A 3 DARAB INTERAKTÍV HENGER -->
+            <div class="flex items-center justify-center gap-4 w-full h-full">
+                
+                <!-- 1. Tárcsa (Bal) -->
+                <div class="flex flex-col items-center justify-center h-full gap-1">
+                    <button onclick="rotateDial(0, 1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <canvas id="dial0" width="120" height="136" class="w-[60px] h-[68px] border border-black rounded shadow-inner cursor-pointer" style="box-shadow: inset 0 0 10px #000;"></canvas>
+                    <button onclick="rotateDial(0, -1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                </div>
+
+                <!-- 2. Tárcsa (Középső) -->
+                <div class="flex flex-col items-center justify-center h-full gap-1">
+                    <button onclick="rotateDial(1, 1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <canvas id="dial1" width="120" height="136" class="w-[60px] h-[68px] border border-black rounded shadow-inner cursor-pointer" style="box-shadow: inset 0 0 10px #000;"></canvas>
+                    <button onclick="rotateDial(1, -1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                </div>
+
+                <!-- 3. Tárcsa (Jobb) -->
+                <div class="flex flex-col items-center justify-center h-full gap-1">
+                    <button onclick="rotateDial(2, 1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <canvas id="dial2" width="120" height="136" class="w-[60px] h-[68px] border border-black rounded shadow-inner cursor-pointer" style="box-shadow: inset 0 0 10px #000;"></canvas>
+                    <button onclick="rotateDial(2, -1)" class="metal-btn w-10 h-5 flex items-center justify-center rounded text-[#dfb76c] focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- AUDIO, RENDERELŐ ÉS GEMINI API MOTOR -->
+    <script>
+        // --- 1. GLOBÁLIS ÁLLAPOTOK ---
+        const CORRECT_COMBO = [0, 1, 2]; // Helyes: Polip -> Szem -> Sárkány
+        let currentCombo = [3, 4, 5];    // Véletlenszerű kezdőállás
+        let isOpened = false;
+        const apiKey = ""; // Canvas runtime környezet automatikusan injektálja
+
+        // --- 2. GEMINI IMAGEN 4.0 KÉPGENERÁTOR MOTOR ---
+        const promptText = "A highly detailed, photorealistic closed medieval gothic treasure chest made of ancient, ornate brass and dark bronze, decorated with detailed relief carvings of dragons on the left and right sides, and mysterious alchemical runes etched into the metal surface. The chest has an integrated, ornate combination lock mechanism built directly into its front center panel. It is placed on a rough dark wooden table in a medieval stone dungeon with warm, flickering torchlight creating soft shadows. The overall mood is mysterious, dark, and ancient, matching the style of a medieval brass relic. Vertical 9:18 orientation, centered composition, dramatic cinematic lighting.";
+
+        // Exponenciális backoff fetch
+        async function fetchWithBackoff(url, options, retries = 5, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`Képalkotási hiba! státusz: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        }
+
+        async function generateNewChest() {
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                
+                const response = await fetchWithBackoff(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instances: [{ prompt: promptText }],
+                        parameters: { sampleCount: 1, aspect_ratio: "9:16" }
+                    })
+                });
+
+                if (response.predictions && response.predictions[0]) {
+                    const base64Data = response.predictions[0].bytesBase64Encoded;
+                    const imageUrl = `data:image/png;base64,${base64Data}`;
+                    
+                    // Kép előtöltése a villogásmentes betöltéshez
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.onload = () => {
+                        document.getElementById('chestFrame').style.backgroundImage = `url('${imageUrl}')`;
+                        document.getElementById('chestFrame').style.opacity = '1';
+                        if (isOpened) closeChest();
+                    };
+                } else {
+                    throw new Error("Sikertelen generálás");
+                }
+            } catch (error) {
+                console.error("Kép generálási hiba, marad az alapértelmezett háttér:", error);
+                document.getElementById('chestFrame').style.opacity = '1'; // API hiba esetén is láthatóvá tesszük az alapértelmezett hátteret
+            }
+        }
+
+        // --- 3. SZIMBÓLUMOK DETALIZÁLT VEKTOROS RAJZOLÁSA ---
+        const DRAW_FUNCTIONS = [
+            // 0: Polip (🐙)
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.arc(x, y - size*0.15, size*0.22, 0, Math.PI * 2);
+                ctx.moveTo(x - size*0.08, y - size*0.15);
+                ctx.arc(x - size*0.08, y - size*0.15, size*0.03, 0, Math.PI*2);
+                ctx.moveTo(x + size*0.08, y - size*0.15);
+                ctx.arc(x + size*0.08, y - size*0.15, size*0.03, 0, Math.PI*2);
+                
+                ctx.moveTo(x, y); ctx.bezierCurveTo(x - size*0.2, y + size*0.25, x - size*0.35, y + size*0.1, x - size*0.4, y - size*0.15);
+                ctx.moveTo(x, y); ctx.bezierCurveTo(x - size*0.15, y + size*0.3, x - size*0.3, y + size*0.35, x - size*0.3, y + size*0.5);
+                ctx.moveTo(x, y); ctx.bezierCurveTo(x, y + size*0.35, x, y + size*0.5, x, y + size*0.6);
+                ctx.moveTo(x, y); ctx.bezierCurveTo(x + size*0.15, y + size*0.3, x + size*0.3, y + size*0.35, x + size*0.3, y + size*0.5);
+                ctx.moveTo(x, y); ctx.bezierCurveTo(x + size*0.2, y + size*0.25, x + size*0.35, y + size*0.1, x + size*0.4, y - size*0.15);
+                ctx.stroke();
+            },
+            // 1: Mindent látó Szem (👁️)
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.moveTo(x, y - size*0.55); ctx.lineTo(x - size*0.5, y + size*0.35); ctx.lineTo(x + size*0.5, y + size*0.35); ctx.closePath();
+                ctx.moveTo(x, y - size*0.48); ctx.lineTo(x - size*0.43, y + size*0.3); ctx.lineTo(x + size*0.43, y + size*0.3); ctx.closePath();
+                ctx.moveTo(x - size*0.28, y + size*0.05);
+                ctx.quadraticCurveTo(x, y - size*0.2, x + size*0.28, y + size*0.05);
+                ctx.quadraticCurveTo(x, y + size*0.3, x - size*0.28, y + size*0.05);
+                ctx.moveTo(x + size*0.1, y + size*0.05);
+                ctx.arc(x, y + size*0.05, size*0.1, 0, Math.PI*2);
+                ctx.moveTo(x + size*0.04, y + size*0.05);
+                ctx.arc(x, y + size*0.05, size*0.04, 0, Math.PI*2);
+                ctx.moveTo(x, y - size*0.48); ctx.lineTo(x, y - size*0.28);
+                ctx.moveTo(x - size*0.35, y + size*0.22); ctx.lineTo(x - size*0.2, y + size*0.14);
+                ctx.moveTo(x + size*0.35, y + size*0.22); ctx.lineTo(x + size*0.2, y + size*0.14);
+                ctx.stroke();
+            },
+            // 2: Sárkány (🐉)
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.moveTo(x - size*0.08, y - size*0.4);
+                ctx.bezierCurveTo(x + size*0.2, y - size*0.5, x + size*0.3, y - size*0.2, x + size*0.08, y - size*0.05);
+                ctx.bezierCurveTo(x - size*0.2, y + size*0.1, x - size*0.3, y + size*0.4, x, y + size*0.45);
+                ctx.bezierCurveTo(x + size*0.2, y + size*0.5, x + size*0.3, y + size*0.2, x + size*0.15, y + size*0.15);
+                ctx.moveTo(x + size*0.08, y - size*0.15); ctx.bezierCurveTo(x + size*0.4, y - size*0.38, x + size*0.35, y + size*0.15, x + size*0.15, y + size*0.08);
+                ctx.moveTo(x + size*0.08, y - size*0.15); ctx.bezierCurveTo(x + size*0.45, y - size*0.55, x + size*0.5, y - size*0.15, x + size*0.18, y - size*0.04);
+                ctx.moveTo(x, y + size*0.45); ctx.lineTo(x - size*0.15, y + size*0.55); ctx.lineTo(x - size*0.08, y + size*0.6); ctx.lineTo(x + size*0.08, y + size*0.48);
+                ctx.moveTo(x - size*0.08, y - size*0.4); ctx.lineTo(x - size*0.22, y - size*0.38); ctx.lineTo(x - size*0.15, y - size*0.3);
+                ctx.stroke();
+            },
+            // 3: Kos
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.moveTo(x - size*0.15, y - size*0.22); ctx.lineTo(x + size*0.15, y - size*0.22);
+                ctx.lineTo(x + size*0.1, y + size*0.22); ctx.lineTo(x, y + size*0.4);
+                ctx.lineTo(x - size*0.1, y + size*0.22); ctx.closePath();
+                ctx.moveTo(x - size*0.15, y - size*0.22); ctx.bezierCurveTo(x - size*0.45, y - size*0.45, x - size*0.52, y + size*0.1, x - size*0.3, y + size*0.22);
+                ctx.bezierCurveTo(x - size*0.15, y + size*0.3, x - size*0.08, y + size*0.1, x - size*0.18, y - size*0.05);
+                ctx.moveTo(x + size*0.15, y - size*0.22); ctx.bezierCurveTo(x + size*0.45, y - size*0.45, x + size*0.52, y + size*0.1, x + size*0.3, y + size*0.22);
+                ctx.bezierCurveTo(x + size*0.15, y + size*0.3, x + size*0.08, y + size*0.1, x + size*0.18, y - size*0.05);
+                ctx.stroke();
+            },
+            // 4: Ankh
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.moveTo(x, y + size*0.08); ctx.bezierCurveTo(x - size*0.28, y + size*0.08, x - size*0.28, y - size*0.5, x, y - size*0.5);
+                ctx.bezierCurveTo(x + size*0.28, y - size*0.5, x + size*0.28, y + size*0.08, x, y + size*0.08);
+                ctx.moveTo(x - size*0.38, y + size*0.18); ctx.lineTo(x + size*0.38, y + size*0.18);
+                ctx.moveTo(x, y + size*0.08); ctx.lineTo(x, y + size*0.55);
+                ctx.stroke();
+            },
+            // 5: Triquetra
+            (ctx, x, y, size) => {
+                ctx.beginPath();
+                ctx.moveTo(x, y - size*0.35); ctx.quadraticCurveTo(x + size*0.35, y + size*0.2, x, y + size*0.42); ctx.quadraticCurveTo(x - size*0.35, y + size*0.2, x, y - size*0.35);
+                ctx.moveTo(x - size*0.3, y + size*0.18); ctx.quadraticCurveTo(x + size*0.3, y + size*0.18, x + size*0.15, y - size*0.25); ctx.quadraticCurveTo(x - size*0.2, y - size*0.2, x - size*0.3, y + size*0.18);
+                ctx.moveTo(x + size*0.3, y + size*0.18); ctx.quadraticCurveTo(x - size*0.3, y + size*0.18, x - size*0.15, y - size*0.25); ctx.quadraticCurveTo(x + size*0.2, y - size*0.2, x + size*0.3, y + size*0.18);
+                ctx.stroke();
+            }
+        ];
+
+        // --- 4. 3D HENGER AUTOMATIZÁLT GRAFIKÁJA ---
+        class CylinderDial {
+            constructor(canvasId, dialIndex) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.index = dialIndex;
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                this.targetAngle = currentCombo[dialIndex] * (Math.PI / 3);
+                this.currentAngle = this.targetAngle;
+                
+                this.isDragging = false;
+                this.startY = 0;
+                this.startAngle = 0;
+                this.initInteraction();
+            }
+
+            initInteraction() {
+                const start = (y) => {
+                    if (isOpened) return;
+                    initAudio();
+                    this.isDragging = true;
+                    this.startY = y;
+                    this.startAngle = this.targetAngle;
+                };
+
+                const move = (y) => {
+                    if (!this.isDragging) return;
+                    const deltaY = y - this.startY;
+                    this.targetAngle = this.startAngle + (deltaY * 0.02);
+                };
+
+                const end = () => {
+                    if (!this.isDragging) return;
+                    this.isDragging = false;
+                    const segment = Math.PI / 3;
+                    const targetIndex = Math.round(this.targetAngle / segment);
+                    this.targetAngle = targetIndex * segment;
+                    
+                    const normalizedIndex = ((targetIndex % 6) + 6) % 6;
+                    if (currentCombo[this.index] !== normalizedIndex) {
+                        currentCombo[this.index] = normalizedIndex;
+                        playClickSound();
+                        checkLock();
+                    }
+                };
+
+                this.canvas.addEventListener('mousedown', (e) => start(e.clientY));
+                window.addEventListener('mousemove', (e) => move(e.clientY));
+                window.addEventListener('mouseup', end);
+
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    start(e.touches[0].clientY);
+                }, {passive: false});
+                window.addEventListener('touchmove', (e) => {
+                    move(e.touches[0].clientY);
+                });
+                window.addEventListener('touchend', end);
+            }
+
+            update() {
+                this.currentAngle += (this.targetAngle - this.currentAngle) * 0.16;
+            }
+
+            draw() {
+                const ctx = this.ctx;
+                const W = this.width;
+                const H = this.height;
+                ctx.clearRect(0, 0, W, H);
+
+                // Antik sárgaréz textúra
+                const brassGlow = ctx.createLinearGradient(0, 0, 0, H);
+                brassGlow.addColorStop(0.0, '#090502');
+                brassGlow.addColorStop(0.2, '#33200d');
+                brassGlow.addColorStop(0.45, '#b58e4a');
+                brassGlow.addColorStop(0.5, '#fce08e');
+                brassGlow.addColorStop(0.55, '#b58e4a');
+                brassGlow.addColorStop(0.8, '#33200d');
+                brassGlow.addColorStop(1.0, '#090502');
+
+                ctx.fillStyle = brassGlow;
+                ctx.fillRect(0, 0, W, H);
+
+                // Szimbólumok elhelyezése hengergörbületen
+                for (let i = 0; i < 6; i++) {
+                    const symbolAngle = this.currentAngle - (i * Math.PI / 3);
+                    const normAngle = Math.atan2(Math.sin(symbolAngle), Math.cos(symbolAngle));
+
+                    if (normAngle > -Math.PI / 2 && normAngle < Math.PI / 2) {
+                        const cos = Math.cos(normAngle);
+                        const sin = Math.sin(normAngle);
+
+                        const yPos = (H / 2) + (sin * (H * 0.42));
+                        const sizeScale = cos;
+
+                        ctx.save();
+                        ctx.translate(W / 2, yPos);
+                        ctx.scale(1, sizeScale);
+
+                        // Sötét vésett él
+                        ctx.lineWidth = 6.0;
+                        ctx.strokeStyle = '#100a04';
+                        DRAW_FUNCTIONS[i](ctx, 0, 0, 56);
+
+                        // Fényes sárgaréz
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeStyle = '#ffeaa8';
+                        DRAW_FUNCTIONS[i](ctx, 1.2, 1.2, 56);
+
+                        ctx.restore();
+                    }
+                }
+
+                // Árnyékoló lefedés
+                const overlayShadow = ctx.createLinearGradient(0, 0, 0, H);
+                overlayShadow.addColorStop(0.0, 'rgba(0,0,0,0.85)');
+                overlayShadow.addColorStop(0.25, 'rgba(0,0,0,0.15)');
+                overlayShadow.addColorStop(0.5, 'rgba(255,255,255,0.03)');
+                overlayShadow.addColorStop(0.75, 'rgba(0,0,0,0.15)');
+                overlayShadow.addColorStop(1.0, 'rgba(0,0,0,0.92)');
+
+                ctx.fillStyle = overlayShadow;
+                ctx.fillRect(0, 0, W, H);
+
+                ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+                ctx.lineWidth = 1.5;
+                for (let j = 5; j < H; j += 8) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, j);
+                    ctx.lineTo(W, j);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // --- 5. TÁRCSAKAPCSOLÓK INDÍTÁSA ---
+        const dials = [];
+        function initDials() {
+            dials.push(new CylinderDial('dial0', 0));
+            dials.push(new CylinderDial('dial1', 1));
+            dials.push(new CylinderDial('dial2', 2));
+        }
+
+        window.rotateDial = function(dialIndex, direction) {
+            if (isOpened) return;
+            initAudio();
+            const dial = dials[dialIndex];
+            dial.targetAngle += direction * (Math.PI / 3);
+            
+            const targetIndex = Math.round(dial.targetAngle / (Math.PI / 3));
+            currentCombo[dialIndex] = ((targetIndex % 6) + 6) % 6;
+            
+            playClickSound();
+            checkLock();
+        }
+
+        // --- 6. HANGGENERÁTOR MOTOR (Web Audio API) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playClickSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            // Mély és nehéz fizikai kattanás
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(130, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + 0.08);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.08);
+
+            // Rugós rezgés kattanása
+            const clickOsc = audioCtx.createOscillator();
+            const clickGain = audioCtx.createGain();
+            clickOsc.connect(clickGain);
+            clickGain.connect(audioCtx.destination);
+            clickOsc.type = 'sine';
+            clickOsc.frequency.setValueAtTime(1400, now);
+            clickOsc.frequency.exponentialRampToValueAtTime(500, now + 0.025);
+            clickGain.gain.setValueAtTime(0.06, now);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+            clickOsc.start(now);
+            clickOsc.stop(now + 0.025);
+        }
+
+        function playUnlockSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            // Zárszerkezet morajló kioldása
+            const lowOsc = audioCtx.createOscillator();
+            const lowGain = audioCtx.createGain();
+            lowOsc.connect(lowGain);
+            lowGain.connect(audioCtx.destination);
+            lowOsc.type = 'sawtooth';
+            lowOsc.frequency.setValueAtTime(60, now);
+            lowOsc.frequency.linearRampToValueAtTime(25, now + 1.2);
+            lowGain.gain.setValueAtTime(0.35, now);
+            lowGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+            lowOsc.start(now);
+            lowOsc.stop(now + 1.2);
+
+            // Mágikus csengő hangok (C-dur arpeggio)
+            const freqs = [523.25, 659.25, 783.99, 1046.50];
+            freqs.forEach((freq, i) => {
+                const chime = audioCtx.createOscillator();
+                const chimeGain = audioCtx.createGain();
+                chime.connect(chimeGain);
+                chimeGain.connect(audioCtx.destination);
+                chime.type = 'sine';
+                chime.frequency.setValueAtTime(freq, now + i * 0.1);
+                chimeGain.gain.setValueAtTime(0.12, now + i * 0.1);
+                chimeGain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.5);
+                chime.start(now + i * 0.1);
+                chime.stop(now + i * 0.1 + 0.55);
+            });
+        }
+
+        // --- 7. NYITÁS / BEZÁRÁS KAPCSOLÓK ---
+        function checkLock() {
+            const success = currentCombo.every((val, idx) => val === CORRECT_COMBO[idx]);
+            if (success && !isOpened) {
+                openChest();
+            }
+        }
+
+        function openChest() {
+            isOpened = true;
+            playUnlockSound();
+
+            document.getElementById('parchment').classList.add('reveal');
+            document.getElementById('goldGlow').classList.add('active');
+            document.getElementById('lockMechanism').style.opacity = '0.3';
+            document.getElementById('chestFrame').style.filter = "brightness(0.85) contrast(1.1)";
+
+            triggerParticles = true;
+        }
+
+        window.closeChest = function() {
+            if (!isOpened) return;
+            isOpened = false;
+            playClickSound();
+
+            document.getElementById('parchment').classList.remove('reveal');
+            document.getElementById('goldGlow').classList.remove('active');
+            document.getElementById('lockMechanism').style.opacity = '1';
+            document.getElementById('chestFrame').style.filter = "none";
+
+            triggerParticles = false;
+
+            // Tárcsák automata összekeverése bezáráskor
+            setTimeout(scrambleDials, 600);
+        }
+
+        function scrambleDials() {
+            for (let i = 0; i < 3; i++) {
+                let randomVal;
+                do {
+                    randomVal = Math.floor(Math.random() * 6);
+                } while (randomVal === CORRECT_COMBO[i]);
+                
+                currentCombo[i] = randomVal;
+                dials[i].targetAngle = randomVal * (Math.PI / 3);
+            }
+        }
+
+        // --- 8. ARANY CSZILLÁM GENERÁTOR ---
+        const sparkCanvas = document.getElementById('sparkCanvas');
+        const sCtx = sparkCanvas.getContext('2d');
+        let particles = [];
+        let triggerParticles = false;
+
+        function resizeSparkCanvas() {
+            sparkCanvas.width = window.innerWidth;
+            sparkCanvas.height = window.innerHeight;
+        }
+
+        class Spark {
+            constructor() {
+                const chestRect = document.getElementById('chestFrame').getBoundingClientRect();
+                this.x = chestRect.left + (chestRect.width * 0.22) + (Math.random() * (chestRect.width * 0.56));
+                this.y = chestRect.top + (chestRect.height * 0.35);
+                this.vx = Math.random() * 2.2 - 1.1;
+                this.vy = -(Math.random() * 2.5 + 1.5);
+                this.size = Math.random() * 2.5 + 1;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.012 + 0.008;
+                this.color = `hsl(${Math.random() * 15 + 38}, 100%, ${Math.random() * 20 + 60}%)`;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.015; // Gravitáció
+                this.life -= this.decay;
+            }
+
+            draw() {
+                sCtx.save();
+                sCtx.globalAlpha = this.life;
+                sCtx.shadowBlur = 6;
+                sCtx.shadowColor = '#fdc232';
+                sCtx.fillStyle = this.color;
+                sCtx.beginPath();
+                sCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                sCtx.fill();
+                sCtx.restore();
+            }
+        }
+
+        function handleParticles() {
+            sCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
+            
+            if (triggerParticles && Math.random() < 0.28) {
+                particles.push(new Spark());
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    p.draw();
+                }
+            }
+        }
+
+        // --- 9. RENDER CIKLUS ---
+        function animate() {
+            dials.forEach(dial => {
+                dial.update();
+                dial.draw();
+            });
+            handleParticles();
+            requestAnimationFrame(animate);
+        }
+
+        // --- PROGRAM INDÍTÁSA ---
+        window.onload = () => {
+            initDials();
+            resizeSparkCanvas();
+            window.addEventListener('resize', resizeSparkCanvas);
+            
+            // Első kincsesláda legenerálása az Imagen 4.0-val
+            generateNewChest();
+            
+            animate();
+        };
+    </script>
+</body>
+</html>
