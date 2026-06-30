@@ -1557,4 +1557,453 @@
                 }; 
                 bc.appendChild(sb);
             } else if (p.pageType === 'qr') { bc.innerHTML += `<button class="p-action-btn" onclick="window.pStartQR()">SCAN QR</button>`; } 
-            else if (p.pageType === 'ar') { bc.innerHTML += `<button
+            else if (p.pageType === 'ar') { bc.innerHTML += `<button class="p-action-btn bg-blue-600" onclick="window.pStartAR()"><i class="fas fa-camera mr-2"></i> START AR CAMERA</button>`; } 
+            else if (p.pageType === 'ar_mindar') { bc.innerHTML += `<button class="p-action-btn bg-indigo-600" onclick="window.pStartMindAR('${p.arMarkerUrl}', '${p.arOverlayUrl}')"><i class="fas fa-vr-cardboard mr-2"></i> START AR RECOGNITION</button>`; } 
+            else if (p.pageType === 'pinpad') { setTimeout(() => window.pStartPinpad(p.pinpadCode || "618", p.pinpadSecret || "SOLVED!"), 50); } 
+            else if (p.pageType === 'puzzle') { setTimeout(() => window.pStartPuzzle(parseInt(p.puzzleSize || "3"), p.puzzleImage || "", p.puzzleSecret || "SOLVED!"), 50); } 
+            else if (p.pageType === 'choice' && p.choices) {
+                p.choices.forEach(c => { if(c.req && !pInventory.some(i => i.name.trim().toLowerCase() === c.req.trim().toLowerCase())) return; const b = document.createElement('button'); b.className = "p-action-btn"; b.textContent = c.text; b.onclick = () => { pSimIdx = window.getPageIdxById(c.targetId) ?? pSimIdx; window.pUpdateUI(); }; bc.appendChild(b); });
+            }
+
+            const nr = document.createElement('div'); 
+            nr.className = "p-nav-row";
+            
+            const bB = document.createElement('button'); 
+            bB.className = "p-action-btn btn-secondary"; 
+            bB.textContent = "Back";
+            bB.onclick = () => { 
+                pSimIdx = window.getPageIdxById(p.prevPageId) ?? Math.max(0, pSimIdx - 1); 
+                window.pUpdateUI(); 
+            };
+            nr.appendChild(bB);
+
+            if (!['password','choice','qr','gps','pinpad','puzzle','ar_mindar'].includes(p.pageType)) {
+                const bN = document.createElement('button'); 
+                bN.className = "p-action-btn"; 
+                bN.textContent = "Next"; 
+                bN.onclick = () => { 
+                    if (p.externalUrl) window.open(p.externalUrl, '_blank'); 
+                    pSimIdx = window.getPageIdxById(p.nextPageId) ?? pSimIdx + 1; 
+                    window.pUpdateUI(); 
+                }; 
+                nr.appendChild(bN);
+            }
+            bc.appendChild(nr); 
+            
+            updateGpsDisplays();
+        };
+
+        window.pTriggerExitConfirm = () => window.openConfirmModal("Exit Game", "Are you sure you want to quit?", "right-from-bracket", window.togglePlayerMode);
+        window.openHintModal = () => {
+            const hints = window.config.storyPages[pSimIdx].hints?.split('\n').filter(h => h.trim() !== ""); if (!hints || !hints.length) return;
+            document.getElementById('hint-confirm-view').classList.remove('hidden'); document.getElementById('hint-display-view').classList.add('hidden'); document.getElementById('hint-modal').style.display = 'flex';
+            document.getElementById('hint-show-btn').onclick = () => { document.getElementById('hint-confirm-view').classList.add('hidden'); document.getElementById('hint-display-view').classList.remove('hidden'); document.getElementById('hint-text').innerHTML = hints[pHintIdx % hints.length]; pHintIdx++; };
+        };
+        window.closeHintModal = () => document.getElementById('hint-modal').style.display = 'none';
+
+        window.pOpenZoom = (url) => { document.getElementById('p-zoomed-img').src = url; zoomScale = 1; zoomPosX = 0; zoomPosY = 0; document.getElementById('p-zoomed-img').style.transform = `translate(0px, 0px) scale(1)`; document.getElementById('p-image-zoom').style.display = 'flex'; };
+        window.pCloseZoom = () => document.getElementById('p-image-zoom').style.display = 'none';
+        
+        const setupPinchZoom = () => {
+            const el = document.getElementById('p-zoomed-img');
+            el.addEventListener('touchstart', e => { if (e.touches.length === 2) { isZooming = true; startDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); } else if (e.touches.length === 1) { isZooming = false; startX = e.touches[0].pageX - zoomPosX; startY = e.touches[0].pageY - zoomPosY; } });
+            el.addEventListener('touchmove', e => { e.preventDefault(); if (e.touches.length === 2 && isZooming) { const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); zoomScale = Math.min(Math.max(1, zoomScale * (dist / startDist)), 5); startDist = dist; } else if (e.touches.length === 1 && !isZooming) { zoomPosX = e.touches[0].pageX - startX; zoomPosY = e.touches[0].pageY - startY; } el.style.transform = `translate(${zoomPosX}px, ${zoomPosY}px) scale(${zoomScale})`; }, { passive: false });
+            el.addEventListener('touchend', () => isZooming = false);
+        };
+
+        window.pToggleInventory = () => { const inv = document.getElementById('p-inventory-overlay'); inv.style.display = inv.style.display === 'block' ? 'none' : 'block'; if(inv.style.display === 'block') window.pRenderInventory(); };
+        window.pOpenMap = () => { window.pMapSeen = true; window.pUpdateBadge(); if (window.pActiveTarget && !isNaN(window.pActiveTarget.lat)) { document.getElementById('p-internal-map-screen').classList.remove('hidden'); window.initPlayerInternalMap(window.pActiveTarget.lat, window.pActiveTarget.lng); } else if (window.pActiveFallbackUrl) { window.open(window.pActiveFallbackUrl, '_blank'); } };
+        window.pUpdateBadge = () => { const hiddenItems = window.config.storyPages[pSimIdx]?.hiddenItems ||[]; const unread = pInventory.filter(i => !i.seen && !hiddenItems.some(h => h.trim().toLowerCase() === i.name.trim().toLowerCase())).length; document.getElementById('p-inv-badge').textContent = unread; document.getElementById('p-inv-badge').classList.toggle('hidden', unread === 0); document.getElementById('p-map-badge').classList.toggle('hidden', window.pMapSeen); };
+        window.pRenderInventory = () => {
+            const hiddenItems = window.config.storyPages[pSimIdx]?.hiddenItems ||[], list = document.getElementById('p-item-list'); list.innerHTML = '';
+            pInventory.forEach(item => {
+                if (hiddenItems.some(h => h.trim().toLowerCase() === item.name.trim().toLowerCase())) return;
+                const card = document.createElement('div'); card.className = 'p-item-card'; card.onclick = () => { item.seen = true; window.pUpdateBadge(); window.pRenderInventory(); };
+                if (item.url) { const img = document.createElement('img'); img.src = item.url; img.onclick = (e) => { e.stopPropagation(); item.seen = true; window.pUpdateBadge(); window.pOpenZoom(item.url); window.pRenderInventory(); }; card.appendChild(img); } 
+                else { card.innerHTML += `<div class="text-4xl text-left">${item.icon}</div><div class="text-[9px] mt-2 text-slate-400 font-bold uppercase">${item.name}</div>`; }
+                list.appendChild(card);
+            });
+        };
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
+            const R = 6371e3; const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180; const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
+        }
+        
+        if ("geolocation" in navigator) navigator.geolocation.watchPosition((pos) => { 
+            userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }; 
+            updateGpsDisplays(); 
+        }, null, { enableHighAccuracy: true });
+        
+        function updateGpsDisplays() {
+            if (!userPos) return;
+            window.updateUserMapMarker(); 
+            window.updatePlayerMapUserMarker();
+            
+            const simP = window.config.storyPages[window.currentIdx]; 
+            if (simP && simP.pageType === 'gps' && document.getElementById('sim-distance-val')) {
+                document.getElementById('sim-distance-val').textContent = getDistance(userPos.lat, userPos.lng, simP.targetLat, simP.targetLng);
+            }
+            const pP = window.config.storyPages[pSimIdx]; 
+            if (pP && pP.pageType === 'gps') {
+                const dist = getDistance(userPos.lat, userPos.lng, pP.targetLat, pP.targetLng); 
+                if (document.getElementById('p-distance-val')) document.getElementById('p-distance-val').textContent = dist;
+                
+                if (dist <= 20 && lastAutoGpsIdx !== pSimIdx) { 
+                    lastAutoGpsIdx = pSimIdx; 
+                    setTimeout(() => { 
+                        pSimIdx = window.getPageIdxById(pP.nextPageId) ?? pSimIdx + 1; 
+                        window.pUpdateUI(); 
+                    }, 1200); 
+                }
+            }
+        }
+
+        window.pStartPinpad = (correctCode, secretText) => {
+            document.getElementById('p-pinpad-screen').classList.remove('hidden'); document.getElementById('ui-overlay-pinpad').classList.add('hidden'); document.getElementById('paper-note').classList.add('hidden');
+            const pt = document.getElementById('paper-text'); pt.style.fontFamily = "'Brush Script MT', 'Comic Sans MS', cursive"; pt.style.fontSize = "32px"; pt.style.color = "#1a1a1a"; pt.style.textAlign = "center"; pt.style.userSelect = "none";
+            const closeBtn = document.getElementById('p-pinpad-close-btn'); if (closeBtn) closeBtn.classList.remove('hidden');
+            document.getElementById('pinpad-container').innerHTML = '';
+            
+            const codeStr = correctCode || "618"; const codeLen = codeStr.length;
+            let ppButtons = [], ppCurrentInput = "", ppAttempts = 0, ppIsProcessing = false, ppDisplaySlots = [], ppDigitTextures = {}, ppEmptyTexture = null, ppStatusLight = null;
+            let ppLastTapTime = 0; ppIsFullscreenTriggered = false;
+
+            ppScene = new THREE.Scene(); ppScene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            const pLight = new THREE.PointLight(0xffffff, 0.8); pLight.position.set(5, 5, 10); ppScene.add(pLight);
+            const dLight = new THREE.DirectionalLight(0xffffff, 0.5); dLight.position.set(-5, 5, 8); ppScene.add(dLight);
+
+            ppCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            ppRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); ppRenderer.setSize(window.innerWidth, window.innerHeight); ppRenderer.setPixelRatio(window.devicePixelRatio); document.getElementById('pinpad-container').appendChild(ppRenderer.domElement);
+
+            const updateCam = () => { if(!ppCamera || !ppRenderer) return; ppCamera.aspect = window.innerWidth / window.innerHeight; ppCamera.updateProjectionMatrix(); ppRenderer.setSize(window.innerWidth, window.innerHeight); ppCamera.position.set(0, 0, Math.max(10.5 / (2 * Math.tan(THREE.MathUtils.degToRad(22.5))), 7.5 / (2 * ppCamera.aspect * Math.tan(THREE.MathUtils.degToRad(22.5))))); };
+            window.pPinpadResizeHandler = updateCam; window.addEventListener('resize', updateCam); updateCam();
+
+            ppRaycaster = new THREE.Raycaster(); ppMouse = new THREE.Vector2();
+
+            const createTex = (t, c='#0f0', bg='#111') => { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; const ctx = cv.getContext('2d'); ctx.fillStyle = bg; ctx.fillRect(0,0,128,128); if(t!==null){ctx.fillStyle=c; ctx.font='bold 90px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(t,64,64);} return new THREE.CanvasTexture(cv); };
+            ppEmptyTexture = createTex(null); for(let i=1; i<=9; i++) ppDigitTextures[i] = createTex(i);
+            
+            ppPinpadGroup = new THREE.Group();
+            ppPinpadGroup.add(new THREE.Mesh(new THREE.BoxGeometry(6, 9, 1), new THREE.MeshPhongMaterial({ color: 0x222222, shininess: 80 })));
+            const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 1.5), new THREE.MeshPhongMaterial({ color: 0x111111 })); screenMesh.position.set(0, 3.2, 0.51); ppPinpadGroup.add(screenMesh);
+            ppStatusLight = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), new THREE.MeshBasicMaterial({ color: 0x333333 })); ppStatusLight.position.set(1.9, 3.2, 0.55); ppPinpadGroup.add(ppStatusLight);
+
+            const spacing = Math.min(1.0, 3.8 / codeLen), startX = -((codeLen - 1) * spacing) / 2;
+            for(let i=0; i<codeLen; i++) { const slot = new THREE.Mesh(new THREE.PlaneGeometry(spacing*0.8, spacing*1.0), new THREE.MeshBasicMaterial({ map: ppEmptyTexture, transparent: true })); slot.position.set(startX + (i * spacing), 3.2, 0.52); ppPinpadGroup.add(slot); ppDisplaySlots.push(slot); }
+
+            for (let i = 1; i <= 9; i++) {
+                const btnGrp = new THREE.Group(), btnMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 0.8), [new THREE.MeshPhongMaterial({color:0x555}), new THREE.MeshPhongMaterial({color:0x555}), new THREE.MeshPhongMaterial({color:0x555}), new THREE.MeshPhongMaterial({color:0x333}), new THREE.MeshPhongMaterial({map:createTex(i,'#000','#eee')}), new THREE.MeshPhongMaterial({color:0x444})]);
+                btnMesh.userData = { id: i }; btnGrp.position.set(-1.6 + ((i-1)%3 * 1.6), 1.2 - (Math.floor((i-1)/3) * 1.6), 0.7); btnGrp.add(btnMesh); ppPinpadGroup.add(btnGrp); ppButtons.push(btnMesh);
+            }
+            ppScene.add(ppPinpadGroup);
+
+            const valCode = () => {
+                if (ppCurrentInput === codeStr) {
+                    ppStatusLight.material.color.setHex(0x00ff00); ppRenderer.domElement.style.opacity = '0';
+                    setTimeout(() => { ppRenderer.domElement.style.display = 'none'; document.getElementById('ui-overlay-pinpad').classList.remove('hidden'); document.getElementById('paper-note').classList.remove('hidden'); pt.innerHTML = secretText.replace(/\n/g, '<br>'); if (closeBtn) closeBtn.classList.add('hidden'); }, 100);
+                } else {
+                    ppAttempts++; ppStatusLight.material.color.setHex(0xff0000); const sPos = ppPinpadGroup.position.x; let shk = 0;
+                    const shkInt = setInterval(() => { ppPinpadGroup.position.x = sPos + (Math.random()-0.5)*0.3; shk++; if(shk>10) { clearInterval(shkInt); ppPinpadGroup.position.x = sPos; ppCurrentInput = ""; ppDisplaySlots.forEach((s, idx) => { s.material.map = ppEmptyTexture; }); ppStatusLight.material.color.setHex(0x333333); ppIsProcessing = false; } }, 30);
+                }
+            };
+
+            const onDown = (e) => {
+                if(ppIsProcessing) return; const now = Date.now(); if (now - ppLastTapTime < 150) return; ppLastTapTime = now;
+                if (!ppIsFullscreenTriggered) { const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullScreen; if (req) req.call(document.documentElement).catch(()=>{}); ppIsFullscreenTriggered = true; }
+                const rect = ppRenderer.domElement.getBoundingClientRect(); const cX = e.touches ? e.touches[0].clientX : e.clientX, cY = e.touches ? e.touches[0].clientY : e.clientY;
+                ppMouse.x = ((cX - rect.left) / rect.width) * 2 - 1; ppMouse.y = -((cY - rect.top) / rect.height) * 2 + 1; ppRaycaster.setFromCamera(ppMouse, ppCamera);
+                const ints = ppRaycaster.intersectObjects(ppButtons);
+                if (ints.length > 0) {
+                    const btn = ints[0].object; btn.position.z = -0.4; setTimeout(() => btn.position.z = 0, 100);
+                    if (ppCurrentInput.length < codeLen) { ppCurrentInput += btn.userData.id; ppDisplaySlots.forEach((s, idx) => s.material.map = (idx < ppCurrentInput.length) ? ppDigitTextures[ppCurrentInput[idx]] : ppEmptyTexture); if (ppCurrentInput.length === codeLen) { ppIsProcessing = true; setTimeout(valCode, 200); } }
+                }
+            };
+            const onMove = (e) => {
+                if(ppIsProcessing || !ppPinpadGroup) return; const rect = ppRenderer.domElement.getBoundingClientRect(); const cX = e.touches ? e.touches[0].clientX : e.clientX, cY = e.touches ? e.touches[0].clientY : e.clientY;
+                ppPinpadGroup.rotation.y = THREE.MathUtils.lerp(ppPinpadGroup.rotation.y, (((cX - rect.left) / rect.width) * 2 - 1) * 0.15, 0.1); ppPinpadGroup.rotation.x = THREE.MathUtils.lerp(ppPinpadGroup.rotation.x, -((-(cY - rect.top) / rect.height) * 2 + 1) * 0.15, 0.1);
+            };
+            ppRenderer.domElement.addEventListener('pointerdown', onDown); ppRenderer.domElement.addEventListener('pointermove', onMove); ppRenderer.domElement.addEventListener('touchstart', onDown, {passive: true}); ppRenderer.domElement.addEventListener('touchmove', onMove, {passive: true});
+            const animate = () => { ppReqId = requestAnimationFrame(animate); ppRenderer.render(ppScene, ppCamera); }; animate();
+        };
+
+        window.pStopPinpad = () => { if(ppReqId) cancelAnimationFrame(ppReqId); if(window.pPinpadResizeHandler) window.removeEventListener('resize', window.pPinpadResizeHandler); document.getElementById('p-pinpad-screen').classList.add('hidden'); document.getElementById('ui-overlay-pinpad').classList.add('hidden'); document.getElementById('pinpad-container').innerHTML = ''; ppRenderer = null; ppScene = null; ppCamera = null; ppPinpadGroup = null; };
+        window.pCancelPinpad = () => { window.pStopPinpad(); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].prevPageId) ?? Math.max(0, pSimIdx - 1); window.pUpdateUI(); };
+        window.pPinpadSolved = () => { window.pStopPinpad(); window.awardPoints(5, window.config.storyPages[pSimIdx].id); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); };
+
+        window.pStartPuzzle = (size, imgUrl, secretText) => {
+            document.getElementById('p-puzzle-screen').classList.remove('hidden'); document.getElementById('p-puzzle-close-btn').classList.remove('hidden'); document.getElementById('ui-overlay-puzzle').classList.add('hidden'); document.getElementById('puzzle-paper-note').classList.add('hidden'); document.getElementById('p-puzzle-container').innerHTML = '';
+            const puzBoard = document.createElement('div'); puzBoard.className = "grid gap-1 bg-slate-800 p-1.5 rounded-xl border-2 border-primary shadow-2xl transition-all duration-500 mx-auto"; puzBoard.style.gridTemplateColumns = `repeat(${size}, 1fr)`; puzBoard.style.width = "100%"; puzBoard.style.aspectRatio = "1/1"; document.getElementById('p-puzzle-container').appendChild(puzBoard);
+            const totalTiles = size * size; let tiles = Array.from({length: totalTiles}, (_, i) => i);
+            for (let i = tiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
+            if(tiles.every((val, i) => val === i)) [tiles[0], tiles[1]] = [tiles[1], tiles[0]];
+            let selectedIdx = null;
+
+            const renderPuzzle = () => {
+                puzBoard.innerHTML = ''; let isSolved = true;
+                for(let i=0; i<totalTiles; i++) {
+                    if(tiles[i] !== i) isSolved = false; const tile = document.createElement('div');
+                    tile.className = `bg-slate-700 rounded cursor-pointer bg-cover bg-no-repeat transition-all box-border ${selectedIdx === i ? 'border-[3px] border-cyan-400 scale-[0.92] opacity-80 shadow-lg' : 'border-2 border-transparent active:scale-[0.95]'}`;
+                    tile.style.backgroundImage = `url(${imgUrl})`; tile.style.backgroundSize = `${size * 100}% ${size * 100}%`; tile.style.backgroundPosition = `${size > 1 ? ((tiles[i] % size) / (size - 1)) * 100 : 0}% ${size > 1 ? (Math.floor(tiles[i] / size) / (size - 1)) * 100 : 0}%`;
+                    tile.onclick = () => { if (selectedIdx === null) selectedIdx = i; else if (selectedIdx === i) selectedIdx = null; else { [tiles[i], tiles[selectedIdx]] = [tiles[selectedIdx], tiles[i]]; selectedIdx = null; } renderPuzzle(); }; puzBoard.appendChild(tile);
+                }
+                if(isSolved) {
+                    puzBoard.style.pointerEvents = 'none'; puzBoard.style.gap = '0px'; puzBoard.style.padding = '0px'; puzBoard.classList.remove('bg-slate-800', 'border-2', 'border-primary');
+                    Array.from(puzBoard.children).forEach(c => { c.classList.remove('rounded', 'border-2', 'border-transparent', 'active:scale-[0.95]'); c.style.borderRadius = '0px'; });
+                    document.getElementById('p-puzzle-close-btn').classList.add('hidden');
+                    setTimeout(() => {
+                        puzBoard.style.pointerEvents = 'auto'; puzBoard.onclick = () => { document.getElementById('ui-overlay-puzzle').classList.remove('hidden'); document.getElementById('puzzle-paper-note').classList.remove('hidden'); document.getElementById('puzzle-paper-note').classList.add('paper-reveal'); document.getElementById('puzzle-paper-text').innerHTML = (secretText || "SOLVED!").replace(/\n/g, '<br>'); };
+                        const hintText = document.createElement('div'); hintText.className = "absolute -bottom-10 left-0 w-full text-center text-cyan-400 text-sm font-bold uppercase tracking-widest animate-pulse"; hintText.innerText = "Tap image to continue!"; document.getElementById('p-puzzle-container').appendChild(hintText);
+                    }, 500);
+                }
+            };
+            renderPuzzle();
+        };
+
+        window.pCancelPuzzle = () => { document.getElementById('p-puzzle-screen').classList.add('hidden'); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].prevPageId) ?? Math.max(0, pSimIdx - 1); window.pUpdateUI(); };
+        window.pPuzzleDone = () => { document.getElementById('p-puzzle-screen').classList.add('hidden'); window.awardPoints(5, window.config.storyPages[pSimIdx].id); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); };
+
+        window.pStartAR = async () => {
+            document.getElementById('p-ar-screen').classList.remove('hidden'); const selector = document.getElementById('ar-item-selector'); selector.innerHTML = '';
+            const visibleInv = pInventory.filter(i => !(window.config.storyPages[pSimIdx]?.hiddenItems || []).some(h => h.trim().toLowerCase() === i.name.trim().toLowerCase()));
+            if (visibleInv.length === 0) selector.innerHTML = '<span class="text-white text-xs p-2 uppercase tracking-widest font-bold">You have no items.</span>';
+            else visibleInv.forEach(item => { const btn = document.createElement('button'); btn.className = 'w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center shrink-0 border border-white/30 transition-all'; btn.innerHTML = item.url ? `<img src="${item.url}" class="w-8 h-8 object-contain pointer-events-none">` : `<span class="text-2xl pointer-events-none">${item.icon}</span>`; btn.onclick = () => { document.getElementById('ar-virtual-object').style.display = 'block'; document.getElementById('ar-object-content').innerHTML = item.url ? `<img src="${item.url}" class="w-full h-full object-contain pointer-events-none">` : `<span class="w-full h-full flex items-center justify-center pointer-events-none" style="font-size: ${document.getElementById('ar-size-slider').value * 0.7}px">${item.icon}</span>`; }; selector.appendChild(btn); });
+            try {
+                arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } }, audio: false });
+                document.getElementById('ar-camera-feed').srcObject = arStream;
+                document.getElementById('ar-virtual-object').style.transform = `translate(calc(-50% + ${window.innerWidth/2}px), calc(-50% + ${window.innerHeight/2}px))`; document.getElementById('ar-virtual-object').style.display = 'none'; 
+            } catch(e) { window.showToast("Camera error"); window.pStopAR(); }
+        };
+        window.pStopAR = () => { if (arStream) arStream.getTracks().forEach(t => t.stop()); arStream = null; document.getElementById('p-ar-screen').classList.add('hidden'); };
+
+        window.pStartMindAR = async (markerUrl, overlayUrl) => {
+            if (!markerUrl || !overlayUrl) { window.showToast("Missing target or overlay image"); return; }
+            const scr = document.getElementById('p-mindar-screen'), lUi = document.getElementById('mindar-loading-ui'), lInd = document.getElementById('mindar-loading-indicator'), sBtn = document.getElementById('mindar-start-btn'), sMsg = document.getElementById('mindar-status-msg'), sil = document.getElementById('mindar-target-silhouette'), arC = document.getElementById('ar-render-container'), hud = document.getElementById('mindar-hud'), scan = document.getElementById('mindar-scanner-ui'), ht = document.getElementById('mindar-hud-text'), sb = document.getElementById('mindar-scanner-box');
+            if(sb) sb.style.opacity = '1'; if(ht) { ht.innerText = "Initializing camera..."; ht.className = "bg-slate-900/80 backdrop-blur-lg text-white px-6 py-3 rounded-2xl border border-white/10 text-sm font-bold shadow-2xl"; }
+            scr.classList.remove('hidden'); lUi.classList.remove('hidden'); lInd.classList.remove('hidden'); sBtn.classList.add('hidden'); hud.classList.add('hidden'); scan.classList.add('hidden'); sMsg.innerText = "Optimizing images...";
+            if (mindArState.mindFileUrl) URL.revokeObjectURL(mindArState.mindFileUrl);
+
+            try {
+                const ovlImg = new Image(); ovlImg.crossOrigin = "anonymous"; await new Promise((res, rej) => { ovlImg.onload = res; ovlImg.onerror = rej; ovlImg.src = overlayUrl; });
+                const aspect = ovlImg.width / ovlImg.height; if (aspect > 1) { mindArState.overlayWidth = 1.2; mindArState.overlayHeight = 1.2 / aspect; } else { mindArState.overlayHeight = 1.2; mindArState.overlayWidth = 1.2 * aspect; }
+                const mImg = new Image(); mImg.crossOrigin = "anonymous"; await new Promise((res, rej) => { mImg.onload = res; mImg.onerror = rej; mImg.src = markerUrl; });
+                const canvas = document.createElement('canvas'); let w = mImg.width, h = mImg.height; if (w > 800 || h > 800) { if (w > h) { h = Math.round(h * 800 / w); w = 800; } else { w = Math.round(w * 800 / h); h = 800; } } canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(mImg, 0, 0, w, h);
+                const optDataUrl = canvas.toDataURL('image/jpeg', 0.8); sil.src = optDataUrl;
+
+                if (!window.MINDAR?.IMAGE?.Compiler) throw new Error("AR engine failed");
+                const compiler = new window.MINDAR.IMAGE.Compiler(), compImg = new Image(); compImg.src = optDataUrl; await new Promise(r => compImg.onload = r);
+                await compiler.compileImageTargets([compImg], (p) => sMsg.innerText = `Building AI Model: ${Math.round(p)}%`);
+                mindArState.mindFileUrl = URL.createObjectURL(new Blob([await compiler.exportData()])); lInd.classList.add('hidden');
+
+                lUi.classList.add('hidden'); hud.classList.remove('hidden'); scan.classList.remove('hidden'); arC.style.display = 'block';
+                arC.innerHTML = `<a-scene mindar-image="imageTargetSrc: ${mindArState.mindFileUrl}; autoStart: true; uiLoading: no; uiScanning: no;" embedded color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false" cursor="rayOrigin: mouse;" raycaster="objects: .clickable"><a-assets><img id="ovl" src="${overlayUrl}" crossorigin="anonymous"></a-assets><a-camera position="0 0 0" look-controls="enabled: false"></a-camera><a-entity mindar-image-target="targetIndex: 0" id="mindar-target"><a-image id="mindar-overlay-img" class="clickable" src="#ovl" width="${mindArState.overlayWidth}" height="${mindArState.overlayHeight}" animation__float="property: position; from: 0 0 0; to: 0 0.1 0.1; dir: alternate; loop: true; dur: 2000;"></a-image></a-entity></a-scene>`;
+
+                setTimeout(() => {
+                    const aCanvas = arC.querySelector('.a-canvas');
+                    if (aCanvas) aCanvas.classList.add('mindar-canvas');
+                    const video = arC.querySelector('video');
+                    if (video) video.classList.add('mindar-video');
+                }, 500);
+
+                const camOverlay = document.getElementById('mindar-camera-overlay');
+                arC.dataset.camInt = setInterval(() => {
+                    const v = document.querySelector('.mindar-video'); if (!arC.innerHTML) { clearInterval(arC.dataset.camInt); return; }
+                    if (v && (v.paused || v.ended)) { v.setAttribute('playsinline', ''); v.setAttribute('autoplay', ''); v.muted = true; const p = v.play(); if (p) p.then(() => camOverlay.classList.add('hidden')).catch(() => { camOverlay.classList.remove('hidden'); document.getElementById('mindar-resume-btn').onclick = () => { v.play(); camOverlay.classList.add('hidden'); }; }); else { camOverlay.classList.remove('hidden'); document.getElementById('mindar-resume-btn').onclick = () => { v.play(); camOverlay.classList.add('hidden'); }; } } else if (v && !v.paused) camOverlay.classList.add('hidden');
+                }, 500);
+
+                setTimeout(() => {
+                    const t = document.getElementById('mindar-target'); if(!t) return;
+                    t.addEventListener('targetFound', () => { ht.innerText = "Target found! Tap the object!"; ht.className = "bg-emerald-500 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl"; sb.style.opacity = '0'; });
+                    t.addEventListener('targetLost', () => { ht.innerText = "Scanning..."; ht.className = "bg-slate-900/80 backdrop-blur text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl"; sb.style.opacity = '1'; });
+                    const imgEl = document.getElementById('mindar-overlay-img');
+                    if(imgEl) {
+                        const handleCollect = () => {
+                            if(sb.style.opacity !== '0' || imgEl.dataset.collected === "true") return;
+                            imgEl.dataset.collected = "true"; ht.innerText = "Collected!"; ht.className = "bg-purple-600 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl scale-110";
+                            const pg = window.config.storyPages[pSimIdx];
+                            if (pg && pg.rewards) pg.rewards.forEach(r => { if(r.name && !pInventory.some(i => i.name === r.name)) pInventory.push({...r, seen: false}); });
+                            window.pUpdateBadge(); window.savePlayerProgress();
+                            setTimeout(() => { window.pStopMindAR(); window.awardPoints(10, pg.id); pSimIdx = window.getPageIdxById(pg.nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); }, 1500);
+                        };
+                        imgEl.addEventListener('click', handleCollect); imgEl.addEventListener('touchstart', handleCollect, {passive: true});
+                    }
+                }, 1000);
+            } catch(e) { window.showToast("AR Error"); window.pStopMindAR(); }
+        };
+
+        window.pStopMindAR = () => {
+            const arC = document.getElementById('ar-render-container'); if(arC.dataset.camInt) clearInterval(arC.dataset.camInt);
+            const scene = document.querySelector('a-scene'); if(scene && scene.systems && scene.systems.mindarimage) scene.systems.mindarimage.stop();
+            arC.innerHTML = ''; arC.style.display = 'none'; document.getElementById('p-mindar-screen').classList.add('hidden');
+            const v = document.querySelector('.mindar-video'); if (v) v.remove();
+        };
+
+        window.pStartQR = () => { document.getElementById('p-qr-layer').classList.remove('hidden'); pQrScanner = new window.Html5Qrcode("p-qr-reader"); pQrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (text) => { const req = (window.config.storyPages[pSimIdx].qrCode || "").trim().toLowerCase(); if(req === "" || text.trim().toLowerCase() === req) { window.awardPoints(5, window.config.storyPages[pSimIdx].id); window.pStopQR(); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); } else window.showToast("INVALID QR CODE!"); }, undefined).catch(() => window.showToast("Camera error")); };
+        window.pStopQR = () => { if(pQrScanner) { pQrScanner.stop().catch(()=>{}); pQrScanner = null; } document.getElementById('p-qr-layer').classList.add('hidden'); };
+
+        window.pEndCall = () => { pStopAllAudio(); document.getElementById('p-call-screen').classList.add('hidden'); if(pCallTimerInterval) clearInterval(pCallTimerInterval); window.awardPoints(5, window.config.storyPages[pSimIdx].id); pSimIdx = window.getPageIdxById(window.config.storyPages[pSimIdx].nextPageId) ?? pSimIdx + 1; window.pUpdateUI(); };
+        
+        function pStopAllAudio() {
+            const ring = document.getElementById('p-ringtone-audio'), voice = document.getElementById('p-call-voice-audio');
+            if (ring) { ring.pause(); ring.currentTime = 0; }
+            if (voice) { voice.pause(); voice.currentTime = 0; }
+        }
+
+        const handleCallAccept = () => {
+            const ring = document.getElementById('p-ringtone-audio'), voice = document.getElementById('p-call-voice-audio');
+            ring.pause(); document.getElementById('p-call-status').textContent = "CONNECTED"; document.getElementById('p-call-controls').classList.add('hidden'); document.getElementById('p-active-ui-buttons').classList.remove('hidden'); const tEl = document.getElementById('p-call-timer'); tEl.style.display = 'block'; tEl.textContent = "00:00"; pCallTimeSeconds = 0; if(pCallTimerInterval) clearInterval(pCallTimerInterval);
+            pCallTimerInterval = setInterval(() => { pCallTimeSeconds++; const m = String(Math.floor(pCallTimeSeconds/60)).padStart(2,'0'), s = String(pCallTimeSeconds%60).padStart(2,'0'); tEl.textContent = `${m}:${s}`; }, 1000);
+            const p = window.config.storyPages[pSimIdx]; if (p.voiceUrl) { voice.src = p.voiceUrl; voice.play().catch(()=>{}); voice.onended = window.pEndCall; }
+        };
+
+        const initSliders = () => {
+            const setupV = (hid) => {
+                const h = document.getElementById(hid); if(!h) return; let sY = 0, currY = 0;
+                h.addEventListener('touchstart', e => { sY = e.touches[0].clientY; h.style.transition = 'none'; }, {passive:true});
+                h.addEventListener('touchmove', e => { currY = e.touches[0].clientY - sY; if(currY > 0) currY = 0; if(currY < -196) currY = -196; h.style.transform = `translateY(${currY}px)`; }, {passive:false});
+                h.addEventListener('touchend', () => { h.style.transition = 'transform 0.2s'; if(currY < -100) { if(hid==='p-handle-accept') handleCallAccept(); else window.pEndCall(); h.style.transform = `translateY(-196px)`; } else h.style.transform = `translateY(0px)`; });
+            }; setupV('p-handle-accept'); setupV('p-handle-decline');
+        };
+
+        window.togglePlayerMode = () => {
+            const pv = document.getElementById('p-internal-map-screen').classList.contains('hidden') === false; if (pv) { window.closePlayerInternalMap(); return; }
+            if (document.getElementById('player-view').style.display === 'flex') { document.getElementById('player-view').style.display = 'none'; pStopAllAudio(); if(splashTimer) clearTimeout(splashTimer); if(pQrScanner) window.pStopQR(); window.pStopAR(); window.pStopMindAR(); window.pStopPinpad(); window.pCancelPuzzle(); history.back(); } 
+            else { pSimIdx = window.currentIdx || 0; pInventory = []; pHintIdx = 0; window.pMapSeen = true; document.getElementById('player-view').style.display = 'flex'; initSliders(); window.pUpdateUI(); history.pushState({view: 'player'}, ""); }
+        };
+
+        window.pResetGame = () => window.openConfirmModal("Restart Game", "Are you sure you want to start over?", "rotate-right", () => { pSimIdx = 0; pInventory = []; pHintIdx = 0; window.pMapSeen = true; window.savePlayerProgress(); window.pUpdateUI(); });
+        
+        window.toggleFullScreen = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(()=>{}); } else { if (document.exitFullscreen) document.exitFullscreen(); } };
+
+        window.openConfirmModal = (title, desc, icon, action) => {
+            document.getElementById('confirm-title').textContent = title; document.getElementById('confirm-desc').textContent = desc; document.getElementById('confirm-icon').className = `fas fa-${icon}`; document.getElementById('confirm-action-btn').onclick = () => { action(); window.closeConfirmModal(); }; document.getElementById('confirm-modal').style.display = 'flex';
+        };
+        window.closeConfirmModal = () => document.getElementById('confirm-modal').style.display = 'none';
+
+        window.newGame = () => window.openConfirmModal("New Game", "Unsaved changes will be lost.", "file", () => { window.config = JSON.parse(JSON.stringify(defaultConfig)); window.currentIdx = 0; window.autoSave(); window.refreshUI(); });
+        
+        window.addPage = () => { const np = { id: self.crypto.randomUUID(), content: "New scene...", pageType: "story", rewards: [], hiddenItems: [], externalUrl: "", hints: "" }; window.config.storyPages.push(np); window.currentIdx = window.config.storyPages.length - 1; window.autoSave(); window.refreshUI(); };
+        window.addChoice = () => { const p = window.config.storyPages[window.currentIdx]; if (!p.choices) p.choices = []; p.choices.push({ text: "Option", targetId: "", req: "" }); window.renderChoiceEditor(); window.autoSave(); };
+        window.addReward = () => { const p = window.config.storyPages[window.currentIdx]; if (!p.rewards) p.rewards = []; p.rewards.push({ name: "Item", icon: "💎", url: "", seen: false }); window.renderRewardsEditor(); window.autoSave(); };
+        window.addAvatar = () => { window.config.avatars.push({ id: 'N', name: 'New Avatar', url: '', color: PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)] }); window.renderAvatarAdmin(); window.autoSave(); };
+        window.copyPage = (i) => { const cp = JSON.parse(JSON.stringify(window.config.storyPages[i])); cp.id = self.crypto.randomUUID(); window.config.storyPages.splice(i + 1, 0, cp); window.currentIdx = i + 1; window.autoSave(); window.refreshUI(); };
+        
+        window.exportGame = () => { const b = new Blob([JSON.stringify(window.config, null, 2)], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `${window.config.appTitle || 'game'}.json`; a.click(); URL.revokeObjectURL(u); };
+        window.importGame = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json'; i.onchange = e => { const r = new FileReader(); r.onload = ev => { try { window.config = JSON.parse(ev.target.result); window.currentIdx = 0; window.autoSave(); window.refreshUI(); window.showToast("Imported successfully!"); } catch (err) { window.showToast("Invalid JSON file!"); } }; r.readAsText(e.target.files[0]); }; i.click(); };
+        
+        window.publishGame = async () => {
+            if (!currentUser || currentUser.isAnonymous) { window.showToast("Login required to publish!"); return; }
+            if (window.config.storyPages.length < 2) { window.showToast("Add at least 2 pages before publishing!"); return; }
+            const ind = document.getElementById('save-indicator'); if(ind) ind.classList.remove('hidden'); ind.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> PUBLISHING...';
+            try {
+                const gameRef = window.config.cloudId ? doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', window.config.cloudId) : doc(collection(db, 'artifacts', appId, 'public', 'data', 'publishedGames'));
+                const cId = gameRef.id; window.config.cloudId = cId; window.config.authorId = currentUser.uid;
+                
+                const isAdmin = currentUser.email === 'jatszmabunker@gmail.com';
+                let finalAuthorName = userNickname || 'Anonymous';
+                const forcedName = document.getElementById('adminAuthorName')?.value.trim();
+                if (isAdmin && forcedName) finalAuthorName = forcedName;
+                window.config.author = finalAuthorName;
+
+                const currentData = (await getDoc(gameRef)).data() || {};
+                const coords = extractCoordsFromGame(window.config);
+                const isPrivate = currentData.isPrivate !== undefined ? currentData.isPrivate : false;
+
+                const dataToSave = { 
+                    title: window.config.appTitle, 
+                    author: finalAuthorName, 
+                    authorId: currentUser.uid, 
+                    config: window.config, 
+                    updatedAt: new Date().toISOString(),
+                    isPrivate: isPrivate
+                };
+                
+                if (coords && !currentData.mapLat && !currentData.mapLng) { dataToSave.mapLat = coords[0]; dataToSave.mapLng = coords[1]; }
+                
+                await setDoc(gameRef, dataToSave, { merge: true });
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'userSaves', 'latest'), { config: window.config, updatedAt: new Date().toISOString() });
+                
+                localStorage.setItem('KALAND_STUDIO_V13', JSON.stringify(window.config));
+                window.showToast("Published successfully!");
+                if(document.getElementById('adminAuthorName')) document.getElementById('adminAuthorName').value = '';
+            } catch (e) { window.showToast("Publish failed."); }
+            if(ind) { ind.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> SAVING...'; ind.classList.add('hidden'); }
+        };
+
+        window.deletePublishedGame = (id) => {
+            if(!currentUser) return;
+            window.openConfirmModal("Delete Published Game?", "This will remove the game from the community list permanently.", "trash", async () => {
+                try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', id)); window.showToast("Game deleted."); if (window.config && window.config.cloudId === id) { window.config.cloudId = null; window.autoSave(); } } catch(e) {}
+            });
+        };
+
+        window.loadAndPlayPublicGame = async (gameId) => {
+            window.showToast("Loading game...");
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gameId));
+                if (snap.exists()) {
+                    window.config = snap.data().config; if (!window.config.tags) window.config.tags =[];
+                    
+                    const savedProg = localStorage.getItem(`PLAYER_PROGRESS_DATA_${gameId}`);
+                    let cloudProg = null; if (currentUser && !currentUser.isAnonymous) { const cSnap = await getDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'playerProgress', gameId)); if (cSnap.exists()) cloudProg = cSnap.data(); }
+                    const progToUse = cloudProg || (savedProg ? JSON.parse(savedProg) : null);
+                    
+                    if (progToUse) {
+                        pSimIdx = progToUse.pSimIdx || 0;
+                        if (pSimIdx >= window.config.storyPages.length) pSimIdx = 0;
+                        pInventory = progToUse.pInventory || [];
+                        pHintIdx = progToUse.pHintIdx || 0;
+                        window.pMapSeen = progToUse.window_pMapSeen !== undefined ? progToUse.window_pMapSeen : true;
+                        window.pLastMapStateStr = progToUse.window_pLastMapStateStr || "";
+                    } else { pSimIdx = 0; pInventory = []; pHintIdx = 0; window.pMapSeen = true; window.pLastMapStateStr = ""; }
+
+                    window.switchView('studio'); 
+                    document.getElementById('player-view').style.display = 'flex'; 
+                    initSliders(); 
+                    window.pUpdateUI(); 
+                    history.pushState({view: 'player'}, "");
+                    window.showToast("Game loaded!");
+                } else window.showToast("Game not found!");
+            } catch(e) { window.showToast("Error loading game."); }
+        };
+
+        window.loadAndEditPublicGame = async (gameId) => {
+            window.showToast("Loading for editing...");
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gameId));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.authorId !== currentUser?.uid && currentUser?.email !== 'jatszmabunker@gmail.com' && data.author !== 'Anonymous') { window.showToast("You don't have permission to edit this game."); return; }
+                    window.config = data.config; window.config.cloudId = gameId; if (!window.config.tags) window.config.tags =[];
+                    window.currentIdx = 0; window.autoSave(); window.switchView('studio'); window.refreshUI(); window.showToast("Ready to edit!");
+                } else window.showToast("Game not found!");
+            } catch(e) { window.showToast("Error loading game."); }
+        };
+
+        // Kliens oldali drag & drop AR virtual object (Player mód)
+        const arObj = document.getElementById('ar-virtual-object');
+        if (arObj) {
+            arObj.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; arXOffset = t.clientX - arObj.getBoundingClientRect().left; arYOffset = t.clientY - arObj.getBoundingClientRect().top; }, {passive: false});
+            arObj.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; arObj.style.transform = `translate(${t.clientX - arXOffset}px, ${t.clientY - arYOffset}px)`; }, {passive: false});
+            const szSlider = document.getElementById('ar-size-slider'); if(szSlider) szSlider.addEventListener('input', e => { arObj.style.width = e.target.value + 'px'; arObj.style.height = e.target.value + 'px'; const c = document.getElementById('ar-object-content'); if(c && c.children.length && c.children[0].tagName === 'SPAN') c.children[0].style.fontSize = (e.target.value * 0.7) + 'px'; });
+        }
+
+        // Initialize theme and app
+        document.addEventListener('DOMContentLoaded', () => {
+            window.initTheme();
+            const urlParams = new URLSearchParams(window.location.search);
+            const directGameId = urlParams.get('gameId');
+            if (directGameId) { window.switchView('studio'); document.getElementById('player-view').style.display = 'flex'; }
+            
+            initAuth(); 
+            const vs = document.getElementById('drawer-app-version'); if(vs) vs.textContent = APP_VERSION;
+            
+            if (!directGameId) {
+                if (window.config.storyPages.length > 0) window.refreshUI(); else window.newGame();
+            }
+        });
+    </script>
+</body>
+</html>
