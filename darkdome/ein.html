@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktív Óra Puzzle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Shadows+Into+Light&display=swap');
+
+        body {
+            background-color: #2c3e50;
+            background-image: radial-gradient(#34495e 10%, transparent 10%), radial-gradient(#34495e 10%, transparent 10%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .clock-face {
+            background: radial-gradient(circle, #f9f9f9 0%, #e0e0e0 100%);
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.2),
+                0 10px 30px rgba(0,0,0,0.5),
+                0 0 0 15px #3e2723, /* Fa keret */
+                0 0 0 16px #1a100e;
+        }
+
+        .hand-hitbox {
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            transform-origin: bottom center;
+            cursor: grab;
+            /* Extra széles láthatatlan terület a könnyebb megfogásért */
+            padding-left: 15px;
+            padding-right: 15px;
+            margin-left: -15px;
+            z-index: 10;
+        }
+        
+        .hand-hitbox:active {
+            cursor: grabbing;
+        }
+
+        .hour-hand-visible {
+            width: 6px;
+            height: 70px;
+            background-color: #111;
+            border-radius: 4px;
+            margin: 0 auto;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        
+        /* A mutató vége (nyíl) */
+        .hour-hand-visible::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -3px;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 12px solid #111;
+        }
+
+        .minute-hand-visible {
+            width: 4px;
+            height: 110px;
+            background-color: #333;
+            border-radius: 4px;
+            margin: 0 auto;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .minute-hand-visible::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: -3px;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 14px solid #333;
+        }
+
+        .number {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            color: #222;
+            left: 50%;
+            top: 50%;
+            margin-left: -15px;
+            margin-top: -15px;
+        }
+
+        .tick {
+            position: absolute;
+            background-color: #555;
+            left: 50%;
+            top: 50%;
+            transform-origin: center;
+        }
+
+        .paper {
+            background-image: linear-gradient(to bottom right, #fffde7, #fff59d);
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid #ccc;
+            transition: all 0.5s ease-in-out;
+            cursor: pointer;
+        }
+
+        .secret-font {
+            font-family: 'Shadows Into Light', cursive;
+        }
+
+        /* Megjelenés animáció a kis papírhoz */
+        @keyframes slideDown {
+            0% { transform: translateY(-30px) rotate(0deg); opacity: 0; }
+            100% { transform: translateY(0) rotate(-5deg); opacity: 1; }
+        }
+
+        .show-paper {
+            display: block !important;
+            animation: slideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center overflow-hidden">
+
+    <!-- Fő tartály -->
+    <div class="relative flex flex-col items-center">
+        
+        <!-- Kis papír (Óra alatt bújik meg) -->
+        <div id="small-paper" class="hidden paper absolute -bottom-8 left-1/2 -ml-8 w-16 h-20 z-0 flex items-end justify-center pb-2 hover:scale-105">
+            <div class="text-xs text-gray-500 italic">Kattints...</div>
+        </div>
+
+        <!-- Az Óra -->
+        <div id="clock" class="clock-face relative w-80 h-80 rounded-full z-10 select-none">
+            
+            <!-- Számok és vonalak (JavaScript generálja) -->
+            <div id="clock-marks"></div>
+
+            <!-- Középső csavar -->
+            <div class="absolute w-5 h-5 bg-yellow-600 border-2 border-yellow-800 rounded-full left-1/2 top-1/2 -ml-2.5 -mt-2.5 z-30 shadow-md" style="pointer-events: none;"></div>
+
+            <!-- Óramutató Hitbox -->
+            <div id="hour-hand" class="hand-hitbox z-10" style="transform: rotate(30deg);">
+                <div class="hour-hand-visible"></div>
+            </div>
+
+            <!-- Percmutató Hitbox -->
+            <div id="minute-hand" class="hand-hitbox z-20" style="transform: rotate(270deg);">
+                <div class="minute-hand-visible"></div>
+            </div>
+            
+        </div>
+
+    </div>
+
+    <!-- Modális ablak a nagy papírhoz -->
+    <div id="paper-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="paper relative w-80 h-96 p-8 flex flex-col items-center justify-center transform scale-75 transition-transform duration-300 rounded-sm" id="large-paper">
+            
+            <!-- Bezáró gomb -->
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-600 hover:text-black font-bold text-xl">✕</button>
+            
+            <!-- Csak a szám jelenik meg, nagy méretben -->
+            <div class="secret-font text-8xl font-bold text-red-800 border-b-2 border-red-800/30 pb-2 inline-block">
+                732
+            </div>
+            
+            <div class="absolute bottom-6 left-6 opacity-40">
+                <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.28l9-1.8v5.634a4.369 4.369 0 00-1 1.086c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V6a1 1 0 00-1-1z"></path></svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Óra számlap generálása ---
+            const clockMarks = document.getElementById('clock-marks');
+            const radius = 135; // Sugár a számokhoz
+            
+            for (let i = 1; i <= 60; i++) {
+                const angle = i * 6 * (Math.PI / 180);
+                
+                // Vonalak rajzolása
+                const tick = document.createElement('div');
+                tick.className = 'tick';
+                
+                const isHour = i % 5 === 0;
+                tick.style.width = isHour ? '4px' : '2px';
+                tick.style.height = isHour ? '12px' : '8px';
+                tick.style.backgroundColor = isHour ? '#333' : '#888';
+                
+                // Pozicionálás a szélre
+                const tickRadius = 150; 
+                tick.style.transform = `translate(-50%, -50%) rotate(${i * 6}deg) translateY(-${tickRadius - 10}px)`;
+                clockMarks.appendChild(tick);
+
+                // Számok rajzolása (csak az órákhoz)
+                if (isHour) {
+                    const number = document.createElement('div');
+                    number.className = 'number';
+                    number.innerText = i / 5;
+                    
+                    // Számok elhelyezése körben
+                    // A 12 óra az fent van (-90 fok a matekban)
+                    const numX = Math.cos(angle - Math.PI / 2) * radius;
+                    const numY = Math.sin(angle - Math.PI / 2) * radius;
+                    
+                    number.style.transform = `translate(${numX}px, ${numY}px)`;
+                    clockMarks.appendChild(number);
+                }
+            }
+
+            // --- Mutatók mozgatása (Drag Logic) ---
+            const clock = document.getElementById('clock');
+            const hourHand = document.getElementById('hour-hand');
+            const minuteHand = document.getElementById('minute-hand');
+            const smallPaper = document.getElementById('small-paper');
+            
+            let activeHand = null;
+            let hourAngle = 30; // Kezdő pozíció
+            let minuteAngle = 270; // Kezdő pozíció
+            let puzzleSolved = false;
+
+            // Kiszámolja a forgás szögét az egér/érintés pozíciójából
+            function calculateAngle(e) {
+                const rect = clock.getBoundingClientRect();
+                // Az óra közepe
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                // Kliens koordináták (egér vagy érintés)
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                // Szög kiszámítása az atan2 segítségével
+                let angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+                
+                // Az atan2 a 3 óránál van 0 fokon, nekünk a 12 óra kell, hogy 0 fok legyen
+                angle += 90; 
+                if (angle < 0) angle += 360;
+                
+                return angle;
+            }
+
+            // Ellenőrzi, hogy 12:35 van-e (+/- 5 fokos tűréshatárral)
+            function checkPuzzle() {
+                if (puzzleSolved) return; // Ha már megoldotta, nem futtatjuk újra
+
+                // Normalizáljuk a szögeket 0-360 közé biztonság kedvéért
+                const normMin = minuteAngle % 360;
+                const normHour = hourAngle % 360;
+
+                // 12:35 feltételek (+/- 5 fok):
+                // Nagymutató (perc): 35 percnél, ami pontosan a 7-es, azaz 210 fok. Tűrés: 205 és 215 fok között.
+                const isMinuteCorrect = (normMin >= 205 && normMin <= 215);
+                
+                // Kismutató (óra): 12 és 1 között, ami arányosan 17.5 fok. Tűrés: 12.5 és 22.5 fok között.
+                const isHourCorrect = (normHour >= 12.5 && normHour <= 22.5);
+
+                if (isMinuteCorrect && isHourCorrect) {
+                    puzzleSolved = true;
+                    smallPaper.classList.add('show-paper');
+                    
+                    // Kis rezgés visszajelzésként mobilokon, ha támogatott
+                    if (navigator.vibrate) {
+                        navigator.vibrate(200);
+                    }
+                }
+            }
+
+            // Eseménykezelők a mutatókhoz
+            function startDrag(e, handType) {
+                e.preventDefault(); // Megakadályozzuk a görgetést érintésnél
+                activeHand = handType;
+                document.body.style.cursor = 'grabbing';
+            }
+
+            hourHand.addEventListener('mousedown', (e) => startDrag(e, 'hour'));
+            hourHand.addEventListener('touchstart', (e) => startDrag(e, 'hour'), {passive: false});
+            
+            minuteHand.addEventListener('mousedown', (e) => startDrag(e, 'minute'));
+            minuteHand.addEventListener('touchstart', (e) => startDrag(e, 'minute'), {passive: false});
+
+            // Mozgatás kezelése a globális dokumentumon, hogy ne veszítsük el a fókuszt gyors húzásnál
+            function handleMove(e) {
+                if (!activeHand) return;
+                
+                const angle = calculateAngle(e);
+                
+                if (activeHand === 'hour') {
+                    hourAngle = angle;
+                    hourHand.style.transform = `rotate(${angle}deg)`;
+                } else if (activeHand === 'minute') {
+                    minuteAngle = angle;
+                    minuteHand.style.transform = `rotate(${angle}deg)`;
+                }
+                
+                checkPuzzle();
+            }
+
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('touchmove', handleMove, {passive: false});
+
+            // Húzás befejezése
+            function stopDrag() {
+                activeHand = null;
+                document.body.style.cursor = 'default';
+            }
+
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+
+            // --- Papír interakciók ---
+            const paperModal = document.getElementById('paper-modal');
+            const largePaper = document.getElementById('large-paper');
+            const closeModalBtn = document.getElementById('close-modal');
+
+            smallPaper.addEventListener('click', () => {
+                // Modális ablak megjelenítése
+                paperModal.classList.remove('pointer-events-none');
+                paperModal.classList.replace('opacity-0', 'opacity-100');
+                
+                // Papír nagyítás animáció
+                largePaper.classList.replace('scale-75', 'scale-100');
+            });
+
+            function closeModal() {
+                paperModal.classList.add('pointer-events-none');
+                paperModal.classList.replace('opacity-100', 'opacity-0');
+                largePaper.classList.replace('scale-100', 'scale-75');
+            }
+
+            closeModalBtn.addEventListener('click', closeModal);
+            paperModal.addEventListener('click', (e) => {
+                // Ha a sötét háttérre kattintanak (nem a papírra), zárjuk be
+                if (e.target === paperModal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
