@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Széf Kinyitása</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #e4ece7; /* Képen látható háttérhez hasonló */
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.05"/></svg>');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        /* Széf külső kerete */
+        #safe-container {
+            width: 320px;
+            height: 450px;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Széf felső díszléce (a képen látható fa/bronz keret) */
+        .safe-top-molding {
+            position: absolute;
+            top: 0;
+            left: -10px;
+            right: -10px;
+            height: 25px;
+            background: linear-gradient(to bottom, #4a3b2c, #8b6b4a, #2a1f16);
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* A széf zöldes belső teste */
+        .safe-body {
+            width: 100%;
+            height: 100%;
+            background-color: #177a6f;
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 100%), 
+                              url('data:image/svg+xml;utf8,<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.1" numOctaves="3" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23noise)" opacity="0.1"/></svg>');
+            border-radius: 8px;
+            border: 2px solid #0c4d45;
+            position: relative;
+            padding: 15px;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* A széf belseje (amikor kinyílik) */
+        .safe-inside {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            right: 25px;
+            bottom: 25px;
+            background-color: #0a0a0a;
+            border-radius: 5px;
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            overflow: hidden; /* Megakadályozza, hogy bármi kilógjon csukott állapotban */
+        }
+
+        /* Feszítővas stílusa */
+        .crowbar {
+            width: 120px;
+            filter: drop-shadow(0 8px 6px rgba(0,0,0,0.8));
+            transform: rotate(-30deg);
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            z-index: 2;
+        }
+
+        /* Érintés/egér fölé vitel effekt */
+        .crowbar:hover {
+            filter: drop-shadow(0 12px 10px rgba(0,0,0,0.9)) brightness(1.2);
+            transform: rotate(-28deg) scale(1.05);
+        }
+
+        /* Kicsúszó animáció */
+        @keyframes slideOutBottom {
+            0% { transform: rotate(-30deg) translateY(0); opacity: 1; }
+            20% { transform: rotate(-30deg) translateY(-20px); opacity: 1; }
+            100% { transform: rotate(-30deg) translateY(150vh); opacity: 0; }
+        }
+
+        .take-animation {
+            animation: slideOutBottom 1.5s forwards cubic-bezier(0.4, 0, 0.2, 1) !important;
+            pointer-events: none; /* Ne lehessen többször rákattintani */
+        }
+
+        /* A széf ajtaja */
+        .safe-door {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            right: 25px;
+            bottom: 25px;
+            background-color: #1a8a7d;
+            border: 3px solid #0c4d45;
+            border-radius: 5px;
+            box-shadow: 
+                inset 0 0 15px rgba(0,0,0,0.5),
+                0 0 10px rgba(0,0,0,0.8);
+            z-index: 5;
+            transform-origin: left center;
+            transition: transform 1.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Ajtó kinyitás animáció */
+        .safe-door.open {
+            transform: perspective(1200px) rotateY(-105deg);
+        }
+
+        /* Tárcsák konténere */
+        .dials-wrapper {
+            display: flex;
+            gap: 8px;
+            /* Ha kinyílik az ajtó, elrejtjük a tárcsákat a hátoldalon */
+            backface-visibility: hidden; 
+        }
+
+        /* Egyetlen tárcsa stílusa */
+        .dial-container {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: conic-gradient(#8f6d41, #c8ab7e, #5a4224, #c8ab7e, #8f6d41);
+            box-shadow: 
+                0 6px 10px rgba(0,0,0,0.6),
+                inset 0 2px 4px rgba(255,255,255,0.4),
+                inset 0 -2px 6px rgba(0,0,0,0.6);
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #2a1f16;
+        }
+
+        /* A forgó rész a számokkal */
+        .dial-ring {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: absolute;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Számok a tárcsán */
+        .dial-number {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 50%;
+            top: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            text-align: center;
+            line-height: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #2a1f16;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+        }
+
+        /* Belső gomb a tárcsa közepén */
+        .dial-center {
+            width: 34px;
+            height: 34px;
+            background: radial-gradient(circle, #d6b88b, #7d5e35);
+            border-radius: 50%;
+            box-shadow: 
+                0 3px 5px rgba(0,0,0,0.7),
+                inset 0 1px 2px rgba(255,255,255,0.5);
+            position: absolute;
+            z-index: 10;
+        }
+        
+        /* Középső pötty (jelző) */
+        .dial-center::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #2a1f16;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+        }
+
+        /* Fix mutató (indikátor) a széf ajtaján a tárcsák felett */
+        .indicator {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #2a1f16;
+            z-index: 20;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+
+        /* Üzenet a sikerhez */
+        #success-message {
+            position: absolute;
+            bottom: -60px;
+            color: #0c4d45;
+            font-weight: bold;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div style="position: relative;">
+        <div id="safe-container">
+            <div class="safe-top-molding"></div>
+            <div class="safe-body">
+                
+                <!-- Széf belseje a feszítővassal -->
+                <div class="safe-inside" id="safe-inside">
+                    <!-- Feszítővas SVG -->
+                    <svg id="crowbar" class="crowbar" viewBox="0 0 120 500" xmlns="http://www.w3.org/2000/svg" onclick="takeCrowbar()">
+                        <defs>
+                            <!-- Fém textúrák és fények -->
+                            <linearGradient id="barColor" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#111" />
+                                <stop offset="20%" stop-color="#b30000" />
+                                <stop offset="50%" stop-color="#ff3333" />
+                                <stop offset="80%" stop-color="#cc0000" />
+                                <stop offset="100%" stop-color="#222" />
+                            </linearGradient>
+                            <linearGradient id="metalTip" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#444" />
+                                <stop offset="40%" stop-color="#aaa" />
+                                <stop offset="60%" stop-color="#eee" />
+                                <stop offset="100%" stop-color="#333" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Felső kampó -->
+                        <path d="M 50,150 C 50,80 100,50 110,90 L 90,100 C 80,70 70,80 70,150 Z" fill="url(#metalTip)" />
+                        <!-- Hasított vég bevágása a felső kampón -->
+                        <polygon points="110,90 90,100 105,115" fill="url(#metalTip)" />
+                        
+                        <!-- Fő test (Hatszögletű hatás) -->
+                        <rect x="50" y="148" width="20" height="260" fill="url(#barColor)" />
+                        <rect x="54" y="148" width="3" height="260" fill="rgba(255,255,255,0.4)" />
+                        <rect x="65" y="148" width="2" height="260" fill="rgba(0,0,0,0.6)" />
+
+                        <!-- Alsó lapított, villa alakú fej (szöghúzó) -->
+                        <path d="M 50,405 C 40,430 20,440 10,460 L 40,470 L 50,430 L 60,470 L 90,460 C 80,440 70,430 70,405 Z" fill="url(#metalTip)" />
+                    </svg>
+                </div>
+
+                <!-- Széf ajtó -->
+                <div id="safe-door" class="safe-door">
+                    <div class="dials-wrapper">
+                        <!-- 1. Tárcsa -->
+                        <div class="dial-container" onclick="rotateDial(0)">
+                            <div class="indicator"></div>
+                            <div class="dial-ring" id="ring-0"></div>
+                            <div class="dial-center"></div>
+                        </div>
+                        
+                        <!-- 2. Tárcsa -->
+                        <div class="dial-container" onclick="rotateDial(1)">
+                            <div class="indicator"></div>
+                            <div class="dial-ring" id="ring-1"></div>
+                            <div class="dial-center"></div>
+                        </div>
+
+                        <!-- 3. Tárcsa -->
+                        <div class="dial-container" onclick="rotateDial(2)">
+                            <div class="indicator"></div>
+                            <div class="dial-ring" id="ring-2"></div>
+                            <div class="dial-center"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div id="success-message">A széf kinyílt!</div>
+    </div>
+
+    <script>
+        // A tárcsák jelenlegi állása (0-9)
+        let currentValues = [0, 0, 0];
+        
+        // A nyitókód: 1 2 3
+        const targetCode = [1, 2, 3];
+        
+        // Jelzi, ha a széf már ki van nyitva, hogy ne lehessen tovább forgatni
+        let isOpen = false;
+
+        // Tárcsák inicializálása számokkal
+        function initDials() {
+            for (let d = 0; d < 3; d++) {
+                const ring = document.getElementById(`ring-${d}`);
+                
+                for (let i = 0; i < 10; i++) {
+                    const numberEl = document.createElement('div');
+                    numberEl.className = 'dial-number';
+                    numberEl.innerText = i;
+                    
+                    // Kiszámoljuk a pozíciót egy körön belül (360 fok / 10 szám = 36 fok lépésenként)
+                    // A számokat felülről (0 fok) kezdve helyezzük el.
+                    const angle = i * 36;
+                    
+                    // A sugarat beállítjuk, hogy a számok a szélén legyenek
+                    numberEl.style.transform = `rotate(${angle}deg) translateY(-22px)`;
+                    
+                    ring.appendChild(numberEl);
+                }
+            }
+        }
+
+        // Kattintás eseménykezelő a tárcsákhoz
+        function rotateDial(index) {
+            if (isOpen) return; // Ha nyitva van, már nem lehet forgatni
+
+            // Növeljük az értéket 1-gyel (9 után visszaugrik 0-ra)
+            currentValues[index] = (currentValues[index] + 1) % 10;
+            
+            // Frissítjük a vizuális elforgatást
+            updateDialVisuals(index);
+            
+            // Ellenőrizzük, hogy helyes-e a kód
+            checkCode();
+        }
+
+        // Tárcsa CSS forgatásának frissítése
+        function updateDialVisuals(index) {
+            const ring = document.getElementById(`ring-${index}`);
+            // Mivel a számok óramutató járásával megegyezően nőnek (0, 1, 2...), 
+            // ahhoz, hogy a következő szám felülre kerüljön, a tárcsát visszafelé (negatív irányba) kell forgatni.
+            const rotationDeg = -(currentValues[index] * 36);
+            ring.style.transform = `rotate(${rotationDeg}deg)`;
+        }
+
+        // Kód ellenőrzése
+        function checkCode() {
+            if (currentValues[0] === targetCode[0] &&
+                currentValues[1] === targetCode[1] &&
+                currentValues[2] === targetCode[2]) {
+                
+                openSafe();
+            }
+        }
+
+        // Széf kinyitása
+        function openSafe() {
+            isOpen = true;
+            
+            // Kis késleltetés a drámai hatás kedvéért (miután beállt az utolsó szám)
+            setTimeout(() => {
+                document.getElementById('safe-door').classList.add('open');
+                
+                // Üzenet megjelenítése
+                setTimeout(() => {
+                    document.getElementById('success-message').style.opacity = 1;
+                }, 1000);
+            }, 400);
+        }
+
+        // Feszítővas felvétele
+        function takeCrowbar() {
+            if (!isOpen) return; // Csak kinyitott széfnél lehessen kivenni
+            
+            const safeInside = document.getElementById('safe-inside');
+            const crowbar = document.getElementById('crowbar');
+            
+            // Overflow kikapcsolása, hogy az animáció kimehessen a széfből
+            safeInside.style.overflow = 'visible';
+            
+            // Animáció indítása
+            crowbar.classList.add('take-animation');
+            
+            // Szöveg módosítása
+            document.getElementById('success-message').innerText = "Feszítővas megszerezve!";
+        }
+
+        // Indítás
+        window.onload = () => {
+            initDials();
+        };
+    </script>
+</body>
+</html>
+
+
