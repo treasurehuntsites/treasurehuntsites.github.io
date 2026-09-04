@@ -655,12 +655,12 @@
         const provider = new GoogleAuthProvider();
 
         const defaultConfig = {
-            appTitle: "The Secret of the City",
-            globalBg: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2000",
-            initialMapLink: "https://goo.gl/maps/RVNTKULSiVMahYHg9?g_st=ac",
+            appTitle: "",
+            globalBg: "",
+            initialMapLink: "",
             tags:[],
-            avatars:[{ id: 'A', name: 'Narrator', url: '', color: '#8b5cf6' }],
-            storyPages:[{ id: self.crypto.randomUUID(), content: "Welcome! §A", pageType: "story", rewards: [], hiddenItems:[], externalUrl: "", hints: "" }]
+            avatars:[],
+            storyPages:[{ id: self.crypto.randomUUID(), content: "", pageType: "story", rewards: [], hiddenItems:[], externalUrl: "", hints: "", ringtoneUrl: "https://treasurehuntsites.github.io/darkdome/media/chirptone.wav" }]
         };
 
         const PRESET_COLORS =['#8b5cf6', '#22d3ee', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#f97316', '#6366f1'];
@@ -673,6 +673,7 @@
         // --- POINTS & LEVEL SYSTEM VARIABLES ---
         let userTotalPoints = 0;
         let globalSolvedPages = [];
+        let globalVisitedPages = [];
         let userNickname = null;
         
         const LEVEL_THRESHOLDS = [
@@ -702,6 +703,7 @@
         let cloudSaveDebounce = null, progressDebounce = null, pCallTimeSeconds = 0, pCallTimerInterval = null, currentPortalUnsubscribe = null;
         let pHintIdx = 0, zoomScale = 1, zoomPosX = 0, zoomPosY = 0, startDist = 0, startX = 0, startY = 0, isZooming = false;
         let sortableInstance = null, publishedGamesData =[];
+        let studioConfigBackup = null, enteredPlayerModeFrom = 'studio';
         let mindArState = { isProcessing: false, mindFileUrl: null, overlayWidth: 1, overlayHeight: 1 };
         window.pActiveTarget = null; window.pActiveFallbackUrl = window.config.initialMapLink; window.pMapSeen = true; window.pLastMapStateStr = "";
         window.currentIdx = window.currentIdx || 0; window.currentTagFilter = null; window.communityTab = 'main';
@@ -734,8 +736,9 @@
                         if (snap.exists()) {
                             userTotalPoints = snap.data().points || 0;
                             globalSolvedPages = snap.data().solvedGlobal || [];
+                            globalVisitedPages = snap.data().visitedGlobal || [];
                             userNickname = snap.data().nickname || null;
-                        } else { userTotalPoints = 0; globalSolvedPages = []; userNickname = null; }
+                        } else { userTotalPoints = 0; globalSolvedPages = []; globalVisitedPages = []; userNickname = null; }
                         
                         document.getElementById('points-value').textContent = userTotalPoints;
                         const pd = document.getElementById('points-display');
@@ -744,8 +747,8 @@
 
                         if (!userNickname) {
                             document.getElementById('nickname-modal').style.display = 'flex';
-                        } else if (userTotalPoints > 0) {
-                            try { setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', user.uid), { points: userTotalPoints, name: userNickname, photoURL: user.photoURL || '', solvedGlobal: globalSolvedPages, updatedAt: new Date().toISOString() }, { merge: true }); } catch(e) {}
+                        } else if (userTotalPoints > 0 || globalVisitedPages.length > 0) {
+                            try { setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', user.uid), { points: userTotalPoints, name: userNickname, photoURL: user.photoURL || '', solvedGlobal: globalSolvedPages, visitedGlobal: globalVisitedPages, updatedAt: new Date().toISOString() }, { merge: true }); } catch(e) {}
                         }
                     }).catch(e => { document.getElementById('points-value').textContent = userTotalPoints; document.getElementById('points-display').classList.remove('hidden'); });
                 } else {
@@ -773,6 +776,11 @@
                         window.config = snap.data().config;
                         if (!window.config.tags) window.config.tags =[];
                         if (document.getElementById('studio-view').style.display === 'block') window.refreshUI(); 
+                    } else {
+                        window.config = JSON.parse(JSON.stringify(defaultConfig));
+                        window.config.storyPages[0].id = self.crypto.randomUUID();
+                        localStorage.setItem('KALAND_STUDIO_V13', JSON.stringify(window.config));
+                        if (document.getElementById('studio-view').style.display === 'block') window.refreshUI();
                     }
                 } else {
                     if(navIconDiv) navIconDiv.classList.remove('hidden');
@@ -799,7 +807,7 @@
             userNickname = name; document.getElementById('nickname-modal').style.display = 'none';
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats'), { nickname: userNickname }, { merge: true });
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid), { points: userTotalPoints, name: userNickname, photoURL: currentUser.photoURL || '', solvedGlobal: globalSolvedPages, updatedAt: new Date().toISOString() }, { merge: true });
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid), { points: userTotalPoints, name: userNickname, photoURL: currentUser.photoURL || '', solvedGlobal: globalSolvedPages, visitedGlobal: globalVisitedPages, updatedAt: new Date().toISOString() }, { merge: true });
                 window.showToast("Nickname saved successfully!");
             } catch (e) { window.showToast("Error saving nickname."); }
         };
@@ -814,7 +822,21 @@
             window.showPointAnimation(amount);
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats'), { points: userTotalPoints, solvedGlobal: globalSolvedPages }, { merge: true });
-                if (userNickname) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid), { points: userTotalPoints, name: userNickname, photoURL: currentUser.photoURL || '', solvedGlobal: globalSolvedPages, updatedAt: new Date().toISOString() }, { merge: true }); }
+                if (userNickname) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid), { points: userTotalPoints, name: userNickname, photoURL: currentUser.photoURL || '', solvedGlobal: globalSolvedPages, visitedGlobal: globalVisitedPages, updatedAt: new Date().toISOString() }, { merge: true }); }
+            } catch(e) {}
+        };
+
+        window.trackPageVisit = async (pageId) => {
+            if (!currentUser || currentUser.isAnonymous || !pageId) return;
+            const isAdmin = currentUser.email === 'jatszmabunker@gmail.com';
+            const isOwnGame = window.config && (window.config.authorId === currentUser.uid || !window.config.cloudId);
+            if (isOwnGame && !isAdmin) return;
+            
+            if (globalVisitedPages.includes(pageId)) return;
+            globalVisitedPages.push(pageId);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats'), { visitedGlobal: globalVisitedPages }, { merge: true });
+                if (userNickname) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid), { visitedGlobal: globalVisitedPages, updatedAt: new Date().toISOString() }, { merge: true }); }
             } catch(e) {}
         };
 
@@ -865,7 +887,7 @@
 
         window.closeLeaderboard = () => document.getElementById('leaderboard-modal').style.display = 'none';
         window.login = () => signInWithPopup(auth, provider);
-        window.logout = () => signOut(auth).then(() => { location.reload(); });
+        window.logout = () => signOut(auth).then(() => { localStorage.removeItem('KALAND_STUDIO_V13'); location.reload(); });
         window.handleLoginNav = () => { if (currentUser && !currentUser.isAnonymous) { window.openConfirmModal("Logout", "Are you sure you want to log out?", "sign-out-alt", window.logout); } else { window.login(); } };
 
         window.toggleDrawer = () => {
@@ -1130,7 +1152,7 @@
                 let visibilityHtml = canManage ? `<div class="mt-2 flex items-center justify-between bg-slate-800 p-2 rounded-lg border ${data.isPrivate ? 'border-amber-500/30' : 'border-slate-700'}"><label class="text-[9px] ${data.isPrivate ? 'text-amber-400' : 'text-slate-400'} uppercase font-bold tracking-widest"><i class="fas ${data.isPrivate ? 'fa-eye-slash' : 'fa-eye'} mr-1"></i>${data.isPrivate ? 'Private' : 'Public'}</label><button onclick="window.toggleGameVisibility('${data.id}', ${!data.isPrivate})" class="text-[9px] font-bold uppercase px-3 py-1.5 rounded ${data.isPrivate ? 'bg-amber-600/20 text-amber-400' : 'bg-emerald-600/20 text-emerald-400'}">${data.isPrivate ? 'Make Public' : 'Make Private'}</button></div>` : '';
 
                 const card = document.createElement('div'); card.className = "glass-card p-4 flex flex-col gap-3 border border-slate-700 hover:border-purple-500 shadow-xl group";
-                card.innerHTML = `<div class="relative rounded-xl h-36 overflow-hidden bg-slate-900 cursor-pointer" onclick="window.loadAndPlayPublicGame('${data.id}')"><img src="${data.config?.globalBg || 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?q=80&w=600'}" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition-transform"><div class="absolute bottom-2 left-2 flex flex-wrap gap-1">${tagsHtml}</div></div><div><div class="flex justify-between items-start gap-2"><h3 class="font-bold text-lg text-white truncate mb-1 flex-1 cursor-pointer" onclick="window.loadAndPlayPublicGame('${data.id}')">${data.title}</h3><button onclick="window.shareGame('${data.id}')" class="text-slate-500 hover:text-cyan-400 p-1 bg-slate-800 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-share-nodes"></i></button></div><p class="text-[9px] text-slate-400 uppercase font-bold">Created by: <span class="text-slate-300">${data.author || 'Anonymous'}</span></p></div><div class="flex flex-col gap-2 mt-auto"><button class="bg-purple-600 py-4 rounded-xl font-bold uppercase text-xs flex items-center justify-center shadow-lg" onclick="window.loadAndPlayPublicGame('${data.id}')"><i class="fas fa-play mr-2"></i> Play Now</button>${canManage ? `<div class="flex gap-2"><button onclick="window.loadAndEditPublicGame('${data.id}')" class="flex-1 bg-slate-800 py-3 rounded-xl font-bold uppercase text-[10px]">Edit</button><button onclick="window.deletePublishedGame('${data.id}')" class="bg-red-900/40 text-red-500 px-4 py-3 rounded-xl"><i class="fas fa-trash"></i></button></div>` : ''}${visibilityHtml}${adminHtml}</div>`;
+                card.innerHTML = `<div class="relative rounded-xl h-36 overflow-hidden bg-slate-900 cursor-pointer" onclick="window.loadAndPlayPublicGame('${data.id}')"><img src="${data.config?.globalBg || 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?q=80&w=600'}" class="w-full h-full object-cover opacity-70 group-hover:scale-110 transition-transform"><div class="absolute bottom-2 left-2 flex flex-wrap gap-1">${tagsHtml}</div></div><div><div class="flex justify-between items-start gap-2"><h3 class="font-bold text-lg text-white truncate mb-1 flex-1 cursor-pointer" onclick="window.loadAndPlayPublicGame('${data.id}')">${data.title}</h3><button onclick="window.shareGame('${data.id}')" class="text-slate-500 hover:text-cyan-400 p-1 bg-slate-800 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-share-nodes"></i></button></div><p class="text-[9px] text-slate-400 uppercase font-bold">Created by: <span class="text-slate-300">${data.author || 'Anonymous'}</span></p></div><div class="flex flex-col gap-2 mt-auto"><button class="bg-purple-600 py-4 rounded-xl font-bold uppercase text-xs flex items-center justify-center shadow-lg" onclick="window.loadAndPlayPublicGame('${data.id}')"><i class="fas fa-play mr-2"></i> Play Now</button>${canManage ? `<div class="flex gap-2"><button onclick="window.loadAndEditPublicGame('${data.id}')" class="flex-1 bg-slate-800 py-3 rounded-xl font-bold uppercase text-[10px]">Edit</button><button onclick="window.duplicatePublishedGame('${data.id}')" class="flex-1 bg-slate-800 py-3 rounded-xl font-bold uppercase text-[10px] text-cyan-400"><i class="fas fa-copy"></i> Copy</button><button onclick="window.deletePublishedGame('${data.id}')" class="bg-red-900/40 text-red-500 px-4 py-3 rounded-xl"><i class="fas fa-trash"></i></button></div>` : ''}${visibilityHtml}${adminHtml}</div>`;
                 list.appendChild(card);
             });
         };
@@ -1303,7 +1325,7 @@
             list.innerHTML = '<div class="text-center w-full text-slate-400 text-xs"><i class="fas fa-spinner fa-spin mb-2"></i><br>Fetching explorers...</div>';
             
             await window.fetchLeaderboardForStats();
-            const playersOnPage = cachedLeaderboard.filter(p => p.solvedGlobal && p.solvedGlobal.includes(pageId));
+            const playersOnPage = cachedLeaderboard.filter(p => (p.visitedGlobal && p.visitedGlobal.includes(pageId)) || (p.solvedGlobal && p.solvedGlobal.includes(pageId)));
             
             list.innerHTML = '';
             if(playersOnPage.length === 0) {
@@ -1432,6 +1454,7 @@
 
         window.pUpdateUI = () => {
             const p = window.config.storyPages[pSimIdx]; if (!p) return;
+            window.trackPageVisit(p.id);
             lastAutoGpsIdx = -1;
             pStopAllAudio(); if(splashTimer) clearTimeout(splashTimer);
             document.getElementById('p-splash-screen').classList.add('hidden'); document.getElementById('p-call-screen').classList.add('hidden'); document.getElementById('p-content-layer').classList.remove('hidden');
@@ -1934,6 +1957,7 @@
             try {
                 const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gameId));
                 if (docSnap.exists()) {
+                    studioConfigBackup = JSON.parse(JSON.stringify(window.config));
                     window.config = docSnap.data().config;
                     if (currentUser && !currentUser.isAnonymous) {
                         try {
@@ -1961,6 +1985,7 @@
                         }
                     }
                     window.config.cloudId = gameId;
+                    enteredPlayerModeFrom = 'community';
                     window.togglePlayerMode();
                 } else {
                     window.showToast("Game not found!");
@@ -1982,6 +2007,24 @@
             } catch (err) {}
         };
 
+        window.duplicatePublishedGame = (gameId) => {
+            window.openConfirmModal("Duplicate?", "Create a copy of this adventure?", "copy", async () => {
+                try {
+                    const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'publishedGames', gameId));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        window.config = data.config;
+                        window.config.appTitle = (window.config.appTitle || "Untitled") + " (Copy)";
+                        delete window.config.cloudId;
+                        window.currentIdx = 0;
+                        window.autoSave();
+                        window.switchView('studio');
+                        window.showToast("Adventure duplicated!");
+                    }
+                } catch(e) { window.showToast("Error duplicating game."); }
+            });
+        };
+
         window.deletePublishedGame = (gameId) => {
             window.openConfirmModal("Delete?", "Are you sure you want to delete this adventure?", "trash", async () => {
                 try {
@@ -1996,11 +2039,13 @@
             if (pv.style.display === 'flex') {
                 pv.style.display = 'none';
                 window.pStopAllAudio();
-                if (window.config.cloudId) {
-                    window.switchView('community');
-                } else {
-                    window.switchView('studio');
+                if (studioConfigBackup) {
+                    window.config = studioConfigBackup;
+                    studioConfigBackup = null;
+                    window.refreshUI();
                 }
+                window.switchView(enteredPlayerModeFrom);
+                enteredPlayerModeFrom = 'studio';
             } else {
                 pv.style.display = 'flex';
                 document.getElementById('studio-view').style.display = 'none';
@@ -2089,12 +2134,13 @@
         window.addPage = () => {
             window.config.storyPages.push({
                 id: self.crypto.randomUUID(),
-                content: "New page...",
+                content: "",
                 pageType: "story",
                 rewards: [],
                 hiddenItems: [],
                 externalUrl: "",
-                hints: ""
+                hints: "",
+                ringtoneUrl: "https://treasurehuntsites.github.io/darkdome/media/chirptone.wav"
             });
             window.currentIdx = window.config.storyPages.length - 1;
             window.autoSave();
