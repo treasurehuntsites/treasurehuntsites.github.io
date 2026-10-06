@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szimbólum Lakat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --brass-dark: #8c7335;
+            --brass-med: #b89947;
+            --brass-light: #e6c25a;
+            --brass-highlight: #fff2a8;
+        }
+
+        body {
+            background-color: #2c2c2c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .lock-container {
+            position: relative;
+            width: 350px;
+            height: 450px;
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .lock-body {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 280px;
+            background: linear-gradient(135deg, var(--brass-med), var(--brass-dark));
+            border-radius: 20px;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.5),
+                inset 5px 5px 15px var(--brass-highlight),
+                10px 10px 30px rgba(0,0,0,0.7);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 30px;
+        }
+
+        .lock-texture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.1"/></svg>');
+            border-radius: 20px;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        .shackle {
+            position: absolute;
+            top: 20px;
+            left: 50px;
+            width: 250px;
+            height: 180px;
+            border: 35px solid #a0a0a0;
+            border-bottom: none;
+            border-radius: 125px 125px 0 0;
+            box-shadow: 
+                inset 5px 5px 10px rgba(255,255,255,0.7),
+                inset -5px -5px 10px rgba(0,0,0,0.5),
+                0 10px 20px rgba(0,0,0,0.5);
+            z-index: 5;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: left bottom;
+        }
+
+        .shackle::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            right: -35px;
+            width: 35px;
+            height: 40px;
+            background-color: #808080;
+            border-radius: 0 0 10px 10px;
+            box-shadow: inset -5px 0 10px rgba(0,0,0,0.5);
+        }
+
+        .lock-container.unlocked .shackle {
+            transform: translateY(-80px) rotate(-15deg);
+        }
+
+        .lock-container.unlocked {
+            transform: scale(0.9) translateY(-20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 1s ease-in-out, opacity 1s ease-in-out 0.5s;
+        }
+
+        .engraved-symbols {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 40px;
+            padding: 10px 20px;
+            background-color: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3), inset -1px -1px 3px rgba(255,255,255,0.2);
+            z-index: 11;
+        }
+
+        .engraved-symbol {
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5), -1px -1px 2px rgba(0,0,0,0.8);
+        }
+
+        .color-red { color: #d32f2f; }
+        .color-yellow { color: #fbc02d; }
+        .color-blue { color: #1976d2; }
+
+        .dials-container {
+            display: flex;
+            gap: 15px;
+            background-color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 5px 10px rgba(0,0,0,0.5);
+            z-index: 11;
+        }
+
+        .dial-window {
+            width: 50px;
+            height: 80px;
+            background-color: var(--brass-light);
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 10px 10px rgba(0,0,0,0.6), inset 0 -10px 10px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dial {
+            position: absolute;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .symbol-slot {
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: #333;
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+            user-select: none;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .dial-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .dial-btn {
+            height: 25px;
+            width: 100%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+        }
+        
+        .dial-btn:hover {
+            background-color: rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .chest-container {
+            position: absolute;
+            width: 400px;
+            height: 300px;
+            opacity: 0;
+            transform: scale(0.8) translateY(50px);
+            pointer-events: none;
+            transition: opacity 1s ease-in-out, transform 1s ease-in-out;
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chest-container.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: auto;
+            transition-delay: 1.5s; /* Wait for lock animation */
+        }
+
+        .chest {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            background: linear-gradient(to bottom, #5c4033, #3e2723);
+            border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border: 5px solid #2a1610;
+        }
+
+        .chest-lid {
+            position: absolute;
+            top: 0;
+            left: -5px;
+            width: calc(100% + 10px);
+            height: 100px;
+            background: linear-gradient(to bottom, #795548, #5c4033);
+            border-radius: 100px 100px 0 0;
+            transform-origin: top center;
+            border: 5px solid #2a1610;
+            box-shadow: inset 0 10px 20px rgba(255,255,255,0.1);
+            transition: transform 1.5s ease-in-out;
+            z-index: 20;
+        }
+
+        .chest-container.visible .chest-lid {
+            transform: rotateX(110deg);
+            transition-delay: 2s; /* Open lid after chest appears */
+        }
+
+        .chest-trim {
+            position: absolute;
+            background-color: #FFD700;
+            box-shadow: inset 1px 1px 3px rgba(255,255,255,0.5), inset -1px -1px 3px rgba(0,0,0,0.5);
+        }
+
+        .trim-vertical { width: 10px; height: 100%; top: 0; }
+        .trim-left { left: 40px; }
+        .trim-right { right: 40px; }
+
+        .chest-lock {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 50px;
+            background-color: #FFD700;
+            border-radius: 5px;
+            z-index: 21;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+        }
+
+        .chest-inside {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            right: 5px;
+            top: 50px;
+            background-color: #1a100c;
+            box-shadow: inset 0 20px 30px rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .paper {
+            background-color: #f4e4bc;
+            width: 150px;
+            height: 100px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            transform: rotate(-5deg) translateY(20px);
+            opacity: 0;
+            transition: opacity 1s, transform 1s;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.05" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 0.9 0 0 0 0 0 0.8 0 0 0 0 0 0.5 0" in="noise" result="coloredNoise"/><feComposite operator="in" in="coloredNoise" in2="SourceGraphic" result="composite"/></filter><rect width="100%" height="100%" fill="%23f4e4bc" filter="url(%23n)" opacity="0.4"/></svg>');
+        }
+
+        .chest-container.visible .paper {
+            opacity: 1;
+            transform: rotate(-5deg) translateY(0);
+            transition-delay: 3s;
+        }
+
+        .torn-edge {
+            clip-path: polygon(0% 0%, 100% 0%, 100% 90%, 95% 95%, 90% 85%, 85% 95%, 80% 90%, 75% 100%, 70% 90%, 65% 95%, 60% 85%, 55% 95%, 50% 90%, 45% 100%, 40% 90%, 35% 95%, 30% 85%, 25% 95%, 20% 90%, 15% 100%, 10% 90%, 5% 95%, 0% 90%);
+        }
+
+        /* Instruction text */
+        .instruction {
+            position: absolute;
+            top: 20px;
+            color: white;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 3px black;
+            text-align: center;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="instruction" id="instructionText">
+        Nyisd ki a lakatot a megfelelő kombinációval!
+    </div>
+
+    <div class="lock-container" id="lock">
+        <div class="shackle"></div>
+        <div class="lock-body">
+            <div class="lock-texture"></div>
+            
+            <div class="engraved-symbols">
+                <i class="fa-solid fa-heart color-red engraved-symbol"></i>
+                <i class="fa-solid fa-star color-yellow engraved-symbol"></i>
+                <i class="fa-solid fa-play color-blue engraved-symbol" style="transform: rotate(-90deg);"></i>
+                <i class="fa-solid fa-moon color-red engraved-symbol"></i>
+                
+                <i class="fa-solid fa-heart color-yellow engraved-symbol"></i>
+                <i class="fa-solid fa-star color-blue engraved-symbol"></i>
+                <i class="fa-solid fa-play color-red engraved-symbol" style="transform: rotate(-90deg);"></i>
+                <i class="fa-solid fa-moon color-yellow engraved-symbol"></i>
+                <i class="fa-solid fa-heart color-blue engraved-symbol"></i>
+            </div>
+
+            <div class="dials-container">
+                <!-- Dial 1 -->
+                <div class="dial-window">
+                    <div class="dial" id="dial0">
+                        <!-- Symbols injected by JS -->
+                    </div>
+                    <div class="dial-controls">
+                        <button class="dial-btn" onclick="rotateDial(0, -1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="dial-btn" onclick="rotateDial(0, 1)"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                </div>
+
+                <!-- Dial 2 -->
+                <div class="dial-window">
+                    <div class="dial" id="dial1">
+                        <!-- Symbols injected by JS -->
+                    </div>
+                    <div class="dial-controls">
+                        <button class="dial-btn" onclick="rotateDial(1, -1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="dial-btn" onclick="rotateDial(1, 1)"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                </div>
+
+                <!-- Dial 3 -->
+                <div class="dial-window">
+                    <div class="dial" id="dial2">
+                        <!-- Symbols injected by JS -->
+                    </div>
+                    <div class="dial-controls">
+                        <button class="dial-btn" onclick="rotateDial(2, -1)"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="dial-btn" onclick="rotateDial(2, 1)"><i class="fa-solid fa-chevron-down"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Open Button (Hidden initially, appears if needed, but auto-open is cooler) -->
+            <button id="openBtn" class="mt-8 px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded shadow border-2 border-yellow-800 transition hidden">Nyitás</button>
+        </div>
+    </div>
+
+    <div class="chest-container" id="chest">
+        <div class="chest">
+            <div class="chest-inside">
+                <div class="paper torn-edge" id="secretCode">
+                    7392
+                </div>
+            </div>
+            
+            <div class="chest-lid">
+                <div class="chest-trim trim-vertical trim-left"></div>
+                <div class="chest-trim trim-vertical trim-right"></div>
+            </div>
+            
+            <div class="chest-trim trim-vertical trim-left"></div>
+            <div class="chest-trim trim-vertical trim-right"></div>
+            <div class="chest-lock"></div>
+        </div>
+    </div>
+
+    <script>
+        // Define the sequence of symbols available on each dial
+        // We need: heart, star, triangle(play), moon
+        // Colors: red, yellow, blue
+        
+        const symbols = [
+            { icon: 'fa-heart', color: 'color-red', id: 'red-heart' },
+            { icon: 'fa-star', color: 'color-yellow', id: 'yellow-star' },
+            { icon: 'fa-play', color: 'color-blue', style: 'transform: rotate(-90deg);', id: 'blue-triangle' },
+            { icon: 'fa-moon', color: 'color-red', id: 'red-moon' },
+            { icon: 'fa-heart', color: 'color-yellow', id: 'yellow-heart' },
+            { icon: 'fa-star', color: 'color-blue', id: 'blue-star' },
+            { icon: 'fa-play', color: 'color-red', style: 'transform: rotate(-90deg);', id: 'red-triangle' },
+            { icon: 'fa-moon', color: 'color-yellow', id: 'yellow-moon' },
+            { icon: 'fa-heart', color: 'color-blue', id: 'blue-heart' },
+            { icon: 'fa-star', color: 'color-red', id: 'red-star' },
+            { icon: 'fa-play', color: 'color-yellow', style: 'transform: rotate(-90deg);', id: 'yellow-triangle' },
+            { icon: 'fa-moon', color: 'color-blue', id: 'blue-moon' }
+        ];
+
+        // The target combination: piros csillag, sárga háromszög, kék hold
+        const targetCombination = ['red-star', 'yellow-triangle', 'blue-moon'];
+        
+        // Current state of each dial (index in the symbols array)
+        // Initialize with random positions
+        let dialPositions = [
+            Math.floor(Math.random() * symbols.length),
+            Math.floor(Math.random() * symbols.length),
+            Math.floor(Math.random() * symbols.length)
+        ];
+
+        // Ensure initial state is not the winning state
+        while(
+            symbols[dialPositions[0]].id === targetCombination[0] &&
+            symbols[dialPositions[1]].id === targetCombination[1] &&
+            symbols[dialPositions[2]].id === targetCombination[2]
+        ) {
+            dialPositions[0] = Math.floor(Math.random() * symbols.length);
+        }
+
+        const slotHeight = 40; // Height of one symbol slot in pixels
+        let isUnlocked = false;
+
+        function initDials() {
+            for (let i = 0; i < 3; i++) {
+                const dialEl = document.getElementById(`dial${i}`);
+                
+                // We create a sequence repeated 3 times to allow smooth scrolling without visual breaks
+                // Current view is in the middle section
+                
+                let html = '';
+                // Add symbols 3 times to create infinite scroll illusion
+                for (let k = 0; k < 3; k++) {
+                    symbols.forEach(sym => {
+                        html += `<div class="symbol-slot"><i class="fa-solid ${sym.icon} ${sym.color}" ${sym.style ? `style="${sym.style}"` : ''}></i></div>`;
+                    });
+                }
+                
+                dialEl.innerHTML = html;
+                
+                // Set initial transform
+                updateDialTransform(i, false);
+                
+                // Add mouse wheel support
+                dialEl.parentElement.addEventListener('wheel', (e) => {
+                    if (isUnlocked) return;
+                    e.preventDefault();
+                    const direction = e.deltaY > 0 ? 1 : -1;
+                    rotateDial(i, direction);
+                });
+            }
+        }
+
+        function rotateDial(dialIndex, direction) {
+            if (isUnlocked) return;
+
+            // Update logical position
+            dialPositions[dialIndex] = (dialPositions[dialIndex] + direction + symbols.length) % symbols.length;
+            
+            // Update visual transform
+            updateDialTransform(dialIndex, true);
+            
+            // Check win condition
+            checkCombination();
+        }
+
+        function updateDialTransform(dialIndex, animate) {
+            const dialEl = document.getElementById(`dial${dialIndex}`);
+            
+            // The actual position we want to show is in the middle block of our 3x repeated list
+            // Center of the dial window is slotHeight / 2
+            // We need to offset by 1 full list length + current position
+            
+            const offsetSlots = symbols.length + dialPositions[dialIndex];
+            
+            // The transform calculation:
+            // - offsetSlots * slotHeight is the distance to scroll
+            // - We subtract slotHeight / 2 to center the active slot in the window
+            const translateY = -(offsetSlots * slotHeight) + (slotHeight / 2);
+            
+            if (!animate) {
+                dialEl.style.transition = 'none';
+            } else {
+                dialEl.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            }
+            
+            dialEl.style.transform = `translateY(${translateY}px)`;
+        }
+
+        function checkCombination() {
+            const currentComb = [
+                symbols[dialPositions[0]].id,
+                symbols[dialPositions[1]].id,
+                symbols[dialPositions[2]].id
+            ];
+
+            if (
+                currentComb[0] === targetCombination[0] &&
+                currentComb[1] === targetCombination[1] &&
+                currentComb[2] === targetCombination[2]
+            ) {
+                unlock();
+            }
+        }
+
+        function unlock() {
+            if (isUnlocked) return;
+            isUnlocked = true;
+
+            const instruction = document.getElementById('instructionText');
+            instruction.textContent = 'Kinyílt!';
+            instruction.style.backgroundColor = 'rgba(76, 175, 80, 0.8)';
+
+            const lock = document.getElementById('lock');
+            const chest = document.getElementById('chest');
+            
+            // Generate a random 4 digit code for the paper
+            const code = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('secretCode').textContent = code;
+
+            // Add unlocked class to trigger CSS animations
+            lock.classList.add('unlocked');
+            
+            // Show chest after lock disappears
+            setTimeout(() => {
+                instruction.style.display = 'none';
+                chest.classList.add('visible');
+            }, 1000);
+        }
+
+        // Initialize on load
+        window.onload = initDials;
+    </script>
+</body>
+</html>
