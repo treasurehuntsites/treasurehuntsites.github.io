@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szabadulószoba Lakat - Canvas Verzió</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #050505;
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 3/4;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid #1f2937;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        #success-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            backdrop-filter: blur(6px);
+        }
+
+        #success-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Virtuálisan rajzolt papírdarab */
+        .virtual-paper {
+            background-color: #e6dca8;
+            width: 300px;
+            height: 200px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Caveat', cursive;
+            font-size: 6rem;
+            color: #12215c; /* Golyóstoll kék */
+            box-shadow: 
+                5px 10px 20px rgba(0,0,0,0.6), 
+                inset 0 0 50px rgba(139, 69, 19, 0.3);
+            transform: scale(0.5) rotate(10deg) translateY(30px);
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 2px 10px 3px 15px; /* Kicsit szakadt, egyenetlen szélek */
+        }
+
+        /* Gyűrődések szimulációja CSS-el */
+        .virtual-paper::before, .virtual-paper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        
+        .virtual-paper::before {
+            background: 
+                linear-gradient(to right, transparent 30%, rgba(0,0,0,0.04) 32%, transparent 34%),
+                linear-gradient(to right, transparent 70%, rgba(0,0,0,0.04) 72%, transparent 74%),
+                linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.05) 42%, transparent 44%);
+        }
+
+        .virtual-paper::after {
+            background: radial-gradient(circle at center, transparent 40%, rgba(100, 70, 20, 0.15) 100%);
+        }
+
+        #success-overlay.show .virtual-paper {
+            transform: scale(1) rotate(-3deg) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- A Canvas elem, amire a teljes lakatot rajzoljuk -->
+        <canvas id="padlock-canvas"></canvas>
+
+        <!-- Siker animáció rétege a virtuális papírral -->
+        <div id="success-overlay">
+            <div class="virtual-paper">3543</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('padlock-canvas');
+        const ctx = canvas.getContext('2d');
+        const successOverlay = document.getElementById('success-overlay');
+
+        // Állapotok
+        const targetCombination = [1, 2, 6, 3, 9];
+        let currentCombination = [0, 0, 0, 0, 0];
+        let isSolved = false;
+        
+        // Tárcsák pozíciói és méretei (relatívak a canvas méretéhez képest 0-1 között)
+        const dialsConfig = {
+            y: 0.65,        // Y koordináta (fentről) - lejjebb toljuk, hogy legyen hely a nyilaknak
+            height: 0.18,   // Magasság
+            gap: 0.02,      // Távolság a tárcsák között
+            startX: 0.22,   // Első tárcsa X pozíciója
+            width: 0.10     // Egy tárcsa szélessége
+        };
+
+        // Animációs adatok tárolása a tekeréshez
+        const dialAnimations = [
+            { offsetY: 0, opacity: 1, animating: false },
+            { offsetY: 0, opacity: 1, animating: false },
+            { offsetY: 0, opacity: 1, animating: false },
+            { offsetY: 0, opacity: 1, animating: false },
+            { offsetY: 0, opacity: 1, animating: false }
+        ];
+
+        function init() {
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawScene(); // Azonnali újrarajzolás átméretezéskor
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            // Lakat testének méretei
+            const padlockW = w * 0.75;
+            const padlockH = h * 0.55;
+            const padlockX = cx - padlockW / 2;
+            const padlockY = cy - padlockH * 0.35; // Lakat feljebb mozgatása
+
+            // 1. Pánt (Shackle) rajzolása
+            ctx.save();
+            const shackleR = padlockW * 0.35;
+            const shackleY = padlockY;
+            ctx.beginPath();
+            ctx.arc(cx, shackleY, shackleR, Math.PI, 0);
+            ctx.lineTo(cx + shackleR, shackleY + padlockH * 0.2);
+            ctx.moveTo(cx - shackleR, shackleY);
+            ctx.lineTo(cx - shackleR, shackleY + padlockH * 0.2);
+
+            // Rozsdás fém hatás a pánton
+            ctx.strokeStyle = '#3a3a3a';
+            ctx.lineWidth = w * 0.12;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#1f1f1f'; // Belső árnyék/kopás
+            ctx.lineWidth = w * 0.08;
+            ctx.stroke();
+            ctx.restore();
+
+            // 2. Lakat test (Sárgaréz blokk)
+            ctx.save();
+            const gradient = ctx.createLinearGradient(padlockX, padlockY, padlockX + padlockW, padlockY + padlockH);
+            gradient.addColorStop(0, '#e5c05c');
+            gradient.addColorStop(0.3, '#c99b2e');
+            gradient.addColorStop(0.5, '#f4dc89');
+            gradient.addColorStop(0.8, '#a67b1e');
+            gradient.addColorStop(1, '#664a0f');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.roundRect(padlockX, padlockY, padlockW, padlockH, w * 0.03);
+            ctx.fill();
+            
+            // Körvonal a térbeliséghez
+            ctx.strokeStyle = '#4a3500';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+
+            // 3. Óra és nyilak (Gravírozás)
+            drawDecorations(cx, padlockY, padlockH, w);
+
+            // 4. Tárcsák kivágása (Fekete háttér a számok mögött)
+            ctx.save();
+            ctx.fillStyle = '#0a0a0a';
+            const cutoutX = w * dialsConfig.startX - w * 0.02;
+            const cutoutY = h * dialsConfig.y - h * 0.02;
+            const cutoutW = w * (dialsConfig.width * 5 + dialsConfig.gap * 4) + w * 0.04;
+            const cutoutH = h * dialsConfig.height + h * 0.04;
+            
+            ctx.beginPath();
+            ctx.roundRect(cutoutX, cutoutY, cutoutW, cutoutH, 8);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+
+            // 5. Tárcsák és számok rajzolása
+            for (let i = 0; i < 5; i++) {
+                drawDial(i);
+            }
+        }
+
+        function drawDecorations(x, padlockY, padlockH, w) {
+            ctx.save();
+            ctx.strokeStyle = '#2a1f12'; // Sötétebb, kontrasztosabb gravírozás szín
+            ctx.lineWidth = w * 0.012; // Vastagabb vonal
+            ctx.fillStyle = '#2a1f12';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Óra pozíciója
+            const clockY = padlockY + padlockH * 0.22;
+            const clockR = w * 0.08;
+            
+            // Óra keret
+            ctx.beginPath();
+            ctx.arc(x, clockY, clockR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Óra beosztások (pöttyök)
+            for(let i=0; i<12; i++) {
+                const ang = (i * Math.PI) / 6;
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(ang) * clockR * 0.75, clockY + Math.sin(ang) * clockR * 0.75, w * 0.007, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Óramutatók (pl. 5 órára mutat)
+            ctx.beginPath();
+            ctx.moveTo(x, clockY);
+            ctx.lineTo(x, clockY - clockR * 0.5); // Percmutató felfelé
+            ctx.moveTo(x, clockY);
+            ctx.lineTo(x + clockR * 0.35, clockY + clockR * 0.4); // Óramutató
+            ctx.stroke();
+
+            // Nyilak pozícionálása az óra és a számlapok közé
+            const arrowY = padlockY + padlockH * 0.45;
+            const arrowGap = w * 0.13;
+            const startX = x - (arrowGap * 1.5);
+
+            // Segédfüggvény egy jól látható nyíl rajzolásához
+            function drawArrow(ax, ay, size, dir) {
+                ctx.save();
+                ctx.translate(ax, ay);
+                if (dir === 'right') ctx.rotate(Math.PI / 2);
+                else if (dir === 'down') ctx.rotate(Math.PI);
+                else if (dir === 'left') ctx.rotate(-Math.PI / 2);
+
+                ctx.beginPath();
+                ctx.moveTo(0, -size*0.6); // Hegy
+                ctx.lineTo(size*0.45, -size*0.1); // Jobb szárny
+                ctx.moveTo(0, -size*0.6);
+                ctx.lineTo(-size*0.45, -size*0.1); // Bal szárny
+                ctx.moveTo(0, -size*0.6);
+                ctx.lineTo(0, size*0.6); // Szár
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Nyilak rajzolása a megfelelő sorrendben: fel, le, jobbra, balra
+            drawArrow(startX, arrowY, w * 0.065, 'up');
+            drawArrow(startX + arrowGap, arrowY, w * 0.065, 'down');
+            drawArrow(startX + arrowGap * 2, arrowY, w * 0.065, 'right');
+            drawArrow(startX + arrowGap * 3, arrowY, w * 0.065, 'left');
+
+            ctx.restore();
+        }
+
+        function drawDial(index) {
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            const dialX = w * (dialsConfig.startX + index * (dialsConfig.width + dialsConfig.gap));
+            const dialY = h * dialsConfig.y;
+            const dialW = w * dialsConfig.width;
+            const dialH = h * dialsConfig.height;
+
+            // Tárcsa hengeres fém háttér
+            const gradient = ctx.createLinearGradient(dialX, dialY, dialX, dialY + dialH);
+            gradient.addColorStop(0, '#111');
+            gradient.addColorStop(0.2, '#777');
+            gradient.addColorStop(0.5, '#ddd');
+            gradient.addColorStop(0.8, '#777');
+            gradient.addColorStop(1, '#111');
+            
+            ctx.fillStyle = gradient;
+            
+            ctx.beginPath();
+            ctx.roundRect(dialX, dialY, dialW, dialH, 6);
+            ctx.fill();
+
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Clipping maszk: Szöveg ne lógjon ki a tárcsáról
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(dialX, dialY, dialW, dialH, 6);
+            ctx.clip();
+
+            const anim = dialAnimations[index];
+            const fontSize = dialW * 0.8;
+            ctx.font = `bold ${fontSize}px 'Roboto Mono', monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            const textX = dialX + dialW / 2;
+            const textY = dialY + dialH / 2 + (anim.offsetY * dialH);
+            
+            // Középső (aktuális) szám
+            ctx.fillStyle = `rgba(15, 15, 15, ${anim.opacity})`;
+            ctx.fillText(currentCombination[index].toString(), textX, textY);
+            
+            // Felette és alatta lévő számok rajzolása a henger hatáshoz
+            const prevDigit = (currentCombination[index] - 1 + 10) % 10;
+            const nextDigit = (currentCombination[index] + 1) % 10;
+            
+            ctx.fillStyle = `rgba(15, 15, 15, ${Math.max(0, anim.opacity - 0.4)})`; 
+            ctx.fillText(nextDigit.toString(), textX, textY + dialH * 0.7); // Alatta lévő szám
+            ctx.fillText(prevDigit.toString(), textX, textY - dialH * 0.7); // Felette lévő szám
+            
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            updateAnimations();
+            drawScene();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateAnimations() {
+            dialAnimations.forEach(anim => {
+                if (anim.animating) {
+                    anim.offsetY += (anim.targetOffsetY - anim.offsetY) * 0.25; // Kicsit gyorsabb pörgetés
+                    anim.opacity += (anim.targetOpacity - anim.opacity) * 0.25;
+
+                    if (Math.abs(anim.targetOffsetY - anim.offsetY) < 0.01) {
+                        anim.offsetY = anim.targetOffsetY;
+                        anim.opacity = anim.targetOpacity;
+                        
+                        if (anim.phase === 'out') {
+                            anim.phase = 'in';
+                            anim.offsetY = anim.direction * -0.5;
+                            anim.targetOffsetY = 0;
+                            anim.targetOpacity = 1;
+                        } else if (anim.phase === 'in') {
+                            anim.animating = false;
+                        }
+                    }
+                }
+            });
+        }
+
+        function getDialHitbox(index) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const dialX = w * (dialsConfig.startX + index * (dialsConfig.width + dialsConfig.gap));
+            const dialY = h * dialsConfig.y;
+            const dialW = w * dialsConfig.width;
+            const dialH = h * dialsConfig.height;
+            return { x: dialX, y: dialY, w: dialW, h: dialH };
+        }
+
+        function handleInteraction(event) {
+            if (isSolved) return;
+            event.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+            
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            for (let i = 0; i < 5; i++) {
+                const hitbox = getDialHitbox(i);
+                
+                if (x >= hitbox.x && x <= hitbox.x + hitbox.w &&
+                    y >= hitbox.y && y <= hitbox.y + hitbox.h) {
+                    
+                    if (dialAnimations[i].animating) return;
+
+                    const isUpClick = y < hitbox.y + hitbox.h / 2;
+                    const direction = isUpClick ? 1 : -1;
+                    
+                    changeDigit(i, direction);
+                    break;
+                }
+            }
+        }
+
+        function changeDigit(index, direction) {
+            let newValue = currentCombination[index] + direction;
+            if (newValue > 9) newValue = 0;
+            if (newValue < 0) newValue = 9;
+            
+            currentCombination[index] = newValue;
+            
+            const anim = dialAnimations[index];
+            anim.animating = true;
+            anim.phase = 'out';
+            anim.direction = direction;
+            anim.targetOffsetY = direction * 0.5;
+            anim.targetOpacity = 0.2;
+
+            setTimeout(checkCombination, 300);
+        }
+
+        function checkCombination() {
+            const isMatch = currentCombination.every((val, index) => val === targetCombination[index]);
+            if (isMatch && !isSolved) {
+                isSolved = true;
+                setTimeout(() => {
+                    successOverlay.classList.add('show');
+                }, 500);
+            }
+        }
+
+        // Event listenerek
+        canvas.addEventListener('mousedown', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction, {passive: false});
+
+        // Alkalmazás indítása képbetöltésre várás nélkül
+        init();
+
+    </script>
+</body>
+</html>
