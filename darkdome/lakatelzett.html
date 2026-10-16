@@ -1,0 +1,492 @@
+<!DOCTYPE1 html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elzett Lakat - Szabadulószoba Feladat</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Escape Room Aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1115;
+            color: #e2e8f0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-typewriter {
+            font-family: 'Special Elite', cursive;
+        }
+
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Ambient Glow & Shadow effects */
+        .metal-shadow {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Letter button hover and active effects */
+        .letter-btn {
+            cursor: pointer;
+            transition: all 0.15s ease;
+            fill: #221d1a;
+            stroke: rgba(0,0,0,0.6);
+            stroke-width: 1;
+        }
+
+        .letter-btn:hover {
+            fill: #eab308;
+            filter: drop-shadow(0px 0px 6px rgba(234, 179, 8, 0.8));
+        }
+
+        .letter-btn:active, .letter-btn.pressed {
+            fill: #f97316;
+            transform: scale(0.92);
+        }
+
+        /* Shackle Animation */
+        #shackle {
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: top center;
+        }
+
+        .shackle-open {
+            transform: translateY(-45px) rotate(-12deg);
+        }
+
+        /* Paper Unfold Effect */
+        #secret-paper {
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(120%) scale(0.5);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #secret-paper.revealed {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Subtle Torch Ambient Light */
+        .ambient-bg {
+            background: radial-gradient(circle at 50% 30%, #2a2d36 0%, #0d0e12 80%);
+        }
+
+        /* Pulse hint glow */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(234, 179, 8, 0.6); }
+        }
+
+        .glow-box {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="ambient-bg min-h-screen flex flex-col items-center justify-center p-4 overflow-x-hidden">
+
+    <!-- Main Game Area -->
+    <main class="w-full max-w-xl flex flex-col items-center relative my-auto">
+
+        <!-- Padlock & Door Hasp Graphic Container -->
+        <div class="relative w-full max-w-[340px] sm:max-w-[380px] aspect-[3/4] flex items-center justify-center my-2">
+            
+            <!-- SVG Padlock Representation -->
+            <svg viewBox="0 0 400 520" class="w-full h-full drop-shadow-2xl">
+                <defs>
+                    <!-- Metal Gradients -->
+                    <linearGradient id="doorBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4a5056"/>
+                        <stop offset="50%" stop-color="#2d3136"/>
+                        <stop offset="100%" stop-color="#1a1c20"/>
+                    </linearGradient>
+
+                    <linearGradient id="shackleMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#555"/>
+                        <stop offset="30%" stop-color="#aaa"/>
+                        <stop offset="50%" stop-color="#eee"/>
+                        <stop offset="70%" stop-color="#888"/>
+                        <stop offset="100%" stop-color="#333"/>
+                    </linearGradient>
+
+                    <linearGradient id="lockBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#d4d7dc"/>
+                        <stop offset="25%" stop-color="#a0a5ad"/>
+                        <stop offset="50%" stop-color="#737882"/>
+                        <stop offset="85%" stop-color="#4b4e56"/>
+                        <stop offset="100%" stop-color="#2c2e33"/>
+                    </linearGradient>
+
+                    <radialGradient id="rustOverlay" cx="40%" cy="40%" r="60%">
+                        <stop offset="0%" stop-color="#8b4513" stop-opacity="0.4"/>
+                        <stop offset="40%" stop-color="#a0522d" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="#000000" stop-opacity="0.5"/>
+                    </radialGradient>
+
+                    <!-- Bevel filter for realistic engraved text -->
+                    <filter id="engrave">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="0.8" result="blur" />
+                        <feOffset dx="1" dy="1" result="offset" />
+                        <feComponentTransfer>
+                            <feFuncA type="linear" slope="0.7"/>
+                        </feComponentTransfer>
+                        <feMerge>
+                            <feMergeNode />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Wooden/Metal Door Background Piece -->
+                <rect x="20" y="10" width="360" height="500" rx="12" fill="url(#doorBg)" stroke="#111" stroke-width="4"/>
+                <!-- Vertical Frame Edge line -->
+                <line x1="80" y1="10" x2="80" y2="510" stroke="#1f2327" stroke-width="6"/>
+
+                <!-- Door Latch Hasp Mount (Behind Lock) -->
+                <g id="door-hasp">
+                    <!-- Base plate -->
+                    <rect x="140" y="20" width="120" height="150" rx="8" fill="#2b2d31" stroke="#111" stroke-width="3"/>
+                    <circle cx="160" cy="40" r="6" fill="#111"/>
+                    <circle cx="240" cy="40" r="6" fill="#111"/>
+                    <!-- Loop staple -->
+                    <path d="M 175 90 L 175 40 Q 200 20 225 40 L 225 90 Z" fill="none" stroke="url(#shackleMetal)" stroke-width="16" stroke-linecap="round"/>
+                </g>
+
+                <!-- MOVING SHACKLE -->
+                <g id="shackle">
+                    <!-- Heavy U-Shackle -->
+                    <path d="M 145 180 L 145 100 Q 200 45 255 100 L 255 180" fill="none" stroke="url(#shackleMetal)" stroke-width="26" stroke-linecap="round"/>
+                    <!-- Inner shadow of shackle -->
+                    <path d="M 145 180 L 145 100 Q 200 45 255 100 L 255 180" fill="none" stroke="#000" stroke-width="2" opacity="0.5"/>
+                </g>
+
+                <!-- MAIN LOCK BODY -->
+                <g id="lock-body-group">
+                    <!-- Outer Body Shadow -->
+                    <rect x="95" y="145" width="210" height="290" rx="14" fill="#000" opacity="0.6"/>
+
+                    <!-- Metal Block Base -->
+                    <rect x="90" y="140" width="220" height="295" rx="12" fill="url(#lockBody)" stroke="#1e2024" stroke-width="3"/>
+
+                    <!-- Top U-Cutout (Distinctive Rectangular Elzett shape) -->
+                    <path d="M 145 140 L 145 220 L 255 220 L 255 140 Z" fill="url(#doorBg)" stroke="#222" stroke-width="3"/>
+                    <!-- Cutout inner bevels -->
+                    <path d="M 145 140 L 145 220 L 255 220 L 255 140" fill="none" stroke="#111" stroke-width="4"/>
+
+                    <!-- Grungy Rust / Texture Overlay -->
+                    <rect x="90" y="140" width="220" height="295" rx="12" fill="url(#rustOverlay)"/>
+
+                    <!-- Surface Wear Patches -->
+                    <path d="M 100 260 Q 130 250 160 280 T 120 380 Z" fill="#5c3818" opacity="0.25"/>
+                    <path d="M 220 340 Q 260 320 290 370 T 260 410 Z" fill="#4a2e15" opacity="0.3"/>
+
+                    <!-- ENGRAVED BRAND NAME: "ELZETT" -->
+                    <g id="text-elzett" class="font-cinzel">
+                        <!-- E -->
+                        <text x="122" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="E">E</text>
+                        <!-- L -->
+                        <text x="150" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="L">L</text>
+                        <!-- Z -->
+                        <text x="178" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="Z">Z</text>
+                        <!-- E -->
+                        <text x="206" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="E">E</text>
+                        <!-- T -->
+                        <text x="234" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="T">T</text>
+                        <!-- T -->
+                        <text x="262" y="305" font-size="34" font-weight="900" class="letter-btn" data-char="T">T</text>
+                    </g>
+
+                    <!-- STAMPED SPECIFICATION: "HARDENED STEEL" -->
+                    <g id="text-hardened" class="font-typewriter">
+                        <!-- HARDENED -->
+                        <text x="108" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="H">H</text>
+                        <text x="122" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="A">A</text>
+                        <text x="136" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="R">R</text>
+                        <text x="150" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="D">D</text>
+                        <text x="164" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="E">E</text>
+                        <text x="178" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="N">N</text>
+                        <text x="192" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="E">E</text>
+                        <text x="206" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="D">D</text>
+
+                        <!-- STEEL -->
+                        <text x="230" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="S">S</text>
+                        <text x="244" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="T">T</text>
+                        <text x="258" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="E">E</text>
+                        <text x="272" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="E">E</text>
+                        <text x="286" y="340" font-size="16" font-weight="bold" class="letter-btn" data-char="L">L</text>
+                    </g>
+
+                    <!-- Bottom bevel line -->
+                    <line x1="100" y1="420" x2="300" y2="420" stroke="#1f2124" stroke-width="2"/>
+                </g>
+            </svg>
+
+            <!-- SECRET CODE PAPER (Revealed when unlocked - Yellowed aged paper with code only) -->
+            <div id="secret-paper" class="absolute inset-x-4 top-12 bottom-8 rounded-lg p-6 shadow-2xl flex items-center justify-center z-20 font-typewriter select-none border border-amber-900/30" style="background: radial-gradient(circle, #f5e4c3 0%, #e0c598 70%, #be9b62 100%); box-shadow: 0 20px 40px rgba(0,0,0,0.9), inset 0 0 50px rgba(100, 55, 10, 0.55);">
+                <span id="final-code-text" class="text-6xl sm:text-7xl font-black text-[#2e1a0b] tracking-widest drop-shadow-[0_2px_2px_rgba(255,255,255,0.2)]">5392</span>
+            </div>
+
+        </div>
+
+        <!-- Code Input Display Screen -->
+        <div class="w-full max-w-md bg-slate-900/90 border-2 border-slate-700 rounded-xl p-3 shadow-xl mt-2 glow-box">
+            <div class="flex justify-between items-center text-xs text-slate-400 mb-1 px-1">
+                <span>BEÍRT BEGYŰJTÖTT BETŰK:</span>
+                <span id="char-count" class="text-amber-400 font-mono">0 kar.</span>
+            </div>
+            
+            <div id="input-display" class="w-full min-h-[46px] bg-black/60 border border-slate-800 rounded-lg p-2.5 font-mono text-amber-400 text-lg tracking-widest break-all flex items-center justify-start overflow-x-auto whitespace-nowrap">
+                <span id="cursor" class="animate-pulse text-amber-500 font-bold">_</span>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="grid grid-cols-2 gap-2 mt-3">
+                <button id="btn-backspace" class="py-2.5 bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-slate-200 border border-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1">
+                    <span>⌫ VISSZA</span>
+                </button>
+                <button id="btn-clear" class="py-2.5 bg-rose-950/80 hover:bg-rose-900 active:bg-rose-700 text-rose-200 border border-rose-800 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1">
+                    <span>✖ TÖRLÉS</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Game Logic & State Management
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Target solutions
+            const TARGET_PHRASE = "SZERETED HA LASSAN HALAD";
+            const TARGET_NORMALIZED = TARGET_PHRASE.replace(/\s+/g, '');
+
+            // Elements
+            const inputDisplay = document.getElementById('input-display');
+            const charCountEl = document.getElementById('char-count');
+            const letterBtns = document.querySelectorAll('.letter-btn');
+            const shackle = document.getElementById('shackle');
+            const secretPaper = document.getElementById('secret-paper');
+
+            let currentInput = "";
+            let isUnlocked = false;
+            let audioEnabled = true;
+
+            // --- WEB AUDIO SYNTHESIZER FOR METALLIC SOUND EFFECTS ---
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            let audioCtx = null;
+
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new AudioCtx();
+                }
+            }
+
+            // Play tactile metal click
+            function playMetalClick() {
+                if (!audioEnabled) return;
+                initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800 + Math.random() * 200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.06);
+            }
+
+            // Play heavy metallic unlock sound
+            function playUnlockSound() {
+                if (!audioEnabled) return;
+                initAudio();
+
+                const now = audioCtx.currentTime;
+
+                // Clang 1: Metallic slide noise
+                const bufferSize = audioCtx.sampleRate * 0.2;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1200, now);
+
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(0.4, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start(now);
+
+                // Heavy metal thud
+                const osc = audioCtx.createOscillator();
+                const oscGain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(220, now + 0.1);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+
+                oscGain.gain.setValueAtTime(0.8, now + 0.1);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+                osc.connect(oscGain);
+                oscGain.connect(audioCtx.destination);
+                osc.start(now + 0.1);
+                osc.stop(now + 0.4);
+            }
+
+            // Update Display UI
+            function updateDisplay() {
+                const formattedText = currentInput.length > 0 ? currentInput : "";
+                
+                inputDisplay.innerHTML = `
+                    <span class="text-amber-300 font-bold">${escapeHtml(formattedText)}</span>
+                    <span id="cursor" class="animate-pulse text-amber-500 font-bold ml-0.5">_</span>
+                `;
+                
+                charCountEl.innerText = `${currentInput.length} kar.`;
+                checkSolution();
+            }
+
+            function escapeHtml(text) {
+                return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            // Append Character
+            function appendChar(char) {
+                if (isUnlocked) return;
+                currentInput += char.toUpperCase();
+                playMetalClick();
+                updateDisplay();
+            }
+
+            // Backspace
+            function handleBackspace() {
+                if (isUnlocked || currentInput.length === 0) return;
+                currentInput = currentInput.slice(0, -1);
+                playMetalClick();
+                updateDisplay();
+            }
+
+            // Clear
+            function handleClear() {
+                if (isUnlocked || currentInput.length === 0) return;
+                currentInput = "";
+                playMetalClick();
+                updateDisplay();
+            }
+
+            // Add space
+            function handleSpace() {
+                if (isUnlocked) return;
+                // Avoid multiple consecutive spaces
+                if (!currentInput.endsWith(" ") && currentInput.length > 0) {
+                    currentInput += " ";
+                    playMetalClick();
+                    updateDisplay();
+                }
+            }
+
+            // Check if solution matches
+            function checkSolution() {
+                const cleanInput = currentInput.trim();
+                const normalizedInput = cleanInput.replace(/\s+/g, '');
+
+                if (cleanInput === TARGET_PHRASE || normalizedInput === TARGET_NORMALIZED) {
+                    unlockPadlock();
+                }
+            }
+
+            // Unlock Sequence
+            function unlockPadlock() {
+                if (isUnlocked) return;
+                isUnlocked = true;
+
+                playUnlockSound();
+
+                // 1. Highlight input box with green success glow
+                const displayContainer = inputDisplay.parentElement;
+                displayContainer.classList.remove('glow-box', 'border-slate-700');
+                displayContainer.classList.add('border-emerald-500', 'shadow-emerald-500/50');
+                inputDisplay.classList.add('text-emerald-400');
+
+                // 2. Lift Padlock Shackle
+                shackle.classList.add('shackle-open');
+
+                // 3. Reveal Secret Paper after short delay
+                setTimeout(() => {
+                    secretPaper.classList.add('revealed');
+                }, 700);
+            }
+
+            // Attach Click Listeners to SVG Padlock Letters
+            letterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const char = btn.getAttribute('data-char');
+                    if (char) {
+                        appendChar(char);
+
+                        // Visual button pulse effect
+                        btn.classList.add('pressed');
+                        setTimeout(() => btn.classList.remove('pressed'), 150);
+                    }
+                });
+            });
+
+            // Button Control Handlers
+            document.getElementById('btn-backspace')?.addEventListener('click', handleBackspace);
+            document.getElementById('btn-clear')?.addEventListener('click', handleClear);
+
+            // Physical Keyboard Support
+            window.addEventListener('keydown', (e) => {
+                if (isUnlocked) return;
+
+                if (e.key === 'Backspace') {
+                    handleBackspace();
+                } else if (e.key === 'Escape' || e.key === 'Delete') {
+                    handleClear();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    handleSpace();
+                } else if (/^[a-zA-Z]$/.test(e.key)) {
+                    const char = e.key.toUpperCase();
+                    appendChar(char);
+
+                    // Flash matching letter on SVG padlock if available
+                    const matchBtn = Array.from(letterBtns).find(b => b.getAttribute('data-char') === char);
+                    if (matchBtn) {
+                        matchBtn.classList.add('pressed');
+                        setTimeout(() => matchBtn.classList.remove('pressed'), 180);
+                    }
+                }
+            });
+
+            // Initialize Display
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
