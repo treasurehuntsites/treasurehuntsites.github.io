@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futurisztikus Széf Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Dark slate background */
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .tech-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 25px currentColor; }
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes slide-out {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            20% { transform: translateY(20px) scale(0.98); opacity: 1; }
+            100% { transform: translateY(-150vh) scale(1.1) rotate(5deg); opacity: 0; display: none; }
+        }
+
+        .slide-out-anim {
+            animation: slide-out 1.5s cubic-bezier(0.8, -0.2, 0.2, 1) forwards;
+        }
+
+        .glow-active {
+            animation: pulse-glow 2s infinite;
+        }
+
+        /* Screen scanline effect */
+        .screen-overlay::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .engraved-text {
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.3), -1px -1px 2px rgba(0,0,0,0.8);
+        }
+
+        .color-panel {
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Connection lines styling mimicking the image */
+        .connection-line {
+            border-right: 3px solid #94a3b8;
+            border-top: 3px solid #94a3b8;
+            border-bottom: 3px solid #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- This is the layer revealed after the code is solved -->
+    <div id="hidden-compartment" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 z-0">
+        <!-- Inner shadow for depth -->
+        <div class="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] pointer-events-none"></div>
+        
+        <div class="relative z-10 flex flex-col items-center opacity-0 transition-opacity duration-1000 delay-500" id="wrench-container">
+            <p class="tech-font text-emerald-500 text-2xl mb-8 tracking-widest uppercase">Secured Cache Unlocked</p>
+            
+            <svg width="500" height="140" viewBox="0 0 500 140" class="drop-shadow-[0_25px_35px_rgba(0,0,0,0.9)] transform hover:scale-105 transition-transform duration-500 cursor-pointer">
+                <defs>
+                    <!-- Photorealistic Metal Gradient -->
+                    <linearGradient id="chrome" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#f8f9fa" />
+                        <stop offset="25%" stop-color="#ced4da" />
+                        <stop offset="50%" stop-color="#6c757d" />
+                        <stop offset="55%" stop-color="#adb5bd" />
+                        <stop offset="80%" stop-color="#e9ecef" />
+                        <stop offset="100%" stop-color="#495057" />
+                    </linearGradient>
+                    <!-- Dark Chrome for inner shadows -->
+                    <linearGradient id="chrome-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#495057" />
+                        <stop offset="50%" stop-color="#212529" />
+                        <stop offset="100%" stop-color="#000000" />
+                    </linearGradient>
+                    <!-- Carved Wood Handle Texture Gradient -->
+                    <linearGradient id="wood" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#5c3a21" />
+                        <stop offset="30%" stop-color="#3e230e" />
+                        <stop offset="70%" stop-color="#2c1606" />
+                        <stop offset="100%" stop-color="#1a0c03" />
+                    </linearGradient>
+                    <!-- Inset Shadow for Engraving -->
+                    <filter id="inset-shadow">
+                        <feOffset dx="1" dy="1"/>
+                        <feGaussianBlur stdDeviation="1" result="offset-blur"/>
+                        <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+                        <feFlood flood-color="black" flood-opacity="0.9" result="color"/>
+                        <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+                        <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+                    </filter>
+                    <!-- Drop Shadow for layered elements -->
+                    <filter id="drop-shadow">
+                        <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.6" />
+                    </filter>
+                </defs>
+
+                <!-- Base Wrench Metallic Body -->
+                <path d="M 110 50 L 390 50 L 390 90 L 110 90 Z" fill="url(#chrome)" />
+                
+                <!-- Left Head (Spanner) -->
+                <path d="M 120 70 C 120 15, 60 5, 30 15 C 10 25, 0 40, 5 45 L 65 45 L 65 95 L 5 95 C 0 100, 10 115, 30 125 C 60 135, 120 125, 120 70 Z" fill="url(#chrome)" />
+                
+                <!-- Right Head (Box end) -->
+                <circle cx="430" cy="70" r="45" fill="url(#chrome)" />
+                <circle cx="430" cy="70" r="28" fill="url(#chrome-dark)" />
+                <circle cx="430" cy="70" r="24" fill="#18181b" />
+                <circle cx="430" cy="70" r="26" fill="none" stroke="url(#chrome)" stroke-width="3" stroke-dasharray="8 4" />
+
+                <!-- Carved Wood Handle -->
+                <path d="M 130 45 C 200 40, 230 35, 250 35 C 270 35, 300 40, 370 45 C 385 46, 390 55, 390 70 C 390 85, 385 94, 370 95 C 300 100, 270 105, 250 105 C 230 105, 200 100, 130 95 C 115 94, 110 85, 110 70 C 110 55, 115 46, 130 45 Z" fill="url(#wood)" filter="url(#drop-shadow)" />
+                
+                <!-- Grip notches -->
+                <path d="M 150 43 C 160 60, 160 80, 150 97 M 180 41 C 190 60, 190 80, 180 99 M 320 41 C 330 60, 330 80, 320 99 M 350 43 C 360 60, 360 80, 350 97" stroke="#1a0c03" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.8" filter="url(#drop-shadow)" />
+
+                <!-- Metallic Plate for Engraving -->
+                <rect x="200" y="52" width="100" height="36" rx="6" fill="url(#chrome)" filter="url(#drop-shadow)" />
+                <rect x="203" y="55" width="94" height="30" rx="4" fill="none" stroke="#343a40" stroke-width="1.5" />
+
+                <!-- Engraved Numbers -->
+                <text x="250" y="79" font-family="'Inter', sans-serif" font-size="28" font-weight="900" fill="#212529" text-anchor="middle" letter-spacing="6" filter="url(#inset-shadow)">5488</text>
+            </svg>
+        </div>
+    </div>
+
+    <!-- This is the top layer that user interacts with -->
+    <div id="main-panel" class="relative z-10 w-[800px] h-[500px] bg-slate-600 rounded-3xl p-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] border-8 border-slate-800 flex flex-col justify-center">
+        
+        <!-- Inner panel chassis -->
+        <div class="w-full h-full bg-slate-500 rounded-xl border-4 border-slate-400 p-8 flex gap-8 shadow-inner">
+            
+            <div class="w-1/3 flex flex-col justify-between relative">
+                
+                <div id="switches-container" class="flex flex-col gap-4 relative z-10">
+                    <!-- Switches will be injected via JS to avoid repetition -->
+                </div>
+
+                <!-- Decorative circuitry graphics mimicking the image -->
+                <div class="absolute right-[-40px] top-[10%] bottom-[30%] w-10 border-r-4 border-t-4 border-b-4 border-slate-300 rounded-r-lg opacity-80"></div>
+                
+                <div class="absolute right-[-80px] bottom-[20%] flex items-center">
+                    <div class="w-10 h-1 bg-slate-300"></div>
+                    <div class="w-20 h-20 rounded-full border-4 border-slate-300 bg-slate-600 shadow-inner flex items-center justify-center">
+                        <div class="w-12 h-12 rounded-full bg-slate-700 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="w-2/3 flex flex-col gap-6 ml-16">
+                
+                <!-- Display Screen -->
+                <div class="h-24 bg-black rounded-lg border-4 border-slate-700 p-2 screen-overlay relative overflow-hidden flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,1)]">
+                    <div id="main-screen-text" class="tech-font text-red-500 text-3xl font-bold tracking-widest z-10">
+                        SYSTEM LOCKED
+                    </div>
+                </div>
+
+                <!-- Decorative Keypad Grid -->
+                <div class="flex-1 grid grid-cols-5 gap-3 p-2 bg-slate-600 rounded-lg shadow-inner">
+                    <!-- Generating 25 dummy keys -->
+                    <script>
+                        for(let i=0; i<25; i++) {
+                            document.write('<div class="bg-slate-400 rounded-md shadow-md border-b-4 border-slate-500 hover:bg-slate-300 transition-colors"></div>');
+                        }
+                    </script>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        // Data & State Initialization
+        // Available colors matching instructions: 1: Red, 2: Blue, 3: Green, 4: Yellow
+        // Index 0 is the default unselected state (Gray)
+        const colors = [
+            { class: 'bg-slate-400', hex: '#94a3b8' }, // 0: Default
+            { class: 'bg-red-500',   hex: '#ef4444' }, // 1: Piros (Red)
+            { class: 'bg-blue-500',  hex: '#3b82f6' }, // 2: Kék (Blue)
+            { class: 'bg-green-500', hex: '#22c55e' }, // 3: Zöld (Green)
+            { class: 'bg-yellow-500',hex: '#eab308' }  // 4: Sárga (Yellow)
+        ];
+
+        // The correct sequence based on instructions:
+        // 1: Red (1), 2: Blue (2), 3: Green (3), 4: Yellow (4)
+        const targetSequence = [1, 2, 3, 4];
+        
+        // We have 4 panels visually to match the new instruction.
+        const totalPanels = 4;
+        let currentState = [0, 0, 0, 0];
+        let isLocked = true;
+
+        const switchesContainer = document.getElementById('switches-container');
+
+        function renderSwitches() {
+            switchesContainer.innerHTML = '';
+            for (let i = 0; i < totalPanels; i++) {
+                const switchRow = document.createElement('div');
+                switchRow.className = 'flex items-center gap-4';
+                
+                const numberLabel = document.createElement('span');
+                numberLabel.className = 'tech-font text-white text-2xl font-bold w-6 text-right drop-shadow-md';
+                numberLabel.innerText = i + 1;
+
+                const colorBox = document.createElement('div');
+                colorBox.className = `w-32 h-10 rounded-sm cursor-pointer border-2 border-slate-700 shadow-inner color-panel ${colors[currentState[i]].class}`;
+                // Optional: apply inline styling for dynamic glow if active
+                if(currentState[i] !== 0) {
+                    colorBox.style.boxShadow = `0 0 15px ${colors[currentState[i]].hex}`;
+                }
+
+                // Interaction Logic
+                colorBox.onclick = () => {
+                    if(!isLocked) return; // Prevent clicking during animation
+                    
+                    // Cycle to next color
+                    currentState[i] = (currentState[i] + 1) % colors.length;
+                    
+                    // Re-render and check
+                    renderSwitches();
+                    checkCode();
+                };
+
+                switchRow.appendChild(numberLabel);
+                switchRow.appendChild(colorBox);
+                switchesContainer.appendChild(switchRow);
+            }
+        }
+
+        function checkCode() {
+            // Check only the first 4 panels against the target sequence
+            let isCorrect = true;
+            for(let i = 0; i < 4; i++) {
+                if(currentState[i] !== targetSequence[i]) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if(isCorrect) {
+                triggerUnlockSequence();
+            }
+        }
+
+        function triggerUnlockSequence() {
+            isLocked = false; // Disable further clicks
+            
+            const screenText = document.getElementById('main-screen-text');
+            const mainPanel = document.getElementById('main-panel');
+            const wrenchContainer = document.getElementById('wrench-container');
+            
+            // 1. Futuristic Success Feedback on Screen
+            screenText.innerText = "ACCESS GRANTED";
+            screenText.classList.remove('text-red-500');
+            screenText.classList.add('text-green-400', 'glow-active');
+            
+            // Change screen border to green
+            screenText.parentElement.classList.remove('border-slate-700');
+            screenText.parentElement.classList.add('border-green-500', 'shadow-[inset_0_0_50px_rgba(34,197,94,0.5)]');
+
+            // 2. Animate Main Panel Away after brief delay
+            setTimeout(() => {
+                mainPanel.classList.add('slide-out-anim');
+                
+                // 3. Reveal Hidden Compartment
+                setTimeout(() => {
+                    wrenchContainer.classList.remove('opacity-0');
+                    wrenchContainer.classList.add('opacity-100');
+                }, 800); // Wait for slide out to clear center
+
+            }, 1200); // Show "ACCESS GRANTED" for 1.2s
+        }
+
+        // Initial Render
+        renderSwitches();
+
+    </script>
+</body>
+</html>
