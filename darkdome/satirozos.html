@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Titkos Szám Satírozó</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@700&display=swap');
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            /* Megakadályozzuk a mobilos frissítést (pull-to-refresh) és a görgetést satírozás közben */
+            overscroll-behavior-y: contain;
+            touch-action: none;
+            background-color: #ffffff;
+            /* Enyhe papír textúra hatás SVG-vel az egész képernyőn */
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+
+        #secret-text {
+            /* A szám tipográfiája */
+            font-family: 'Courier Prime', monospace;
+            /* A szöveg teljesen fehér, mint a papír */
+            color: #ffffff;
+            /* Enyhe textúra a számra is, hogy valósághűbb legyen a satírozás */
+            text-shadow: 1px 1px 0px rgba(255,255,255,1), -1px -1px 0px rgba(255,255,255,1);
+        }
+    </style>
+</head>
+<body class="relative overflow-hidden cursor-crosshair">
+
+    <!-- A Canvas, amire a szürke ceruzanyomok kerülnek (teljes képernyő) -->
+    <canvas id="shading-canvas" class="absolute inset-0 z-10 block"></canvas>
+    
+    <!-- A titkos szám, ami a Canvas FELETT van. Mivel fehér, blokkolja a szürke vonalakat. -->
+    <div id="secret-text" class="absolute inset-0 z-20 flex items-center justify-center text-[25vw] sm:text-[15vw] tracking-[0.2em] font-bold select-none pointer-events-none">
+        0000
+    </div>
+
+    <script>
+        const canvas = document.getElementById('shading-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const secretText = document.getElementById('secret-text');
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Állandó 4 jegyű szám beállítása
+        function generateSecretNumber() {
+            secretText.textContent = '6814';
+        }
+
+        // Canvas méretezése a teljes ablakhoz
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            setupPencilBrush();
+        }
+
+        // Ceruza stílusának beállítása (szürke, halvány, vastag)
+        function setupPencilBrush() {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            // Grafit szín, nagyon alacsony átlátszósággal az épülő satírozó hatásért
+            ctx.strokeStyle = 'rgba(70, 75, 80, 0.08)'; 
+            // Széles hegy, mintha lapjával használnánk a ceruzát
+            ctx.lineWidth = 45; 
+        }
+
+        // Koordináták lekérése egeres vagy érintéses eseményből
+        function getPosition(e) {
+            let clientX, clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: clientX,
+                y: clientY
+            };
+        }
+
+        // Rajzolás (satírozás) elkezdése
+        function startDrawing(e) {
+            isDrawing = true;
+            const pos = getPosition(e);
+            lastX = pos.x;
+            lastY = pos.y;
+            
+            // Rajzoljunk egy pöttyöt oda is, ahova csak rákattintott
+            drawStroke(pos.x, pos.y);
+        }
+
+        // Rajzolás folyamata
+        function draw(e) {
+            if (!isDrawing) return;
+            // Megakadályozzuk, hogy a telefon görgessen az oldalon satírozás közben
+            e.preventDefault(); 
+            
+            const pos = getPosition(e);
+            drawStroke(pos.x, pos.y);
+        }
+
+        // Vonal húzása
+        function drawStroke(x, y) {
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            
+            // Halvány véletlenszerűség hozzáadása, hogy ne legyen túl sima (grafit textúra)
+            ctx.lineWidth = 40 + Math.random() * 15;
+            
+            lastX = x;
+            lastY = y;
+        }
+
+        // Rajzolás befejezése
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Eseménykezelők egérhez
+        canvas.addEventListener('mousedown', startDrawing);
+        window.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+
+        // Eseménykezelők érintőképernyőhöz
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        window.addEventListener('touchmove', draw, { passive: false });
+        window.addEventListener('touchend', stopDrawing);
+        window.addEventListener('touchcancel', stopDrawing);
+
+        // Ablak átméretezésének kezelése
+        window.addEventListener('resize', () => {
+            // Lementjük a jelenlegi satírozást
+            const tempData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            resizeCanvas();
+            // Visszatöltjük a lementett rajzot
+            ctx.putImageData(tempData, 0, 0);
+        });
+
+        // Inicializálás induláskor
+        generateSecretNumber();
+        resizeCanvas();
+
+    </script>
+</body>
+</html>
